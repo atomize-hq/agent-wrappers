@@ -6,14 +6,20 @@
 //! the CLI prints to stdout (the agent's final response per upstream docs).
 
 use std::{
+    collections::BTreeMap,
     env,
     ffi::OsStr,
+    future::Future,
     io::{self as stdio, Write},
     path::{Path, PathBuf},
+    pin::Pin,
     process::ExitStatus,
     time::Duration,
 };
 
+use futures_core::Stream;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tempfile::TempDir;
 use thiserror::Error;
 use tokio::{
@@ -556,6 +562,444 @@ pub enum CodexError {
     StdinWrite(#[source] std::io::Error),
     #[error("failed to join codex output task: {0}")]
     Join(#[from] tokio::task::JoinError),
+}
+
+/// Single JSONL event emitted by `codex exec --json`.
+///
+/// Each line on stdout maps to a [`ThreadEvent`] with lifecycle edges:
+/// - `thread.started` is emitted once per invocation.
+/// - `turn.started` begins the turn associated with the provided prompt.
+/// - one or more `item.*` events stream output and tool activity.
+/// - `turn.completed` or `turn.failed` closes the stream; `error` captures transport-level failures.
+///
+/// Item variants mirror the upstream `item_type` field: `agent_message`, `reasoning`,
+/// `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, `todo_list`, and `error`.
+/// Unknown or future fields are preserved in `extra` maps to keep the parser forward-compatible.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "type")]
+pub enum ThreadEvent {
+    #[serde(rename = "thread.started")]
+    ThreadStarted(ThreadStarted),
+    #[serde(rename = "turn.started")]
+    TurnStarted(TurnStarted),
+    #[serde(rename = "turn.completed")]
+    TurnCompleted(TurnCompleted),
+    #[serde(rename = "turn.failed")]
+    TurnFailed(TurnFailed),
+    #[serde(rename = "item.started")]
+    ItemStarted(ItemEnvelope<ItemSnapshot>),
+    #[serde(rename = "item.delta")]
+    ItemDelta(ItemDelta),
+    #[serde(rename = "item.completed")]
+    ItemCompleted(ItemEnvelope<ItemSnapshot>),
+    #[serde(rename = "item.failed")]
+    ItemFailed(ItemEnvelope<ItemFailure>),
+    #[serde(rename = "error")]
+    Error(EventError),
+}
+
+/// Marks the start of a new thread.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ThreadStarted {
+    pub thread_id: String,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Indicates the CLI accepted a new turn within a thread.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TurnStarted {
+    pub thread_id: String,
+    pub turn_id: String,
+    /// Original input text when upstream echoes it; may be omitted for security reasons.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input_text: Option<String>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Reports a completed turn.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TurnCompleted {
+    pub thread_id: String,
+    pub turn_id: String,
+    /// Identifier of the last output item when provided by the CLI.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_item_id: Option<String>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Indicates a turn-level failure.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TurnFailed {
+    pub thread_id: String,
+    pub turn_id: String,
+    pub error: EventError,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Shared wrapper for item events that always include thread/turn context.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ItemEnvelope<T> {
+    pub thread_id: String,
+    pub turn_id: String,
+    #[serde(flatten)]
+    pub item: T,
+}
+
+/// Snapshot of an item at start/completion time.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ItemSnapshot {
+    #[serde(rename = "item_id", alias = "id")]
+    pub item_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<u32>,
+    #[serde(default)]
+    pub status: ItemStatus,
+    #[serde(flatten)]
+    pub payload: ItemPayload,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta describing the next piece of an item.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ItemDelta {
+    pub thread_id: String,
+    pub turn_id: String,
+    #[serde(rename = "item_id")]
+    pub item_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<u32>,
+    #[serde(flatten)]
+    pub delta: ItemDeltaPayload,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Terminal item failure event.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ItemFailure {
+    #[serde(rename = "item_id", alias = "id")]
+    pub item_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<u32>,
+    pub error: EventError,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Fully-typed item payload for start/completed events.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "item_type", content = "content", rename_all = "snake_case")]
+pub enum ItemPayload {
+    AgentMessage(TextContent),
+    Reasoning(TextContent),
+    CommandExecution(CommandExecutionState),
+    FileChange(FileChangeState),
+    McpToolCall(McpToolCallState),
+    WebSearch(WebSearchState),
+    TodoList(TodoListState),
+    Error(EventError),
+}
+
+/// Delta form of an item payload. Each delta should be applied in order to reconstruct the item.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "item_type", content = "delta", rename_all = "snake_case")]
+pub enum ItemDeltaPayload {
+    AgentMessage(TextDelta),
+    Reasoning(TextDelta),
+    CommandExecution(CommandExecutionDelta),
+    FileChange(FileChangeDelta),
+    McpToolCall(McpToolCallDelta),
+    WebSearch(WebSearchDelta),
+    TodoList(TodoListDelta),
+    Error(EventError),
+}
+
+/// Item status supplied by the CLI for bookkeeping.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ItemStatus {
+    InProgress,
+    Completed,
+    Failed,
+    #[serde(other)]
+    Unknown,
+}
+
+impl Default for ItemStatus {
+    fn default() -> Self {
+        ItemStatus::InProgress
+    }
+}
+
+/// Human-readable content emitted by the agent.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TextContent {
+    pub text: String,
+}
+
+/// Incremental content fragment for streaming items.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TextDelta {
+    pub text_delta: String,
+}
+
+/// Snapshot of a command execution, including accumulated stdout/stderr.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CommandExecutionState {
+    pub command: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stdout: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stderr: String,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta for command execution.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CommandExecutionDelta {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stdout: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stderr: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// File change or diff applied by the agent.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FileChangeState {
+    pub path: PathBuf,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub change: Option<FileChangeKind>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diff: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stdout: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stderr: String,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta describing a file change.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FileChangeDelta {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diff: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stdout: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stderr: String,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Type of file operation being reported.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum FileChangeKind {
+    Apply,
+    Diff,
+    #[serde(other)]
+    Unknown,
+}
+
+/// State of an MCP tool call.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct McpToolCallState {
+    pub server_name: String,
+    pub tool_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub arguments: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<Value>,
+    #[serde(default)]
+    pub status: ToolCallStatus,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta for MCP tool call output.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct McpToolCallDelta {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<Value>,
+    #[serde(default)]
+    pub status: ToolCallStatus,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Lifecycle state for a tool call.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolCallStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    #[serde(other)]
+    Unknown,
+}
+
+impl Default for ToolCallStatus {
+    fn default() -> Self {
+        ToolCallStatus::Pending
+    }
+}
+
+/// Details of a web search step.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct WebSearchState {
+    pub query: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub results: Option<Value>,
+    #[serde(default)]
+    pub status: WebSearchStatus,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta for search results.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct WebSearchDelta {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub results: Option<Value>,
+    #[serde(default)]
+    pub status: WebSearchStatus,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Search progress indicator.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum WebSearchStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    #[serde(other)]
+    Unknown,
+}
+
+impl Default for WebSearchStatus {
+    fn default() -> Self {
+        WebSearchStatus::Pending
+    }
+}
+
+/// Checklist maintained by the agent.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TodoListState {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<TodoItem>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta for todo list mutations.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TodoListDelta {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<TodoItem>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Single todo item.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TodoItem {
+    pub title: String,
+    #[serde(default)]
+    pub completed: bool,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Error payload shared by turn/item failures.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct EventError {
+    pub message: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Options configuring a streaming exec invocation.
+#[derive(Clone, Debug)]
+pub struct ExecStreamRequest {
+    /// User prompt that will be forwarded to `codex exec`.
+    pub prompt: String,
+    /// Per-event idle timeout. If no JSON lines arrive before the duration elapses,
+    /// [`ExecStreamError::IdleTimeout`] is returned.
+    pub idle_timeout: Option<Duration>,
+    /// Optional file path passed through to `--output-last-message`. When unset, the wrapper
+    /// will request a temporary path and return it in [`ExecCompletion::last_message_path`].
+    pub output_last_message: Option<PathBuf>,
+    /// Optional file path passed through to `--output-schema` so clients can persist the schema
+    /// describing the item envelope structure seen during the run.
+    pub output_schema: Option<PathBuf>,
+}
+
+/// Ergonomic container for the streaming surface; produced by `stream_exec` (implemented in D2).
+///
+/// `events` yields parsed [`ThreadEvent`] values as soon as each JSONL line arrives from the CLI.
+/// `completion` resolves once the Codex process exits and is the place to surface `--output-last-message`
+/// and `--output-schema` paths after streaming finishes.
+pub struct ExecStream {
+    pub events: DynThreadEventStream,
+    pub completion: DynExecCompletion,
+}
+
+/// Type-erased stream of events from the Codex CLI.
+pub type DynThreadEventStream =
+    Pin<Box<dyn Stream<Item = Result<ThreadEvent, ExecStreamError>> + Send>>;
+
+/// Type-erased completion future that resolves when streaming stops.
+pub type DynExecCompletion =
+    Pin<Box<dyn Future<Output = Result<ExecCompletion, ExecStreamError>> + Send>>;
+
+/// Summary returned when the codex child process exits.
+#[derive(Clone, Debug)]
+pub struct ExecCompletion {
+    pub status: ExitStatus,
+    /// Path that codex wrote when `--output-last-message` was enabled. The wrapper may eagerly
+    /// read the file and populate `last_message` when feasible.
+    pub last_message_path: Option<PathBuf>,
+    pub last_message: Option<String>,
+    /// Path to the JSON schema requested via `--output-schema`, if provided by the caller.
+    pub schema_path: Option<PathBuf>,
+}
+
+/// Errors that may occur while consuming the JSONL stream.
+#[derive(Debug, Error)]
+pub enum ExecStreamError {
+    #[error(transparent)]
+    Codex(#[from] CodexError),
+    #[error("failed to parse codex JSONL event: {source}: `{line}`")]
+    Parse {
+        line: String,
+        #[source]
+        source: serde_json::Error,
+    },
+    #[error("codex JSON stream idle for {idle_for:?}")]
+    IdleTimeout { idle_for: Duration },
+    #[error("codex JSON stream closed unexpectedly")]
+    ChannelClosed,
 }
 
 enum DirectoryContext {
