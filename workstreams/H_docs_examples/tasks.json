@@ -4,6 +4,7 @@
     "title": "Plan docs and example coverage",
     "description": "List required doc sections and examples aligned with other workstreams: bundled binary/CODEX_HOME, streaming API, MCP/app-server, feature detection. Map each to files and commands.",
     "dependencies": [],
+    "status": "done",
     "files": ["workstreams/H_docs_examples/BRIEF.md", "README.md", "crates/codex/EXAMPLES.md"],
     "outputs": ["Doc plan note"]
   },
