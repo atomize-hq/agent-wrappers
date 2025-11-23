@@ -11,7 +11,7 @@ use std::{
     io::{self as stdio, Write},
     path::{Path, PathBuf},
     process::ExitStatus,
-    time::Duration,
+    time::{Duration, SystemTime},
 };
 
 use tempfile::TempDir;
@@ -36,6 +36,114 @@ const DEFAULT_REASONING_CONFIG_GPT5_CODEX: &[(&str, &str)] = &[
     ("model_verbosity", "low"),
 ];
 const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
+
+/// Snapshot of Codex CLI capabilities derived from probing a specific binary.
+///
+/// Instances of this type are intended to be cached per binary path so callers can
+/// gate optional flags (like `--output-schema`) without repeatedly spawning the CLI.
+/// A process-wide `HashMap<CapabilityCacheKey, CodexCapabilities>` (behind a mutex/once)
+/// keeps probes cheap; entries should use canonical binary paths where possible and
+/// ship a [`BinaryFingerprint`] so we can invalidate stale snapshots when the binary
+/// on disk changes.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CodexCapabilities {
+    /// Canonical path used as the cache key.
+    pub cache_key: CapabilityCacheKey,
+    /// File metadata used to detect when a cached entry is stale.
+    pub fingerprint: Option<BinaryFingerprint>,
+    /// Parsed output from `codex --version`; `None` when the command fails.
+    pub version: Option<CodexVersionInfo>,
+    /// Known feature toggles; fields default to `false` when detection fails.
+    pub features: CodexFeatureFlags,
+    /// Steps attempted while interrogating the binary (version, features, help).
+    pub probe_plan: CapabilityProbePlan,
+    /// Timestamp of when the probe finished.
+    pub collected_at: SystemTime,
+}
+
+/// Parsed version details emitted by `codex --version`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CodexVersionInfo {
+    /// Raw stdout from `codex --version` so we do not lose channel/build metadata.
+    pub raw: String,
+    /// Parsed `major.minor.patch` triplet when the output contains a semantic version.
+    pub semantic: Option<(u64, u64, u64)>,
+    /// Optional commit hash or build identifier printed by pre-release builds.
+    pub commit: Option<String>,
+    /// Release channel inferred from the version string suffix (e.g., `-beta`).
+    pub channel: CodexReleaseChannel,
+}
+
+/// Release channel segments inferred from the Codex version string.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CodexReleaseChannel {
+    Stable,
+    Beta,
+    Nightly,
+    /// Fallback for bespoke or vendor-patched builds.
+    Custom,
+}
+
+/// Feature gates for Codex CLI flags.
+///
+/// All fields default to `false` so callers can conservatively avoid passing flags
+/// unless probes prove that the binary understands them.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CodexFeatureFlags {
+    /// True when `codex features list` is available.
+    pub supports_features_list: bool,
+    /// True when `--output-schema` is accepted by `codex exec`.
+    pub supports_output_schema: bool,
+    /// True when `codex add-dir` is available for recursive prompting.
+    pub supports_add_dir: bool,
+    /// True when `codex login --mcp` is recognized for MCP integration.
+    pub supports_mcp_login: bool,
+}
+
+/// Description of how we interrogate the CLI to populate a [`CodexCapabilities`] snapshot.
+///
+/// Probes should prefer an explicit feature list when available, fall back to parsing
+/// `codex --help` flags, and finally rely on coarse version heuristics. Each attempted
+/// step is recorded so hosts can trace why a particular flag was enabled or skipped.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CapabilityProbePlan {
+    /// Steps attempted in order; consumers should push entries as probes run.
+    pub steps: Vec<CapabilityProbeStep>,
+}
+
+/// Command-level probes used to infer feature support.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CapabilityProbeStep {
+    /// Invoke `codex --version` to capture version/build metadata.
+    VersionFlag,
+    /// Prefer `codex features list --json` when supported for structured output.
+    FeaturesListJson,
+    /// Fallback to `codex features list` when only plain text is available.
+    FeaturesListText,
+    /// Parse `codex --help` to spot known flags (e.g., `--output-schema`, `add-dir`, `login --mcp`) when the features list is missing.
+    HelpFallback,
+}
+
+/// Cache key for capability snapshots derived from a specific Codex binary path.
+///
+/// Cache lookups should canonicalize the path when possible so symlinked binaries
+/// collapse to a single entry.
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct CapabilityCacheKey {
+    /// Canonical binary path when resolvable; otherwise the original path.
+    pub binary_path: PathBuf,
+}
+
+/// File metadata used to invalidate cached capability snapshots when the binary changes.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BinaryFingerprint {
+    /// Canonical path if the binary resolves through symlinks.
+    pub canonical_path: Option<PathBuf>,
+    /// Last modification time of the binary on disk (`metadata().modified()`).
+    pub modified: Option<SystemTime>,
+    /// File length from `metadata().len()`, useful for cheap change detection.
+    pub len: Option<u64>,
+}
 
 /// High-level client for interacting with `codex exec`.
 #[derive(Clone, Debug)]
