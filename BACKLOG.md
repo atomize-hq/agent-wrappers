@@ -1,56 +1,52 @@
 # Codex Wrapper Backlog
 
-High-priority items to make the Rust wrapper production-ready and cover Codex CLI surface area.
+High-priority items to make the Rust wrapper production-ready, cover Codex CLI surface area, and stay version-safe. Grouped into workstreams to enable concurrent progress.
 
-## CLI Surface Coverage
-- `exec`: support all flags (`--image/-i`, `--model/-m`, `--oss`, `--sandbox/-s`, `--profile/-p`, `--full-auto`, `--dangerously-bypass-approvals-and-sandbox/--yolo`, `--cd/-C`, `--skip-git-repo-check`, `--add-dir`, `--output-schema`, `--color`, `--json`, `--output-last-message/-o`); expose structured builder fields.
-- Interactive (no subcommand): mirror `exec` options plus session resume behavior.
-- `login`/`logout`: cover ChatGPT OAuth, API key input (`--with-api-key`), device auth (`--device-auth`), issuer/client overrides.
-- `resume`: resume by ID or `--last`.
-- `apply`: apply latest diff; surface stdout/stderr and exit codes.
-- `sandbox`: seatbelt/landlock/windows wrappers.
-- `features`: list/enable/disable feature flags.
-- `mcp`: `list/get/add/remove/login/logout` with JSON output and `--env` on add.
-- `mcp-server` and `app-server`: support launch helpers (stdio MCP server mode).
+## Workstream A: Binary + env isolation
+1. Add builder opts for pinned binary path (default to bundled) and per-invocation `CODEX_HOME` override.
+2. Helper to compute app-scoped CODEX_HOME (e.g., `~/.myhub/codex`) and mkdir/log path discovery (`config.toml`, `auth.json`, `.credentials.json`, `history.jsonl`, `conversations/*.jsonl`, `logs/codex-*.log`).
+3. Expose composite env prep (CODEX_HOME + CODEX_BINARY) when spawning any subcommand.
 
-## Configuration and State
-- Respect config precedence: CLI flags > env vars > `$CODEX_HOME/config.toml`.
-- Manage `CODEX_HOME` (default `~/.codex`); expose helpers to locate paths:
-  - `config.toml`, `auth.json`, `.credentials.json`, `history.jsonl`, `conversations/*.jsonl`, `logs/codex-*.log`.
-- Read/write `config.toml` fragments for MCP servers (`[mcp_servers]` with stdio/streamable_http transports, timeouts, enabled/disabled tools).
-- Expose profile selection (`[profiles.<name>]`).
-- Support credential store mode (`File/Keyring/Auto`) for both core auth and MCP OAuth tokens.
+## Workstream B: CLI surface coverage (exec/interactive)
+1. `exec` flags: `--image/-i`, `--model/-m`, `--oss`, `--sandbox/-s`, `--profile/-p`, `--full-auto`, `--dangerously-bypass-approvals-and-sandbox/--yolo`, `--cd/-C`, `--add-dir`, `--skip-git-repo-check`, `--output-schema`, `--color`, `--json`, `--output-last-message/-o`.
+2. Interactive (no subcommand): mirror exec options + optional session resume hints.
+3. `resume`: resume by ID or `--last`.
+4. `apply`: apply latest diff; capture stdout/stderr/exit.
+5. `sandbox`: seatbelt/landlock/windows runners.
+6. `features`: list/enable/disable.
 
-## Sessions and Logging
-- Session reuse: allow passing session IDs, `--last`, and loading conversation files.
-- History handling: read/append `history.jsonl` and per-session JSONL rolls.
-- Log handling: opt-in tee to log files, honor `RUST_LOG`, expose log path helper.
-- Apply/diff artifacts: capture and return apply exit status/stdout/stderr.
+## Workstream C: Auth + sessions
+1. `login`/`logout`: ChatGPT OAuth, API key stdin (`--with-api-key`), device auth, issuer/client overrides.
+2. Status parsing via `codex login status` (prefer `--json` if/when present).
+3. Credential store modes (`File/Keyring/Auto`) for core auth and MCP OAuth.
+4. Session reuse: pass session IDs, `--last`, load conversation files; history helpers for `history.jsonl` and `conversations/*.jsonl`.
 
-## JSON Streaming
-- Provide typed event stream for `--json` output (ThreadEvent, item types: agent_message, reasoning, command_execution, file_change, mcp_tool_call, web_search, todo_list, errors).
-- Write `--output-last-message` helper; accept output schema path.
-- Handle tool call lifecycle (begin/end), errors, and final messages.
+## Workstream D: JSON streaming + logging
+1. Typed event stream for `--json` output (thread/turn/item lifecycle; item types agent_message, reasoning, command_execution, file_change, mcp_tool_call, web_search, todo_list, errors).
+2. Real-time streaming: flush per event; idle timeout surfaced as error; expose `--output-last-message` helper and schema path handling.
+3. Log tee: opt-in mirroring to files; honor `RUST_LOG`; expose log path helper.
+4. Apply/diff artifacts: return apply exit status/stdout/stderr.
 
-## MCP Support
-- `mcp add`: stdio server command/args/env/cwd; streamable HTTP fields (url, headers, bearer env var).
-- `mcp login/logout`: when `experimental_use_rmcp_client = true`.
-- Allow enabling/disabling tools per server; tune `startup_timeout_sec` and `tool_timeout_sec`.
-- Run Codex as MCP server (`codex mcp-server`) with configurable stdin/stdout plumbing.
+## Workstream E: MCP + app-server
+1. `mcp` management: `list/get/add/remove/login/logout` with JSON, env injection on add; support `[mcp_servers]` stdio + streamable_http definitions (headers, bearer env var, timeouts, enabled/disabled tools).
+2. Launch helpers for `codex mcp-server` and `codex app-server` (stdio JSON-RPC); lifecycle management (spawn/kill, health check).
+3. Tool params: `codex` (start session) and `codex-reply` (continue by conversationId) with prompt/cwd/model/sandbox/approval/config map; stream events to caller.
+4. Approval elicitation plumbing: surface exec/apply approvals and cancellation handling.
 
-## Sandbox and Approval Policies
-- Surface approval policies (`UnlessTrusted`, `OnFailure`, `OnRequest`, `Never`) and sandbox modes (`ReadOnly`, `WorkspaceWrite`, `DangerFullAccess`).
-- Map convenience flags (`--full-auto`, `--yolo`) to their composite settings.
-- Allow extra writable dirs (`--add-dir`) and working dir overrides (`--cd`).
+## Workstream F: Versioning + feature detection
+1. Binary version probe (`codex --version`) and `codex features list`; cache supported flags/features per binary.
+2. Update flow: detect newer releases (npm/Homebrew/github), emit advisory; optional downloader hook (outside crate) but expose hooks to plug in.
+3. Capability guards: gate new flags behind detection; graceful degradation for older binaries.
 
-## Auth
-- ChatGPT OAuth login spawn helper (existing).
-- API key login via stdin flag (`--with-api-key`); improve status parsing by reading `codex login status --json` when available.
-- MCP OAuth credential storage and logout support.
+## Workstream G: Notifications + long-running tasks
+1. Support external `notify` hook (run program with JSON payload on turn complete).
+2. Ensure mcp-server/app-server event notifications bubble up to orchestration layer for wake-ups on task completion.
+3. Long-running task resume: expose `codex-reply` helper for conversationId + prompt; cancellation support.
 
-## Ergonomics and Reliability
-- Timeouts with clearer error types; support zero timeout = no limit.
-- Mirror/quiet controls for stdout/stderr.
-- Color mode controls; defaults to deterministic.
-- Expose binary discovery via `CODEX_BINARY` env var override.
-- Add examples for MCP, exec JSON streaming, resume, apply, and feature toggles.
+## Workstream H: Examples + docs
+1. Add examples for MCP server/app-server usage, JSON streaming, resume/apply, feature toggles, CODEX_HOME override, and bundled binary selection.
+2. API docs describing env resolution, event schema, approval/sandbox policies.
+
+## References: neighboring crates
+- `codex-helper` (proxy/failover/logging; rewrites ~/.codex/config.toml to point Codex at local proxy; manages multi-upstream, quota-aware routing; sessions/usage diagnostics). Consider ideas for multi-provider routing and config backup/restore, not code.
+- `llm-link` (multi-provider proxy with app presets for Codex CLI/Zed/Claude Code, supports OpenAI/Ollama/Anthropic etc., hot reload config, dynamic model discovery). Useful patterns for multi-protocol adapters, but likely out of scope for core Codex wrapper.
