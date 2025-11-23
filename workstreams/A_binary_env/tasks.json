@@ -15,6 +15,7 @@
     "id": "A2-implement-env-prep",
     "title": "Implement builder fields and env-prep helper",
     "description": "Add builder fields for binary_path and codex_home; implement env-prep that applies CODEX_HOME and CODEX_BINARY per Command. Ensure all spawn sites (exec/login/status/logout/basic commands) use the helper. Create helper to compute app-scoped CODEX_HOME if provided, with mkdirs as needed.",
+    "status": "done",
     "dependencies": ["A1-design-env-api"],
     "files": ["crates/codex/src/lib.rs"],
     "outputs": ["Code changes compiled"],
