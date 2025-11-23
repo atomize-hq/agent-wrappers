@@ -1,0 +1,27 @@
+[
+  {
+    "id": "H1-plan-docs",
+    "title": "Plan docs and example coverage",
+    "description": "List required doc sections and examples aligned with other workstreams: bundled binary/CODEX_HOME, streaming API, MCP/app-server, feature detection. Map each to files and commands.",
+    "dependencies": [],
+    "files": ["workstreams/H_docs_examples/BRIEF.md", "README.md", "crates/codex/EXAMPLES.md"],
+    "outputs": ["Doc plan note"]
+  },
+  {
+    "id": "H2-examples-update",
+    "title": "Add/refresh examples",
+    "description": "Add examples under crates/codex/examples for streaming, CODEX_HOME override, bundled binary selection, MCP codex/codex-reply, app-server thread/turn, feature detection. Ensure they compile and document required env vars.",
+    "dependencies": ["H1-plan-docs"],
+    "files": ["crates/codex/examples", "crates/codex/EXAMPLES.md"],
+    "tests": ["cargo test -p codex --examples"],
+    "outputs": ["New/updated example files"]
+  },
+  {
+    "id": "H3-readme",
+    "title": "Update README and EXAMPLES guide",
+    "description": "Document new APIs and examples: binary/CODEX_HOME setup, streaming API usage, MCP/app-server usage, version detection hooks. Link to examples and note safety defaults.",
+    "dependencies": ["H2-examples-update"],
+    "files": ["README.md", "crates/codex/EXAMPLES.md"],
+    "outputs": ["Updated docs"]
+  }
+]

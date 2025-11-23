@@ -1,0 +1,37 @@
+[
+  {
+    "id": "E1-design-mcp-app",
+    "title": "Design MCP/app-server APIs and lifecycle",
+    "description": "Specify Rust APIs to spawn/stop codex mcp-server and app-server (stdio JSON-RPC) using bundled binary + CODEX_HOME. Define request/notification types (codex/codex-reply params, thread/turn methods), approval/cancel handling, and error model. Note dependency on Workstream A env-prep helper for spawning.",
+    "dependencies": [],
+    "files": ["workstreams/E_mcp_app_server/BRIEF.md"],
+    "outputs": ["Design note/doc comments in repo"]
+  },
+  {
+    "id": "E2-implement-mcp-server",
+    "title": "Implement MCP server launcher and codex/codex-reply wrappers",
+    "description": "Add code to spawn codex mcp-server with env from Workstream A, manage stdin/stdout tasks, and expose async calls for codex and codex-reply (conversationId + prompt, plus optional model/cwd/sandbox/approval/config). Stream codex/event notifications (task_complete, approvals, errors) to caller and support cancellation.",
+    "dependencies": ["E1-design-mcp-app"],
+    "files": ["crates/codex/src/lib.rs"],
+    "tests": ["cargo test -p codex"],
+    "notes": "Use structured types for notifications; ensure kill_on_drop and graceful shutdown." 
+  },
+  {
+    "id": "E3-implement-app-server",
+    "title": "Implement app-server launcher and thread/turn helpers",
+    "description": "Add code to spawn codex app-server over stdio, send initialize + thread/start/resume, turn/start/interrupt, and stream task_complete and item notifications. Share transport code with E2 where possible.",
+    "dependencies": ["E1-design-mcp-app"],
+    "files": ["crates/codex/src/lib.rs"],
+    "tests": ["cargo test -p codex"],
+    "notes": "Reuse JSON-RPC transport; respect env isolation." 
+  },
+  {
+    "id": "E4-tests-examples",
+    "title": "Tests and examples for MCP/app-server",
+    "description": "Add integration-style tests with fake stdio or fixtures to validate request/notification handling, cancellations, and shutdown. Add examples demonstrating codex/codex-reply long-running continuation and app-server thread/turn usage (coordinate with H).",
+    "dependencies": ["E2-implement-mcp-server", "E3-implement-app-server"],
+    "files": ["crates/codex/examples", "crates/codex/src/lib.rs"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Example files", "README updates"]
+  }
+]

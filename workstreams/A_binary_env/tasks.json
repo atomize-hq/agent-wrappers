@@ -1,0 +1,33 @@
+[
+  {
+    "id": "A1-design-env-api",
+    "title": "Design binary and CODEX_HOME API surface",
+    "description": "Draft builder/API changes to accept explicit binary path (default bundled), optional CODEX_HOME override, and env-prep helper used by all spawns. Document expected directory layout under CODEX_HOME (config.toml, auth.json, .credentials.json, history.jsonl, conversations/*.jsonl, logs/codex-*.log). Produce module-level doc comments and decide on types (e.g., PathBuf for home, bool for create_dirs).",
+    "dependencies": [],
+    "files": ["crates/codex/src/lib.rs", "workstreams/A_binary_env/BRIEF.md"],
+    "outputs": ["API proposal in comments or a short design note committed to the repo"],
+    "tests": [],
+    "notes": "Keep backward compatibility: existing builder defaults unchanged unless new opts are set.",
+    "kickoff_prompt": "kickoff_prompts/01_initial.md"
+  },
+  {
+    "id": "A2-implement-env-prep",
+    "title": "Implement builder fields and env-prep helper",
+    "description": "Add builder fields for binary_path and codex_home; implement env-prep that applies CODEX_HOME and CODEX_BINARY per Command. Ensure all spawn sites (exec/login/status/logout/basic commands) use the helper. Create helper to compute app-scoped CODEX_HOME if provided, with mkdirs as needed.",
+    "dependencies": ["A1-design-env-api"],
+    "files": ["crates/codex/src/lib.rs"],
+    "outputs": ["Code changes compiled"],
+    "tests": ["cargo test -p codex"],
+    "notes": "Do not mutate parent process env; apply per-Command env()."
+  },
+  {
+    "id": "A3-tests-docs",
+    "title": "Tests and doc updates for env/binary overrides",
+    "description": "Add unit tests for default binary, CODEX_BINARY override, and CODEX_HOME override applied per command. Add example or README snippet showing bundled binary + app-scoped CODEX_HOME usage (coordinate with Workstream H if desired).",
+    "dependencies": ["A2-implement-env-prep"],
+    "files": ["crates/codex/src/lib.rs", "crates/codex/examples"],
+    "outputs": ["New tests", "Updated docs/examples"],
+    "tests": ["cargo test -p codex"],
+    "notes": "Prefer tempdirs in tests to avoid polluting real HOME."
+  }
+]

@@ -1,0 +1,28 @@
+[
+  {
+    "id": "D1-design-stream-types",
+    "title": "Design typed JSONL event API",
+    "description": "Define Rust types mirroring Codex exec --json events (thread/turn/item lifecycle, item variants: agent_message, reasoning, command_execution, file_change, mcp_tool_call, web_search, todo_list, error). Plan streaming surface (e.g., async Stream) and error types (including idle timeout). Document how --output-last-message and --output-schema integrate.",
+    "dependencies": [],
+    "files": ["crates/codex/src/lib.rs", "workstreams/D_json_stream_logging/BRIEF.md"],
+    "outputs": ["Type definitions and API sketch (doc comments or design note)"]
+  },
+  {
+    "id": "D2-implement-stream",
+    "title": "Implement JSONL streaming and parsing",
+    "description": "Implement async streaming API that spawns codex exec with --json, parses each line into typed events, flushes in real time, and propagates idle timeout errors. Ensure ANSI is disabled when parsing. Include support for --output-last-message path and apply/diff stdout/stderr/exit capture.",
+    "dependencies": ["D1-design-stream-types"],
+    "files": ["crates/codex/src/lib.rs"],
+    "tests": ["cargo test -p codex"],
+    "notes": "Use async channels/streams; avoid blocking tasks."
+  },
+  {
+    "id": "D3-tests-example",
+    "title": "Tests and example for streaming",
+    "description": "Add unit/integration tests for event ordering, tool call parsing, error propagation, idle timeout behavior. Add example showing real-time consumption and writing last message file; document in README (coordinate with H).",
+    "dependencies": ["D2-implement-stream"],
+    "files": ["crates/codex/src/lib.rs", "crates/codex/examples"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Example file", "README section"]
+  }
+]

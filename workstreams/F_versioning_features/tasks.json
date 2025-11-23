@@ -1,0 +1,28 @@
+[
+  {
+    "id": "F1-design-capability-model",
+    "title": "Design capability and version model",
+    "description": "Define structs to hold binary version info and feature flags (e.g., supports_output_schema, supports_add_dir, supports_mcp_login). Plan probing strategy: codex --version, codex features list, optional --help parsing. Document caching keyed by binary path.",
+    "dependencies": [],
+    "files": ["workstreams/F_versioning_features/BRIEF.md"],
+    "outputs": ["Design note/doc comments"]
+  },
+  {
+    "id": "F2-implement-probes",
+    "title": "Implement version/feature probes with caching",
+    "description": "Implement functions to run codex --version and codex features list using env from Workstream A; parse outputs into capability model; cache results per binary path. Handle failures gracefully with defaults and warnings.",
+    "dependencies": ["F1-design-capability-model"],
+    "files": ["crates/codex/src/lib.rs"],
+    "tests": ["cargo test -p codex"],
+    "notes": "Do not assume network; keep probes local." 
+  },
+  {
+    "id": "F3-update-advisory",
+    "title": "Expose update advisory hooks",
+    "description": "Add helper that compares local version to latest known (pass-in value or simple static table) and surfaces advisory to host. Document how host can integrate npm/Homebrew/GitHub update checks outside the crate.",
+    "dependencies": ["F2-implement-probes"],
+    "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Docs describing integration"]
+  }
+]
