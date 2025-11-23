@@ -5,6 +5,8 @@
 //! (non-interactive color handling, timeouts, optional model selection), and returns whatever
 //! the CLI prints to stdout (the agent's final response per upstream docs).
 
+pub mod mcp;
+
 use std::{
     env,
     ffi::OsStr,
