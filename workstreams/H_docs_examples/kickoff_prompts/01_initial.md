@@ -1,6 +1,6 @@
 You are starting Workstream H (Docs + Examples), Task H1-plan-docs.
 
-Branch/worktree workflow (follow before coding):
+Branch/worktree workflow (follow before coding, see workstreams/KICKOFF_GUIDE.md):
 1) Checkout the workstream branch: `git checkout ws/H_docs_examples`.
 2) In `workstreams/H_docs_examples/tasks.json`, mark this task as "doing" (edit the JSON) while on the workstream branch.
 3) Log session start in `workstreams/H_docs_examples/SESSION_LOG.md`.
@@ -11,8 +11,11 @@ Task goal: plan documentation and example coverage for new features (bundled bin
 Resources: workstreams/H_docs_examples/BRIEF.md, workstreams/H_docs_examples/tasks.json, README.md, crates/codex/EXAMPLES.md.
 Deliverable: a doc plan note committed to repo.
 
-Completion steps (in this order):
-1) Return to the workstream branch `ws/H_docs_examples` (if you were in the worktree/task branch).
-2) In `workstreams/H_docs_examples/tasks.json`, update this task status to "done" (or equivalent).
-3) Update `workstreams/H_docs_examples/SESSION_LOG.md` with end time/outcome.
-4) Write the kickoff prompt for the next task in `workstreams/H_docs_examples/kickoff_prompts/<next>.md` (create the file) while on the workstream branch.
+Completion steps (in this order, see workstreams/KICKOFF_GUIDE.md):
+1) In the worktree on the task branch: finish code, `git status`, `git add ...`, `git commit -m "<msg>"` (run tests as needed).
+2) Return to the workstream branch `ws/H_docs_examples`: `git checkout ws/H_docs_examples`.
+3) Merge the task branch: `git merge --no-ff task/H1-plan-docs`.
+4) Remove the worktree: `git worktree remove ../wt-H1` (optional but recommended).
+5) In `workstreams/H_docs_examples/tasks.json`, update this task status to "done" (or equivalent).
+6) Update `workstreams/H_docs_examples/SESSION_LOG.md` with end time/outcome.
+7) Write the kickoff prompt for the next task in `workstreams/H_docs_examples/kickoff_prompts/<next>.md` (create the file) while on the workstream branch, following the guide.
