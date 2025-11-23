@@ -12,7 +12,7 @@
     "id": "D2-implement-stream",
     "title": "Implement JSONL streaming and parsing",
     "description": "Implement async streaming API that spawns codex exec with --json, parses each line into typed events, flushes in real time, and propagates idle timeout errors. Ensure ANSI is disabled when parsing. Include support for --output-last-message path and apply/diff stdout/stderr/exit capture.",
-    "status": "doing",
+    "status": "done",
     "dependencies": ["D1-design-stream-types"],
     "files": ["crates/codex/src/lib.rs"],
     "tests": ["cargo test -p codex"],
