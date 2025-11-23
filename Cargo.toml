@@ -1,0 +1,16 @@
+[workspace]
+members = ["crates/codex"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+rust-version = "1.78"
+license = "MIT OR Apache-2.0"
+authors = ["Agent Wrappers Contributors"]
+
+[workspace.dependencies]
+tokio = { version = "1.38", features = ["process", "io-util", "io-std", "macros", "rt", "rt-multi-thread", "time"] }
+thiserror = "1.0"
+tracing = "0.1"
+tempfile = "3.12"
