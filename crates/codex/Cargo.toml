@@ -9,7 +9,7 @@ keywords = ["codex", "cli", "wrapper", "agent"]
 categories = ["api-bindings", "command-line-interface"]
 
 [dependencies]
-tokio = { version = "1.38", features = ["process", "io-util", "macros", "rt", "rt-multi-thread", "time"] }
+tokio = { version = "1.38", features = ["process", "io-util", "macros", "rt", "rt-multi-thread", "time", "sync", "fs"] }
 thiserror = "1.0"
 tracing = "0.1"
 tempfile = "3.12"
