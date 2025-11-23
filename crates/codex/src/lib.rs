@@ -14,7 +14,8 @@ use std::{
     path::{Path, PathBuf},
     pin::Pin,
     process::ExitStatus,
-    time::Duration,
+    task::{Context, Poll},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use futures_core::Stream;
@@ -23,8 +24,10 @@ use serde_json::Value;
 use tempfile::TempDir;
 use thiserror::Error;
 use tokio::{
-    io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
+    fs,
+    io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
     process::Command,
+    sync::mpsc,
     task, time,
 };
 use tracing::debug;
@@ -94,6 +97,137 @@ impl CodexClient {
         }
 
         self.invoke_codex_exec(prompt).await
+    }
+
+    /// Streams structured JSONL events from `codex exec --json`.
+    pub async fn stream_exec(
+        &self,
+        request: ExecStreamRequest,
+    ) -> Result<ExecStream, ExecStreamError> {
+        if request.prompt.trim().is_empty() {
+            return Err(CodexError::EmptyPrompt.into());
+        }
+
+        let ExecStreamRequest {
+            prompt,
+            idle_timeout,
+            output_last_message,
+            output_schema,
+        } = request;
+
+        let dir_ctx = self.directory_context()?;
+        let dir_path = dir_ctx.path().to_path_buf();
+        let last_message_path =
+            output_last_message.unwrap_or_else(|| unique_temp_path("codex_last_message_", "txt"));
+
+        let mut command = Command::new(&self.binary);
+        command
+            .arg("exec")
+            .arg("--color")
+            .arg(ColorMode::Never.as_str())
+            .arg("--skip-git-repo-check")
+            .arg("--json")
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .stdin(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .current_dir(&dir_path);
+
+        if let Some(config) = reasoning_config_for(self.model.as_deref()) {
+            for (key, value) in config {
+                command.arg("--config").arg(format!("{key}={value}"));
+            }
+        }
+
+        if let Some(model) = &self.model {
+            command.arg("--model").arg(model);
+        }
+
+        for image in &self.images {
+            command.arg("--image").arg(image);
+        }
+
+        command.arg("--output-last-message").arg(&last_message_path);
+
+        if let Some(schema_path) = &output_schema {
+            command.arg("--output-schema").arg(schema_path);
+        }
+
+        if env::var_os("RUST_LOG").is_none() {
+            command.env("RUST_LOG", "error");
+        }
+
+        let mut child = command.spawn().map_err(|source| CodexError::Spawn {
+            binary: self.binary.clone(),
+            source,
+        })?;
+
+        {
+            let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
+            stdin
+                .write_all(prompt.as_bytes())
+                .await
+                .map_err(CodexError::StdinWrite)?;
+            stdin
+                .write_all(b"\n")
+                .await
+                .map_err(CodexError::StdinWrite)?;
+            stdin.shutdown().await.map_err(CodexError::StdinWrite)?;
+        }
+
+        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+
+        let (tx, rx) = mpsc::channel(32);
+        let stdout_task = tokio::spawn(forward_json_events(stdout, tx, self.mirror_stdout));
+        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+
+        let events = EventChannelStream::new(rx, idle_timeout);
+        let timeout = self.timeout;
+        let schema_path = output_schema.clone();
+        let completion = Box::pin(async move {
+            let _dir_ctx = dir_ctx;
+            let wait_task = async move {
+                let status = child
+                    .wait()
+                    .await
+                    .map_err(|source| CodexError::Wait { source })?;
+                let stdout_result = stdout_task.await.map_err(CodexError::Join)?;
+                stdout_result?;
+                let stderr_bytes = stderr_task
+                    .await
+                    .map_err(CodexError::Join)?
+                    .map_err(CodexError::CaptureIo)?;
+                if !status.success() {
+                    return Err(CodexError::NonZeroExit {
+                        status,
+                        stderr: String::from_utf8(stderr_bytes).unwrap_or_default(),
+                    }
+                    .into());
+                }
+                let last_message = read_last_message(&last_message_path).await;
+                Ok(ExecCompletion {
+                    status,
+                    last_message_path: Some(last_message_path),
+                    last_message,
+                    schema_path,
+                })
+            };
+
+            if timeout.is_zero() {
+                wait_task.await
+            } else {
+                match time::timeout(timeout, wait_task).await {
+                    Ok(result) => result,
+                    Err(_) => Err(CodexError::Timeout { timeout }.into()),
+                }
+            }
+        });
+
+        Ok(ExecStream {
+            events: Box::pin(events),
+            completion,
+        })
     }
 
     /// Spawns a `codex login` session using the default ChatGPT OAuth flow.
@@ -802,6 +936,8 @@ pub struct FileChangeDelta {
     pub stdout: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub stderr: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
     #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
     pub extra: BTreeMap<String, Value>,
 }
@@ -1000,6 +1136,145 @@ pub enum ExecStreamError {
     IdleTimeout { idle_for: Duration },
     #[error("codex JSON stream closed unexpectedly")]
     ChannelClosed,
+}
+
+struct EventChannelStream {
+    rx: mpsc::Receiver<Result<ThreadEvent, ExecStreamError>>,
+    idle_timeout: Option<Duration>,
+    idle_timer: Option<Pin<Box<time::Sleep>>>,
+}
+
+impl EventChannelStream {
+    fn new(
+        rx: mpsc::Receiver<Result<ThreadEvent, ExecStreamError>>,
+        idle_timeout: Option<Duration>,
+    ) -> Self {
+        Self {
+            rx,
+            idle_timeout,
+            idle_timer: None,
+        }
+    }
+
+    fn reset_timer(&mut self) {
+        self.idle_timer = self
+            .idle_timeout
+            .map(|duration| Box::pin(time::sleep(duration)));
+    }
+}
+
+impl Stream for EventChannelStream {
+    type Item = Result<ThreadEvent, ExecStreamError>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+
+        if let Some(timer) = this.idle_timer.as_mut() {
+            if let Poll::Ready(()) = timer.as_mut().poll(cx) {
+                let idle_for = this.idle_timeout.expect("idle_timer implies timeout");
+                this.idle_timer = None;
+                return Poll::Ready(Some(Err(ExecStreamError::IdleTimeout { idle_for })));
+            }
+        }
+
+        match this.rx.poll_recv(cx) {
+            Poll::Ready(Some(item)) => {
+                if this.idle_timeout.is_some() {
+                    this.reset_timer();
+                }
+                Poll::Ready(Some(item))
+            }
+            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Pending => {
+                if this.idle_timer.is_none() {
+                    if let Some(duration) = this.idle_timeout {
+                        let mut sleep = Box::pin(time::sleep(duration));
+                        if let Poll::Ready(()) = sleep.as_mut().poll(cx) {
+                            return Poll::Ready(Some(Err(ExecStreamError::IdleTimeout {
+                                idle_for: duration,
+                            })));
+                        }
+                        this.idle_timer = Some(sleep);
+                    }
+                }
+                Poll::Pending
+            }
+        }
+    }
+}
+
+async fn forward_json_events<R>(
+    reader: R,
+    sender: mpsc::Sender<Result<ThreadEvent, ExecStreamError>>,
+    mirror_stdout: bool,
+) -> Result<(), ExecStreamError>
+where
+    R: AsyncRead + Unpin,
+{
+    let mut lines = BufReader::new(reader).lines();
+    loop {
+        let line = match lines.next_line().await {
+            Ok(Some(line)) => line,
+            Ok(None) => break,
+            Err(err) => {
+                return Err(CodexError::CaptureIo(err).into());
+            }
+        };
+
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        if mirror_stdout {
+            if let Err(err) = task::block_in_place(|| {
+                let mut out = stdio::stdout();
+                out.write_all(line.as_bytes())?;
+                out.write_all(b"\n")?;
+                out.flush()
+            }) {
+                return Err(CodexError::CaptureIo(err).into());
+            }
+        }
+
+        let parsed =
+            serde_json::from_str::<ThreadEvent>(&line).map_err(|source| ExecStreamError::Parse {
+                line: line.clone(),
+                source,
+            });
+        let send_result = match parsed {
+            Ok(event) => sender.send(Ok(event)).await,
+            Err(err) => {
+                let _ = sender.send(Err(err)).await;
+                break;
+            }
+        };
+        if send_result.is_err() {
+            break;
+        }
+    }
+
+    Ok(())
+}
+
+async fn read_last_message(path: &Path) -> Option<String> {
+    match fs::read_to_string(path).await {
+        Ok(contents) => Some(contents),
+        Err(_) => None,
+    }
+}
+
+fn unique_temp_path(prefix: &str, extension: &str) -> PathBuf {
+    let mut path = env::temp_dir();
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_else(|_| Duration::from_secs(0))
+        .as_nanos();
+    path.push(format!(
+        "{prefix}{timestamp}_{}.{}",
+        std::process::id(),
+        extension
+    ));
+    path
 }
 
 enum DirectoryContext {
