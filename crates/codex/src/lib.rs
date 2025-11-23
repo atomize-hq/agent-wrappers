@@ -27,7 +27,8 @@
 
 use std::{
     env,
-    ffi::OsStr,
+    ffi::{OsStr, OsString},
+    fs,
     io::{self as stdio, Write},
     path::{Path, PathBuf},
     process::ExitStatus,
@@ -56,11 +57,14 @@ const DEFAULT_REASONING_CONFIG_GPT5_CODEX: &[(&str, &str)] = &[
     ("model_verbosity", "low"),
 ];
 const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
+const CODEX_HOME_ENV: &str = "CODEX_HOME";
+const RUST_LOG_ENV: &str = "RUST_LOG";
+const DEFAULT_RUST_LOG: &str = "error";
 
 /// High-level client for interacting with `codex exec`.
 #[derive(Clone, Debug)]
 pub struct CodexClient {
-    binary: PathBuf,
+    command_env: CommandEnvironment,
     model: Option<String>,
     timeout: Duration,
     color_mode: ColorMode,
@@ -114,19 +118,17 @@ impl CodexClient {
     ///
     /// The returned child inherits `kill_on_drop` so abandoning the handle cleans up the login helper.
     pub fn spawn_login_process(&self) -> Result<tokio::process::Child, CodexError> {
-        let mut command = Command::new(&self.binary);
+        let mut command = Command::new(self.command_env.binary_path());
         command
             .arg("login")
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true);
 
-        if env::var_os("RUST_LOG").is_none() {
-            command.env("RUST_LOG", "error");
-        }
+        self.command_env.apply(&mut command)?;
 
         command.spawn().map_err(|source| CodexError::Spawn {
-            binary: self.binary.clone(),
+            binary: self.command_env.binary_path().to_path_buf(),
             source,
         })
     }
@@ -188,7 +190,7 @@ impl CodexClient {
     async fn invoke_codex_exec(&self, prompt: &str) -> Result<String, CodexError> {
         let dir_ctx = self.directory_context()?;
 
-        let mut command = Command::new(&self.binary);
+        let mut command = Command::new(self.command_env.binary_path());
         command
             .arg("exec")
             .arg("--color")
@@ -228,12 +230,10 @@ impl CodexClient {
             command.arg("--json");
         }
 
-        if env::var_os("RUST_LOG").is_none() {
-            command.env("RUST_LOG", "error");
-        }
+        self.command_env.apply(&mut command)?;
 
         let mut child = command.spawn().map_err(|source| CodexError::Spawn {
-            binary: self.binary.clone(),
+            binary: self.command_env.binary_path().to_path_buf(),
             source,
         })?;
 
@@ -309,7 +309,11 @@ impl CodexClient {
         } else {
             primary_output.trim().to_string()
         };
-        debug!(binary = ?self.binary, bytes = trimmed.len(), "received Codex output");
+        debug!(
+            binary = ?self.command_env.binary_path(),
+            bytes = trimmed.len(),
+            "received Codex output"
+        );
         Ok(trimmed)
     }
 
@@ -327,19 +331,17 @@ impl CodexClient {
         S: AsRef<OsStr>,
         I: IntoIterator<Item = S>,
     {
-        let mut command = Command::new(&self.binary);
+        let mut command = Command::new(self.command_env.binary_path());
         command
             .args(args)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true);
 
-        if env::var_os("RUST_LOG").is_none() {
-            command.env("RUST_LOG", "error");
-        }
+        self.command_env.apply(&mut command)?;
 
         let mut child = command.spawn().map_err(|source| CodexError::Spawn {
-            binary: self.binary.clone(),
+            binary: self.command_env.binary_path().to_path_buf(),
             source,
         })?;
 
@@ -396,6 +398,8 @@ impl Default for CodexClient {
 #[derive(Clone, Debug)]
 pub struct CodexClientBuilder {
     binary: PathBuf,
+    codex_home: Option<PathBuf>,
+    create_home_dirs: bool,
     model: Option<String>,
     timeout: Duration,
     color_mode: ColorMode,
@@ -415,6 +419,20 @@ impl CodexClientBuilder {
     /// Sets the path to the Codex binary. Defaults to `codex`.
     pub fn binary(mut self, binary: impl Into<PathBuf>) -> Self {
         self.binary = binary.into();
+        self
+    }
+
+    /// Sets a custom `CODEX_HOME` path that will be applied per command.
+    /// Directories are created by default; disable via [`Self::create_home_dirs`].
+    pub fn codex_home(mut self, home: impl Into<PathBuf>) -> Self {
+        self.codex_home = Some(home.into());
+        self
+    }
+
+    /// Controls whether the CODEX_HOME directory tree should be created if missing.
+    /// Defaults to `true` when [`Self::codex_home`] is set.
+    pub fn create_home_dirs(mut self, enable: bool) -> Self {
+        self.create_home_dirs = enable;
         self
     }
 
@@ -480,8 +498,10 @@ impl CodexClientBuilder {
 
     /// Builds the [`CodexClient`].
     pub fn build(self) -> CodexClient {
+        let command_env =
+            CommandEnvironment::new(self.binary, self.codex_home, self.create_home_dirs);
         CodexClient {
-            binary: self.binary,
+            command_env,
             model: self.model,
             timeout: self.timeout,
             color_mode: self.color_mode,
@@ -498,6 +518,8 @@ impl Default for CodexClientBuilder {
     fn default() -> Self {
         Self {
             binary: default_binary_path(),
+            codex_home: None,
+            create_home_dirs: true,
             model: None,
             timeout: DEFAULT_TIMEOUT,
             color_mode: ColorMode::Never,
@@ -540,6 +562,99 @@ fn reasoning_config_for(model: Option<&str>) -> Option<&'static [(&'static str, 
     }
 }
 
+#[derive(Clone, Debug)]
+struct CommandEnvironment {
+    binary: PathBuf,
+    codex_home: Option<CodexHome>,
+    create_home_dirs: bool,
+}
+
+impl CommandEnvironment {
+    fn new(binary: PathBuf, codex_home: Option<PathBuf>, create_home_dirs: bool) -> Self {
+        Self {
+            binary,
+            codex_home: codex_home.map(CodexHome::new),
+            create_home_dirs,
+        }
+    }
+
+    fn binary_path(&self) -> &Path {
+        &self.binary
+    }
+
+    fn environment_overrides(&self) -> Result<Vec<(OsString, OsString)>, CodexError> {
+        if let Some(home) = &self.codex_home {
+            if self.create_home_dirs {
+                home.ensure_layout()?;
+            }
+        }
+
+        let mut envs = Vec::new();
+        envs.push((
+            OsString::from(CODEX_BINARY_ENV),
+            self.binary.as_os_str().to_os_string(),
+        ));
+
+        if let Some(home) = &self.codex_home {
+            envs.push((
+                OsString::from(CODEX_HOME_ENV),
+                home.root().as_os_str().to_os_string(),
+            ));
+        }
+
+        if env::var_os(RUST_LOG_ENV).is_none() {
+            envs.push((
+                OsString::from(RUST_LOG_ENV),
+                OsString::from(DEFAULT_RUST_LOG),
+            ));
+        }
+
+        Ok(envs)
+    }
+
+    fn apply(&self, command: &mut Command) -> Result<(), CodexError> {
+        for (key, value) in self.environment_overrides()? {
+            command.env(key, value);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CodexHome {
+    root: PathBuf,
+}
+
+impl CodexHome {
+    fn new(root: PathBuf) -> Self {
+        Self { root }
+    }
+
+    fn root(&self) -> &Path {
+        self.root.as_path()
+    }
+
+    fn conversations_dir(&self) -> PathBuf {
+        self.root.join("conversations")
+    }
+
+    fn logs_dir(&self) -> PathBuf {
+        self.root.join("logs")
+    }
+
+    fn ensure_layout(&self) -> Result<(), CodexError> {
+        let conversations = self.conversations_dir();
+        let logs = self.logs_dir();
+        for path in [self.root(), conversations.as_path(), logs.as_path()] {
+            fs::create_dir_all(path).map_err(|source| CodexError::PrepareCodexHome {
+                path: path.to_path_buf(),
+                source,
+            })?;
+        }
+        Ok(())
+    }
+}
+
 /// Errors that may occur while invoking the Codex CLI.
 #[derive(Debug, Error)]
 pub enum CodexError {
@@ -564,6 +679,12 @@ pub enum CodexError {
     EmptyPrompt,
     #[error("failed to create temporary working directory: {0}")]
     TempDir(#[source] std::io::Error),
+    #[error("failed to prepare CODEX_HOME at `{path}`: {source}")]
+    PrepareCodexHome {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
     #[error("codex stdout unavailable")]
     StdoutUnavailable,
     #[error("codex stderr unavailable")]
@@ -595,6 +716,7 @@ impl DirectoryContext {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
     use std::sync::{Mutex, OnceLock};
 
     fn env_guard() -> std::sync::MutexGuard<'static, ()> {
@@ -608,6 +730,8 @@ mod tests {
         assert!(builder.model.is_none());
         assert_eq!(builder.timeout, DEFAULT_TIMEOUT);
         assert_eq!(builder.color_mode, ColorMode::Never);
+        assert!(builder.codex_home.is_none());
+        assert!(builder.create_home_dirs);
         assert!(builder.working_dir.is_none());
         assert!(builder.images.is_empty());
         assert!(!builder.json_output);
@@ -661,6 +785,90 @@ mod tests {
             env::set_var(key, value);
         } else {
             env::remove_var(key);
+        }
+    }
+
+    #[test]
+    fn command_env_sets_expected_overrides() {
+        let _guard = env_guard();
+        let rust_log_original = env::var_os(RUST_LOG_ENV);
+        env::remove_var(RUST_LOG_ENV);
+
+        let temp = tempfile::tempdir().unwrap();
+        let home = temp.path().join("codex_home");
+        let env_prep =
+            CommandEnvironment::new(PathBuf::from("/custom/codex"), Some(home.clone()), true);
+        let overrides = env_prep.environment_overrides().unwrap();
+        let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+
+        assert_eq!(
+            map.get(&OsString::from(CODEX_BINARY_ENV)),
+            Some(&OsString::from("/custom/codex"))
+        );
+        assert_eq!(
+            map.get(&OsString::from(CODEX_HOME_ENV)),
+            Some(&home.as_os_str().to_os_string())
+        );
+        assert_eq!(
+            map.get(&OsString::from(RUST_LOG_ENV)),
+            Some(&OsString::from(DEFAULT_RUST_LOG))
+        );
+
+        assert!(home.is_dir());
+        assert!(home.join("conversations").is_dir());
+        assert!(home.join("logs").is_dir());
+
+        match rust_log_original {
+            Some(value) => env::set_var(RUST_LOG_ENV, value),
+            None => env::remove_var(RUST_LOG_ENV),
+        }
+    }
+
+    #[test]
+    fn command_env_respects_existing_rust_log() {
+        let _guard = env_guard();
+        let rust_log_original = env::var_os(RUST_LOG_ENV);
+        env::set_var(RUST_LOG_ENV, "trace");
+
+        let env_prep = CommandEnvironment::new(PathBuf::from("codex"), None, true);
+        let overrides = env_prep.environment_overrides().unwrap();
+        let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+
+        assert_eq!(
+            map.get(&OsString::from(CODEX_BINARY_ENV)),
+            Some(&OsString::from("codex"))
+        );
+        assert!(!map.contains_key(&OsString::from(RUST_LOG_ENV)));
+
+        match rust_log_original {
+            Some(value) => env::set_var(RUST_LOG_ENV, value),
+            None => env::remove_var(RUST_LOG_ENV),
+        }
+    }
+
+    #[test]
+    fn command_env_can_skip_home_creation() {
+        let _guard = env_guard();
+        let rust_log_original = env::var_os(RUST_LOG_ENV);
+        env::remove_var(RUST_LOG_ENV);
+
+        let temp = tempfile::tempdir().unwrap();
+        let home = temp.path().join("codex_home");
+        let env_prep = CommandEnvironment::new(PathBuf::from("codex"), Some(home.clone()), false);
+        let overrides = env_prep.environment_overrides().unwrap();
+        let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+
+        assert!(!home.exists());
+        assert!(!home.join("conversations").exists());
+        assert!(!home.join("logs").exists());
+        assert_eq!(
+            map.get(&OsString::from(CODEX_HOME_ENV)),
+            Some(&home.as_os_str().to_os_string())
+        );
+
+        match rust_log_original {
+            Some(value) => env::set_var(RUST_LOG_ENV, value),
+            None => env::remove_var(RUST_LOG_ENV),
         }
     }
 
