@@ -40,3 +40,8 @@ if let Some(child) = client.spawn_mcp_login_process().await? {
 }
 ```
 - When guards are `Unknown`, skip the optional flags and surface the guard notes to operators rather than attempting the flag blindly.
+
+## Capability overrides
+- Hosts can skip probes for pinned/bundled binaries by supplying a manual snapshot via `CodexClientBuilder::capability_snapshot(...)`. The snapshot is cached against the canonical binary path and current fingerprint; when the on-disk binary changes the cache entry is invalidated and the snapshot is re-applied.
+- Version/feature overrides (`capability_version_override`, `capability_feature_overrides`, or the `capability_feature_hints` helper) apply after cache hits or probes run. Manual snapshots take precedence over cached/probed data, then version overrides, then feature overrides.
+- Feature overrides let vendors opt into bespoke flags (`capability_feature_overrides` to force true/false; `capability_feature_hints` to only force-enable). Guard helpers and probes consume the merged snapshot so callers can combine manual hints with probed data.
