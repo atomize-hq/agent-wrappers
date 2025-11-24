@@ -10,9 +10,10 @@
 
 use std::{
     collections::{BTreeMap, HashMap},
+    env,
     ffi::OsString,
-    io,
-    path::PathBuf,
+    fs, io,
+    path::{Path, PathBuf},
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -30,6 +31,7 @@ use tokio::{
     task::JoinHandle,
     time,
 };
+use toml::{value::Table as TomlTable, Value as TomlValue};
 use tracing::{debug, warn};
 
 /// JSON-RPC method name used to initialize MCP servers.
@@ -64,6 +66,417 @@ pub type RequestId = u64;
 
 /// Stream of notifications surfaced alongside a JSON-RPC response.
 pub type EventStream<T> = mpsc::UnboundedReceiver<T>;
+
+/// Default config filename placed under CODEX_HOME.
+pub const DEFAULT_CONFIG_FILE: &str = "config.toml";
+const MCP_SERVERS_KEY: &str = "mcp_servers";
+
+/// MCP server definition coupled with its name.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct McpServerEntry {
+    pub name: String,
+    pub definition: McpServerDefinition,
+}
+
+/// JSON-serializable MCP server configuration stored under `[mcp_servers]`.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct McpServerDefinition {
+    pub transport: McpTransport,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tools: Option<McpToolConfig>,
+}
+
+/// Supported transport definitions for MCP servers.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "transport", rename_all = "snake_case")]
+pub enum McpTransport {
+    Stdio(StdioServerDefinition),
+    StreamableHttp(StreamableHttpDefinition),
+}
+
+/// Stdio transport configuration for an MCP server.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StdioServerDefinition {
+    pub command: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub args: Vec<String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub env: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timeout_ms: Option<u64>,
+}
+
+/// HTTP transport configuration that supports streaming responses.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StreamableHttpDefinition {
+    pub url: String,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub headers: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bearer_env_var: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connect_timeout_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_timeout_ms: Option<u64>,
+}
+
+/// Tool allow/deny lists for a given MCP server.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct McpToolConfig {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub enabled: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub disabled: Vec<String>,
+}
+
+/// Input for adding or updating an MCP server entry.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AddServerRequest {
+    pub name: String,
+    pub definition: McpServerDefinition,
+    #[serde(default)]
+    pub overwrite: bool,
+    #[serde(default)]
+    pub env: BTreeMap<String, String>,
+    #[serde(default)]
+    pub bearer_token: Option<String>,
+}
+
+/// Result of logging into a server (auth token set in env var).
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct McpLoginResult {
+    pub server: String,
+    pub env_var: Option<String>,
+}
+
+/// Result of clearing a stored auth token.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct McpLogoutResult {
+    pub server: String,
+    pub env_var: Option<String>,
+    pub cleared: bool,
+}
+
+/// Errors surfaced while managing MCP config entries.
+#[derive(Debug, Error)]
+pub enum McpConfigError {
+    #[error("failed to read {path}: {source}")]
+    Read {
+        path: PathBuf,
+        #[source]
+        source: io::Error,
+    },
+    #[error("failed to write {path}: {source}")]
+    Write {
+        path: PathBuf,
+        #[source]
+        source: io::Error,
+    },
+    #[error("failed to create directory {path}: {source}")]
+    CreateDir {
+        path: PathBuf,
+        #[source]
+        source: io::Error,
+    },
+    #[error("failed to parse {path}: {source}")]
+    Parse {
+        path: PathBuf,
+        #[source]
+        source: toml::de::Error,
+    },
+    #[error("config root at {path} must be a table")]
+    InvalidRoot { path: PathBuf },
+    #[error("`mcp_servers` must be a table in {path}")]
+    InvalidServers { path: PathBuf },
+    #[error("failed to decode mcp_servers: {source}")]
+    DecodeServers {
+        #[source]
+        source: toml::de::Error,
+    },
+    #[error("failed to serialize config: {source}")]
+    Serialize {
+        #[source]
+        source: toml::ser::Error,
+    },
+    #[error("server `{0}` already exists")]
+    ServerAlreadyExists(String),
+    #[error("server `{0}` not found")]
+    ServerNotFound(String),
+    #[error("server name may not be empty")]
+    InvalidServerName,
+    #[error("invalid env var name `{name}`")]
+    InvalidEnvVarName { name: String },
+    #[error("server `{server}` missing bearer_env_var for auth token")]
+    MissingBearerEnvVar { server: String },
+    #[error("server `{server}` transport does not support login/logout")]
+    UnsupportedAuthTransport { server: String },
+}
+
+/// Helper to load and mutate MCP config stored under `[mcp_servers]`.
+pub struct McpConfigManager {
+    config_path: PathBuf,
+}
+
+impl McpConfigManager {
+    /// Create a manager that reads/writes the given config path.
+    pub fn new(config_path: impl Into<PathBuf>) -> Self {
+        Self {
+            config_path: config_path.into(),
+        }
+    }
+
+    /// Convenience constructor for a CODEX_HOME directory.
+    pub fn from_code_home(code_home: impl AsRef<Path>) -> Self {
+        Self::new(code_home.as_ref().join(DEFAULT_CONFIG_FILE))
+    }
+
+    /// Returns the underlying config path.
+    pub fn config_path(&self) -> &Path {
+        &self.config_path
+    }
+
+    /// Returns all configured MCP servers.
+    pub fn list_servers(&self) -> Result<Vec<McpServerEntry>, McpConfigError> {
+        let servers = self.read_servers()?;
+        Ok(servers
+            .into_iter()
+            .map(|(name, definition)| McpServerEntry { name, definition })
+            .collect())
+    }
+
+    /// Returns a single MCP server by name.
+    pub fn get_server(&self, name: &str) -> Result<McpServerEntry, McpConfigError> {
+        let servers = self.read_servers()?;
+        let Some(definition) = servers.get(name).cloned() else {
+            return Err(McpConfigError::ServerNotFound(name.to_string()));
+        };
+
+        Ok(McpServerEntry {
+            name: name.to_string(),
+            definition,
+        })
+    }
+
+    /// Adds or updates a server definition and injects any provided env vars.
+    pub fn add_server(
+        &self,
+        mut request: AddServerRequest,
+    ) -> Result<McpServerEntry, McpConfigError> {
+        if request.name.trim().is_empty() {
+            return Err(McpConfigError::InvalidServerName);
+        }
+
+        let mut env_injections = request.env.clone();
+        if let Some(token) = request.bearer_token.take() {
+            let var = Self::bearer_env_var(&request.name, &request.definition)?;
+            env_injections.entry(var).or_insert(token);
+        }
+
+        if let McpTransport::Stdio(transport) = &mut request.definition.transport {
+            for (key, value) in &env_injections {
+                transport.env.entry(key.clone()).or_insert(value.clone());
+            }
+        }
+
+        self.set_env_vars(&env_injections)?;
+
+        let (table, mut servers) = self.read_table_and_servers()?;
+        if !request.overwrite && servers.contains_key(&request.name) {
+            return Err(McpConfigError::ServerAlreadyExists(request.name));
+        }
+
+        servers.insert(request.name.clone(), request.definition.clone());
+        self.persist_servers(table, &servers)?;
+
+        Ok(McpServerEntry {
+            name: request.name,
+            definition: request.definition,
+        })
+    }
+
+    /// Removes a server definition. Returns the removed entry if it existed.
+    pub fn remove_server(&self, name: &str) -> Result<Option<McpServerEntry>, McpConfigError> {
+        let (table, mut servers) = self.read_table_and_servers()?;
+        let removed = servers.remove(name).map(|definition| McpServerEntry {
+            name: name.to_string(),
+            definition,
+        });
+
+        if removed.is_some() {
+            self.persist_servers(table, &servers)?;
+        }
+
+        Ok(removed)
+    }
+
+    /// Writes the provided token into the server's bearer env var.
+    pub fn login(
+        &self,
+        name: &str,
+        token: impl AsRef<str>,
+    ) -> Result<McpLoginResult, McpConfigError> {
+        let servers = self.read_servers()?;
+        let definition = servers
+            .get(name)
+            .ok_or_else(|| McpConfigError::ServerNotFound(name.to_string()))?;
+        let env_var = Self::bearer_env_var(name, definition)?;
+        self.validate_env_key(&env_var)?;
+        env::set_var(&env_var, token.as_ref());
+        Ok(McpLoginResult {
+            server: name.to_string(),
+            env_var: Some(env_var),
+        })
+    }
+
+    /// Clears the bearer env var used for the given server.
+    pub fn logout(&self, name: &str) -> Result<McpLogoutResult, McpConfigError> {
+        let servers = self.read_servers()?;
+        let definition = servers
+            .get(name)
+            .ok_or_else(|| McpConfigError::ServerNotFound(name.to_string()))?;
+        let env_var = Self::bearer_env_var(name, definition)?;
+        let cleared = env::var(&env_var).is_ok();
+        env::remove_var(&env_var);
+        Ok(McpLogoutResult {
+            server: name.to_string(),
+            env_var: Some(env_var),
+            cleared,
+        })
+    }
+
+    fn bearer_env_var(
+        name: &str,
+        definition: &McpServerDefinition,
+    ) -> Result<String, McpConfigError> {
+        match &definition.transport {
+            McpTransport::StreamableHttp(http) => {
+                http.bearer_env_var
+                    .clone()
+                    .ok_or_else(|| McpConfigError::MissingBearerEnvVar {
+                        server: name.to_string(),
+                    })
+            }
+            McpTransport::Stdio(_) => Err(McpConfigError::UnsupportedAuthTransport {
+                server: name.to_string(),
+            }),
+        }
+    }
+
+    fn read_servers(&self) -> Result<BTreeMap<String, McpServerDefinition>, McpConfigError> {
+        let table = self.load_table()?;
+        self.parse_servers(table.get(MCP_SERVERS_KEY))
+    }
+
+    fn read_table_and_servers(
+        &self,
+    ) -> Result<(TomlTable, BTreeMap<String, McpServerDefinition>), McpConfigError> {
+        let table = self.load_table()?;
+        let servers = self.parse_servers(table.get(MCP_SERVERS_KEY))?;
+        Ok((table, servers))
+    }
+
+    fn parse_servers(
+        &self,
+        value: Option<&TomlValue>,
+    ) -> Result<BTreeMap<String, McpServerDefinition>, McpConfigError> {
+        let Some(value) = value else {
+            return Ok(BTreeMap::new());
+        };
+
+        let table = value
+            .as_table()
+            .ok_or_else(|| McpConfigError::InvalidServers {
+                path: self.config_path.clone(),
+            })?;
+        let cloned = TomlValue::Table(table.clone());
+        cloned
+            .try_into()
+            .map_err(|source| McpConfigError::DecodeServers { source })
+    }
+
+    fn persist_servers(
+        &self,
+        mut table: TomlTable,
+        servers: &BTreeMap<String, McpServerDefinition>,
+    ) -> Result<(), McpConfigError> {
+        if servers.is_empty() {
+            table.remove(MCP_SERVERS_KEY);
+        } else {
+            let value = TomlValue::try_from(servers.clone())
+                .map_err(|source| McpConfigError::Serialize { source })?;
+            table.insert(MCP_SERVERS_KEY.to_string(), value);
+        }
+
+        self.write_table(table)
+    }
+
+    fn load_table(&self) -> Result<TomlTable, McpConfigError> {
+        if !self.config_path.exists() {
+            return Ok(TomlTable::new());
+        }
+
+        let contents =
+            fs::read_to_string(&self.config_path).map_err(|source| McpConfigError::Read {
+                path: self.config_path.clone(),
+                source,
+            })?;
+
+        if contents.trim().is_empty() {
+            return Ok(TomlTable::new());
+        }
+
+        let value: TomlValue = contents.parse().map_err(|source| McpConfigError::Parse {
+            path: self.config_path.clone(),
+            source,
+        })?;
+
+        value
+            .as_table()
+            .cloned()
+            .ok_or_else(|| McpConfigError::InvalidRoot {
+                path: self.config_path.clone(),
+            })
+    }
+
+    fn write_table(&self, table: TomlTable) -> Result<(), McpConfigError> {
+        if let Some(parent) = self.config_path.parent() {
+            fs::create_dir_all(parent).map_err(|source| McpConfigError::CreateDir {
+                path: parent.to_path_buf(),
+                source,
+            })?;
+        }
+
+        let serialized = toml::to_string_pretty(&TomlValue::Table(table))
+            .map_err(|source| McpConfigError::Serialize { source })?;
+
+        fs::write(&self.config_path, serialized).map_err(|source| McpConfigError::Write {
+            path: self.config_path.clone(),
+            source,
+        })
+    }
+
+    fn set_env_vars(&self, vars: &BTreeMap<String, String>) -> Result<(), McpConfigError> {
+        for (key, value) in vars {
+            self.validate_env_key(key)?;
+            env::set_var(key, value);
+        }
+        Ok(())
+    }
+
+    fn validate_env_key(&self, key: &str) -> Result<(), McpConfigError> {
+        let invalid = key.is_empty() || key.contains('=') || key.contains('\0');
+        if invalid {
+            return Err(McpConfigError::InvalidEnvVarName {
+                name: key.to_string(),
+            });
+        }
+        Ok(())
+    }
+}
 
 /// Shared launch configuration for stdio MCP/app-server processes.
 ///
@@ -997,7 +1410,45 @@ async fn broadcast_app_event(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{fs, os::unix::fs::PermissionsExt};
+    use std::{collections::BTreeMap, env, fs, os::unix::fs::PermissionsExt};
+
+    fn temp_config_manager() -> (tempfile::TempDir, McpConfigManager) {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let manager = McpConfigManager::from_code_home(dir.path());
+        (dir, manager)
+    }
+
+    fn stdio_definition(command: &str) -> McpServerDefinition {
+        McpServerDefinition {
+            transport: McpTransport::Stdio(StdioServerDefinition {
+                command: command.to_string(),
+                args: Vec::new(),
+                env: BTreeMap::new(),
+                timeout_ms: Some(1500),
+            }),
+            description: None,
+            tags: Vec::new(),
+            tools: None,
+        }
+    }
+
+    fn streamable_definition(url: &str, bearer_var: &str) -> McpServerDefinition {
+        McpServerDefinition {
+            transport: McpTransport::StreamableHttp(StreamableHttpDefinition {
+                url: url.to_string(),
+                headers: BTreeMap::new(),
+                bearer_env_var: Some(bearer_var.to_string()),
+                connect_timeout_ms: Some(5000),
+                request_timeout_ms: Some(5000),
+            }),
+            description: None,
+            tags: Vec::new(),
+            tools: Some(McpToolConfig {
+                enabled: vec![],
+                disabled: vec![],
+            }),
+        }
+    }
 
     fn write_fake_mcp_server() -> (tempfile::TempDir, PathBuf) {
         let dir = tempfile::tempdir().expect("tempdir");
@@ -1197,6 +1648,142 @@ for line in sys.stdin:
             .await
             .expect("spawn app server");
         (dir, server)
+    }
+
+    #[test]
+    fn add_stdio_server_injects_env_and_persists() {
+        let (dir, manager) = temp_config_manager();
+        let env_key = "MCP_STDIO_TEST_KEY";
+        env::remove_var(env_key);
+
+        let mut env_map = BTreeMap::new();
+        env_map.insert(env_key.to_string(), "secret".to_string());
+
+        let added = manager
+            .add_server(AddServerRequest {
+                name: "local".into(),
+                definition: stdio_definition("my-mcp"),
+                overwrite: false,
+                env: env_map,
+                bearer_token: None,
+            })
+            .expect("add server");
+
+        match added.definition.transport {
+            McpTransport::Stdio(def) => {
+                assert_eq!(def.command, "my-mcp");
+                assert_eq!(def.env.get(env_key), Some(&"secret".to_string()));
+            }
+            _ => panic!("expected stdio transport"),
+        }
+
+        let listed = manager.list_servers().expect("list servers");
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].name, "local");
+
+        let fetched = manager.get_server("local").expect("get server");
+        match fetched.definition.transport {
+            McpTransport::Stdio(def) => {
+                assert_eq!(def.env.get(env_key), Some(&"secret".to_string()))
+            }
+            _ => panic!("expected stdio transport"),
+        }
+
+        let config_path = dir.path().join(DEFAULT_CONFIG_FILE);
+        let serialized = fs::read_to_string(config_path).expect("read config");
+        let value: TomlValue = serialized.parse().expect("parse toml");
+        let table = value.as_table().expect("table root");
+        let servers_table = table.get(MCP_SERVERS_KEY).expect("mcp_servers");
+        let decoded: BTreeMap<String, McpServerDefinition> = servers_table
+            .clone()
+            .try_into()
+            .expect("decode mcp_servers");
+        let stored = decoded.get("local").expect("stored server");
+        match &stored.transport {
+            McpTransport::Stdio(def) => {
+                assert_eq!(def.env.get(env_key), Some(&"secret".to_string()))
+            }
+            _ => panic!("expected stdio transport"),
+        }
+
+        assert_eq!(env::var(env_key).unwrap(), "secret");
+        env::remove_var(env_key);
+    }
+
+    #[test]
+    fn add_streamable_http_sets_token_and_allows_login_logout() {
+        let (_dir, manager) = temp_config_manager();
+        let env_var = "MCP_HTTP_TOKEN_E5";
+        env::remove_var(env_var);
+
+        let mut definition = streamable_definition("https://example.test/mcp", env_var);
+        if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
+            http.headers.insert("X-Test".into(), "true".into());
+        }
+
+        let _added = manager
+            .add_server(AddServerRequest {
+                name: "remote".into(),
+                definition,
+                overwrite: false,
+                env: BTreeMap::new(),
+                bearer_token: Some("token-a".into()),
+            })
+            .expect("add server");
+
+        assert_eq!(env::var(env_var).unwrap(), "token-a");
+
+        let logout = manager.logout("remote").expect("logout");
+        assert_eq!(logout.env_var.as_deref(), Some(env_var));
+        assert!(logout.cleared);
+        assert!(env::var(env_var).is_err());
+
+        let login = manager.login("remote", "token-b").expect("login");
+        assert_eq!(login.env_var.as_deref(), Some(env_var));
+        assert_eq!(env::var(env_var).unwrap(), "token-b");
+
+        env::remove_var(env_var);
+    }
+
+    #[test]
+    fn remove_server_prunes_config() {
+        let (_dir, manager) = temp_config_manager();
+
+        manager
+            .add_server(AddServerRequest {
+                name: "one".into(),
+                definition: stdio_definition("one"),
+                overwrite: false,
+                env: BTreeMap::new(),
+                bearer_token: None,
+            })
+            .expect("add first");
+
+        manager
+            .add_server(AddServerRequest {
+                name: "two".into(),
+                definition: stdio_definition("two"),
+                overwrite: false,
+                env: BTreeMap::new(),
+                bearer_token: None,
+            })
+            .expect("add second");
+
+        let removed = manager.remove_server("one").expect("remove");
+        assert!(removed.is_some());
+
+        let listed = manager.list_servers().expect("list");
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].name, "two");
+
+        let config = fs::read_to_string(manager.config_path()).expect("read config");
+        let value: TomlValue = config.parse().expect("parse config");
+        let table = value.as_table().expect("table root");
+        let servers_value = table.get(MCP_SERVERS_KEY).cloned().expect("servers");
+        let servers: BTreeMap<String, McpServerDefinition> =
+            servers_value.try_into().expect("decode servers");
+        assert!(servers.get("one").is_none());
+        assert!(servers.get("two").is_some());
     }
 
     #[tokio::test]
