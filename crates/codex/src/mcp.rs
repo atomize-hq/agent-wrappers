@@ -250,6 +250,16 @@ pub struct AppCallHandle {
     pub response: oneshot::Receiver<Result<Value, McpError>>,
 }
 
+#[derive(Clone)]
+enum NotificationHook {
+    Codex {
+        sinks: Arc<Mutex<Vec<mpsc::UnboundedSender<CodexEvent>>>>,
+    },
+    App {
+        sinks: Arc<Mutex<Vec<mpsc::UnboundedSender<AppNotification>>>>,
+    },
+}
+
 /// Errors surfaced while managing MCP/app-server transports.
 #[derive(Debug, Error)]
 pub enum McpError {
@@ -367,11 +377,101 @@ impl CodexMcpServer {
     }
 }
 
+/// Client wrapper around the stdio app-server.
+pub struct CodexAppServer {
+    transport: Arc<JsonRpcTransport>,
+}
+
+impl CodexAppServer {
+    /// Launch `codex app-server`, issue `initialize`, and return a connected handle.
+    pub async fn start(config: StdioServerConfig, client: ClientInfo) -> Result<Self, McpError> {
+        Self::with_capabilities(config, client, Value::Null).await
+    }
+
+    /// Launch with explicit capabilities to send during `initialize`.
+    pub async fn with_capabilities(
+        config: StdioServerConfig,
+        client: ClientInfo,
+        capabilities: Value,
+    ) -> Result<Self, McpError> {
+        let transport = JsonRpcTransport::spawn_app(config).await?;
+        let params = InitializeParams {
+            client,
+            capabilities,
+        };
+
+        transport
+            .initialize(params, transport.startup_timeout())
+            .await
+            .map_err(|err| McpError::Handshake(err.to_string()))?;
+
+        Ok(Self {
+            transport: Arc::new(transport),
+        })
+    }
+
+    /// Start a new thread (or use a provided ID) via `thread/start`.
+    pub async fn thread_start(&self, params: ThreadStartParams) -> Result<AppCallHandle, McpError> {
+        self.invoke_app_call(METHOD_THREAD_START, serde_json::to_value(params)?)
+            .await
+    }
+
+    /// Resume an existing thread via `thread/resume`.
+    pub async fn thread_resume(
+        &self,
+        params: ThreadResumeParams,
+    ) -> Result<AppCallHandle, McpError> {
+        self.invoke_app_call(METHOD_THREAD_RESUME, serde_json::to_value(params)?)
+            .await
+    }
+
+    /// Start a new turn on a thread via `turn/start`.
+    pub async fn turn_start(&self, params: TurnStartParams) -> Result<AppCallHandle, McpError> {
+        self.invoke_app_call(METHOD_TURN_START, serde_json::to_value(params)?)
+            .await
+    }
+
+    /// Interrupt an active turn via `turn/interrupt`.
+    pub async fn turn_interrupt(
+        &self,
+        params: TurnInterruptParams,
+    ) -> Result<AppCallHandle, McpError> {
+        self.invoke_app_call(METHOD_TURN_INTERRUPT, serde_json::to_value(params)?)
+            .await
+    }
+
+    /// Request cancellation for a pending call.
+    pub fn cancel(&self, request_id: RequestId) -> Result<(), McpError> {
+        self.transport.cancel(request_id)
+    }
+
+    /// Gracefully shut down the app-server.
+    pub async fn shutdown(&self) -> Result<(), McpError> {
+        self.transport.shutdown().await
+    }
+
+    async fn invoke_app_call(
+        &self,
+        method: &str,
+        params: Value,
+    ) -> Result<AppCallHandle, McpError> {
+        let events = self.transport.register_app_listener().await;
+        let (request_id, raw_response) = self.transport.request(method, params).await?;
+        let response = map_response::<Value>(raw_response);
+
+        Ok(AppCallHandle {
+            request_id,
+            events,
+            response,
+        })
+    }
+}
+
 /// Internal transport that handles stdio JSON-RPC.
 struct JsonRpcTransport {
     writer: mpsc::UnboundedSender<String>,
     pending: Arc<Mutex<HashMap<RequestId, oneshot::Sender<Result<Value, McpError>>>>>,
-    codex_events: Arc<Mutex<Vec<mpsc::UnboundedSender<CodexEvent>>>>,
+    notification_hook: NotificationHook,
     next_id: AtomicU64,
     tasks: Vec<JoinHandle<()>>,
     child: Arc<Mutex<Option<Child>>>,
@@ -380,9 +480,27 @@ struct JsonRpcTransport {
 
 impl JsonRpcTransport {
     async fn spawn_mcp(config: StdioServerConfig) -> Result<Self, McpError> {
+        let hook = NotificationHook::Codex {
+            sinks: Arc::new(Mutex::new(Vec::new())),
+        };
+        Self::spawn_with_subcommand(config, "mcp-server", hook).await
+    }
+
+    async fn spawn_app(config: StdioServerConfig) -> Result<Self, McpError> {
+        let hook = NotificationHook::App {
+            sinks: Arc::new(Mutex::new(Vec::new())),
+        };
+        Self::spawn_with_subcommand(config, "app-server", hook).await
+    }
+
+    async fn spawn_with_subcommand(
+        config: StdioServerConfig,
+        subcommand: &str,
+        notification_hook: NotificationHook,
+    ) -> Result<Self, McpError> {
         let mut command = Command::new(&config.binary);
         command
-            .arg("mcp-server")
+            .arg(subcommand)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
@@ -416,14 +534,13 @@ impl JsonRpcTransport {
         let stderr = child.stderr.take();
 
         let pending = Arc::new(Mutex::new(HashMap::new()));
-        let codex_events = Arc::new(Mutex::new(Vec::new()));
         let (writer_tx, writer_rx) = mpsc::unbounded_channel();
 
         let writer_handle = tokio::spawn(writer_task(stdin, writer_rx));
         let reader_handle = tokio::spawn(reader_task(
             stdout,
             pending.clone(),
-            codex_events.clone(),
+            notification_hook.clone(),
             config.mirror_stdio,
         ));
 
@@ -438,7 +555,7 @@ impl JsonRpcTransport {
         Ok(Self {
             writer: writer_tx,
             pending,
-            codex_events,
+            notification_hook,
             next_id: AtomicU64::new(1),
             tasks,
             child: Arc::new(Mutex::new(Some(child))),
@@ -487,10 +604,33 @@ impl JsonRpcTransport {
     }
 
     async fn register_codex_listener(&self) -> EventStream<CodexEvent> {
-        let (tx, rx) = mpsc::unbounded_channel();
-        let mut guard = self.codex_events.lock().await;
-        guard.push(tx);
-        rx
+        match &self.notification_hook {
+            NotificationHook::Codex { sinks } => {
+                let (tx, rx) = mpsc::unbounded_channel();
+                let mut guard = sinks.lock().await;
+                guard.push(tx);
+                rx
+            }
+            _ => {
+                let (_tx, rx) = mpsc::unbounded_channel();
+                rx
+            }
+        }
+    }
+
+    async fn register_app_listener(&self) -> EventStream<AppNotification> {
+        match &self.notification_hook {
+            NotificationHook::App { sinks } => {
+                let (tx, rx) = mpsc::unbounded_channel();
+                let mut guard = sinks.lock().await;
+                guard.push(tx);
+                rx
+            }
+            _ => {
+                let (_tx, rx) = mpsc::unbounded_channel();
+                rx
+            }
+        }
     }
 
     fn cancel(&self, request_id: RequestId) -> Result<(), McpError> {
@@ -579,7 +719,7 @@ async fn writer_task(mut stdin: ChildStdin, mut rx: mpsc::UnboundedReceiver<Stri
 async fn reader_task(
     stdout: ChildStdout,
     pending: Arc<Mutex<HashMap<RequestId, oneshot::Sender<Result<Value, McpError>>>>>,
-    codex_events: Arc<Mutex<Vec<mpsc::UnboundedSender<CodexEvent>>>>,
+    notification_hook: NotificationHook,
     mirror_stdio: bool,
 ) {
     let mut lines = BufReader::new(stdout).lines();
@@ -604,16 +744,23 @@ async fn reader_task(
             Some(Incoming::Response(response)) => {
                 handle_response(response, &pending).await;
             }
-            Some(Incoming::Notification(notification)) => {
-                if notification.method == METHOD_CODEX_EVENT {
-                    let params = notification.params.unwrap_or(Value::Null);
-                    let event = parse_codex_event(&params).unwrap_or(CodexEvent::Raw {
-                        method: METHOD_CODEX_EVENT.to_string(),
-                        params,
-                    });
-                    broadcast_codex_event(event, &codex_events).await;
+            Some(Incoming::Notification(notification)) => match &notification_hook {
+                NotificationHook::Codex { sinks } => {
+                    if notification.method == METHOD_CODEX_EVENT {
+                        let params = notification.params.unwrap_or(Value::Null);
+                        let event = parse_codex_event(&params).unwrap_or(CodexEvent::Raw {
+                            method: METHOD_CODEX_EVENT.to_string(),
+                            params,
+                        });
+                        broadcast_codex_event(event, sinks).await;
+                    }
                 }
-            }
+                NotificationHook::App { sinks } => {
+                    let params = notification.params.unwrap_or(Value::Null);
+                    let event = parse_app_notification(&notification.method, &params);
+                    broadcast_app_event(event, sinks).await;
+                }
+            },
             None => {
                 warn!("received malformed MCP message");
             }
@@ -796,6 +943,57 @@ async fn broadcast_codex_event(
     guard.retain(|tx| tx.send(event.clone()).is_ok());
 }
 
+fn parse_app_notification(method: &str, value: &Value) -> AppNotification {
+    let notification_type = value
+        .get("type")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_lowercase();
+
+    let thread_id = extract_string(value, &["thread_id", "threadId"]).unwrap_or_default();
+    let turn_id = extract_string(value, &["turn_id", "turnId"]);
+
+    match notification_type.as_str() {
+        "task_complete" | "taskcomplete" => AppNotification::TaskComplete {
+            thread_id,
+            turn_id,
+            result: value.get("result").cloned().unwrap_or(Value::Null),
+        },
+        "item" => AppNotification::Item {
+            thread_id,
+            turn_id,
+            item: value.get("item").cloned().unwrap_or_else(|| value.clone()),
+        },
+        "error" => AppNotification::Error {
+            message: value
+                .get("message")
+                .or_else(|| value.get("error"))
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
+            data: value.get("data").cloned(),
+        },
+        _ => AppNotification::Raw {
+            method: method.to_string(),
+            params: value.clone(),
+        },
+    }
+}
+
+fn extract_string(value: &Value, keys: &[&str]) -> Option<String> {
+    keys.iter()
+        .find_map(|key| value.get(key).and_then(Value::as_str))
+        .map(|s| s.to_string())
+}
+
+async fn broadcast_app_event(
+    event: AppNotification,
+    sinks: &Arc<Mutex<Vec<mpsc::UnboundedSender<AppNotification>>>>,
+) {
+    let mut guard = sinks.lock().await;
+    guard.retain(|tx| tx.send(event.clone()).is_ok());
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -840,6 +1038,85 @@ for line in sys.stdin:
         send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"ready": True}})
     elif method == "codex/codex" or method == "codex/codex-reply":
         handle_codex(msg.get("id"))
+    elif method == "$/cancelRequest":
+        target = msg.get("params", {}).get("id")
+        pending[str(target)] = "cancelled"
+        send({"jsonrpc": "2.0", "id": target, "error": {"code": -32800, "message": "cancelled"}})
+    elif method == "shutdown":
+        send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"ok": True}})
+        break
+    elif method == "exit":
+        break
+"#;
+
+        fs::write(&script_path, script).expect("write script");
+        let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).expect("chmod");
+        (dir, script_path)
+    }
+
+    fn write_fake_app_server() -> (tempfile::TempDir, PathBuf) {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let script_path = dir.path().join("fake-codex-app");
+        let script = r#"#!/usr/bin/env python3
+import json
+import sys
+import threading
+import time
+
+pending = {}
+turn_lookup = {}
+
+def send(payload):
+    sys.stdout.write(json.dumps(payload) + "\n")
+    sys.stdout.flush()
+
+def handle_turn(req_id, params):
+    thread_id = params.get("thread_id") or "thread-unknown"
+    turn_id = f"turn-{req_id}"
+    pending[str(req_id)] = "pending"
+    turn_lookup[turn_id] = req_id
+
+    def worker():
+        time.sleep(0.05)
+        if pending.get(str(req_id)) == "cancelled":
+            return
+        send({"jsonrpc": "2.0", "method": "task/notification", "params": {"type": "item", "thread_id": thread_id, "turn_id": turn_id, "item": {"message": "processing"}}})
+        time.sleep(0.05)
+        if pending.get(str(req_id)) == "cancelled":
+            return
+        send({"jsonrpc": "2.0", "method": "task/notification", "params": {"type": "task_complete", "thread_id": thread_id, "turn_id": turn_id, "result": {"ok": True}}})
+        send({"jsonrpc": "2.0", "id": req_id, "result": {"turn_id": turn_id, "accepted": True}})
+        pending.pop(str(req_id), None)
+        turn_lookup.pop(turn_id, None)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+for line in sys.stdin:
+    if not line.strip():
+        continue
+    msg = json.loads(line)
+    method = msg.get("method")
+    if method == "initialize":
+        send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"ready": True}})
+    elif method == "thread/start":
+        params = msg.get("params", {})
+        thread_id = params.get("thread_id") or f"thread-{msg.get('id')}"
+        send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"thread_id": thread_id}})
+    elif method == "thread/resume":
+        params = msg.get("params", {})
+        thread_id = params.get("thread_id")
+        send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"thread_id": thread_id, "resumed": True}})
+    elif method == "turn/start":
+        handle_turn(msg.get("id"), msg.get("params", {}))
+    elif method == "turn/interrupt":
+        params = msg.get("params", {})
+        turn_id = params.get("turn_id")
+        req_id = turn_lookup.get(turn_id)
+        if req_id:
+            pending[str(req_id)] = "cancelled"
+        send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"interrupted": True}})
     elif method == "$/cancelRequest":
         target = msg.get("params", {}).get("id")
         pending[str(target)] = "cancelled"
@@ -948,6 +1225,148 @@ for line in sys.stdin:
 
         let handle = server.codex(params).await.expect("codex call");
         server.cancel(handle.request_id).expect("cancel send");
+
+        let response = time::timeout(Duration::from_secs(2), handle.response)
+            .await
+            .expect("response timeout")
+            .expect("recv");
+        assert!(matches!(response, Err(McpError::Cancelled)));
+
+        let _ = server.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn app_flow_streams_notifications_and_response() {
+        let (_dir, script) = write_fake_app_server();
+        let config = test_config(script);
+        let client = ClientInfo {
+            name: "tests".to_string(),
+            version: "0.0.0".to_string(),
+        };
+
+        let server = CodexAppServer::start(config, client)
+            .await
+            .expect("spawn server");
+
+        let thread_params = ThreadStartParams {
+            thread_id: None,
+            metadata: Value::Null,
+        };
+        let thread_handle = server
+            .thread_start(thread_params)
+            .await
+            .expect("thread start");
+        let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+            .await
+            .expect("thread response timeout")
+            .expect("thread response recv")
+            .expect("thread response ok");
+        let thread_id = thread_response
+            .get("thread_id")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        assert!(!thread_id.is_empty());
+
+        let params = TurnStartParams {
+            thread_id: thread_id.clone(),
+            prompt: "hi".into(),
+            model: None,
+            config: BTreeMap::new(),
+        };
+        let mut handle = server.turn_start(params).await.expect("turn start");
+
+        let first_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+            .await
+            .expect("event timeout")
+            .expect("event value");
+        let turn_id = match first_event {
+            AppNotification::Item {
+                thread_id: tid,
+                turn_id: Some(turn),
+                item,
+            } => {
+                assert_eq!(tid, thread_id);
+                assert!(item.get("message").is_some());
+                turn
+            }
+            other => panic!("unexpected event: {other:?}"),
+        };
+
+        let second_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+            .await
+            .expect("event timeout")
+            .expect("event value");
+        match second_event {
+            AppNotification::TaskComplete {
+                thread_id: tid,
+                turn_id: event_turn,
+                result,
+            } => {
+                assert_eq!(tid, thread_id);
+                assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
+                assert_eq!(result, serde_json::json!({ "ok": true }));
+            }
+            other => panic!("unexpected event: {other:?}"),
+        }
+
+        let response = time::timeout(Duration::from_secs(2), handle.response)
+            .await
+            .expect("response timeout")
+            .expect("response recv");
+        let response = response.expect("response ok");
+        assert_eq!(
+            response
+                .get("turn_id")
+                .and_then(Value::as_str)
+                .unwrap_or_default(),
+            turn_id
+        );
+
+        let _ = server.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn canceling_app_request_returns_cancelled_error() {
+        let (_dir, script) = write_fake_app_server();
+        let config = test_config(script);
+        let client = ClientInfo {
+            name: "tests".to_string(),
+            version: "0.0.0".to_string(),
+        };
+
+        let server = CodexAppServer::start(config, client)
+            .await
+            .expect("spawn server");
+
+        let thread_params = ThreadStartParams {
+            thread_id: None,
+            metadata: Value::Null,
+        };
+        let thread_handle = server
+            .thread_start(thread_params)
+            .await
+            .expect("thread start");
+        let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+            .await
+            .expect("thread response timeout")
+            .expect("thread response recv")
+            .expect("thread response ok");
+        let thread_id = thread_response
+            .get("thread_id")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+
+        let params = TurnStartParams {
+            thread_id,
+            prompt: "cancel me".into(),
+            model: None,
+            config: BTreeMap::new(),
+        };
+
+        let handle = server.turn_start(params).await.expect("turn start");
+        server.cancel(handle.request_id).expect("send cancel");
 
         let response = time::timeout(Duration::from_secs(2), handle.response)
             .await
