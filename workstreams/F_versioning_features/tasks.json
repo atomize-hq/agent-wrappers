@@ -45,5 +45,14 @@
     "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
     "tests": ["cargo test -p codex"],
     "status": "done"
+  },
+  {
+    "id": "F6-capability-overrides",
+    "title": "Allow host capability overrides",
+    "description": "Allow hosts to supply/override capability snapshots (version + feature flags) so guard consumers can skip probes for pinned/bundled Codex builds and opt into vendor-specific flags. Document override precedence, cache invalidation, and how to combine manual hints with probe results.",
+    "dependencies": ["F5-capability-consumers"],
+    "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
+    "tests": ["cargo test -p codex"],
+    "status": "doing"
   }
 ]

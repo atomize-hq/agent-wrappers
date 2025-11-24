@@ -11,3 +11,4 @@ Append entries: `[START ...] [END ...] Agent: <name> | Task(s): <IDs> | Branch: 
 [END 2025-11-23 21:24] Agent: Codex | Task(s): F4-capability-guards | Branch: ws/F_versioning_features | Notes: Capability guard helpers merged with tests and task branch integrated
 [START 2025-11-23 21:44] Agent: Codex | Task(s): F5-capability-consumers | Branch: ws/F_versioning_features | Notes: Starting capability consumer wiring task and worktree setup
 [END 2025-11-23 21:57] Agent: Codex | Task(s): F5-capability-consumers | Branch: ws/F_versioning_features | Notes: Capability consumers merged; optional flags now guarded with docs/tests
+[START 2025-11-23 22:14] Agent: Codex | Task(s): F6-capability-overrides | Branch: ws/F_versioning_features | Notes: Starting capability overrides task and worktree setup
