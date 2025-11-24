@@ -12,3 +12,6 @@ Append entries: `[START ...] [END ...] Agent: <name> | Task(s): <IDs> | Branch: 
 
 [START 2025-11-24 03:29:57Z] Agent: Codex | Task(s): H4-rustdoc-sync | Branch: ws/H_docs_examples | Notes: Starting rustdoc sync; will create task branch/worktree next
 [END 2025-11-24 03:35:52Z] Agent: Codex | Task(s): H4-rustdoc-sync | Branch: ws/H_docs_examples | Notes: Rustdoc refreshed with streaming/app-server/capability docs; merged task branch
+
+[START 2025-11-24 03:40:38Z] Agent: Codex | Task(s): H5-docs-qa | Branch: ws/H_docs_examples | Notes: Starting QA task; will branch/worktree next
+[END 2025-11-24 03:48:46Z] Agent: Codex | Task(s): H5-docs-qa | Branch: ws/H_docs_examples | Notes: QA complete; merged doc/streaming fixes after cargo test -p codex --doc/--examples

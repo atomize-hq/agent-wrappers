@@ -5,36 +5,91 @@
     "description": "List required doc sections and examples aligned with other workstreams: bundled binary/CODEX_HOME, streaming API, MCP/app-server, feature detection. Map each to files and commands.",
     "dependencies": [],
     "status": "done",
-    "files": ["workstreams/H_docs_examples/BRIEF.md", "README.md", "crates/codex/EXAMPLES.md"],
-    "outputs": ["Doc plan note"]
+    "files": [
+      "workstreams/H_docs_examples/BRIEF.md",
+      "README.md",
+      "crates/codex/EXAMPLES.md"
+    ],
+    "outputs": [
+      "Doc plan note"
+    ]
   },
   {
     "id": "H2-examples-update",
     "title": "Add/refresh examples",
     "description": "Add examples under crates/codex/examples for streaming, CODEX_HOME override, bundled binary selection, MCP codex/codex-reply, app-server thread/turn, feature detection. Ensure they compile and document required env vars.",
-    "dependencies": ["H1-plan-docs"],
-    "files": ["crates/codex/examples", "crates/codex/EXAMPLES.md"],
-    "tests": ["cargo test -p codex --examples"],
-    "outputs": ["New/updated example files"],
+    "dependencies": [
+      "H1-plan-docs"
+    ],
+    "files": [
+      "crates/codex/examples",
+      "crates/codex/EXAMPLES.md"
+    ],
+    "tests": [
+      "cargo test -p codex --examples"
+    ],
+    "outputs": [
+      "New/updated example files"
+    ],
     "status": "done"
   },
   {
     "id": "H3-readme",
     "title": "Update README and EXAMPLES guide",
     "description": "Document new APIs and examples: binary/CODEX_HOME setup, streaming API usage, MCP/app-server usage, version detection hooks. Link to examples and note safety defaults.",
-    "dependencies": ["H2-examples-update"],
-    "files": ["README.md", "crates/codex/EXAMPLES.md"],
-    "outputs": ["Updated docs"],
+    "dependencies": [
+      "H2-examples-update"
+    ],
+    "files": [
+      "README.md",
+      "crates/codex/EXAMPLES.md"
+    ],
+    "outputs": [
+      "Updated docs"
+    ],
     "status": "done"
   },
   {
     "id": "H4-rustdoc-sync",
     "title": "Sync crate-level rustdoc with latest APIs",
     "description": "Refresh crate-level documentation and inline rustdoc to match new APIs and examples: binary/CODEX_HOME setup, streaming event shapes, log tee + artifacts, MCP/app-server flows, capability detection hooks. Add short inline examples and link back to README/EXAMPLES.",
-    "dependencies": ["H3-readme"],
-    "files": ["crates/codex/src/lib.rs", "crates/codex/examples"],
-    "tests": ["cargo test -p codex --doc", "cargo test -p codex --examples"],
-    "outputs": ["Updated rustdoc"],
+    "dependencies": [
+      "H3-readme"
+    ],
+    "files": [
+      "crates/codex/src/lib.rs",
+      "crates/codex/examples"
+    ],
+    "tests": [
+      "cargo test -p codex --doc",
+      "cargo test -p codex --examples"
+    ],
+    "outputs": [
+      "Updated rustdoc"
+    ],
+    "status": "done"
+  },
+  {
+    "id": "H5-docs-qa",
+    "title": "QA docs and examples",
+    "description": "Run doc tests/examples, verify streaming event shapes/log tee/artifact paths, and cross-check MCP/app-server/capability instructions against latest APIs and samples. Patch any drift and note coverage gaps.",
+    "dependencies": [
+      "H4-rustdoc-sync"
+    ],
+    "files": [
+      "README.md",
+      "crates/codex/EXAMPLES.md",
+      "crates/codex/src/lib.rs",
+      "crates/codex/examples"
+    ],
+    "tests": [
+      "cargo test -p codex --doc",
+      "cargo test -p codex --examples"
+    ],
+    "outputs": [
+      "QA notes",
+      "Doc/example fixes"
+    ],
     "status": "done"
   }
 ]
