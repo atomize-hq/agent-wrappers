@@ -88,5 +88,15 @@
     "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
     "tests": ["cargo test -p codex"],
     "outputs": ["Public helpers for listing/preparing runtimes", "Tests for stdio + HTTP retrieval without mutation"]
+  },
+  {
+    "id": "E10-app-runtime-api",
+    "title": "App runtime API surface",
+    "status": "done",
+    "description": "Expose a lightweight API surface around the app-server helpers so callers can list available runtimes/metadata and prepare launch-ready stdio configs (Workstream A env prep intact) without mutating stored config or thread state.",
+    "dependencies": ["E3-implement-app-server"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Public app runtime helpers", "Tests for listing/preparing app runtimes without mutation"]
   }
 ]
