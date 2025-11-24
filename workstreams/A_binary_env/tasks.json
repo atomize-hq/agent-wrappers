@@ -51,7 +51,7 @@
     "dependencies": ["A4-integration-smoke"],
     "files": ["crates/codex/src/lib.rs", "crates/codex/EXAMPLES.md"],
     "outputs": ["Public helper(s) describing CODEX_HOME layout and log paths"],
-    "status": "todo",
+    "status": "doing",
     "tests": ["cargo test -p codex"],
     "notes": "Keep helpers read-only unless create_home_dirs is true; document expected file locations for host apps."
   }
