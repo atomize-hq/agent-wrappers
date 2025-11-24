@@ -5,3 +5,5 @@ Append entries: `[START ...] [END ...] Agent: <name> | Task(s): <IDs> | Branch: 
 [END 2025-11-23 18:31] Agent: Codex | Task(s): F1-design-capability-model | Branch: ws/F_versioning_features | Notes: Capability model and probe strategy doc comments merged
 [START 2025-11-23 20:02] Agent: Codex | Task(s): F2-implement-probes | Branch: ws/F_versioning_features | Notes: Starting probe implementation task
 [END 2025-11-23 20:22] Agent: Codex | Task(s): F2-implement-probes | Branch: ws/F_versioning_features | Notes: Capability probes implemented and merged
+[START 2025-11-23 20:49] Agent: Codex | Task(s): F3-update-advisory | Branch: ws/F_versioning_features | Notes: Starting advisory helpers task and worktree setup
+[END 2025-11-23 21:03] Agent: Codex | Task(s): F3-update-advisory | Branch: ws/F_versioning_features | Notes: Update advisory helpers merged with docs/tests; ready for next task kickoff

@@ -25,6 +25,16 @@
     "dependencies": ["F2-implement-probes"],
     "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
     "tests": ["cargo test -p codex"],
-    "outputs": ["Docs describing integration"]
+    "outputs": ["Docs describing integration"],
+    "status": "done"
+  },
+  {
+    "id": "F4-capability-guards",
+    "title": "Gate wrapper behavior behind capability probes",
+    "description": "Use probed capabilities to guard optional Codex flags (output-schema, add-dir, login --mcp). Add helper(s) that let hosts opt-in to features only when supported and degrade gracefully otherwise.",
+    "dependencies": ["F3-update-advisory"],
+    "files": ["crates/codex/src/lib.rs"],
+    "tests": ["cargo test -p codex"],
+    "status": "todo"
   }
 ]
