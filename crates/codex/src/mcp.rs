@@ -170,6 +170,48 @@ pub struct ResolvedStreamableHttpDefinition {
     pub request_timeout_ms: Option<u64>,
 }
 
+/// Launcher/connector wrapper around a resolved MCP runtime server.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct McpServerLauncher {
+    pub name: String,
+    pub transport: McpServerLauncherTransport,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tools: Option<McpToolConfig>,
+}
+
+/// Transport-specific launcher/connector.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum McpServerLauncherTransport {
+    Stdio(StdioLauncher),
+    StreamableHttp(StreamableHttpConnector),
+}
+
+/// Prepared stdio launcher with merged env and startup timeout.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StdioLauncher {
+    pub command: PathBuf,
+    pub args: Vec<String>,
+    pub env: Vec<(OsString, OsString)>,
+    pub current_dir: Option<PathBuf>,
+    pub timeout: Duration,
+    pub mirror_stdio: bool,
+}
+
+/// Prepared HTTP connector with resolved headers and timeouts.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StreamableHttpConnector {
+    pub url: String,
+    pub headers: BTreeMap<String, String>,
+    pub bearer_env_var: Option<String>,
+    pub bearer_token: Option<String>,
+    pub connect_timeout: Option<Duration>,
+    pub request_timeout: Option<Duration>,
+}
+
 /// Input for adding or updating an MCP server entry.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AddServerRequest {
@@ -328,6 +370,131 @@ fn resolve_streamable_http(
     }
 }
 
+impl McpRuntimeServer {
+    /// Converts a runtime server into a launcher/connector, merging stdio defaults.
+    pub fn into_launcher(self, defaults: &StdioServerConfig) -> McpServerLauncher {
+        let McpRuntimeServer {
+            name,
+            transport,
+            description,
+            tags,
+            tools,
+        } = self;
+
+        let transport = match transport {
+            McpRuntimeTransport::Stdio(def) => {
+                McpServerLauncherTransport::Stdio(StdioLauncher::from_runtime(def, defaults))
+            }
+            McpRuntimeTransport::StreamableHttp(def) => {
+                McpServerLauncherTransport::StreamableHttp(def.into())
+            }
+        };
+
+        McpServerLauncher {
+            name,
+            transport,
+            description,
+            tags,
+            tools,
+        }
+    }
+
+    /// Convenience clone-preserving conversion to a launcher/connector.
+    pub fn to_launcher(&self, defaults: &StdioServerConfig) -> McpServerLauncher {
+        self.clone().into_launcher(defaults)
+    }
+}
+
+impl StdioLauncher {
+    fn from_runtime(definition: StdioServerDefinition, defaults: &StdioServerConfig) -> Self {
+        let env = merge_stdio_env(
+            defaults.code_home.as_deref(),
+            &defaults.env,
+            &definition.env,
+        );
+
+        Self {
+            command: PathBuf::from(definition.command),
+            args: definition.args,
+            env,
+            current_dir: defaults.current_dir.clone(),
+            timeout: definition
+                .timeout_ms
+                .map(Duration::from_millis)
+                .unwrap_or(defaults.startup_timeout),
+            mirror_stdio: defaults.mirror_stdio,
+        }
+    }
+
+    /// Builds a `tokio::process::Command` with merged env/dirs applied.
+    pub fn command(&self) -> Command {
+        let mut command = Command::new(&self.command);
+        command
+            .args(&self.args)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true);
+
+        if let Some(dir) = &self.current_dir {
+            command.current_dir(dir);
+        }
+
+        for (key, value) in &self.env {
+            command.env(key, value);
+        }
+
+        command
+    }
+}
+
+impl From<ResolvedStreamableHttpDefinition> for StreamableHttpConnector {
+    fn from(definition: ResolvedStreamableHttpDefinition) -> Self {
+        let ResolvedStreamableHttpDefinition {
+            url,
+            headers,
+            bearer_env_var,
+            bearer_token,
+            connect_timeout_ms,
+            request_timeout_ms,
+        } = definition;
+
+        Self {
+            url,
+            headers,
+            bearer_env_var,
+            bearer_token,
+            connect_timeout: connect_timeout_ms.map(Duration::from_millis),
+            request_timeout: request_timeout_ms.map(Duration::from_millis),
+        }
+    }
+}
+
+fn merge_stdio_env(
+    code_home: Option<&Path>,
+    base_env: &[(OsString, OsString)],
+    runtime_env: &BTreeMap<String, String>,
+) -> Vec<(OsString, OsString)> {
+    let mut merged: HashMap<OsString, OsString> = HashMap::new();
+
+    if let Some(code_home) = code_home {
+        merged.insert(
+            OsString::from("CODEX_HOME"),
+            code_home.as_os_str().to_os_string(),
+        );
+    }
+
+    for (key, value) in base_env {
+        merged.insert(key.clone(), value.clone());
+    }
+
+    for (key, value) in runtime_env {
+        merged.insert(OsString::from(key), OsString::from(value));
+    }
+
+    merged.into_iter().collect()
+}
+
 /// Helper to load and mutate MCP config stored under `[mcp_servers]`.
 pub struct McpConfigManager {
     config_path: PathBuf,
@@ -385,6 +552,30 @@ impl McpConfigManager {
     /// Returns a runtime-ready config for a single server by name.
     pub fn runtime_server(&self, name: &str) -> Result<McpRuntimeServer, McpConfigError> {
         self.get_server(name).map(McpRuntimeServer::from)
+    }
+
+    /// Returns prepared launchers/connectors for all runtime servers.
+    pub fn runtime_launchers(
+        &self,
+        defaults: &StdioServerConfig,
+    ) -> Result<Vec<McpServerLauncher>, McpConfigError> {
+        self.runtime_servers()
+            .map(|servers| {
+                servers
+                    .into_iter()
+                    .map(|server| server.into_launcher(defaults))
+                    .collect()
+            })
+    }
+
+    /// Returns a prepared launcher/connector for a single runtime server by name.
+    pub fn runtime_launcher(
+        &self,
+        name: &str,
+        defaults: &StdioServerConfig,
+    ) -> Result<McpServerLauncher, McpConfigError> {
+        self.runtime_server(name)
+            .map(|server| server.into_launcher(defaults))
     }
 
     /// Adds or updates a server definition and injects any provided env vars.
@@ -1536,7 +1727,13 @@ async fn broadcast_app_event(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{collections::BTreeMap, env, fs, os::unix::fs::PermissionsExt};
+    use std::{
+        collections::{BTreeMap, HashMap},
+        env, fs,
+        ffi::OsString,
+        os::unix::fs::PermissionsExt,
+        path::PathBuf,
+    };
 
     fn temp_config_manager() -> (tempfile::TempDir, McpConfigManager) {
         let dir = tempfile::tempdir().expect("tempdir");
@@ -2049,6 +2246,158 @@ for line in sys.stdin:
                 );
             }
             other => panic!("expected streamable_http transport, got {other:?}"),
+        }
+
+        env::remove_var(env_var);
+    }
+
+    #[test]
+    fn runtime_stdio_launcher_merges_env_timeout_and_tools() {
+        let base_dir = tempfile::tempdir().expect("tempdir");
+        let code_home = base_dir.path().join("code_home");
+
+        let defaults = StdioServerConfig {
+            binary: PathBuf::from("codex"),
+            code_home: Some(code_home.clone()),
+            current_dir: Some(base_dir.path().to_path_buf()),
+            env: vec![
+                (OsString::from("BASE_ONLY"), OsString::from("base")),
+                (OsString::from("OVERRIDE_ME"), OsString::from("base")),
+            ],
+            mirror_stdio: true,
+            startup_timeout: Duration::from_secs(5),
+        };
+
+        let mut definition = StdioServerDefinition {
+            command: "my-mcp".into(),
+            args: vec!["--flag".into()],
+            env: BTreeMap::new(),
+            timeout_ms: Some(1500),
+        };
+        definition
+            .env
+            .insert("OVERRIDE_ME".into(), "runtime".into());
+        definition
+            .env
+            .insert("RUNTIME_ONLY".into(), "runtime-env".into());
+
+        let runtime = McpRuntimeServer {
+            name: "local".into(),
+            transport: McpRuntimeTransport::Stdio(definition),
+            description: Some("example".into()),
+            tags: vec!["dev".into()],
+            tools: Some(McpToolConfig {
+                enabled: vec!["tool-1".into()],
+                disabled: vec!["tool-2".into()],
+            }),
+        };
+
+        let launcher = runtime.into_launcher(&defaults);
+        assert_eq!(launcher.name, "local");
+        assert_eq!(launcher.description.as_deref(), Some("example"));
+        assert_eq!(launcher.tags, vec!["dev".to_string()]);
+
+        let tools = launcher.tools.clone().expect("tool hints");
+        assert_eq!(tools.enabled, vec!["tool-1".to_string()]);
+        assert_eq!(tools.disabled, vec!["tool-2".to_string()]);
+
+        match launcher.transport {
+            McpServerLauncherTransport::Stdio(launch) => {
+                assert_eq!(launch.command, PathBuf::from("my-mcp"));
+                assert_eq!(launch.args, vec!["--flag".to_string()]);
+                assert_eq!(
+                    launch.current_dir.as_ref(),
+                    defaults.current_dir.as_ref()
+                );
+                assert_eq!(launch.timeout, Duration::from_millis(1500));
+                assert!(launch.mirror_stdio);
+
+                let env_map: HashMap<OsString, OsString> = launch.env.into_iter().collect();
+                assert_eq!(
+                    env_map.get(&OsString::from("BASE_ONLY")),
+                    Some(&OsString::from("base"))
+                );
+                assert_eq!(
+                    env_map.get(&OsString::from("OVERRIDE_ME")),
+                    Some(&OsString::from("runtime"))
+                );
+                assert_eq!(
+                    env_map.get(&OsString::from("RUNTIME_ONLY")),
+                    Some(&OsString::from("runtime-env"))
+                );
+                assert_eq!(
+                    env_map.get(&OsString::from("CODEX_HOME")),
+                    Some(&code_home.as_os_str().to_os_string())
+                );
+            }
+            other => panic!("expected stdio launcher, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn streamable_http_connector_converts_timeouts_and_headers() {
+        let env_var = "MCP_HTTP_TOKEN_E7";
+        env::set_var(env_var, "token-launcher");
+
+        let mut definition = StreamableHttpDefinition {
+            url: "https://example.test/stream".into(),
+            headers: BTreeMap::new(),
+            bearer_env_var: Some(env_var.to_string()),
+            connect_timeout_ms: Some(1200),
+            request_timeout_ms: Some(3400),
+        };
+        definition
+            .headers
+            .insert("X-Test".into(), "true".into());
+
+        let runtime = McpRuntimeServer {
+            name: "remote".into(),
+            transport: McpRuntimeTransport::StreamableHttp(resolve_streamable_http(definition)),
+            description: None,
+            tags: vec!["http".into()],
+            tools: Some(McpToolConfig {
+                enabled: vec!["tool-a".into()],
+                disabled: vec![],
+            }),
+        };
+
+        let defaults = StdioServerConfig {
+            binary: PathBuf::from("codex"),
+            code_home: None,
+            current_dir: None,
+            env: Vec::new(),
+            mirror_stdio: false,
+            startup_timeout: Duration::from_secs(2),
+        };
+
+        let launcher = runtime.into_launcher(&defaults);
+        match launcher.transport {
+            McpServerLauncherTransport::StreamableHttp(connector) => {
+                assert_eq!(connector.url, "https://example.test/stream");
+                assert_eq!(
+                    connector.headers.get("X-Test").map(String::as_str),
+                    Some("true")
+                );
+                assert_eq!(
+                    connector.headers.get("Authorization").map(String::as_str),
+                    Some("Bearer token-launcher")
+                );
+                assert_eq!(
+                    connector.connect_timeout,
+                    Some(Duration::from_millis(1200))
+                );
+                assert_eq!(
+                    connector.request_timeout,
+                    Some(Duration::from_millis(3400))
+                );
+                assert_eq!(connector.bearer_env_var.as_deref(), Some(env_var));
+                assert_eq!(connector.bearer_token.as_deref(), Some("token-launcher"));
+
+                let tools = launcher.tools.as_ref().expect("tool hints present");
+                assert_eq!(tools.enabled, vec!["tool-a".to_string()]);
+                assert!(tools.disabled.is_empty());
+            }
+            other => panic!("expected http connector, got {other:?}"),
         }
 
         env::remove_var(env_var);
