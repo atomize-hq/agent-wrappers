@@ -21,7 +21,7 @@
   {
     "id": "E3-implement-app-server",
     "title": "Implement app-server launcher and thread/turn helpers",
-    "status": "doing",
+    "status": "done",
     "description": "Add code to spawn codex app-server over stdio, send initialize + thread/start/resume, turn/start/interrupt, and stream task_complete and item notifications. Share transport code with E2 where possible.",
     "dependencies": ["E1-design-mcp-app"],
     "files": ["crates/codex/src/lib.rs"],
