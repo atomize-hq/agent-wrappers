@@ -43,7 +43,7 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 
 ## Streaming Output & Artifacts
 - Enable JSONL streaming with `.json(true)` or by invoking the CLI directly. The crate returns captured output; use the examples to consume the stream yourself:
-  - `crates/codex/examples/stream_events.rs`: typed consumer for `thread.started`, `turn.started/completed`, and `item.created` events; includes idle timeout handling and a `--sample` replay path.
+  - `crates/codex/examples/stream_events.rs`: typed consumer for `thread.started`, `turn.started/completed`, and `item.created` events; uses `--timeout 0` to keep streaming, includes idle timeout handling, and a `--sample` replay path.
   - `crates/codex/examples/stream_last_message.rs`: runs `--output-last-message` + `--output-schema`, reads the emitted files, and ships sample payloads if the binary is missing.
   - `crates/codex/examples/stream_with_log.rs`: mirrors JSON events to stdout and tees them to `CODEX_LOG_PATH` (default `codex-stream.log`); also supports `--sample`.
   - `crates/codex/examples/json_stream.rs`: simplest `--json` usage when you just want the raw stream buffered.
