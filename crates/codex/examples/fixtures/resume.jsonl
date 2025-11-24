@@ -1,7 +1,5 @@
-{"type":"thread.resumed","thread_id":"demo-thread"}
-{"type":"turn.started","turn_id":"turn-9","thread_id":"demo-thread"}
-{"type":"item.created","thread_id":"demo-thread","turn_id":"turn-9","item":{"type":"reasoning","id":"r1","content":"Rehydrating context for the apply step."}}
-{"type":"item.created","thread_id":"demo-thread","turn_id":"turn-9","item":{"type":"command_execution","id":"cmd-9","status":"completed","content":"git status --short"}}
-{"type":"item.created","thread_id":"demo-thread","turn_id":"turn-9","item":{"type":"file_change","id":"chg-9","status":"completed","content":"Staged src/lib.rs changes"}}
-{"type":"item.created","thread_id":"demo-thread","turn_id":"turn-9","item":{"type":"agent_message","id":"msg-9","status":"completed","content":"Ready to apply the staged diff."}}
-{"type":"turn.completed","turn_id":"turn-9","thread_id":"demo-thread"}
+{"type":"thread.started","thread_id":"019ab7c5-3c6c-7dd3-8e6e-cec2a5a49a62"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"**Providing brief follow-up**"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"- Still no repo visibility (read-only, no commands run); hygiene status remains unknown.\n- When you can, run `git status` plus your usual lint/tests to surface any pending issues."}}
+{"type":"turn.completed","usage":{"input_tokens":7569,"cached_input_tokens":7040,"output_tokens":109}}

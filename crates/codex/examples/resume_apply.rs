@@ -1,14 +1,16 @@
 //! Resume a Codex session and apply the latest diff.
 //!
-//! This example streams events from `codex resume --json` (using `--last` or a provided
-//! conversation ID) and then calls `codex diff`/`codex apply` to preview and apply the staged
-//! changes. Pass `--sample` to replay bundled payloads from
-//! `crates/codex/examples/fixtures/` when you do not have a Codex binary.
+//! The current CLI (0.61.0) streams resume events via `codex exec --json resume --last`
+//! but does not expose JSON diff/apply helpers. This example streams the resume events
+//! and will attempt a live `codex apply <task-id>` when `--apply-task <id>` is provided;
+//! otherwise it replays the bundled diff/apply fixtures. Pass `--sample` to replay all
+//! fixtures when you do not have a Codex binary.
 //!
 //! Examples:
 //! ```bash
 //! cargo run -p codex --example resume_apply -- --sample
 //! CODEX_CONVERSATION_ID=abc123 cargo run -p codex --example resume_apply
+//! CODEX_CONVERSATION_ID=abc123 cargo run -p codex --example resume_apply -- --apply-task task-123
 //! cargo run -p codex --example resume_apply -- --resume-id abc123 --no-apply
 //! ```
 
@@ -34,12 +36,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let skip_apply = take_flag(&mut args, "--no-apply");
     let resume_id =
         take_value(&mut args, "--resume-id").or_else(|| env::var("CODEX_CONVERSATION_ID").ok());
+    let apply_task = take_value(&mut args, "--apply-task");
 
     let binary = resolve_binary();
     if use_sample || !binary_exists(&binary) {
         eprintln!(
-            "Using sample resume/apply payloads from {} and {}; set CODEX_BINARY and drop --sample to hit the real binary.",
+            "Using sample resume/apply payloads from {}, {}, and {}; set CODEX_BINARY and drop --sample to hit the real binary.",
             fixtures::RESUME_FIXTURE_PATH,
+            fixtures::DIFF_FIXTURE_PATH,
             fixtures::APPLY_FIXTURE_PATH
         );
         replay_samples(!skip_apply);
@@ -47,8 +51,27 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     stream_resume(&binary, resume_id.as_deref()).await?;
-    if !skip_apply {
-        run_diff_and_apply(&binary).await?;
+
+    if skip_apply {
+        return Ok(());
+    }
+
+    if let Some(task_id) = apply_task.as_deref() {
+        if let Err(err) = run_apply(&binary, task_id).await {
+            eprintln!(
+                "codex apply failed; showing sample diff/apply payloads from {} and {}: {err}",
+                fixtures::DIFF_FIXTURE_PATH,
+                fixtures::APPLY_FIXTURE_PATH
+            );
+            print_diff_apply_samples(true);
+        }
+    } else {
+        eprintln!(
+            "codex apply now expects a task id; showing sample diff/apply payloads from {} and {}.",
+            fixtures::DIFF_FIXTURE_PATH,
+            fixtures::APPLY_FIXTURE_PATH
+        );
+        print_diff_apply_samples(true);
     }
 
     Ok(())
@@ -59,13 +82,23 @@ async fn stream_resume(binary: &Path, resume_id: Option<&str>) -> Result<(), Box
 
     let mut command = Command::new(binary);
     command
-        .arg("resume")
-        .args(["--json", "--skip-git-repo-check", "--timeout", "0"]);
+        .args([
+            "exec",
+            "--json",
+            "--skip-git-repo-check",
+            "--sandbox",
+            "read-only",
+            "--color",
+            "never",
+        ])
+        .arg("resume");
+
     if let Some(id) = resume_id {
-        command.args(["--id", id]);
+        command.arg(id);
     } else {
         command.arg("--last");
     }
+
     command
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
@@ -79,31 +112,15 @@ async fn stream_resume(binary: &Path, resume_id: Option<&str>) -> Result<(), Box
 
     let status = child.wait().await?;
     if !status.success() {
-        return Err(format!("codex resume exited with {status}").into());
+        return Err(format!("codex exec resume exited with {status}").into());
     }
 
     Ok(())
 }
 
-async fn run_diff_and_apply(binary: &Path) -> Result<(), Box<dyn Error>> {
-    println!("--- diff preview ---");
-    let diff_output = Command::new(binary)
-        .args(["diff", "--json", "--skip-git-repo-check"])
-        .output()
-        .await?;
-    if !diff_output.stdout.is_empty() {
-        println!("{}", String::from_utf8_lossy(&diff_output.stdout));
-    }
-
-    if !diff_output.status.success() {
-        return Err(format!("codex diff exited with {}", diff_output.status).into());
-    }
-
-    println!("--- apply ---");
-    let output = Command::new(binary)
-        .args(["apply", "--json", "--skip-git-repo-check"])
-        .output()
-        .await?;
+async fn run_apply(binary: &Path, task_id: &str) -> Result<(), Box<dyn Error>> {
+    println!("--- apply (task {task_id}) ---");
+    let output = Command::new(binary).args(["apply", task_id]).output().await?;
 
     println!("exit status: {}", output.status);
     if !output.stdout.is_empty() {
@@ -113,7 +130,21 @@ async fn run_diff_and_apply(binary: &Path) -> Result<(), Box<dyn Error>> {
         println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
     }
 
+    if !output.status.success() {
+        return Err(format!("codex apply exited with {}", output.status).into());
+    }
+
     Ok(())
+}
+
+fn print_diff_apply_samples(include_apply: bool) {
+    println!("--- diff preview (sample) ---");
+    print!("{}", fixtures::sample_diff());
+
+    if include_apply {
+        println!("--- apply (sample) ---");
+        println!("{}", fixtures::apply_result());
+    }
 }
 
 fn replay_samples(include_apply: bool) {
@@ -122,13 +153,7 @@ fn replay_samples(include_apply: bool) {
         println!("{line}");
     }
 
-    println!("--- diff preview (sample) ---");
-    print!("{}", fixtures::sample_diff());
-
-    if include_apply {
-        println!("--- apply (sample) ---");
-        println!("{}", fixtures::apply_result());
-    }
+    print_diff_apply_samples(include_apply);
 }
 
 fn resolve_binary() -> PathBuf {

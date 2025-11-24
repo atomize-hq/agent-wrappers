@@ -1,14 +1,14 @@
 # Codex Wrapper Examples vs. Native CLI
 
-Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. Wrapper calls (`cargo run -p codex --example ...`) run with safe defaults: `--skip-git-repo-check`, temp working dirs unless overridden, 120s timeout, ANSI color disabled, and `RUST_LOG=error` unless set. Select the binary with `CODEX_BINARY` or `.binary(...)`; set `CODEX_HOME` to keep config/auth/history/logs under an app-scoped directory. Examples labeled `--sample` print mocked data (covering `thread/turn/item` events and MCP/app-server notifications) when you do not have a binary handy; streaming/resume/apply fixtures live in `crates/codex/examples/fixtures/*` so docs and samples stay aligned.
+Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. Wrapper calls (`cargo run -p codex --example ...`) run with safe defaults: `--skip-git-repo-check`, temp working dirs unless overridden, 120s timeout, ANSI color disabled, and `RUST_LOG=error` unless set. Select the binary with `CODEX_BINARY` or `.binary(...)`; set `CODEX_HOME` to keep config/auth/history/logs under an app-scoped directory. Examples labeled `--sample` print fixture data captured from the live CLI (compact `thread.started`/`turn.started`/`item.completed`/`turn.completed` events plus MCP/app-server notifications) when you do not have a binary handy; streaming/resume/apply fixtures live in `crates/codex/examples/fixtures/*` so docs and samples stay aligned.
 
 ## Basics
 
 | Wrapper example | Native command | Notes |
 | --- | --- | --- |
 | `cargo run -p codex --example send_prompt -- "List Rust toolchain commands"` | `codex exec "List Rust toolchain commands" --skip-git-repo-check` | Baseline prompt with default timeout/temp dir. |
-| `cargo run -p codex --example timeout -- "List long-running tasks"` | `codex exec "List long-running tasks" --skip-git-repo-check --timeout 30` | Forces a 30‑second timeout. |
-| `cargo run -p codex --example timeout_zero -- "Stream until completion"` | `codex exec "Stream until completion" --skip-git-repo-check --timeout 0` | Disables the wrapper timeout. |
+| `cargo run -p codex --example timeout -- "List long-running tasks"` | `codex exec "List long-running tasks" --skip-git-repo-check` | Wrapper-enforced 30‑second timeout (CLI flag no longer exposed). |
+| `cargo run -p codex --example timeout_zero -- "Stream until completion"` | `codex exec "Stream until completion" --skip-git-repo-check` | Disables the wrapper timeout; CLI currently offers no `--timeout` flag. |
 | `cargo run -p codex --example working_dir -- "C:\\path\\to\\repo" "List files here"` | `codex exec "List files here" --skip-git-repo-check --cd "C:\\path\\to\\repo"` | Run inside a specific directory. |
 | `cargo run -p codex --example working_dir_json -- "C:\\path\\to\\repo" "Summarize repo status"` | `echo "Summarize repo status" \| codex exec --skip-git-repo-check --json --cd "C:\\path\\to\\repo"` | Combines working dir override with JSON streaming. |
 | `cargo run -p codex --example select_model -- gpt-5-codex -- "Explain rustfmt defaults"` | `codex exec "Explain rustfmt defaults" --skip-git-repo-check --model gpt-5-codex` | Picks a specific model. |
@@ -30,15 +30,15 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 | Wrapper example | Native command | Notes |
 | --- | --- | --- |
 | `cargo run -p codex --example json_stream -- "Summarize repo status"` | `echo "Summarize repo status" \| codex exec --skip-git-repo-check --json` | Enable JSONL streaming; prompt is piped via stdin. |
-| `cargo run -p codex --example stream_events -- "Summarize repo status"` | `echo "Summarize repo status" \| codex exec --skip-git-repo-check --json --timeout 0` | Typed consumer for `thread/turn/item` events (thread/turn IDs included, item created/updated for agent_message, reasoning, command_execution, file_change, mcp_tool_call, web_search, todo_list) plus `turn.failed`; `--sample` replays bundled events. |
+| `cargo run -p codex --example stream_events -- "Summarize repo status"` | `echo "Summarize repo status" \| codex exec --skip-git-repo-check --json --sandbox read-only --color never` | Typed consumer for the compact `thread.started`/`turn.started`/`item.completed`/`turn.completed` events (token usage only on completion; per-event IDs omitted by the CLI); includes idle-timeout handling and a `--sample` replay path. |
 | `cargo run -p codex --example stream_last_message -- "Summarize repo status"` | `codex exec --skip-git-repo-check --json --output-last-message <path> --output-schema <path> <<<"Summarize repo status"` | Reads `--output-last-message` + `--output-schema` files (thread/turn metadata included); ships sample payloads if no binary. |
-| `CODEX_LOG_PATH=/tmp/codex.log cargo run -p codex --example stream_with_log -- "Stream with logging"` | `echo "Stream with logging" \| codex exec --skip-git-repo-check --json` | Mirrors stdout and tees JSONL events to `CODEX_LOG_PATH` (or uses sample events with IDs/status). |
+| `CODEX_LOG_PATH=/tmp/codex.log cargo run -p codex --example stream_with_log -- "Stream with logging"` | `echo "Stream with logging" \| codex exec --skip-git-repo-check --json --sandbox read-only --color never` | Mirrors stdout and tees JSONL events to `CODEX_LOG_PATH` (or uses the live-captured sample events in `crates/codex/examples/fixtures/streaming.jsonl`). |
 
 ## Resume & Apply/Diff
 
 | Wrapper example | Native command | Notes |
 | --- | --- | --- |
-| `CODEX_CONVERSATION_ID=abc cargo run -p codex --example resume_apply` | `codex resume --json --skip-git-repo-check --last` then `codex diff/apply --json --skip-git-repo-check` | Streams resume events (`thread.resumed` + turn/item) for the last turn (or `--resume-id <id>`), previews the staged diff, and prints the `apply.result` payload (exit/stdout/stderr); `--sample` and `--no-apply` supported. |
+| `CODEX_CONVERSATION_ID=abc cargo run -p codex --example resume_apply` | `codex exec --json --skip-git-repo-check --sandbox read-only resume --last` (optionally followed by `codex apply <task-id>`) | Streams resume events from the live CLI (`thread.started` + compact item.completed events); the CLI no longer exposes `diff`/JSON apply helpers, so the example falls back to fixture diff/apply payloads unless `--apply-task <id>` is provided. |
 
 ## MCP + App Server
 
