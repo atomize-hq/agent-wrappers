@@ -789,6 +789,22 @@ mod tests {
     }
 
     #[test]
+    fn default_binary_falls_back_when_env_missing() {
+        let _guard = env_guard();
+        let key = CODEX_BINARY_ENV;
+        let original = env::var_os(key);
+        env::remove_var(key);
+
+        assert_eq!(default_binary_path(), PathBuf::from("codex"));
+
+        if let Some(value) = original {
+            env::set_var(key, value);
+        } else {
+            env::remove_var(key);
+        }
+    }
+
+    #[test]
     fn command_env_sets_expected_overrides() {
         let _guard = env_guard();
         let rust_log_original = env::var_os(RUST_LOG_ENV);
@@ -821,6 +837,71 @@ mod tests {
         match rust_log_original {
             Some(value) => env::set_var(RUST_LOG_ENV, value),
             None => env::remove_var(RUST_LOG_ENV),
+        }
+    }
+
+    #[test]
+    fn command_env_applies_home_and_binary_per_command() {
+        let _guard = env_guard();
+        let binary_key = CODEX_BINARY_ENV;
+        let home_key = CODEX_HOME_ENV;
+        let rust_log_key = RUST_LOG_ENV;
+        let original_binary = env::var_os(binary_key);
+        let original_home = env::var_os(home_key);
+        let original_rust_log = env::var_os(rust_log_key);
+
+        env::set_var(binary_key, "/tmp/ignored_codex");
+        env::set_var(home_key, "/tmp/ambient_home");
+        env::remove_var(rust_log_key);
+
+        let temp = tempfile::tempdir().unwrap();
+        let home = temp.path().join("scoped_home");
+        let env_prep = CommandEnvironment::new(
+            PathBuf::from("/app/bundled/codex"),
+            Some(home.clone()),
+            true,
+        );
+
+        let mut command = Command::new("echo");
+        env_prep.apply(&mut command).unwrap();
+
+        let envs: HashMap<OsString, Option<OsString>> = command
+            .as_std()
+            .get_envs()
+            .map(|(key, value)| (key.to_os_string(), value.map(|v| v.to_os_string())))
+            .collect();
+
+        assert_eq!(
+            envs.get(&OsString::from(binary_key)),
+            Some(&Some(OsString::from("/app/bundled/codex")))
+        );
+        assert_eq!(
+            envs.get(&OsString::from(home_key)),
+            Some(&Some(home.as_os_str().to_os_string()))
+        );
+        assert_eq!(
+            envs.get(&OsString::from(rust_log_key)),
+            Some(&Some(OsString::from(DEFAULT_RUST_LOG)))
+        );
+        assert_eq!(
+            env::var_os(home_key),
+            Some(OsString::from("/tmp/ambient_home"))
+        );
+        assert!(home.is_dir());
+        assert!(home.join("conversations").is_dir());
+        assert!(home.join("logs").is_dir());
+
+        match original_binary {
+            Some(value) => env::set_var(binary_key, value),
+            None => env::remove_var(binary_key),
+        }
+        match original_home {
+            Some(value) => env::set_var(home_key, value),
+            None => env::remove_var(home_key),
+        }
+        match original_rust_log {
+            Some(value) => env::set_var(rust_log_key, value),
+            None => env::remove_var(rust_log_key),
         }
     }
 
