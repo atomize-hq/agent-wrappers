@@ -162,5 +162,30 @@
       "Upgrade advisory note"
     ],
     "status": "done"
+  },
+  {
+    "id": "H9-docs-integration-fixture",
+    "title": "Docs integration fixture",
+    "description": "Add a lightweight integration fixture to keep streaming/resume/apply sample payloads and docs aligned with the latest CLI surface. Refresh examples/docs if drift is detected, and tighten upgrade/capability caching guidance as needed.",
+    "dependencies": [
+      "H8-docs-post-review"
+    ],
+    "files": [
+      "README.md",
+      "crates/codex/EXAMPLES.md",
+      "crates/codex/src/lib.rs",
+      "crates/codex/examples",
+      "workstreams/H_docs_examples"
+    ],
+    "tests": [
+      "cargo test -p codex --doc",
+      "cargo test -p codex --examples"
+    ],
+    "outputs": [
+      "Updated docs/examples",
+      "Integration fixture outputs",
+      "Upgrade/capability caching notes"
+    ],
+    "status": "done"
   }
 ]
