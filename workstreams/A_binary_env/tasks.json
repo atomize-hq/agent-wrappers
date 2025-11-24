@@ -29,7 +29,7 @@
     "dependencies": ["A2-implement-env-prep"],
     "files": ["crates/codex/src/lib.rs", "crates/codex/examples"],
     "outputs": ["New tests", "Updated docs/examples"],
-    "status": "doing",
+    "status": "done",
     "tests": ["cargo test -p codex"],
     "notes": "Prefer tempdirs in tests to avoid polluting real HOME."
   }
