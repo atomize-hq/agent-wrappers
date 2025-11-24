@@ -25,6 +25,6 @@
     "dependencies": ["H2-examples-update"],
     "files": ["README.md", "crates/codex/EXAMPLES.md"],
     "outputs": ["Updated docs"],
-    "status": "doing"
+    "status": "done"
   }
 ]
