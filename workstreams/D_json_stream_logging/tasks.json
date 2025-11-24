@@ -27,5 +27,15 @@
     "files": ["crates/codex/src/lib.rs", "crates/codex/examples"],
     "tests": ["cargo test -p codex"],
     "outputs": ["Example file", "README section"]
+  },
+  {
+    "id": "D4-log-tee",
+    "title": "File logging for streamed events",
+    "description": "Add opt-in log teeing for JSON streaming so clients can persist raw event lines without breaking stdout/stderr controls. Ensure RUST_LOG handling stays correct. Include tests validating tee ordering/flush behavior and log contents for apply/diff/tool traffic.",
+    "status": "doing",
+    "dependencies": ["D3-tests-example"],
+    "files": ["crates/codex/src/lib.rs", "workstreams/D_json_stream_logging/BRIEF.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Logging surface (builder/request options) with passing tests", "Docs/examples updated"]
   }
 ]
