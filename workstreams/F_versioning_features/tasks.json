@@ -73,6 +73,6 @@
     "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
     "tests": ["cargo test -p codex"],
     "outputs": ["Docs for cache management APIs"],
-    "status": "todo"
+    "status": "doing"
   }
 ]
