@@ -10,7 +10,7 @@ license = "MIT OR Apache-2.0"
 authors = ["Agent Wrappers Contributors"]
 
 [workspace.dependencies]
-tokio = { version = "1.38", features = ["process", "io-util", "io-std", "macros", "rt", "rt-multi-thread", "time"] }
+tokio = { version = "1.38", features = ["process", "io-util", "io-std", "macros", "rt", "rt-multi-thread", "time", "sync", "fs"] }
 thiserror = "1.0"
 tracing = "0.1"
 tempfile = "3.12"

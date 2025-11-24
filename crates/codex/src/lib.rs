@@ -446,7 +446,7 @@ pub fn write_capabilities_snapshot(
     let path = path.as_ref();
     let resolved_format = resolve_snapshot_format(format, path)?;
     let contents = serialize_capabilities_snapshot(snapshot, resolved_format)?;
-    fs::write(path, contents).map_err(|source| CapabilitySnapshotError::WriteSnapshot {
+    std_fs::write(path, contents).map_err(|source| CapabilitySnapshotError::WriteSnapshot {
         path: path.to_path_buf(),
         source,
     })
@@ -459,11 +459,10 @@ pub fn read_capabilities_snapshot(
 ) -> Result<CodexCapabilities, CapabilitySnapshotError> {
     let path = path.as_ref();
     let resolved_format = resolve_snapshot_format(format, path)?;
-    let contents =
-        fs::read_to_string(path).map_err(|source| CapabilitySnapshotError::ReadSnapshot {
-            path: path.to_path_buf(),
-            source,
-        })?;
+    let contents = std_fs::read_to_string(path).map_err(|source| CapabilitySnapshotError::ReadSnapshot {
+        path: path.to_path_buf(),
+        source,
+    })?;
     deserialize_capabilities_snapshot(&contents, resolved_format)
 }
 
@@ -492,7 +491,7 @@ pub fn write_capability_overrides(
     let path = path.as_ref();
     let resolved_format = resolve_snapshot_format(format, path)?;
     let contents = serialize_capability_overrides(overrides, resolved_format)?;
-    fs::write(path, contents).map_err(|source| CapabilitySnapshotError::WriteSnapshot {
+    std_fs::write(path, contents).map_err(|source| CapabilitySnapshotError::WriteSnapshot {
         path: path.to_path_buf(),
         source,
     })
@@ -505,11 +504,10 @@ pub fn read_capability_overrides(
 ) -> Result<CapabilityOverrides, CapabilitySnapshotError> {
     let path = path.as_ref();
     let resolved_format = resolve_snapshot_format(format, path)?;
-    let contents =
-        fs::read_to_string(path).map_err(|source| CapabilitySnapshotError::ReadSnapshot {
-            path: path.to_path_buf(),
-            source,
-        })?;
+    let contents = std_fs::read_to_string(path).map_err(|source| CapabilitySnapshotError::ReadSnapshot {
+        path: path.to_path_buf(),
+        source,
+    })?;
     deserialize_capability_overrides(&contents, resolved_format)
 }
 
@@ -794,7 +792,7 @@ fn capability_cache() -> &'static Mutex<HashMap<CapabilityCacheKey, CodexCapabil
 }
 
 fn capability_cache_key(binary: &Path) -> CapabilityCacheKey {
-    let canonical = fs::canonicalize(binary).unwrap_or_else(|_| binary.to_path_buf());
+    let canonical = std_fs::canonicalize(binary).unwrap_or_else(|_| binary.to_path_buf());
     CapabilityCacheKey {
         binary_path: canonical,
     }
@@ -864,11 +862,11 @@ pub fn clear_capability_cache() {
 }
 
 fn current_fingerprint(key: &CapabilityCacheKey) -> Option<BinaryFingerprint> {
-    let canonical = fs::canonicalize(&key.binary_path).ok();
+    let canonical = std_fs::canonicalize(&key.binary_path).ok();
     let metadata_path = canonical
         .as_deref()
         .unwrap_or_else(|| key.binary_path.as_path());
-    let metadata = fs::metadata(metadata_path).ok()?;
+    let metadata = std_fs::metadata(metadata_path).ok()?;
     Some(BinaryFingerprint {
         canonical_path: canonical,
         modified: metadata.modified().ok(),
@@ -2358,10 +2356,10 @@ mod tests {
 
     fn write_fake_codex(dir: &Path, script: &str) -> PathBuf {
         let path = dir.join("codex");
-        fs::write(&path, script).unwrap();
-        let mut perms = fs::metadata(&path).unwrap().permissions();
+        std_fs::write(&path, script).unwrap();
+        let mut perms = std_fs::metadata(&path).unwrap().permissions();
         perms.set_mode(0o755);
-        fs::set_permissions(&path, perms).unwrap();
+        std_fs::set_permissions(&path, perms).unwrap();
         path
     }
 
@@ -2766,10 +2764,10 @@ mod tests {
             &binary
         ));
 
-        fs::write(&binary, "#!/bin/bash\necho changed").unwrap();
-        let mut perms = fs::metadata(&binary).unwrap().permissions();
+        std_fs::write(&binary, "#!/bin/bash\necho changed").unwrap();
+        let mut perms = std_fs::metadata(&binary).unwrap().permissions();
         perms.set_mode(0o755);
-        fs::set_permissions(&binary, perms).unwrap();
+        std_fs::set_permissions(&binary, perms).unwrap();
 
         assert!(!capability_snapshot_matches_binary(&snapshot, &binary));
     }
@@ -2884,14 +2882,14 @@ fi
 
         let first = client.probe_capabilities().await;
         assert!(first.features.supports_output_schema);
-        let first_lines = fs::read_to_string(&log_path).unwrap().lines().count();
+        let first_lines = std_fs::read_to_string(&log_path).unwrap().lines().count();
         assert!(first_lines >= 2);
 
         let refreshed = client
             .probe_capabilities_with_policy(CapabilityCachePolicy::Refresh)
             .await;
         assert!(refreshed.features.supports_output_schema);
-        let refreshed_lines = fs::read_to_string(&log_path).unwrap().lines().count();
+        let refreshed_lines = std_fs::read_to_string(&log_path).unwrap().lines().count();
         assert!(
             refreshed_lines > first_lines,
             "expected refresh policy to re-run probes"
@@ -3054,7 +3052,7 @@ exit 99
         let capabilities = client.probe_capabilities().await;
         assert_eq!(
             capabilities.cache_key.binary_path,
-            fs::canonicalize(&binary).unwrap()
+            std_fs::canonicalize(&binary).unwrap()
         );
         assert!(capabilities.fingerprint.is_some());
         assert!(capabilities.features.supports_output_schema);
@@ -3207,7 +3205,7 @@ fi
         let response = client.send_prompt("hello").await.unwrap();
         assert_eq!(response.trim(), "ok");
 
-        let logged = fs::read_to_string(&log_path).unwrap();
+        let logged = std_fs::read_to_string(&log_path).unwrap();
         assert!(logged.contains("--add-dir"));
         assert!(logged.contains("src"));
         assert!(logged.contains("--output-schema"));
@@ -3253,7 +3251,7 @@ fi
         let response = client.send_prompt("hello").await.unwrap();
         assert_eq!(response.trim(), "ok");
 
-        let logged = fs::read_to_string(&log_path).unwrap();
+        let logged = std_fs::read_to_string(&log_path).unwrap();
         assert!(!logged.contains("--add-dir"));
         assert!(!logged.contains("--output-schema"));
     }
@@ -3333,7 +3331,7 @@ fi
         let output = login.wait_with_output().await.unwrap();
         assert!(output.status.success());
 
-        let logged = fs::read_to_string(&log_path).unwrap();
+        let logged = std_fs::read_to_string(&log_path).unwrap();
         assert!(logged.contains("login --mcp"));
     }
 
