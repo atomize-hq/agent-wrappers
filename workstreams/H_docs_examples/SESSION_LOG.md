@@ -9,3 +9,5 @@ Append entries: `[START ...] [END ...] Agent: <name> | Task(s): <IDs> | Branch: 
 
 [START 2025-11-24 02:38:07Z] Agent: Codex | Task(s): H3-readme | Branch: ws/H_docs_examples | Notes: Starting README/EXAMPLES doc refresh; will create task branch/worktree next
 [END 2025-11-24 02:47:55Z] Agent: Codex | Task(s): H3-readme | Branch: ws/H_docs_examples | Notes: README/EXAMPLES refreshed and merged task branch
+
+[START 2025-11-24 03:29:57Z] Agent: Codex | Task(s): H4-rustdoc-sync | Branch: ws/H_docs_examples | Notes: Starting rustdoc sync; will create task branch/worktree next

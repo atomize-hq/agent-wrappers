@@ -26,5 +26,15 @@
     "files": ["README.md", "crates/codex/EXAMPLES.md"],
     "outputs": ["Updated docs"],
     "status": "done"
+  },
+  {
+    "id": "H4-rustdoc-sync",
+    "title": "Sync crate-level rustdoc with latest APIs",
+    "description": "Refresh crate-level documentation and inline rustdoc to match new APIs and examples: binary/CODEX_HOME setup, streaming event shapes, log tee + artifacts, MCP/app-server flows, capability detection hooks. Add short inline examples and link back to README/EXAMPLES.",
+    "dependencies": ["H3-readme"],
+    "files": ["crates/codex/src/lib.rs", "crates/codex/examples"],
+    "tests": ["cargo test -p codex --doc", "cargo test -p codex --examples"],
+    "outputs": ["Updated rustdoc"],
+    "status": "doing"
   }
 ]
