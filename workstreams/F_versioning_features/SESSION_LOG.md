@@ -19,3 +19,4 @@ Append entries: `[START ...] [END ...] Agent: <name> | Task(s): <IDs> | Branch: 
 [END 2025-11-24 04:10] Agent: Codex | Task(s): F8-capability-cache-controls | Branch: ws/F_versioning_features | Notes: Cache control helpers and policies merged with tests/docs; worktree closed
 [START 2025-11-24 07:13] Agent: Codex | Task(s): F9-post-workstream-review | Branch: ws/F_versioning_features | Notes: Starting post-workstream review and audit
 [END 2025-11-24 07:19] Agent: Codex | Task(s): F9-post-workstream-review | Branch: ws/F_versioning_features | Notes: Audit complete; added advisory tests and handoff notes; merged task branch
+[START 2025-11-24 13:50] Agent: Codex | Task(s): F10-release-docs-and-examples | Branch: ws/F_versioning_features | Notes: Starting release docs/examples task and worktree setup
