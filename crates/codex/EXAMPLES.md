@@ -9,7 +9,7 @@ Every example under `crates/codex/examples/` corresponds to a specific `codex ex
 | `cargo run -p codex --example timeout_zero -- "Stream until completion"` | `codex exec "Stream until completion" --skip-git-repo-check --timeout 0` | Disables the wrapper timeout. |
 | `cargo run -p codex --example working_dir -- "C:\path\to\repo" "List files here"` | `codex exec "List files here" --skip-git-repo-check --cd "C:\path\to\repo"` | Runs Codex inside a specific directory. |
 | `$env:CODEX_BINARY="C:\bin\codex-nightly.exe"; cargo run -p codex --example env_binary -- "Nightly sanity check"` | `C:\bin\codex-nightly.exe exec "Nightly sanity check" --skip-git-repo-check` | Demonstrates honoring `CODEX_BINARY`. |
-| `cargo run -p codex --example bundled_binary_home -- "Health check prompt"` | `CODEX_HOME="C:\data\codex" C:\apps\codex\bin\codex.exe exec "Health check prompt" --skip-git-repo-check` | Bundled binary with app-scoped `CODEX_HOME`; wrapper creates the isolated tree before spawning. |
+| `cargo run -p codex --example bundled_binary_home -- "Health check prompt"` | `CODEX_HOME="C:\data\codex" C:\apps\codex\bin\codex.exe exec "Health check prompt" --skip-git-repo-check` | Bundled binary with app-scoped `CODEX_HOME`; prints `CodexHomeLayout` paths and creates the isolated tree before spawning. |
 | `cargo run -p codex --example select_model -- gpt-5-codex -- "Explain rustfmt defaults"` | `codex exec "Explain rustfmt defaults" --skip-git-repo-check --model gpt-5-codex` | Picks a specific model. |
 | `cargo run -p codex --example color_always -- "Show colorful output"` | `codex exec "Show colorful output" --skip-git-repo-check --color always` | Forces ANSI color codes. |
 | `cargo run -p codex --example image_json -- "C:\path\to\mockup.png" "Describe the screenshot"` | `echo "Describe the screenshot" \| codex exec --skip-git-repo-check --json --image "C:\path\to\mockup.png"` | Attaches an image while streaming JSON quietly. |
@@ -19,5 +19,23 @@ Every example under `crates/codex/examples/` corresponds to a specific `codex ex
 | `cargo run -p codex --example no_stdout_mirror -- "Stream quietly"` | `codex exec "Stream quietly" --skip-git-repo-check > out.txt` | Disables stdout mirroring on the wrapper so you can capture output yourself. |
 | `cargo run -p codex --example send_prompt --color never -- "Show monochrome"` | `codex exec "Show monochrome" --skip-git-repo-check --color never` | (Color example also works for `auto`/`never`.) |
 | `cargo run -p ingestion --example ingest_to_codex -- --instructions "Summarize the documents" --model gpt-5-codex --json --include-prompt --image "C:\Docs\mockup.png" C:\Docs\spec.pdf` | `codex exec --skip-git-repo-check --json --model gpt-5-codex --image "C:\Docs\mockup.png" "<constructed prompt covering spec.pdf>"` | Full ingestion harness: it builds the multi-document prompt before calling `codex exec`. |
+
+## Discovering CODEX_HOME layout
+
+Use `CodexHomeLayout` to inspect where Codex stores config, credentials, history,
+conversations, and logs when you set an app-scoped `CODEX_HOME`:
+
+```rust
+use codex::CodexHomeLayout;
+
+let layout = CodexHomeLayout::new("/apps/myhub/codex");
+println!("Config: {}", layout.config_path().display());
+println!("History: {}", layout.history_path().display());
+println!("Conversations: {}", layout.conversations_dir().display());
+println!("Logs: {}", layout.logs_dir().display());
+
+// Optional: create the CODEX_HOME directories yourself before spawning Codex.
+layout.materialize(true).expect("failed to prepare CODEX_HOME");
+```
 
 Use these pairs as a checklist when validating parity between the Rust wrapper and the raw Codex CLI.

@@ -104,6 +104,13 @@ impl CodexClient {
         CodexClientBuilder::default()
     }
 
+    /// Returns the configured `CODEX_HOME` layout, if one was provided.
+    /// This does not create any directories on disk; pair with
+    /// [`CodexClientBuilder::create_home_dirs`] to control materialization.
+    pub fn codex_home_layout(&self) -> Option<CodexHomeLayout> {
+        self.command_env.codex_home_layout()
+    }
+
     /// Sends `prompt` to `codex exec` and returns its stdout (the final agent message) on success.
     pub async fn send_prompt(&self, prompt: impl AsRef<str>) -> Result<String, CodexError> {
         let prompt = prompt.as_ref();
@@ -565,7 +572,7 @@ fn reasoning_config_for(model: Option<&str>) -> Option<&'static [(&'static str, 
 #[derive(Clone, Debug)]
 struct CommandEnvironment {
     binary: PathBuf,
-    codex_home: Option<CodexHome>,
+    codex_home: Option<CodexHomeLayout>,
     create_home_dirs: bool,
 }
 
@@ -573,7 +580,7 @@ impl CommandEnvironment {
     fn new(binary: PathBuf, codex_home: Option<PathBuf>, create_home_dirs: bool) -> Self {
         Self {
             binary,
-            codex_home: codex_home.map(CodexHome::new),
+            codex_home: codex_home.map(CodexHomeLayout::new),
             create_home_dirs,
         }
     }
@@ -582,11 +589,13 @@ impl CommandEnvironment {
         &self.binary
     }
 
+    fn codex_home_layout(&self) -> Option<CodexHomeLayout> {
+        self.codex_home.clone()
+    }
+
     fn environment_overrides(&self) -> Result<Vec<(OsString, OsString)>, CodexError> {
         if let Some(home) = &self.codex_home {
-            if self.create_home_dirs {
-                home.ensure_layout()?;
-            }
+            home.materialize(self.create_home_dirs)?;
         }
 
         let mut envs = Vec::new();
@@ -620,29 +629,65 @@ impl CommandEnvironment {
     }
 }
 
-#[derive(Clone, Debug)]
-struct CodexHome {
+/// Describes the on-disk layout used by the Codex CLI when `CODEX_HOME` is set.
+///
+/// Files are rooted next to `config.toml`, `auth.json`, `.credentials.json`, and
+/// `history.jsonl`; `conversations/` holds transcript JSONL files and `logs/`
+/// holds `codex-*.log` outputs. Call [`Self::materialize`] to create the
+/// directories when standing up an app-scoped home.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CodexHomeLayout {
     root: PathBuf,
 }
 
-impl CodexHome {
-    fn new(root: PathBuf) -> Self {
-        Self { root }
+impl CodexHomeLayout {
+    /// Creates a new layout description rooted at `root`.
+    pub fn new(root: impl Into<PathBuf>) -> Self {
+        Self { root: root.into() }
     }
 
-    fn root(&self) -> &Path {
+    /// Returns the `CODEX_HOME` root.
+    pub fn root(&self) -> &Path {
         self.root.as_path()
     }
 
-    fn conversations_dir(&self) -> PathBuf {
+    /// Path to `config.toml` under `CODEX_HOME`.
+    pub fn config_path(&self) -> PathBuf {
+        self.root.join("config.toml")
+    }
+
+    /// Path to `auth.json` under `CODEX_HOME`.
+    pub fn auth_path(&self) -> PathBuf {
+        self.root.join("auth.json")
+    }
+
+    /// Path to `.credentials.json` under `CODEX_HOME`.
+    pub fn credentials_path(&self) -> PathBuf {
+        self.root.join(".credentials.json")
+    }
+
+    /// Path to `history.jsonl` under `CODEX_HOME`.
+    pub fn history_path(&self) -> PathBuf {
+        self.root.join("history.jsonl")
+    }
+
+    /// Directory containing conversation transcripts.
+    pub fn conversations_dir(&self) -> PathBuf {
         self.root.join("conversations")
     }
 
-    fn logs_dir(&self) -> PathBuf {
+    /// Directory containing Codex log files.
+    pub fn logs_dir(&self) -> PathBuf {
         self.root.join("logs")
     }
 
-    fn ensure_layout(&self) -> Result<(), CodexError> {
+    /// Creates the `CODEX_HOME` root and its known subdirectories when
+    /// `create_home_dirs` is `true`. No-op when disabled.
+    pub fn materialize(&self, create_home_dirs: bool) -> Result<(), CodexError> {
+        if !create_home_dirs {
+            return Ok(());
+        }
+
         let conversations = self.conversations_dir();
         let logs = self.logs_dir();
         for path in [self.root(), conversations.as_path(), logs.as_path()] {
@@ -951,6 +996,49 @@ mod tests {
             Some(value) => env::set_var(RUST_LOG_ENV, value),
             None => env::remove_var(RUST_LOG_ENV),
         }
+    }
+
+    #[test]
+    fn codex_home_layout_exposes_paths() {
+        let root = PathBuf::from("/tmp/codex_layout_root");
+        let layout = CodexHomeLayout::new(&root);
+
+        assert_eq!(layout.root(), root.as_path());
+        assert_eq!(layout.config_path(), root.join("config.toml"));
+        assert_eq!(layout.auth_path(), root.join("auth.json"));
+        assert_eq!(layout.credentials_path(), root.join(".credentials.json"));
+        assert_eq!(layout.history_path(), root.join("history.jsonl"));
+        assert_eq!(layout.conversations_dir(), root.join("conversations"));
+        assert_eq!(layout.logs_dir(), root.join("logs"));
+    }
+
+    #[test]
+    fn codex_home_layout_respects_materialization_flag() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("codex_home_layout");
+        let layout = CodexHomeLayout::new(&root);
+
+        layout.materialize(false).unwrap();
+        assert!(!root.exists());
+
+        layout.materialize(true).unwrap();
+        assert!(root.is_dir());
+        assert!(layout.conversations_dir().is_dir());
+        assert!(layout.logs_dir().is_dir());
+    }
+
+    #[test]
+    fn codex_client_returns_configured_home_layout() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("app_codex_home");
+        let client = CodexClient::builder().codex_home(&root).build();
+
+        let layout = client.codex_home_layout().expect("layout missing");
+        assert_eq!(layout.root(), root.as_path());
+        assert!(!root.exists());
+
+        let client_without_home = CodexClient::builder().build();
+        assert!(client_without_home.codex_home_layout().is_none());
     }
 
     #[test]

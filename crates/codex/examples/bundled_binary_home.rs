@@ -1,6 +1,7 @@
-//! Run Codex using a bundled binary and an app-scoped `CODEX_HOME`.
-//! This keeps user installations untouched while shipping Codex alongside
-//! your application assets.
+//! Run Codex using a bundled binary and an app-scoped `CODEX_HOME` while
+//! exposing the layout so the host app can inspect Codex state paths. This
+//! keeps user installations untouched while shipping Codex alongside your
+//! application assets.
 //!
 //! Example layout (relative to the compiled binary):
 //! ```text
@@ -14,7 +15,7 @@
 //! cargo run -p codex --example bundled_binary_home -- "Health check prompt"
 //! ```
 
-use codex::CodexClient;
+use codex::{CodexClient, CodexHomeLayout};
 use std::{env, error::Error, path::PathBuf};
 
 #[tokio::main]
@@ -22,8 +23,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let prompt = collect_prompt()?;
     let codex_binary = bundled_codex_path();
     let codex_home = bundled_codex_home();
+    let layout = CodexHomeLayout::new(&codex_home);
     println!("Using binary: {}", codex_binary.display());
     println!("Using CODEX_HOME: {}", codex_home.display());
+    println!(
+        "Conversations will land in: {}",
+        layout.conversations_dir().display()
+    );
+    println!("Logs will land in: {}", layout.logs_dir().display());
+
+    // Optional: create the CODEX_HOME root/conversations/logs ahead of time.
+    layout.materialize(true)?;
 
     let client = CodexClient::builder()
         .binary(&codex_binary)
