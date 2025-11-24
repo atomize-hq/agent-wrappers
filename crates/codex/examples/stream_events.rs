@@ -1,7 +1,7 @@
 //! Consume the JSONL event stream (`codex exec --json`) and print turn/item events.
-//! Events include thread + turn lifecycle plus item created/updated variants such as
-//! `agent_message`, `reasoning`, `command_execution`, `file_change`, and `mcp_tool_call`
-//! (with thread/turn IDs and status).
+//! With Codex CLI 0.61.0 the stream is compact: `thread.started`, `turn.started`,
+//! `item.completed` (carrying `item.id/type/text`), and `turn.completed` with token usage.
+//! Thread/turn IDs only show up on the initial `thread.started` event.
 //!
 //! Flags:
 //! - `--sample` to replay demo events from `crates/codex/examples/fixtures/streaming.jsonl` without
@@ -40,6 +40,8 @@ struct StreamEvent {
     error: Option<String>,
     #[serde(default)]
     message: Option<String>,
+    #[serde(default)]
+    usage: Option<Usage>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -51,7 +53,21 @@ struct StreamItem {
     #[serde(default)]
     content: Option<String>,
     #[serde(default)]
+    text: Option<String>,
+    #[serde(default)]
     status: Option<String>,
+    #[serde(default)]
+    output: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Usage {
+    #[serde(default)]
+    input_tokens: Option<u64>,
+    #[serde(default)]
+    cached_input_tokens: Option<u64>,
+    #[serde(default)]
+    output_tokens: Option<u64>,
 }
 
 #[tokio::main]
@@ -93,7 +109,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn stream_from_codex(binary: &Path, prompt: &str) -> Result<(), Box<dyn Error>> {
     let mut command = Command::new(binary);
     command
-        .args(["exec", "--json", "--skip-git-repo-check", "--timeout", "0"])
+        .args([
+            "exec",
+            "--json",
+            "--skip-git-repo-check",
+            "--sandbox",
+            "read-only",
+            "--color",
+            "never",
+        ])
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
@@ -155,44 +179,50 @@ fn print_event(event: StreamEvent) {
             event.thread_id.as_deref().unwrap_or("-")
         ),
         "turn.started" => {
-            let turn_id = event.turn_id.as_deref().unwrap_or("-");
-            if let Some(thread_id) = event.thread_id.as_deref() {
-                println!("Turn started: {turn_id} (thread {thread_id})");
-            } else {
+            if let Some(turn_id) = event.turn_id.as_deref() {
                 println!("Turn started: {turn_id}");
+            } else {
+                println!("Turn started");
             }
         }
         "turn.completed" => {
-            let turn_id = event.turn_id.as_deref().unwrap_or("-");
-            let suffix = event
-                .thread_id
-                .as_deref()
-                .map(|thread_id| format!(" (thread {thread_id})"))
-                .unwrap_or_default();
-            println!("Turn completed: {turn_id}{suffix}");
+            if let Some(usage) = event.usage {
+                let input = usage
+                    .input_tokens
+                    .map(|value| value.to_string())
+                    .unwrap_or_else(|| "-".to_string());
+                let cached = usage
+                    .cached_input_tokens
+                    .map(|value| value.to_string())
+                    .unwrap_or_else(|| "-".to_string());
+                let output = usage
+                    .output_tokens
+                    .map(|value| value.to_string())
+                    .unwrap_or_else(|| "-".to_string());
+                println!("Turn completed (input {input}, cached {cached}, output {output})");
+            } else {
+                println!("Turn completed");
+            }
         }
         "turn.failed" => {
-            let turn_id = event.turn_id.as_deref().unwrap_or("-");
             let message = event.message.as_deref().unwrap_or("Unknown failure");
-            println!("Turn failed: {turn_id} — {message}");
+            println!("Turn failed — {message}");
         }
         kind if kind.starts_with("item.") => {
             if let Some(item) = event.item {
                 let body = item
-                    .content
+                    .text
                     .as_deref()
+                    .or(item.content.as_deref())
+                    .or(item.output.as_deref())
                     .unwrap_or("(no content provided by Codex)");
                 let status = item
                     .status
                     .as_deref()
                     .map(|value| format!(" [{value}]"))
                     .unwrap_or_default();
-                println!(
-                    "Item {}: {} — {body}{}",
-                    item.kind,
-                    item.id.unwrap_or_default(),
-                    status
-                );
+                let id = item.id.as_deref().unwrap_or("-");
+                println!("Item {} ({id}): {body}{status}", item.kind);
             } else {
                 println!("Item event ({kind})");
             }

@@ -25,13 +25,12 @@
 //! ```
 //!
 //! ## Streaming, events, and artifacts
-//! - Use `.json(true)` to request JSONL streaming. Events include `thread.started`
-//!   (or `thread.resumed` on continuation), `turn.started`/`turn.completed`/`turn.failed`, and
-//!   `item.created`/`item.updated` with `item.type` such as `agent_message`, `reasoning`,
-//!   `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, or `todo_list` plus
-//!   optional `status`/`content`/`input`. Errors surface as `{"type":"error","message":...}`.
+//! - Use `.json(true)` to request JSONL streaming. With Codex CLI 0.61.0 the stream is compact:
+//!   `thread.started` (with a `thread_id`), `turn.started`, `item.completed` (with
+//!   `item.id/type/text`), and `turn.completed` (with token usage). Per-event thread/turn IDs and
+//!   `item.created/updated` variants no longer appear. Errors surface as `{"type":"error","message":...}`.
 //!   Sample payloads ship with the streaming examples for offline inspection; the fixtures live at
-//!   `crates/codex/examples/fixtures/*` to keep docs/examples aligned with the CLI surface.
+//!   `crates/codex/examples/fixtures/*` and track the live CLI output.
 //! - `.mirror_stdout(true)` (default) lets you watch the stream live while the wrapper buffers it;
 //!   set `.mirror_stdout(false)` when you need to parse the JSON yourself.
 //! - Persist artifacts via CLI flags (`--output-last-message`, `--output-schema`) and tee events to
@@ -42,22 +41,28 @@
 //!   `--sample` payloads.
 //!
 //! ## Resume + apply/diff
-//! - `codex resume --json --skip-git-repo-check --last` (or `--id <conversationId>`) streams the
-//!   same `thread/turn/item` events as `exec` with an initial `thread.resumed` to mark the
-//!   continuation; reuse the streaming consumers above to handle the feed.
-//! - `codex diff --json --skip-git-repo-check` previews staged changes, and `codex apply --json`
-//!   returns stdout/stderr plus the exit status for the apply step (e.g.
-//!   `{"type":"apply.result","exit_code":0,"stdout":"...","stderr":""}`). Keep handling non-JSON
-//!   stdout defensively in host apps.
+//! - `codex exec --json --skip-git-repo-check --sandbox read-only resume --last` streams the same
+//!   compact events as `exec`, starting with `thread.started` (no `thread.resumed`). Reuse the
+//!   streaming consumers above to handle the feed.
+//! - The CLI currently omits a `diff` subcommand and `apply` expects a task ID (no JSON payloads);
+//!   use fixtures for doc/demo flows and gate live apply behind explicit task IDs.
 //! - `crates/codex/examples/resume_apply.rs` strings these together with sample payloads and lets
-//!   you skip the apply call when you just want the resume stream.
+//!   you skip the apply call or provide `--apply-task <id>` when you have a task to apply.
 //!
 //! ```rust,no_run
 //! use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, process::Command};
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let mut child = Command::new("codex")
-//!     .args(["exec", "--json", "--skip-git-repo-check", "--timeout", "0"])
+//!     .args([
+//!         "exec",
+//!         "--json",
+//!         "--skip-git-repo-check",
+//!         "--sandbox",
+//!         "read-only",
+//!         "--color",
+//!         "never",
+//!     ])
 //!     .stdin(std::process::Stdio::piped())
 //!     .stdout(std::process::Stdio::piped())
 //!     .spawn()?;
@@ -163,9 +168,8 @@ impl CodexClient {
 
     /// Sends `prompt` to `codex exec` and returns its captured stdout on success.
     ///
-    /// When `.json(true)` is enabled the CLI emits JSONL events (`thread.started` or
-    /// `thread.resumed`, `turn.started`/`turn.completed`/`turn.failed`,
-    /// `item.created`/`item.updated`, or `error`). The stream is mirrored to stdout unless
+    /// When `.json(true)` is enabled the CLI emits JSONL events (`thread.started`, `turn.started`,
+    /// `item.completed`, `turn.completed`, or `error`). The stream is mirrored to stdout unless
     /// `.mirror_stdout(false)`; the returned string contains the buffered lines for offline
     /// parsing. For per-event handling, see `crates/codex/examples/stream_events.rs`.
     ///
@@ -542,10 +546,9 @@ impl CodexClientBuilder {
 
     /// Enables Codex's JSONL output mode (`--json`).
     ///
-    /// Prompts are piped via stdin when enabled. Events include `thread.started`
-    /// (or `thread.resumed` when continuing), `turn.started`/`turn.completed`/`turn.failed`,
-    /// and `item.created`/`item.updated` with `item.type` such as `agent_message` or `reasoning`.
-    /// Pair with `.mirror_stdout(false)` if you plan to parse the stream instead of just mirroring it.
+    /// Prompts are piped via stdin when enabled. Events include `thread.started`, `turn.started`,
+    /// `item.completed`, and `turn.completed` (plus `error` on failures). Pair with
+    /// `.mirror_stdout(false)` if you plan to parse the stream instead of just mirroring it.
     pub fn json(mut self, enable: bool) -> Self {
         self.json_output = enable;
         self

@@ -11,8 +11,8 @@ fn streaming_fixture_covers_event_shapes() {
         "streaming fixture should include thread.start"
     );
     assert!(
-        events.iter().any(|line| line.contains("turn.failed")),
-        "streaming fixture should include a failure case"
+        events.iter().any(|line| line.contains("item.")),
+        "streaming fixture should include at least one item event"
     );
 
     for line in events {
@@ -23,15 +23,21 @@ fn streaming_fixture_covers_event_shapes() {
             .expect("fixture event has type");
 
         if kind.starts_with("item.") {
+            let item = value
+                .get("item")
+                .expect("item.* events include an item body");
+            assert!(item.get("type").is_some(), "item body includes type");
             assert!(
-                value.get("item").is_some(),
-                "item.* events include an item body"
+                item.get("text").is_some() || item.get("content").is_some(),
+                "item body includes text/content"
             );
+        }
+
+        if kind == "turn.completed" {
             assert!(
-                value.get("thread_id").is_some(),
-                "item events carry thread_id"
+                value.get("usage").is_some(),
+                "turn.completed carries token usage"
             );
-            assert!(value.get("turn_id").is_some(), "item events carry turn_id");
         }
     }
 }
@@ -44,21 +50,21 @@ fn resume_fixture_includes_thread_and_turn_ids() {
         "resume fixture should not be empty"
     );
 
-    let first: Value =
-        serde_json::from_str(resume_events[0]).expect("first resume event parses as JSON");
-    assert_eq!(
-        first.get("type").and_then(Value::as_str),
-        Some("thread.resumed"),
-        "resume fixture should start with thread.resumed"
-    );
-
     for line in resume_events {
         let value: Value = serde_json::from_str(line).expect("valid resume fixture JSON");
-        assert!(
-            value.get("thread_id").is_some(),
-            "resume events carry thread_id"
-        );
         assert!(value.get("type").is_some(), "resume events carry type");
+        if value.get("type").and_then(Value::as_str) == Some("thread.started") {
+            assert!(
+                value.get("thread_id").is_some(),
+                "thread.started carries thread_id"
+            );
+        }
+        if value.get("type").and_then(Value::as_str) == Some("turn.completed") {
+            assert!(
+                value.get("usage").is_some(),
+                "resume turn completion includes usage"
+            );
+        }
     }
 }
 
