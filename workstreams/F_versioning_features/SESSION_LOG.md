@@ -8,3 +8,4 @@ Append entries: `[START ...] [END ...] Agent: <name> | Task(s): <IDs> | Branch: 
 [START 2025-11-23 20:49] Agent: Codex | Task(s): F3-update-advisory | Branch: ws/F_versioning_features | Notes: Starting advisory helpers task and worktree setup
 [END 2025-11-23 21:03] Agent: Codex | Task(s): F3-update-advisory | Branch: ws/F_versioning_features | Notes: Update advisory helpers merged with docs/tests; ready for next task kickoff
 [START 2025-11-23 21:13] Agent: Codex | Task(s): F4-capability-guards | Branch: ws/F_versioning_features | Notes: Starting capability guards task and worktree setup
+[END 2025-11-23 21:24] Agent: Codex | Task(s): F4-capability-guards | Branch: ws/F_versioning_features | Notes: Capability guard helpers merged with tests and task branch integrated

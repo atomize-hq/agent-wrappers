@@ -35,6 +35,6 @@
     "dependencies": ["F3-update-advisory"],
     "files": ["crates/codex/src/lib.rs"],
     "tests": ["cargo test -p codex"],
-    "status": "doing"
+    "status": "done"
   }
 ]
