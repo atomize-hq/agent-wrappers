@@ -54,5 +54,15 @@
     "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
     "tests": ["cargo test -p codex"],
     "status": "done"
+  },
+  {
+    "id": "F7-capability-snapshot-serialization",
+    "title": "Persist capability snapshots",
+    "description": "Add serialization helpers to export/import capability snapshots and override data (JSON/TOML), including disk save/load utilities keyed by canonical binary path/fingerprint so hosts can reuse probe results across processes. Ensure manual snapshots still honor override precedence and cache invalidation.",
+    "dependencies": ["F6-capability-overrides"],
+    "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Helper API docs/examples for snapshot persistence"],
+    "status": "doing"
   }
 ]
