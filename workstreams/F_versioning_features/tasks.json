@@ -36,5 +36,14 @@
     "files": ["crates/codex/src/lib.rs"],
     "tests": ["cargo test -p codex"],
     "status": "done"
+  },
+  {
+    "id": "F5-capability-consumers",
+    "title": "Wire capability guards into host flows",
+    "description": "Wire guard helpers into host-facing flows so optional Codex flags are only used when supported. Provide examples/docs showing consumption and graceful degradation when capabilities are unknown.",
+    "dependencies": ["F4-capability-guards"],
+    "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
+    "tests": ["cargo test -p codex"],
+    "status": "done"
   }
 ]
