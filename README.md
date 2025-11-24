@@ -72,6 +72,32 @@ Set `json_event_log` on the builder or per request to tee every raw JSONL line t
 
 The events continue to flow to your `events` stream even when log teeing is enabled.
 
+## Apply or inspect diffs
+
+`CodexClient::apply` and `CodexClient::diff` wrap `codex apply/diff`, capture stdout/stderr, and return the exit status via [`ApplyDiffArtifacts`](crates/codex/src/lib.rs). They honor the builder flags you already use for streaming:
+
+- `mirror_stdout` controls whether stdout is echoed while still being captured.
+- `quiet` suppresses stderr mirroring (stderr is always returned in the artifacts).
+- `RUST_LOG` defaults to `error` for these subcommands when the environment is unset; set `RUST_LOG=info` (or higher) to inspect codex internals.
+
+```rust
+use codex::CodexClient;
+
+# async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+let client = CodexClient::builder()
+    .mirror_stdout(false) // silence stdout while capturing
+    .quiet(true)          // silence stderr while capturing
+    .build();
+
+let apply = client.apply().await?; // or client.diff()
+println!("exit: {}", apply.status);
+println!("stdout: {}", apply.stdout);
+println!("stderr: {}", apply.stderr);
+# Ok(()) }
+```
+
+When you stream JSONL events, apply/diff output is also emitted inside `file_change` events (stdout/stderr/exit code) and tee'd to any `json_event_log` path you configure.
+
 ## RUST_LOG defaults
 
 If `RUST_LOG` is unset, the wrapper injects `RUST_LOG=error` for the spawned `codex` process to silence verbose upstream tracing. Any existing `RUST_LOG` value is respected. To debug codex internals alongside your own logs, set `RUST_LOG=info` (or higher) before invoking `CodexClient`.
@@ -81,3 +107,4 @@ If `RUST_LOG` is unset, the wrapper injects `RUST_LOG=error` for the spawned `co
 - New streaming docs cover `ExecStreamRequest` fields, idle timeouts, and the `events`/`completion` contract.
 - Documented the JSON event log tee: append-only, flushed per line, request-level override of builder default.
 - Clarified `RUST_LOG` defaults (`error` when unset) and how to opt into more verbose codex logs.
+- Added apply/diff helper docs: captured stdout/stderr/exit status, console mirroring defaults, and how output flows into JSON event logs.

@@ -4,6 +4,8 @@
 //! - [`CodexClient::send_prompt`] for a single prompt/response with optional `--json` output.
 //! - [`CodexClient::stream_exec`] for typed, real-time JSONL events from `codex exec --json`,
 //!   returning an [`ExecStream`] with an event stream plus a completion future.
+//! - [`CodexClient::apply`] / [`CodexClient::diff`] to run `codex apply/diff`, echo stdout/stderr
+//!   according to the builder (`mirror_stdout` / `quiet`), and return captured output + exit status.
 //!
 //! Logging + defaults:
 //! - Set `json_event_log` on the builder or [`ExecStreamRequest`] to tee raw JSONL lines to disk
@@ -12,6 +14,10 @@
 //!   controls stderr mirroring.
 //! - When `RUST_LOG` is unset, the spawned `codex` process inherits `RUST_LOG=error` to mute
 //!   verbose tracing. Existing values are preserved if you want more detail.
+//! - The same `RUST_LOG` default applies to `codex apply/diff`; captured stdout/stderr is still
+//!   returned even when mirrored to the console.
+//! - When streaming, apply/diff output (stdout/stderr/exit) is included in `file_change` events
+//!   and written to any configured `json_event_log` tee before parsing.
 //!
 //! See `examples/json_stream.rs` for an end-to-end streaming walkthrough.
 
@@ -329,12 +335,20 @@ impl CodexClient {
         }
     }
 
-    /// Applies the most recent Codex diff by invoking `codex apply` and captures stdout/stderr.
+    /// Applies the most recent Codex diff by invoking `codex apply`.
+    ///
+    /// Stdout mirrors to the console when `mirror_stdout` is enabled; stderr mirrors unless `quiet`
+    /// is set. Output and exit status are always captured and returned, and `RUST_LOG=error` is
+    /// injected for the child process when the environment variable is unset.
     pub async fn apply(&self) -> Result<ApplyDiffArtifacts, CodexError> {
         self.apply_or_diff("apply").await
     }
 
-    /// Shows the most recent Codex diff by invoking `codex diff` and captures stdout/stderr.
+    /// Shows the most recent Codex diff by invoking `codex diff`.
+    ///
+    /// Mirrors stdout/stderr using the same `mirror_stdout`/`quiet` defaults as `apply`, but always
+    /// returns the captured output alongside the child exit status. Applies the same `RUST_LOG`
+    /// defaulting behavior when the variable is unset.
     pub async fn diff(&self) -> Result<ApplyDiffArtifacts, CodexError> {
         self.apply_or_diff("diff").await
     }
@@ -1237,8 +1251,11 @@ pub struct ExecCompletion {
 /// Captured output from `codex apply` or `codex diff`.
 #[derive(Clone, Debug)]
 pub struct ApplyDiffArtifacts {
+    /// Exit status returned by the subcommand.
     pub status: ExitStatus,
+    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
     pub stdout: String,
+    /// Captured stderr (mirrored unless `quiet` is set).
     pub stderr: String,
 }
 
