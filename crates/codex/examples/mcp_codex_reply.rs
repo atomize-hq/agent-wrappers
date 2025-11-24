@@ -73,12 +73,12 @@ async fn demo_codex_reply(
     prompt: &str,
 ) -> Result<(), Box<dyn Error>> {
     println!(
-        "Starting `codex mcp-server --stdio` then calling codex-reply for conversation {conversation_id}"
+        "Starting `codex mcp-server` then calling codex-reply for conversation {conversation_id}"
     );
 
     let mut command = Command::new(binary);
     command
-        .args(["mcp-server", "--stdio"])
+        .arg("mcp-server")
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::inherit())
@@ -145,7 +145,17 @@ fn resolve_binary() -> PathBuf {
 }
 
 fn binary_exists(path: &Path) -> bool {
-    std::fs::metadata(path).is_ok()
+    if path.is_absolute() || path.components().count() > 1 {
+        std::fs::metadata(path).is_ok()
+    } else {
+        env::var_os("PATH")
+            .and_then(|paths| {
+                env::split_paths(&paths)
+                    .map(|dir| dir.join(path))
+                    .find(|candidate| std::fs::metadata(candidate).is_ok())
+            })
+            .is_some()
+    }
 }
 
 fn take_flag(args: &mut Vec<String>, flag: &str) -> bool {

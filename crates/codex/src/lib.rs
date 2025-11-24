@@ -73,8 +73,8 @@
 //! ```
 //!
 //! ## Servers and capability detection
-//! - Integrate the stdio servers via `codex mcp-server --stdio` (`crates/codex/examples/mcp_codex_tool.rs`,
-//!   `crates/codex/examples/mcp_codex_reply.rs`) and `codex app-server --stdio`
+//! - Integrate the stdio servers via `codex mcp-server` (`crates/codex/examples/mcp_codex_tool.rs`,
+//!   `crates/codex/examples/mcp_codex_reply.rs`) and `codex app-server`
 //!   (`crates/codex/examples/app_server_thread_turn.rs`) to drive JSON-RPC flows and approvals.
 //! - Gate optional flags with `crates/codex/examples/feature_detection.rs`, which parses
 //!   `codex --version` + `codex features list` to decide whether to enable streaming, log tee,

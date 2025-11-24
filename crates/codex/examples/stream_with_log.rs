@@ -127,7 +127,17 @@ fn resolve_binary() -> PathBuf {
 }
 
 fn binary_exists(path: &Path) -> bool {
-    fs::metadata(path).is_ok()
+    if path.is_absolute() || path.components().count() > 1 {
+        fs::metadata(path).is_ok()
+    } else {
+        env::var_os("PATH")
+            .and_then(|paths| {
+                env::split_paths(&paths)
+                    .map(|dir| dir.join(path))
+                    .find(|candidate| fs::metadata(candidate).is_ok())
+            })
+            .is_some()
+    }
 }
 
 fn take_flag(args: &mut Vec<String>, flag: &str) -> bool {

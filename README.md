@@ -59,9 +59,9 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 
 ## MCP + App-Server Flows
 - The CLI ships stdio servers for Model Context Protocol and the app-server APIs. Examples cover the JSON-RPC wiring, approvals, and shutdown:
-  - `crates/codex/examples/mcp_codex_tool.rs`: start `codex mcp-server --stdio`, call `tools/codex` with prompt/cwd/model/sandbox, and watch `approval_required`/`task_complete` notifications (includes `turn_id`/`sandbox` and supports `--sample`).
-  - `crates/codex/examples/mcp_codex_reply.rs`: resume a session via `tools/codex-reply`, taking `CODEX_CONVERSATION_ID` or a CLI arg; supports `--sample`.
-  - `crates/codex/examples/app_server_thread_turn.rs`: launch `codex app-server --stdio`, send `thread/start` then `turn/start`, and stream task notifications (thread/turn IDs echoed; `--sample` supported).
+- `crates/codex/examples/mcp_codex_tool.rs`: start `codex mcp-server`, call `tools/codex` with prompt/cwd/model/sandbox, and watch `approval_required`/`task_complete` notifications (includes `turn_id`/`sandbox` and supports `--sample`).
+- `crates/codex/examples/mcp_codex_reply.rs`: resume a session via `tools/codex-reply`, taking `CODEX_CONVERSATION_ID` or a CLI arg; supports `--sample`.
+- `crates/codex/examples/app_server_thread_turn.rs`: launch `codex app-server`, send `thread/start` then `turn/start`, and stream task notifications (thread/turn IDs echoed; `--sample` supported).
 - Pass `CODEX_HOME` for isolated server state and `CODEX_BINARY` (or `.binary(...)`) to pin the binary version used by the servers.
 
 ## Feature Detection & Version Hooks

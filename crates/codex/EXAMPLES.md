@@ -44,9 +44,9 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 
 | Wrapper example | Native command | Notes |
 | --- | --- | --- |
-| `cargo run -p codex --example mcp_codex_tool -- "Summarize repo status"` | `codex mcp-server --stdio` then send `tools/codex` JSON-RPC call | Streams codex tool notifications (approval/task_complete); `--sample` and optional `CODEX_HOME` for isolation. |
-| `CODEX_CONVERSATION_ID=abc123 cargo run -p codex --example mcp_codex_reply -- "Continue the prior run"` | `codex mcp-server --stdio` then call `tools/codex-reply` with `conversationId=abc123` | Resume a session via `codex-reply`; needs `CODEX_CONVERSATION_ID` or first arg; `--sample` available. |
-| `cargo run -p codex --example app_server_thread_turn -- "Draft a release note"` | `codex app-server --stdio` then send `thread/start` and `turn/start` | App-server thread/turn notifications; supports `--sample` and optional `CODEX_HOME` for state isolation. |
+| `cargo run -p codex --example mcp_codex_tool -- "Summarize repo status"` | `codex mcp-server` then send `tools/codex` JSON-RPC call | Streams codex tool notifications (approval/task_complete); `--sample` and optional `CODEX_HOME` for isolation. |
+| `CODEX_CONVERSATION_ID=abc123 cargo run -p codex --example mcp_codex_reply -- "Continue the prior run"` | `codex mcp-server` then call `tools/codex-reply` with `conversationId=abc123` | Resume a session via `codex-reply`; needs `CODEX_CONVERSATION_ID` or first arg; `--sample` available. |
+| `cargo run -p codex --example app_server_thread_turn -- "Draft a release note"` | `codex app-server` then send `thread/start` and `turn/start` | App-server thread/turn notifications; supports `--sample` and optional `CODEX_HOME` for state isolation. |
 
 ## Feature Detection
 
