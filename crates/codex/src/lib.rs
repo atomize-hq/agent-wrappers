@@ -1294,11 +1294,149 @@ impl DirectoryContext {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures_util::{pin_mut, StreamExt};
+    use serde_json::json;
     use std::sync::{Mutex, OnceLock};
+    use tokio::io::AsyncWriteExt;
 
     fn env_guard() -> std::sync::MutexGuard<'static, ()> {
         static ENV_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
         ENV_MUTEX.get_or_init(|| Mutex::new(())).lock().unwrap()
+    }
+
+    #[tokio::test]
+    async fn json_stream_preserves_order_and_parses_tool_calls() {
+        let lines = vec![
+            r#"{"type":"thread.started","thread_id":"thread-1"}"#.to_string(),
+            serde_json::to_string(&json!({
+                "type": "item.started",
+                "thread_id": "thread-1",
+                "turn_id": "turn-1",
+                "item_id": "item-1",
+                "item_type": "mcp_tool_call",
+                "content": {
+                    "server_name": "files",
+                    "tool_name": "list",
+                    "status": "running"
+                }
+            }))
+            .unwrap(),
+            serde_json::to_string(&json!({
+                "type": "item.delta",
+                "thread_id": "thread-1",
+                "turn_id": "turn-1",
+                "item_id": "item-1",
+                "item_type": "mcp_tool_call",
+                "delta": {
+                    "result": {"paths": ["foo.rs"]},
+                    "status": "completed"
+                }
+            }))
+            .unwrap(),
+        ];
+
+        let (mut writer, reader) = tokio::io::duplex(4096);
+        let (tx, rx) = mpsc::channel(8);
+        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false));
+
+        for line in &lines {
+            writer.write_all(line.as_bytes()).await.unwrap();
+            writer.write_all(b"\n").await.unwrap();
+        }
+        writer.shutdown().await.unwrap();
+
+        let stream = EventChannelStream::new(rx, None);
+        pin_mut!(stream);
+        let events: Vec<_> = stream.collect().await;
+        forward_handle.await.unwrap().unwrap();
+
+        assert_eq!(events.len(), lines.len(), "events: {events:?}");
+
+        match &events[0] {
+            Ok(ThreadEvent::ThreadStarted(event)) => {
+                assert_eq!(event.thread_id, "thread-1");
+            }
+            other => panic!("unexpected first event: {other:?}"),
+        }
+
+        match &events[1] {
+            Ok(ThreadEvent::ItemStarted(envelope)) => {
+                assert_eq!(envelope.thread_id, "thread-1");
+                assert_eq!(envelope.turn_id, "turn-1");
+                match &envelope.item.payload {
+                    ItemPayload::McpToolCall(state) => {
+                        assert_eq!(state.server_name, "files");
+                        assert_eq!(state.tool_name, "list");
+                        assert_eq!(state.status, ToolCallStatus::Running);
+                    }
+                    other => panic!("unexpected payload: {other:?}"),
+                }
+            }
+            other => panic!("unexpected second event: {other:?}"),
+        }
+
+        match &events[2] {
+            Ok(ThreadEvent::ItemDelta(delta)) => {
+                assert_eq!(delta.item_id, "item-1");
+                match &delta.delta {
+                    ItemDeltaPayload::McpToolCall(call_delta) => {
+                        assert_eq!(call_delta.status, ToolCallStatus::Completed);
+                        let result = call_delta
+                            .result
+                            .as_ref()
+                            .expect("tool call delta result is captured");
+                        assert_eq!(result["paths"][0], "foo.rs");
+                    }
+                    other => panic!("unexpected delta payload: {other:?}"),
+                }
+            }
+            other => panic!("unexpected third event: {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn json_stream_propagates_parse_errors() {
+        let (mut writer, reader) = tokio::io::duplex(1024);
+        let (tx, rx) = mpsc::channel(4);
+        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false));
+
+        writer
+            .write_all(br#"{"type":"thread.started","thread_id":"thread-err"}"#)
+            .await
+            .unwrap();
+        writer.write_all(b"\nthis is not json\n").await.unwrap();
+        writer.shutdown().await.unwrap();
+
+        let stream = EventChannelStream::new(rx, None);
+        pin_mut!(stream);
+        let events: Vec<_> = stream.collect().await;
+        forward_handle.await.unwrap().unwrap();
+
+        assert_eq!(events.len(), 2);
+        assert!(matches!(
+            events[0],
+            Ok(ThreadEvent::ThreadStarted(ThreadStarted { ref thread_id, .. }))
+                if thread_id == "thread-err"
+        ));
+        match &events[1] {
+            Err(ExecStreamError::Parse { line, .. }) => assert_eq!(line, "this is not json"),
+            other => panic!("expected parse error, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn event_channel_stream_times_out_when_idle() {
+        let (_tx, rx) = mpsc::channel(1);
+        let stream = EventChannelStream::new(rx, Some(Duration::from_millis(5)));
+        pin_mut!(stream);
+
+        let next = stream.next().await;
+        match next {
+            Some(Err(ExecStreamError::IdleTimeout { idle_for })) => {
+                assert_eq!(idle_for, Duration::from_millis(5));
+            }
+            other => panic!("expected idle timeout, got {other:?}"),
+        }
     }
 
     #[test]
