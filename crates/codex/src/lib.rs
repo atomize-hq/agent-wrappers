@@ -25,9 +25,12 @@
 //! ```
 //!
 //! ## Streaming, events, and artifacts
-//! - Use `.json(true)` to request JSONL streaming (events such as `thread.started`,
-//!   `turn.started`/`turn.completed`, and `item.created` with `item.type` like `agent_message`
-//!   or `reasoning`). Errors surface as `{"type":"error","message":...}`.
+//! - Use `.json(true)` to request JSONL streaming. Events include `thread.started`,
+//!   `turn.started`/`turn.completed`/`turn.failed`, and `item.created`/`item.updated` with
+//!   `item.type` such as `agent_message`, `reasoning`, `command_execution`, `file_change`,
+//!   `mcp_tool_call`, `web_search`, or `todo_list` plus optional `status`/`content`/`input`.
+//!   Errors surface as `{"type":"error","message":...}`. Sample payloads ship with the
+//!   streaming examples for offline inspection.
 //! - `.mirror_stdout(true)` (default) lets you watch the stream live while the wrapper buffers it;
 //!   set `.mirror_stdout(false)` when you need to parse the JSON yourself.
 //! - Persist artifacts via CLI flags (`--output-last-message`, `--output-schema`) and tee events to

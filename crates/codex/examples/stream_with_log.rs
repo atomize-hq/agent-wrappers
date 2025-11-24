@@ -26,9 +26,10 @@ use tokio::{
 
 const SAMPLE_EVENTS: &[&str] = &[
     r#"{"type":"thread.started","thread_id":"demo-thread"}"#,
-    r#"{"type":"turn.started","turn_id":"turn-1"}"#,
-    r#"{"type":"item.created","item":{"type":"agent_message","content":"Logging demo output..."}}"#,
-    r#"{"type":"turn.completed","turn_id":"turn-1"}"#,
+    r#"{"type":"turn.started","turn_id":"turn-1","thread_id":"demo-thread"}"#,
+    r#"{"type":"item.created","item":{"type":"command_execution","id":"cmd-1","status":"in_progress","content":"npm test"}}"#,
+    r#"{"type":"item.created","item":{"type":"agent_message","id":"msg-1","status":"completed","content":"Streaming log tee demo."}}"#,
+    r#"{"type":"turn.completed","turn_id":"turn-1","thread_id":"demo-thread"}"#,
 ];
 
 #[tokio::main]

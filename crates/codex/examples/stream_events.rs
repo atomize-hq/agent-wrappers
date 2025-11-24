@@ -1,4 +1,6 @@
 //! Consume the JSONL event stream (`codex exec --json`) and print turn/item events.
+//! Events include thread + turn lifecycle plus item variants such as `agent_message`,
+//! `reasoning`, `command_execution`, `file_change`, and `mcp_tool_call`.
 //!
 //! Flags:
 //! - `--sample` to replay bundled demo events without invoking Codex (useful when the binary is absent).
@@ -21,10 +23,17 @@ use tokio::{
 
 const SAMPLE_EVENTS: &[&str] = &[
     r#"{"type":"thread.started","thread_id":"demo-thread"}"#,
-    r#"{"type":"turn.started","turn_id":"turn-1"}"#,
-    r#"{"type":"item.created","item":{"type":"reasoning","content":"Scanning repo for status..."}}"#,
-    r#"{"type":"item.created","item":{"type":"agent_message","content":"Everything looks good. Tests are green."}}"#,
-    r#"{"type":"turn.completed","turn_id":"turn-1"}"#,
+    r#"{"type":"turn.started","turn_id":"turn-1","thread_id":"demo-thread"}"#,
+    r#"{"type":"item.created","item":{"type":"command_execution","id":"cmd-1","status":"in_progress","content":"npm test"}}"#,
+    r#"{"type":"item.created","item":{"type":"file_change","id":"chg-1","status":"completed","content":"Updated README.md"}}"#,
+    r#"{"type":"item.created","item":{"type":"mcp_tool_call","id":"tool-1","status":"queued","content":"tools/codex --sandbox"}}"#,
+    r#"{"type":"item.created","item":{"type":"web_search","id":"search-1","status":"in_progress","content":"Searching docs for install steps"}}"#,
+    r#"{"type":"item.created","item":{"type":"todo_list","id":"todo-1","content":"Ship README + EXAMPLES refresh"}}"#,
+    r#"{"type":"item.created","item":{"type":"reasoning","id":"r1","content":"Running checks and updating docs."}}"#,
+    r#"{"type":"item.created","item":{"type":"agent_message","id":"msg-1","status":"completed","content":"All checks passed. Docs updated."}}"#,
+    r#"{"type":"turn.completed","turn_id":"turn-1","thread_id":"demo-thread"}"#,
+    r#"{"type":"turn.started","turn_id":"turn-2","thread_id":"demo-thread"}"#,
+    r#"{"type":"turn.failed","turn_id":"turn-2","thread_id":"demo-thread","message":"Idle timeout reached"}"#,
 ];
 
 #[derive(Debug, Deserialize)]
@@ -158,8 +167,31 @@ fn print_event(event: StreamEvent) {
             "Thread started: {}",
             event.thread_id.as_deref().unwrap_or("-")
         ),
-        "turn.started" => println!("Turn started: {}", event.turn_id.as_deref().unwrap_or("-")),
-        "turn.completed" => println!("Turn completed: {}", event.turn_id.as_deref().unwrap_or("-")),
+        "turn.started" => {
+            let turn_id = event.turn_id.as_deref().unwrap_or("-");
+            if let Some(thread_id) = event.thread_id.as_deref() {
+                println!("Turn started: {turn_id} (thread {thread_id})");
+            } else {
+                println!("Turn started: {turn_id}");
+            }
+        }
+        "turn.completed" => {
+            let turn_id = event.turn_id.as_deref().unwrap_or("-");
+            let suffix = event
+                .thread_id
+                .as_deref()
+                .map(|thread_id| format!(" (thread {thread_id})"))
+                .unwrap_or_default();
+            println!("Turn completed: {turn_id}{suffix}");
+        }
+        "turn.failed" => {
+            let turn_id = event.turn_id.as_deref().unwrap_or("-");
+            let message = event
+                .message
+                .as_deref()
+                .unwrap_or("Unknown failure");
+            println!("Turn failed: {turn_id} — {message}");
+        }
         kind if kind.starts_with("item.") => {
             if let Some(item) = event.item {
                 let body = item
