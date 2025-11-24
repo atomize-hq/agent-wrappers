@@ -24,6 +24,7 @@ const SAMPLE_NOTIFICATIONS: &[&str] = &[
     r#"{"jsonrpc":"2.0","method":"notifications/thread.started","params":{"thread_id":"demo-thread"}}"#,
     r#"{"jsonrpc":"2.0","method":"notifications/turn.started","params":{"turn_id":"turn-1","thread_id":"demo-thread"}}"#,
     r#"{"jsonrpc":"2.0","method":"notifications/task_complete","params":{"thread_id":"demo-thread","turn_id":"turn-1","message":"Release note drafted."}}"#,
+    r#"{"jsonrpc":"2.0","method":"notifications/turn.failed","params":{"thread_id":"demo-thread","turn_id":"turn-2","message":"Sandbox approval timeout"}}"#,
 ];
 
 #[tokio::main]

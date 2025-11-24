@@ -42,8 +42,9 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 - Example `crates/codex/examples/send_prompt.rs` covers the baseline; `working_dir(_json).rs`, `timeout*.rs`, `image_json.rs`, `color_always.rs`, `quiet.rs`, and `no_stdout_mirror.rs` expand on inputs and output handling.
 
 ## Streaming Output & Artifacts
+- Event schema: JSONL lines carry `type` plus IDs. Expect `thread.started`, `turn.started/turn.completed/turn.failed`, and `item.created/item.updated` where `item.type` can be `agent_message`, `reasoning`, `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, or `todo_list` with optional `status`/`content`/`input`. Errors surface as `{"type":"error","message":...}`. Examples ship `--sample` payloads so you can inspect shapes without a binary.
 - Enable JSONL streaming with `.json(true)` or by invoking the CLI directly. The crate returns captured output; use the examples to consume the stream yourself:
-  - `crates/codex/examples/stream_events.rs`: typed consumer for `thread.started`, `turn.started/completed`, and `item.created` events; uses `--timeout 0` to keep streaming, includes idle timeout handling, and a `--sample` replay path.
+  - `crates/codex/examples/stream_events.rs`: typed consumer for `thread/turn/item` events (success + failure), uses `--timeout 0` to keep streaming, includes idle timeout handling, and a `--sample` replay path.
   - `crates/codex/examples/stream_last_message.rs`: runs `--output-last-message` + `--output-schema`, reads the emitted files, and ships sample payloads if the binary is missing.
   - `crates/codex/examples/stream_with_log.rs`: mirrors JSON events to stdout and tees them to `CODEX_LOG_PATH` (default `codex-stream.log`); also supports `--sample`.
   - `crates/codex/examples/json_stream.rs`: simplest `--json` usage when you just want the raw stream buffered.
@@ -51,16 +52,16 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 
 ## MCP + App-Server Flows
 - The CLI ships stdio servers for Model Context Protocol and the app-server APIs. Examples cover the JSON-RPC wiring, approvals, and shutdown:
-  - `crates/codex/examples/mcp_codex_tool.rs`: start `codex mcp-server --stdio`, call `tools/codex` with prompt/cwd/model/sandbox, and watch `approval_required`/`task_complete` notifications (`--sample` available).
+  - `crates/codex/examples/mcp_codex_tool.rs`: start `codex mcp-server --stdio`, call `tools/codex` with prompt/cwd/model/sandbox, and watch `approval_required`/`task_complete` notifications (includes `turn_id`/`sandbox` and supports `--sample`).
   - `crates/codex/examples/mcp_codex_reply.rs`: resume a session via `tools/codex-reply`, taking `CODEX_CONVERSATION_ID` or a CLI arg; supports `--sample`.
-  - `crates/codex/examples/app_server_thread_turn.rs`: launch `codex app-server --stdio`, send `thread/start` then `turn/start`, and stream task notifications (`--sample` supported).
+  - `crates/codex/examples/app_server_thread_turn.rs`: launch `codex app-server --stdio`, send `thread/start` then `turn/start`, and stream task notifications (thread/turn IDs echoed; `--sample` supported).
 - Pass `CODEX_HOME` for isolated server state and `CODEX_BINARY` (or `.binary(...)`) to pin the binary version used by the servers.
 
 ## Feature Detection & Version Hooks
 - `crates/codex/examples/feature_detection.rs` shows how to:
   - parse `codex --version`
   - list features via `codex features list` (if supported)
-  - gate optional knobs like JSON streaming or log tee
+  - gate optional knobs like JSON streaming, log tee, MCP/app-server endpoints, and artifact flags
   - emit an upgrade advisory hook when required capabilities are missing
 - Use this when deciding whether to enable `--json`, log tee paths, or app-server endpoints in your app UI.
 

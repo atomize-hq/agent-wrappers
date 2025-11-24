@@ -21,8 +21,8 @@ use tokio::{
 };
 
 const SAMPLE_NOTIFICATIONS: &[&str] = &[
-    r#"{"jsonrpc":"2.0","method":"codex/event","params":{"type":"approval_required","kind":"exec","prompt":"Summarize repo status","sandbox":true}}"#,
-    r#"{"jsonrpc":"2.0","method":"codex/event","params":{"type":"task_complete","message":"Summary ready","turn_id":"turn-1"}}"#,
+    r#"{"jsonrpc":"2.0","method":"codex/event","params":{"type":"approval_required","kind":"exec","prompt":"Summarize repo status","sandbox":true,"thread_id":"demo-thread","turn_id":"turn-1"}}"#,
+    r#"{"jsonrpc":"2.0","method":"codex/event","params":{"type":"task_complete","message":"Summary ready","turn_id":"turn-1","thread_id":"demo-thread"}}"#,
 ];
 
 #[tokio::main]

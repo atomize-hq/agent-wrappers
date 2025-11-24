@@ -1,8 +1,9 @@
 //! Probe the Codex binary for version/features and gate optional flags.
 //!
 //! This example runs `codex --version` and `codex features list` (if available) and then
-//! demonstrates gating streaming/logging flags. If the binary is missing, it falls back to
-//! sample capability data. Set `CODEX_BINARY` to override the binary path.
+//! demonstrates gating streaming/logging/artifact flags plus MCP/app-server flows. If the binary
+//! is missing, it falls back to sample capability data. Set `CODEX_BINARY` to override the binary
+//! path.
 //!
 //! Example:
 //! ```bash
@@ -70,9 +71,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             features: vec![
                 "json-stream".into(),
                 "output-last-message".into(),
+                "output-schema".into(),
                 "log-tee".into(),
                 "app-server".into(),
                 "mcp-server".into(),
+                "notify".into(),
             ],
         }
     };
@@ -94,6 +97,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("-> Log tee supported; safe to write to log files.");
     } else {
         println!("-> Log tee unavailable; fall back to console-only streaming.");
+    }
+
+    if capability.supports("output-last-message") && capability.supports("output-schema") {
+        println!("-> Artifact flags supported; enable --output-last-message/--output-schema.");
+    } else {
+        println!("-> Skip artifact flags when streaming; binary does not advertise them.");
+    }
+
+    if capability.supports("mcp-server") && capability.supports("app-server") {
+        println!("-> MCP + app-server endpoints available; enable the related examples.");
+    } else {
+        println!("-> Server endpoints missing; keep MCP/app-server flows disabled.");
     }
 
     if let Some(update_hook) = update_advisory_hook(&capability) {
