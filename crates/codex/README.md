@@ -4,6 +4,7 @@
 - Capability probes now capture `codex --version`, `codex features list` (`--json` when available), and `--help` hints, storing results as `CodexCapabilities` snapshots with `collected_at` timestamps and `BinaryFingerprint` metadata keyed by canonical binary path.
 - Guard helpers (`guard_output_schema`, `guard_add_dir`, `guard_mcp_login`, `guard_features_list`) keep optional flags off when support is unknown; surface `CapabilityGuard.notes` to operators instead of passing flags blindly.
 - Cache controls: configure `CapabilityCachePolicy::{PreferCache, Refresh, Bypass}` via `capability_cache_policy` or `bypass_capability_cache`. Use `Refresh` for TTL/backoff windows or hot-swaps that reuse the same path; use `Bypass` when metadata is missing (FUSE/overlay filesystems) or when you need an isolated probe that skips cache reads/writes.
+- TTL/backoff helper: `capability_cache_ttl_decision` inspects `collected_at` and fingerprint presence to recommend `Refresh` vs `Bypass` for hot-swaps or metadata-missing paths (FUSE/overlay); start with a ~5 minute TTL and back off toward 10-15 minutes when metadata keeps failing.
 - Overrides + persistence: `capability_snapshot` / `capability_overrides` accept manual snapshots and feature/version hints; `write_capabilities_snapshot`, `read_capabilities_snapshot`, and `capability_snapshot_matches_binary` let hosts reuse snapshots across processes while avoiding stale data when fingerprints diverge.
 - Update advisories stay offline: supply `CodexLatestReleases` and call `update_advisory_from_capabilities` to prompt upgrades without this crate performing network I/O.
 
@@ -18,3 +19,33 @@ cargo run -p codex --example capability_snapshot -- ./codex ./codex-capabilities
 - Refresh vs. Bypass: use `Refresh` to re-probe while still writing back to the cache (good for TTL/backoff windows or deployments that reuse the same path); use `Bypass` for one-off probes that should not read or write cache entries when metadata is unreliable.
 
 See `crates/codex/examples/capability_snapshot.rs` for the full flow, including fingerprint validation and snapshot persistence helpers.
+
+## TTL/backoff helper
+Use `capability_cache_ttl_decision` to decide whether to reuse a cached snapshot or force a probe with the right cache policy:
+
+```rust
+use codex::{
+    capability_cache_entry, capability_cache_ttl_decision, CapabilityCachePolicy, CodexClient,
+};
+use std::{path::Path, time::{Duration, SystemTime}};
+
+async fn refresh_capabilities(client: &CodexClient, binary: &Path) {
+    let cached = capability_cache_entry(binary);
+    let ttl = Duration::from_secs(300); // start with ~5 minutes for binaries with fingerprints
+    let decision = capability_cache_ttl_decision(cached.as_ref(), ttl, SystemTime::now());
+
+    let capabilities = if let Some(snapshot) = cached.filter(|_| !decision.should_probe) {
+        snapshot
+    } else {
+        client.probe_capabilities_with_policy(decision.policy).await
+    };
+
+    if decision.policy == CapabilityCachePolicy::Bypass {
+        // FUSE/overlay path; back off toward 10-15 minutes to avoid hammering probes.
+    }
+
+    let _ = capabilities; // reuse, refresh, or bypass based on the helper decision
+}
+```
+- `Refresh` covers hot-swaps that reuse the same binary path even when fingerprints look unchanged.
+- `Bypass` is returned when metadata is missing; avoid cache writes and increase the TTL/backoff window to reduce probe churn.

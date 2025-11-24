@@ -21,3 +21,30 @@ Every example under `crates/codex/examples/` corresponds to a specific `codex ex
 | `cargo run -p ingestion --example ingest_to_codex -- --instructions "Summarize the documents" --model gpt-5-codex --json --include-prompt --image "C:\Docs\mockup.png" C:\Docs\spec.pdf` | `codex exec --skip-git-repo-check --json --model gpt-5-codex --image "C:\Docs\mockup.png" "<constructed prompt covering spec.pdf>"` | Full ingestion harness: it builds the multi-document prompt before calling `codex exec`. |
 
 Use these pairs as a checklist when validating parity between the Rust wrapper and the raw Codex CLI.
+
+## Capability TTL helper
+`capability_cache_ttl_decision` provides a TTL/backoff wrapper around cached snapshots so hosts know when to reuse, refresh, or bypass:
+
+```rust
+use codex::{capability_cache_entry, capability_cache_ttl_decision, CapabilityCachePolicy, CodexClient};
+use std::time::{Duration, SystemTime};
+
+async fn decide(client: &CodexClient, binary: &std::path::Path) {
+    let cached = capability_cache_entry(binary);
+    let decision = capability_cache_ttl_decision(cached.as_ref(), Duration::from_secs(300), SystemTime::now());
+
+    let capabilities = if let Some(snapshot) = cached.filter(|_| !decision.should_probe) {
+        snapshot
+    } else {
+        client.probe_capabilities_with_policy(decision.policy).await
+    };
+
+    if decision.policy == CapabilityCachePolicy::Bypass {
+        // Metadata missing (FUSE/overlay); stretch the TTL toward 10-15 minutes to reduce probe churn.
+    }
+
+    let _ = capabilities;
+}
+```
+- `Refresh` is recommended for hot-swaps that reuse the same path even when fingerprints look unchanged.
+- `Bypass` is returned when metadata is missing; avoid cache writes and apply a growing TTL/backoff to avoid hammering the binary.
