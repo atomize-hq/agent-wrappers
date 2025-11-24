@@ -21,3 +21,5 @@ Append entries: `[START ...] [END ...] Agent: <name> | Task(s): <IDs> | Branch: 
 [END 2025-11-24 07:19] Agent: Codex | Task(s): F9-post-workstream-review | Branch: ws/F_versioning_features | Notes: Audit complete; added advisory tests and handoff notes; merged task branch
 [START 2025-11-24 13:50] Agent: Codex | Task(s): F10-release-docs-and-examples | Branch: ws/F_versioning_features | Notes: Starting release docs/examples task and worktree setup
 [END 2025-11-24 13:58] Agent: Codex | Task(s): F10-release-docs-and-examples | Branch: ws/F_versioning_features | Notes: Release notes + cache policy example merged; ready for next kickoff
+[START 2025-11-24 14:18] Agent: Codex | Task(s): F11-capability-ttl-helper | Branch: ws/F_versioning_features | Notes: Starting capability TTL/backoff helper task and worktree setup
+[END 2025-11-24 14:28] Agent: Codex | Task(s): F11-capability-ttl-helper | Branch: ws/F_versioning_features | Notes: TTL/backoff helper merged with tests and docs; cache policy guidance wired
