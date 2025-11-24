@@ -133,6 +133,43 @@ pub struct McpToolConfig {
     pub disabled: Vec<String>,
 }
 
+/// Resolved runtime configuration for an MCP server, ready for spawning or connecting.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct McpRuntimeServer {
+    pub name: String,
+    pub transport: McpRuntimeTransport,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tools: Option<McpToolConfig>,
+}
+
+/// Transport-specific runtime configuration.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "transport", rename_all = "snake_case")]
+pub enum McpRuntimeTransport {
+    Stdio(StdioServerDefinition),
+    StreamableHttp(ResolvedStreamableHttpDefinition),
+}
+
+/// HTTP runtime config with bearer tokens resolved from the environment.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ResolvedStreamableHttpDefinition {
+    pub url: String,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub headers: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bearer_env_var: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bearer_token: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connect_timeout_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_timeout_ms: Option<u64>,
+}
+
 /// Input for adding or updating an MCP server entry.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AddServerRequest {
@@ -216,6 +253,81 @@ pub enum McpConfigError {
     UnsupportedAuthTransport { server: String },
 }
 
+impl From<McpServerEntry> for McpRuntimeServer {
+    fn from(entry: McpServerEntry) -> Self {
+        let McpServerEntry { name, definition } = entry;
+        McpRuntimeServer::from_definition(name, definition)
+    }
+}
+
+impl McpRuntimeServer {
+    /// Builds a runtime config from a stored server definition.
+    pub fn from_definition(name: impl Into<String>, definition: McpServerDefinition) -> Self {
+        let McpServerDefinition {
+            transport,
+            description,
+            tags,
+            tools,
+        } = definition;
+
+        Self {
+            name: name.into(),
+            transport: McpRuntimeTransport::from_transport(transport),
+            description,
+            tags,
+            tools,
+        }
+    }
+}
+
+impl McpRuntimeTransport {
+    fn from_transport(transport: McpTransport) -> Self {
+        match transport {
+            McpTransport::Stdio(definition) => McpRuntimeTransport::Stdio(definition),
+            McpTransport::StreamableHttp(definition) => {
+                McpRuntimeTransport::StreamableHttp(resolve_streamable_http(definition))
+            }
+        }
+    }
+}
+
+fn resolve_streamable_http(
+    definition: StreamableHttpDefinition,
+) -> ResolvedStreamableHttpDefinition {
+    let StreamableHttpDefinition {
+        url,
+        headers,
+        bearer_env_var,
+        connect_timeout_ms,
+        request_timeout_ms,
+    } = definition;
+
+    let mut headers = headers;
+    let mut bearer_token = None;
+    if let Some(env_var) = bearer_env_var.as_deref() {
+        if let Ok(token) = env::var(env_var) {
+            if !token.is_empty() {
+                let has_auth_header = headers
+                    .keys()
+                    .any(|key| key.eq_ignore_ascii_case("authorization"));
+                if !has_auth_header {
+                    headers.insert("Authorization".into(), format!("Bearer {token}"));
+                }
+                bearer_token = Some(token);
+            }
+        }
+    }
+
+    ResolvedStreamableHttpDefinition {
+        url,
+        headers,
+        bearer_env_var,
+        bearer_token,
+        connect_timeout_ms,
+        request_timeout_ms,
+    }
+}
+
 /// Helper to load and mutate MCP config stored under `[mcp_servers]`.
 pub struct McpConfigManager {
     config_path: PathBuf,
@@ -259,6 +371,20 @@ impl McpConfigManager {
             name: name.to_string(),
             definition,
         })
+    }
+
+    /// Returns runtime-ready configs for all servers, resolving bearer tokens from the environment.
+    pub fn runtime_servers(&self) -> Result<Vec<McpRuntimeServer>, McpConfigError> {
+        Ok(self
+            .list_servers()?
+            .into_iter()
+            .map(McpRuntimeServer::from)
+            .collect())
+    }
+
+    /// Returns a runtime-ready config for a single server by name.
+    pub fn runtime_server(&self, name: &str) -> Result<McpRuntimeServer, McpConfigError> {
+        self.get_server(name).map(McpRuntimeServer::from)
     }
 
     /// Adds or updates a server definition and injects any provided env vars.
@@ -1784,6 +1910,148 @@ for line in sys.stdin:
             servers_value.try_into().expect("decode servers");
         assert!(servers.get("one").is_none());
         assert!(servers.get("two").is_some());
+    }
+
+    #[test]
+    fn runtime_stdio_server_resolves_env_and_tools() {
+        let (_dir, manager) = temp_config_manager();
+        let mut definition = stdio_definition("my-mcp");
+        definition.description = Some("local mcp".into());
+        definition.tags = vec!["dev".into(), "local".into()];
+        definition.tools = Some(McpToolConfig {
+            enabled: vec!["tool-a".into()],
+            disabled: vec!["tool-b".into()],
+        });
+
+        if let McpTransport::Stdio(ref mut stdio) = definition.transport {
+            stdio.args = vec!["--flag".into()];
+            stdio.env.insert("EXAMPLE".into(), "value".into());
+            stdio.timeout_ms = Some(2500);
+        }
+
+        let mut injected = BTreeMap::new();
+        injected.insert("MCP_STDIO_INJECT_E6".into(), "yes".into());
+
+        manager
+            .add_server(AddServerRequest {
+                name: "local".into(),
+                definition,
+                overwrite: false,
+                env: injected,
+                bearer_token: None,
+            })
+            .expect("add server");
+
+        let runtime = manager.runtime_server("local").expect("runtime server");
+        assert_eq!(runtime.name, "local");
+        assert_eq!(runtime.description.as_deref(), Some("local mcp"));
+        assert_eq!(runtime.tags, vec!["dev".to_string(), "local".to_string()]);
+
+        let tools = runtime.tools.as_ref().expect("tool hints");
+        assert_eq!(tools.enabled, vec!["tool-a".to_string()]);
+        assert_eq!(tools.disabled, vec!["tool-b".to_string()]);
+
+        match &runtime.transport {
+            McpRuntimeTransport::Stdio(def) => {
+                assert_eq!(def.command, "my-mcp");
+                assert_eq!(def.args, vec!["--flag".to_string()]);
+                assert_eq!(def.timeout_ms, Some(2500));
+                assert_eq!(def.env.get("EXAMPLE").map(String::as_str), Some("value"));
+                assert_eq!(
+                    def.env.get("MCP_STDIO_INJECT_E6").map(String::as_str),
+                    Some("yes")
+                );
+            }
+            other => panic!("expected stdio transport, got {other:?}"),
+        }
+
+        serde_json::to_string(&runtime).expect("serialize runtime");
+        env::remove_var("MCP_STDIO_INJECT_E6");
+    }
+
+    #[test]
+    fn runtime_http_resolves_bearer_and_sets_header() {
+        let (_dir, manager) = temp_config_manager();
+        let env_var = "MCP_HTTP_TOKEN_E6";
+        env::set_var(env_var, "token-123");
+
+        let mut definition = streamable_definition("https://example.test/mcp", env_var);
+        if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
+            http.headers.insert("X-Test".into(), "true".into());
+            http.connect_timeout_ms = Some(1200);
+            http.request_timeout_ms = Some(3400);
+        }
+
+        manager
+            .add_server(AddServerRequest {
+                name: "remote".into(),
+                definition,
+                overwrite: false,
+                env: BTreeMap::new(),
+                bearer_token: None,
+            })
+            .expect("add server");
+
+        let runtime = manager.runtime_server("remote").expect("runtime server");
+        match &runtime.transport {
+            McpRuntimeTransport::StreamableHttp(def) => {
+                assert_eq!(def.url, "https://example.test/mcp");
+                assert_eq!(def.bearer_env_var.as_deref(), Some(env_var));
+                assert_eq!(def.bearer_token.as_deref(), Some("token-123"));
+                assert_eq!(def.headers.get("X-Test").map(String::as_str), Some("true"));
+                assert_eq!(
+                    def.headers.get("Authorization").map(String::as_str),
+                    Some("Bearer token-123")
+                );
+                assert_eq!(def.connect_timeout_ms, Some(1200));
+                assert_eq!(def.request_timeout_ms, Some(3400));
+            }
+            other => panic!("expected streamable_http transport, got {other:?}"),
+        }
+
+        let serialized = serde_json::to_value(&runtime).expect("serialize runtime");
+        assert!(serialized.get("transport").is_some());
+
+        env::remove_var(env_var);
+    }
+
+    #[test]
+    fn runtime_http_preserves_existing_auth_header() {
+        let (_dir, manager) = temp_config_manager();
+        let env_var = "MCP_HTTP_TOKEN_E6B";
+        env::set_var(env_var, "token-override");
+
+        let mut definition = streamable_definition("https://example.test/custom", env_var);
+        if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
+            http.headers
+                .insert("Authorization".into(), "Custom 123".into());
+        }
+
+        manager
+            .add_server(AddServerRequest {
+                name: "remote-custom".into(),
+                definition,
+                overwrite: false,
+                env: BTreeMap::new(),
+                bearer_token: None,
+            })
+            .expect("add server");
+
+        let runtime = manager
+            .runtime_server("remote-custom")
+            .expect("runtime server");
+        match &runtime.transport {
+            McpRuntimeTransport::StreamableHttp(def) => {
+                assert_eq!(def.bearer_token.as_deref(), Some("token-override"));
+                assert_eq!(
+                    def.headers.get("Authorization").map(String::as_str),
+                    Some("Custom 123")
+                );
+            }
+            other => panic!("expected streamable_http transport, got {other:?}"),
+        }
+
+        env::remove_var(env_var);
     }
 
     #[tokio::test]
