@@ -1,9 +1,19 @@
-//! Minimal async wrapper over the [OpenAI Codex CLI](https://github.com/openai/codex).
+//! Async wrapper over the [OpenAI Codex CLI](https://github.com/openai/codex).
 //!
-//! The CLI ships both an interactive TUI (`codex`) and a headless automation mode (`codex exec`).
-//! This crate targets the latter: it shells out to `codex exec`, enforces sensible defaults
-//! (non-interactive color handling, timeouts, optional model selection), and returns whatever
-//! the CLI prints to stdout (the agent's final response per upstream docs).
+//! Two surfaces are exposed:
+//! - [`CodexClient::send_prompt`] for a single prompt/response with optional `--json` output.
+//! - [`CodexClient::stream_exec`] for typed, real-time JSONL events from `codex exec --json`,
+//!   returning an [`ExecStream`] with an event stream plus a completion future.
+//!
+//! Logging + defaults:
+//! - Set `json_event_log` on the builder or [`ExecStreamRequest`] to tee raw JSONL lines to disk
+//!   before parsing. Logs append to existing files, flush per line, and create parent directories.
+//! - Disable `mirror_stdout` when parsing JSON so stdout stays under caller control; `quiet`
+//!   controls stderr mirroring.
+//! - When `RUST_LOG` is unset, the spawned `codex` process inherits `RUST_LOG=error` to mute
+//!   verbose tracing. Existing values are preserved if you want more detail.
+//!
+//! See `examples/json_stream.rs` for an end-to-end streaming walkthrough.
 
 use std::{
     collections::BTreeMap,
@@ -102,6 +112,10 @@ impl CodexClient {
     }
 
     /// Streams structured JSONL events from `codex exec --json`.
+    ///
+    /// Respects `mirror_stdout` (raw JSON echoing) and tees raw lines to `json_event_log` when
+    /// configured on the builder or request. Returns an [`ExecStream`] with both the parsed event
+    /// stream and a completion future that reports `--output-last-message`/schema paths.
     pub async fn stream_exec(
         &self,
         request: ExecStreamRequest,
@@ -606,7 +620,8 @@ impl CodexClientBuilder {
     }
 
     /// Tees each JSONL event line from [`CodexClient::stream_exec`] into a log file.
-    /// The log is appended to when it already exists.
+    /// Logs append to existing files, flush after each line, and create parent directories as
+    /// needed. [`ExecStreamRequest::json_event_log`] overrides this default per request.
     pub fn json_event_log(mut self, path: impl Into<PathBuf>) -> Self {
         self.json_event_log = Some(path.into());
         self
@@ -1106,6 +1121,8 @@ pub struct ExecStreamRequest {
     /// describing the item envelope structure seen during the run.
     pub output_schema: Option<PathBuf>,
     /// Optional file path that receives a tee of every raw JSONL event line as it streams in.
+    /// Appends to existing files, flushes each line, and creates parent directories. Overrides
+    /// [`CodexClientBuilder::json_event_log`] for this request when provided.
     pub json_event_log: Option<PathBuf>,
 }
 
