@@ -62,7 +62,7 @@
     "dependencies": ["A5-home-path-helpers"],
     "files": ["crates/codex/src/lib.rs", "crates/codex/EXAMPLES.md", "crates/codex/tests", "workstreams/A_binary_env/BRIEF.md"],
     "outputs": ["Release-ready docs/notes and metadata updates"],
-    "status": "doing",
+    "status": "done",
     "tests": ["cargo test -p codex"],
     "notes": "Focus on release polish (README/notes/version bumps) and ensure tests remain green."
   }
