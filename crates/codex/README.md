@@ -48,6 +48,93 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Call [`CodexHomeLayout::materialize`] to create the root, `conversations/`, and `logs/` directories before spawning Codex.
 
+## Stream JSONL events
+
+Use the streaming surface to consume `codex exec --json` output as it arrives. Disable stdout mirroring so you control the console, and set an idle timeout to fail fast if the CLI stalls.
+
+```rust
+use codex::{CodexClient, ExecStreamRequest, ThreadEvent};
+use futures_util::StreamExt;
+use std::{path::PathBuf, time::Duration};
+
+# async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+let client = CodexClient::builder()
+    .json(true)
+    .quiet(true)
+    .mirror_stdout(false)
+    .json_event_log("logs/codex_events.log")
+    .build();
+
+let mut stream = client
+    .stream_exec(ExecStreamRequest {
+        prompt: "List repo files".into(),
+        idle_timeout: Some(Duration::from_secs(30)),
+        output_last_message: Some(PathBuf::from("last_message.txt")),
+        output_schema: None,
+        json_event_log: None, // override per request if desired
+    })
+    .await?;
+
+while let Some(event) = stream.events.next().await {
+    match event {
+        Ok(ThreadEvent::ItemDelta(delta)) => println!("delta: {:?}", delta.delta),
+        Ok(other) => println!("event: {other:?}"),
+        Err(err) => {
+            eprintln!("stream error: {err}");
+            break;
+        }
+    }
+}
+
+let completion = stream.completion.await?;
+println!("codex exited with {}", completion.status);
+if let Some(path) = completion.last_message_path {
+    println!("last message saved to {}", path.display());
+}
+# Ok(()) }
+```
+
+## Log the raw JSON stream
+
+Set `json_event_log` on the builder or per request to tee every raw JSONL line to disk before parsing:
+
+- The log is appended to (existing files are preserved) and flushed per line.
+- Parent directories are created automatically.
+- An empty string is ignored; set a real path or leave `None` to disable.
+- The per-request `json_event_log` overrides the builder default for that run.
+
+Events still flow to your `events` stream even when teeing is enabled.
+
+## Apply or inspect diffs
+
+`CodexClient::apply` and `CodexClient::diff` wrap `codex apply/diff`, capture stdout/stderr, and return the exit status via [`ApplyDiffArtifacts`](crates/codex/src/lib.rs). They honor the builder flags you already use for streaming:
+
+- `mirror_stdout` controls whether stdout is echoed while still being captured.
+- `quiet` suppresses stderr mirroring (stderr is always returned in the artifacts).
+- `RUST_LOG` defaults to `error` for these subcommands when the environment is unset; set `RUST_LOG=info` (or higher) to inspect codex internals.
+
+```rust
+use codex::CodexClient;
+
+# async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+let client = CodexClient::builder()
+    .mirror_stdout(false) // silence stdout while capturing
+    .quiet(true)          // silence stderr while capturing
+    .build();
+
+let apply = client.apply().await?; // or client.diff()
+println!("exit: {}", apply.status);
+println!("stdout: {}", apply.stdout);
+println!("stderr: {}", apply.stderr);
+# Ok(()) }
+```
+
+When you stream JSONL events, apply/diff output is also emitted inside `file_change` events and tee'd to any `json_event_log` path you configure.
+
+## RUST_LOG defaults
+
+If `RUST_LOG` is unset, the wrapper injects `RUST_LOG=error` for spawned commands to silence verbose upstream tracing. Any existing `RUST_LOG` value is respected.
+
 ## Examples
 
 See `crates/codex/EXAMPLES.md` for one-to-one CLI parity examples, including `bundled_binary_home` to run Codex from an embedded binary with isolated state.
