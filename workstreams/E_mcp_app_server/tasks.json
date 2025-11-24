@@ -122,7 +122,7 @@
   {
     "id": "E13-app-runtime-pool-api",
     "title": "App runtime pool public API",
-    "status": "doing",
+    "status": "done",
     "description": "Expose a public API around the app-runtime pool so callers can list available and running app runtimes, start/reuse/stop/stop-all from prepared configs (Workstream A env prep intact) while keeping metadata/resume hints intact and never mutating stored definitions or thread data.",
     "dependencies": ["E12-app-runtime-pool"],
     "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
