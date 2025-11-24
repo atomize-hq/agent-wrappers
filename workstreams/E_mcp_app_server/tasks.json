@@ -31,7 +31,7 @@
   {
     "id": "E4-tests-examples",
     "title": "Tests and examples for MCP/app-server",
-    "status": "doing",
+    "status": "done",
     "description": "Add integration-style tests with fake stdio or fixtures to validate request/notification handling, cancellations, and shutdown. Add examples demonstrating codex/codex-reply long-running continuation and app-server thread/turn usage (coordinate with H).",
     "dependencies": ["E2-implement-mcp-server", "E3-implement-app-server"],
     "files": ["crates/codex/examples", "crates/codex/src/lib.rs"],
