@@ -6,3 +6,4 @@ Instructions: Append a new entry per session. Include start/end UTC timestamps, 
 - Template: `[START yyyy-mm-ddTHH:MMZ] [END yyyy-mm-ddTHH:MMZ] Agent: <name> | Task(s): <IDs> | Branch: <branch> | Notes: <what changed/tested/blocked>`
 - [START 2025-11-23T22:21Z] [END 2025-11-23T22:31Z] Agent: Codex | Task(s): A1-design-env-api | Branch: ws/A_binary_env | Notes: Added doc design note for binary/CODEX_HOME env prep and merged task branch.
 - [START 2025-11-23T22:54Z] [END 2025-11-23T23:06Z] Agent: Codex | Task(s): A2-implement-env-prep | Branch: ws/A_binary_env | Notes: Implemented per-command env prep/CODEX_HOME helper, added builder opts + tests, ran `cargo test -p codex`, merged task branch.
+- [START 2025-11-24T00:56Z] [END ????] Agent: Codex | Task(s): A3-tests-docs | Branch: ws/A_binary_env | Notes: Session start; adding tests/docs for env/binary overrides.
