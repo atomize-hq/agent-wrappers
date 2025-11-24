@@ -264,6 +264,93 @@ pub struct CodexFeatureFlags {
     pub supports_mcp_login: bool,
 }
 
+/// High-level view of whether a specific feature can be used safely.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CapabilitySupport {
+    Supported,
+    Unsupported,
+    Unknown,
+}
+
+impl CapabilitySupport {
+    /// True when it is safe to enable the guarded feature or flag.
+    pub const fn is_supported(self) -> bool {
+        matches!(self, CapabilitySupport::Supported)
+    }
+
+    /// True when support could not be confirmed due to missing probes.
+    pub const fn is_unknown(self) -> bool {
+        matches!(self, CapabilitySupport::Unknown)
+    }
+}
+
+/// Feature/flag tokens that can be guarded based on probed capabilities.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CapabilityFeature {
+    OutputSchema,
+    AddDir,
+    McpLogin,
+    FeaturesList,
+}
+
+impl CapabilityFeature {
+    fn label(self) -> &'static str {
+        match self {
+            CapabilityFeature::OutputSchema => "--output-schema",
+            CapabilityFeature::AddDir => "codex add-dir",
+            CapabilityFeature::McpLogin => "codex login --mcp",
+            CapabilityFeature::FeaturesList => "codex features list",
+        }
+    }
+}
+
+/// Result of gating a Codex feature/flag against probed capabilities.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CapabilityGuard {
+    /// Feature being checked.
+    pub feature: CapabilityFeature,
+    /// Whether the feature is safe to enable.
+    pub support: CapabilitySupport,
+    /// Notes explaining how the guard was derived.
+    pub notes: Vec<String>,
+}
+
+impl CapabilityGuard {
+    fn supported(feature: CapabilityFeature, note: impl Into<String>) -> Self {
+        CapabilityGuard {
+            feature,
+            support: CapabilitySupport::Supported,
+            notes: vec![note.into()],
+        }
+    }
+
+    fn unsupported(feature: CapabilityFeature, note: impl Into<String>) -> Self {
+        CapabilityGuard {
+            feature,
+            support: CapabilitySupport::Unsupported,
+            notes: vec![note.into()],
+        }
+    }
+
+    fn unknown(feature: CapabilityFeature, notes: Vec<String>) -> Self {
+        CapabilityGuard {
+            feature,
+            support: CapabilitySupport::Unknown,
+            notes,
+        }
+    }
+
+    /// Convenience wrapper for `support.is_supported()`.
+    pub const fn is_supported(&self) -> bool {
+        self.support.is_supported()
+    }
+
+    /// Convenience wrapper for `support.is_unknown()`.
+    pub const fn is_unknown(&self) -> bool {
+        self.support.is_unknown()
+    }
+}
+
 /// Description of how we interrogate the CLI to populate a [`CodexCapabilities`] snapshot.
 ///
 /// Probes should prefer an explicit feature list when available, fall back to parsing
@@ -292,6 +379,95 @@ pub enum CapabilityProbeStep {
     FeaturesListText,
     /// Parse `codex --help` to spot known flags (e.g., `--output-schema`, `add-dir`, `login --mcp`) when the features list is missing.
     HelpFallback,
+}
+
+impl CodexCapabilities {
+    /// Guards whether `--output-schema` should be passed to `codex exec`.
+    pub fn guard_output_schema(&self) -> CapabilityGuard {
+        self.guard_feature(CapabilityFeature::OutputSchema)
+    }
+
+    /// Guards whether `codex add-dir` can be invoked safely.
+    pub fn guard_add_dir(&self) -> CapabilityGuard {
+        self.guard_feature(CapabilityFeature::AddDir)
+    }
+
+    /// Guards whether `codex login --mcp` is available.
+    pub fn guard_mcp_login(&self) -> CapabilityGuard {
+        self.guard_feature(CapabilityFeature::McpLogin)
+    }
+
+    /// Guards whether `codex features list` is supported by the probed binary.
+    pub fn guard_features_list(&self) -> CapabilityGuard {
+        self.guard_feature(CapabilityFeature::FeaturesList)
+    }
+
+    /// Returns a guard describing if a feature/flag is supported by the probed binary.
+    ///
+    /// The guard treats missing `features list` support as `Unknown` so hosts can
+    /// degrade gracefully on older binaries instead of passing unsupported flags.
+    pub fn guard_feature(&self, feature: CapabilityFeature) -> CapabilityGuard {
+        guard_feature_support(feature, &self.features, self.version.as_ref())
+    }
+}
+
+fn guard_feature_support(
+    feature: CapabilityFeature,
+    flags: &CodexFeatureFlags,
+    version: Option<&CodexVersionInfo>,
+) -> CapabilityGuard {
+    let supported = match feature {
+        CapabilityFeature::OutputSchema => flags.supports_output_schema,
+        CapabilityFeature::AddDir => flags.supports_add_dir,
+        CapabilityFeature::McpLogin => flags.supports_mcp_login,
+        CapabilityFeature::FeaturesList => flags.supports_features_list,
+    };
+
+    if supported {
+        return CapabilityGuard::supported(
+            feature,
+            format!("Support for {} reported by Codex probe.", feature.label()),
+        );
+    }
+
+    if feature == CapabilityFeature::FeaturesList {
+        let mut notes = vec![format!(
+            "Support for {} could not be confirmed; feature list probes failed or were unavailable.",
+            feature.label()
+        )];
+        if version.is_none() {
+            notes.push(
+                "Version was unavailable; assuming compatibility with older Codex builds."
+                    .to_string(),
+            );
+        }
+        return CapabilityGuard::unknown(feature, notes);
+    }
+
+    if flags.supports_features_list {
+        return CapabilityGuard::unsupported(
+            feature,
+            format!(
+                "`{}` did not advertise {}; skipping related flag to stay compatible.",
+                CapabilityFeature::FeaturesList.label(),
+                feature.label()
+            ),
+        );
+    }
+
+    let mut notes = vec![format!(
+        "Support for {} is unknown because {} is unavailable; disable the flag for compatibility.",
+        feature.label(),
+        CapabilityFeature::FeaturesList.label()
+    )];
+    if version.is_none() {
+        notes.push(
+            "Version could not be parsed; treating feature support conservatively to avoid CLI errors."
+                .to_string(),
+        );
+    }
+
+    CapabilityGuard::unknown(feature, notes)
 }
 
 /// Cache key for capability snapshots derived from a specific Codex binary path.
@@ -1590,6 +1766,19 @@ mod tests {
         }
     }
 
+    fn capabilities_with_feature_flags(features: CodexFeatureFlags) -> CodexCapabilities {
+        CodexCapabilities {
+            cache_key: CapabilityCacheKey {
+                binary_path: PathBuf::from("codex"),
+            },
+            fingerprint: None,
+            version: None,
+            features,
+            probe_plan: CapabilityProbePlan::default(),
+            collected_at: SystemTime::now(),
+        }
+    }
+
     #[test]
     fn builder_defaults_are_sane() {
         let builder = CodexClient::builder();
@@ -1837,6 +2026,64 @@ mod tests {
         assert!(parsed.supports_add_dir);
         assert!(parsed.supports_mcp_login);
         assert!(parsed.supports_features_list);
+    }
+
+    #[test]
+    fn capability_guard_reports_detected_support() {
+        let mut flags = CodexFeatureFlags::default();
+        flags.supports_features_list = true;
+        flags.supports_output_schema = true;
+        flags.supports_add_dir = true;
+        flags.supports_mcp_login = true;
+        let capabilities = capabilities_with_feature_flags(flags);
+
+        let output_schema = capabilities.guard_output_schema();
+        assert_eq!(output_schema.support, CapabilitySupport::Supported);
+        assert!(output_schema.is_supported());
+
+        let add_dir = capabilities.guard_add_dir();
+        assert_eq!(add_dir.support, CapabilitySupport::Supported);
+        assert!(add_dir.is_supported());
+
+        let mcp_login = capabilities.guard_mcp_login();
+        assert_eq!(mcp_login.support, CapabilitySupport::Supported);
+
+        let features_list = capabilities.guard_features_list();
+        assert_eq!(features_list.support, CapabilitySupport::Supported);
+    }
+
+    #[test]
+    fn capability_guard_marks_absent_feature_as_unsupported() {
+        let mut flags = CodexFeatureFlags::default();
+        flags.supports_features_list = true;
+        let capabilities = capabilities_with_feature_flags(flags);
+
+        let output_schema = capabilities.guard_output_schema();
+        assert_eq!(output_schema.support, CapabilitySupport::Unsupported);
+        assert!(!output_schema.is_supported());
+        assert!(output_schema
+            .notes
+            .iter()
+            .any(|note| note.contains("features list")));
+
+        let mcp_login = capabilities.guard_mcp_login();
+        assert_eq!(mcp_login.support, CapabilitySupport::Unsupported);
+    }
+
+    #[test]
+    fn capability_guard_returns_unknown_without_feature_list() {
+        let capabilities = capabilities_with_feature_flags(CodexFeatureFlags::default());
+
+        let add_dir = capabilities.guard_add_dir();
+        assert_eq!(add_dir.support, CapabilitySupport::Unknown);
+        assert!(add_dir.is_unknown());
+        assert!(add_dir
+            .notes
+            .iter()
+            .any(|note| note.contains("unknown") || note.contains("unavailable")));
+
+        let features_list = capabilities.guard_features_list();
+        assert_eq!(features_list.support, CapabilitySupport::Unknown);
     }
 
     #[tokio::test]
