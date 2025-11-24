@@ -42,7 +42,7 @@
     "id": "D5-docs-release",
     "title": "Document streaming logging surface",
     "description": "Polish crate-level docs/README around JSON streaming and the new log tee options, including RUST_LOG defaults, usage patterns, and examples. Prep any release notes needed for the logging surface.",
-    "status": "todo",
+    "status": "doing",
     "dependencies": ["D4-log-tee"],
     "files": ["README.md", "crates/codex/src/lib.rs", "workstreams/D_json_stream_logging/BRIEF.md"],
     "tests": ["cargo test -p codex"],
