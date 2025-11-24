@@ -4,13 +4,36 @@
 //! This crate targets the latter: it shells out to `codex exec`, enforces sensible defaults
 //! (non-interactive color handling, timeouts, optional model selection), and returns whatever
 //! the CLI prints to stdout (the agent's final response per upstream docs).
+//!
+//! ## Binary + CODEX_HOME design (Workstream A)
+//! - `CodexClientBuilder` will grow environment knobs: `binary_path: PathBuf` (default still
+//!   `default_binary_path()`), `codex_home: Option<PathBuf>`, and `create_home_dirs: bool`
+//!   (defaults to `true` when `codex_home` is set) that ensures the on-disk layout exists.
+//!   The existing `binary(...)` setter remains; new `codex_home(...)` /
+//!   `create_home_dirs(...)` methods are additive.
+//! - A shared `CommandEnvironment` helper will prepare every `tokio::process::Command`
+//!   (exec/login/status/logout/MCP/app-server) without mutating the parent env. It applies
+//!   `CODEX_HOME` when provided, mirrors the resolved binary into `CODEX_BINARY`, reuses the
+//!   default `RUST_LOG` fallback, and can pre-create `conversations/` and `logs/` directories
+//!   when asked.
+//! - Expected `CODEX_HOME` contents: root holds `config.toml`, `auth.json`, `.credentials.json`,
+//!   and `history.jsonl`; `conversations/` stores `*.jsonl` transcripts; `logs/` stores
+//!   `codex-*.log`. When `codex_home` is unset no directories are created and the ambient
+//!   `CODEX_HOME` (if any) is inherited.
+//! - Backward compatibility: callers that ignore the new options keep today's behavior (binary
+//!   from `CODEX_BINARY` or `codex` on PATH, no forced `CODEX_HOME`, same spawning semantics).
+//!   Opting into `codex_home` enables app-scoped state isolation without affecting the host
+//!   process environment.
 
 use std::{
+    collections::{HashMap, HashSet},
     env,
-    ffi::OsStr,
+    ffi::{OsStr, OsString},
+    fs,
     io::{self as stdio, Write},
     path::{Path, PathBuf},
     process::ExitStatus,
+    sync::{Mutex, OnceLock},
     time::{Duration, SystemTime},
 };
 
@@ -21,7 +44,9 @@ use tokio::{
     process::Command,
     task, time,
 };
-use tracing::debug;
+use semver::Version;
+use serde_json::Value;
+use tracing::{debug, warn};
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(120);
 const DEFAULT_REASONING_CONFIG_GPT5: &[(&str, &str)] = &[
@@ -36,6 +61,9 @@ const DEFAULT_REASONING_CONFIG_GPT5_CODEX: &[(&str, &str)] = &[
     ("model_verbosity", "low"),
 ];
 const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
+const CODEX_HOME_ENV: &str = "CODEX_HOME";
+const RUST_LOG_ENV: &str = "RUST_LOG";
+const DEFAULT_RUST_LOG: &str = "error";
 
 /// Snapshot of Codex CLI capabilities derived from probing a specific binary.
 ///
@@ -111,6 +139,12 @@ pub struct CapabilityProbePlan {
     pub steps: Vec<CapabilityProbeStep>,
 }
 
+impl Default for CapabilityProbePlan {
+    fn default() -> Self {
+        Self { steps: Vec::new() }
+    }
+}
+
 /// Command-level probes used to infer feature support.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CapabilityProbeStep {
@@ -145,10 +179,63 @@ pub struct BinaryFingerprint {
     pub len: Option<u64>,
 }
 
+fn capability_cache(
+) -> &'static Mutex<HashMap<CapabilityCacheKey, CodexCapabilities>> {
+    static CACHE: OnceLock<Mutex<HashMap<CapabilityCacheKey, CodexCapabilities>>> =
+        OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn capability_cache_key(binary: &Path) -> CapabilityCacheKey {
+    let canonical = fs::canonicalize(binary).unwrap_or_else(|_| binary.to_path_buf());
+    CapabilityCacheKey {
+        binary_path: canonical,
+    }
+}
+
+fn cached_capabilities(
+    key: &CapabilityCacheKey,
+    fingerprint: &Option<BinaryFingerprint>,
+) -> Option<CodexCapabilities> {
+    let cache = capability_cache().lock().ok()?;
+    let cached = cache.get(key)?;
+    if fingerprints_match(&cached.fingerprint, fingerprint) {
+        Some(cached.clone())
+    } else {
+        None
+    }
+}
+
+fn update_capability_cache(capabilities: CodexCapabilities) {
+    if let Ok(mut cache) = capability_cache().lock() {
+        cache.insert(capabilities.cache_key.clone(), capabilities);
+    }
+}
+
+fn current_fingerprint(key: &CapabilityCacheKey) -> Option<BinaryFingerprint> {
+    let canonical = fs::canonicalize(&key.binary_path).ok();
+    let metadata_path = canonical
+        .as_deref()
+        .unwrap_or_else(|| key.binary_path.as_path());
+    let metadata = fs::metadata(metadata_path).ok()?;
+    Some(BinaryFingerprint {
+        canonical_path: canonical,
+        modified: metadata.modified().ok(),
+        len: Some(metadata.len()),
+    })
+}
+
+fn fingerprints_match(
+    cached: &Option<BinaryFingerprint>,
+    fresh: &Option<BinaryFingerprint>,
+) -> bool {
+    cached == fresh
+}
+
 /// High-level client for interacting with `codex exec`.
 #[derive(Clone, Debug)]
 pub struct CodexClient {
-    binary: PathBuf,
+    command_env: CommandEnvironment,
     model: Option<String>,
     timeout: Duration,
     color_mode: ColorMode,
@@ -202,19 +289,17 @@ impl CodexClient {
     ///
     /// The returned child inherits `kill_on_drop` so abandoning the handle cleans up the login helper.
     pub fn spawn_login_process(&self) -> Result<tokio::process::Child, CodexError> {
-        let mut command = Command::new(&self.binary);
+        let mut command = Command::new(self.command_env.binary_path());
         command
             .arg("login")
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true);
 
-        if env::var_os("RUST_LOG").is_none() {
-            command.env("RUST_LOG", "error");
-        }
+        self.command_env.apply(&mut command)?;
 
         command.spawn().map_err(|source| CodexError::Spawn {
-            binary: self.binary.clone(),
+            binary: self.command_env.binary_path().to_path_buf(),
             source,
         })
     }
@@ -273,10 +358,145 @@ impl CodexClient {
         }
     }
 
+    /// Probes the configured binary for version/build metadata and supported feature flags.
+    ///
+    /// Results are cached per canonical binary path and invalidated when file metadata changes.
+    /// Failures are logged and return conservative defaults so callers can gate optional flags.
+    pub async fn probe_capabilities(&self) -> CodexCapabilities {
+        let cache_key = capability_cache_key(self.command_env.binary_path());
+        let fingerprint = current_fingerprint(&cache_key);
+
+        if let Some(cached) = cached_capabilities(&cache_key, &fingerprint) {
+            return cached;
+        }
+
+        let mut plan = CapabilityProbePlan::default();
+        let mut features = CodexFeatureFlags::default();
+        let mut version = None;
+
+        plan.steps.push(CapabilityProbeStep::VersionFlag);
+        match self.run_basic_command(["--version"]).await {
+            Ok(output) => {
+                if !output.status.success() {
+                    warn!(
+                        status = ?output.status,
+                        binary = ?cache_key.binary_path,
+                        "codex --version exited non-zero"
+                    );
+                }
+                let text = command_output_text(&output);
+                if !text.trim().is_empty() {
+                    version = Some(parse_version_output(&text));
+                }
+            }
+            Err(error) => warn!(
+                ?error,
+                binary = ?cache_key.binary_path,
+                "codex --version probe failed"
+            ),
+        }
+
+        let mut parsed_features = false;
+
+        plan.steps.push(CapabilityProbeStep::FeaturesListJson);
+        match self
+            .run_basic_command(["features", "list", "--json"])
+            .await
+        {
+            Ok(output) => {
+                if !output.status.success() {
+                    warn!(
+                        status = ?output.status,
+                        binary = ?cache_key.binary_path,
+                        "codex features list --json exited non-zero"
+                    );
+                }
+                if output.status.success() {
+                    features.supports_features_list = true;
+                }
+                let text = command_output_text(&output);
+                if let Some(parsed) = parse_features_from_json(&text) {
+                    merge_feature_flags(&mut features, parsed);
+                    parsed_features = detected_feature_flags(&features);
+                } else if !text.is_empty() {
+                    let parsed = parse_features_from_text(&text);
+                    merge_feature_flags(&mut features, parsed);
+                    parsed_features = detected_feature_flags(&features);
+                }
+            }
+            Err(error) => warn!(
+                ?error,
+                binary = ?cache_key.binary_path,
+                "codex features list --json probe failed"
+            ),
+        }
+
+        if !parsed_features {
+            plan.steps.push(CapabilityProbeStep::FeaturesListText);
+            match self.run_basic_command(["features", "list"]).await {
+                Ok(output) => {
+                    if !output.status.success() {
+                        warn!(
+                            status = ?output.status,
+                            binary = ?cache_key.binary_path,
+                            "codex features list exited non-zero"
+                        );
+                    }
+                    if output.status.success() {
+                        features.supports_features_list = true;
+                    }
+                    let text = command_output_text(&output);
+                    let parsed = parse_features_from_text(&text);
+                    merge_feature_flags(&mut features, parsed);
+                }
+                Err(error) => warn!(
+                    ?error,
+                    binary = ?cache_key.binary_path,
+                    "codex features list probe failed"
+                ),
+            }
+        }
+
+        if should_run_help_fallback(&features) {
+            plan.steps.push(CapabilityProbeStep::HelpFallback);
+            match self.run_basic_command(["--help"]).await {
+                Ok(output) => {
+                    if !output.status.success() {
+                        warn!(
+                            status = ?output.status,
+                            binary = ?cache_key.binary_path,
+                            "codex --help exited non-zero"
+                        );
+                    }
+                    let text = command_output_text(&output);
+                    let parsed = parse_help_output(&text);
+                    merge_feature_flags(&mut features, parsed);
+                }
+                Err(error) => warn!(
+                    ?error,
+                    binary = ?cache_key.binary_path,
+                    "codex --help probe failed"
+                ),
+            }
+        }
+
+        let capabilities = CodexCapabilities {
+            cache_key,
+            fingerprint,
+            version,
+            features,
+            probe_plan: plan,
+            collected_at: SystemTime::now(),
+        };
+
+        update_capability_cache(capabilities.clone());
+        capabilities
+    }
+
     async fn invoke_codex_exec(&self, prompt: &str) -> Result<String, CodexError> {
         let dir_ctx = self.directory_context()?;
 
-        let mut command = Command::new(&self.binary);
+        let mut command = Command::new(self.command_env.binary_path());
         command
             .arg("exec")
             .arg("--color")
@@ -316,12 +536,10 @@ impl CodexClient {
             command.arg("--json");
         }
 
-        if env::var_os("RUST_LOG").is_none() {
-            command.env("RUST_LOG", "error");
-        }
+        self.command_env.apply(&mut command)?;
 
         let mut child = command.spawn().map_err(|source| CodexError::Spawn {
-            binary: self.binary.clone(),
+            binary: self.command_env.binary_path().to_path_buf(),
             source,
         })?;
 
@@ -397,7 +615,11 @@ impl CodexClient {
         } else {
             primary_output.trim().to_string()
         };
-        debug!(binary = ?self.binary, bytes = trimmed.len(), "received Codex output");
+        debug!(
+            binary = ?self.command_env.binary_path(),
+            bytes = trimmed.len(),
+            "received Codex output"
+        );
         Ok(trimmed)
     }
 
@@ -415,19 +637,17 @@ impl CodexClient {
         S: AsRef<OsStr>,
         I: IntoIterator<Item = S>,
     {
-        let mut command = Command::new(&self.binary);
+        let mut command = Command::new(self.command_env.binary_path());
         command
             .args(args)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true);
 
-        if env::var_os("RUST_LOG").is_none() {
-            command.env("RUST_LOG", "error");
-        }
+        self.command_env.apply(&mut command)?;
 
         let mut child = command.spawn().map_err(|source| CodexError::Spawn {
-            binary: self.binary.clone(),
+            binary: self.command_env.binary_path().to_path_buf(),
             source,
         })?;
 
@@ -484,6 +704,8 @@ impl Default for CodexClient {
 #[derive(Clone, Debug)]
 pub struct CodexClientBuilder {
     binary: PathBuf,
+    codex_home: Option<PathBuf>,
+    create_home_dirs: bool,
     model: Option<String>,
     timeout: Duration,
     color_mode: ColorMode,
@@ -503,6 +725,20 @@ impl CodexClientBuilder {
     /// Sets the path to the Codex binary. Defaults to `codex`.
     pub fn binary(mut self, binary: impl Into<PathBuf>) -> Self {
         self.binary = binary.into();
+        self
+    }
+
+    /// Sets a custom `CODEX_HOME` path that will be applied per command.
+    /// Directories are created by default; disable via [`Self::create_home_dirs`].
+    pub fn codex_home(mut self, home: impl Into<PathBuf>) -> Self {
+        self.codex_home = Some(home.into());
+        self
+    }
+
+    /// Controls whether the CODEX_HOME directory tree should be created if missing.
+    /// Defaults to `true` when [`Self::codex_home`] is set.
+    pub fn create_home_dirs(mut self, enable: bool) -> Self {
+        self.create_home_dirs = enable;
         self
     }
 
@@ -568,8 +804,10 @@ impl CodexClientBuilder {
 
     /// Builds the [`CodexClient`].
     pub fn build(self) -> CodexClient {
+        let command_env =
+            CommandEnvironment::new(self.binary, self.codex_home, self.create_home_dirs);
         CodexClient {
-            binary: self.binary,
+            command_env,
             model: self.model,
             timeout: self.timeout,
             color_mode: self.color_mode,
@@ -586,6 +824,8 @@ impl Default for CodexClientBuilder {
     fn default() -> Self {
         Self {
             binary: default_binary_path(),
+            codex_home: None,
+            create_home_dirs: true,
             model: None,
             timeout: DEFAULT_TIMEOUT,
             color_mode: ColorMode::Never,
@@ -628,6 +868,99 @@ fn reasoning_config_for(model: Option<&str>) -> Option<&'static [(&'static str, 
     }
 }
 
+#[derive(Clone, Debug)]
+struct CommandEnvironment {
+    binary: PathBuf,
+    codex_home: Option<CodexHome>,
+    create_home_dirs: bool,
+}
+
+impl CommandEnvironment {
+    fn new(binary: PathBuf, codex_home: Option<PathBuf>, create_home_dirs: bool) -> Self {
+        Self {
+            binary,
+            codex_home: codex_home.map(CodexHome::new),
+            create_home_dirs,
+        }
+    }
+
+    fn binary_path(&self) -> &Path {
+        &self.binary
+    }
+
+    fn environment_overrides(&self) -> Result<Vec<(OsString, OsString)>, CodexError> {
+        if let Some(home) = &self.codex_home {
+            if self.create_home_dirs {
+                home.ensure_layout()?;
+            }
+        }
+
+        let mut envs = Vec::new();
+        envs.push((
+            OsString::from(CODEX_BINARY_ENV),
+            self.binary.as_os_str().to_os_string(),
+        ));
+
+        if let Some(home) = &self.codex_home {
+            envs.push((
+                OsString::from(CODEX_HOME_ENV),
+                home.root().as_os_str().to_os_string(),
+            ));
+        }
+
+        if env::var_os(RUST_LOG_ENV).is_none() {
+            envs.push((
+                OsString::from(RUST_LOG_ENV),
+                OsString::from(DEFAULT_RUST_LOG),
+            ));
+        }
+
+        Ok(envs)
+    }
+
+    fn apply(&self, command: &mut Command) -> Result<(), CodexError> {
+        for (key, value) in self.environment_overrides()? {
+            command.env(key, value);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CodexHome {
+    root: PathBuf,
+}
+
+impl CodexHome {
+    fn new(root: PathBuf) -> Self {
+        Self { root }
+    }
+
+    fn root(&self) -> &Path {
+        self.root.as_path()
+    }
+
+    fn conversations_dir(&self) -> PathBuf {
+        self.root.join("conversations")
+    }
+
+    fn logs_dir(&self) -> PathBuf {
+        self.root.join("logs")
+    }
+
+    fn ensure_layout(&self) -> Result<(), CodexError> {
+        let conversations = self.conversations_dir();
+        let logs = self.logs_dir();
+        for path in [self.root(), conversations.as_path(), logs.as_path()] {
+            fs::create_dir_all(path).map_err(|source| CodexError::PrepareCodexHome {
+                path: path.to_path_buf(),
+                source,
+            })?;
+        }
+        Ok(())
+    }
+}
+
 /// Errors that may occur while invoking the Codex CLI.
 #[derive(Debug, Error)]
 pub enum CodexError {
@@ -652,6 +985,12 @@ pub enum CodexError {
     EmptyPrompt,
     #[error("failed to create temporary working directory: {0}")]
     TempDir(#[source] std::io::Error),
+    #[error("failed to prepare CODEX_HOME at `{path}`: {source}")]
+    PrepareCodexHome {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
     #[error("codex stdout unavailable")]
     StdoutUnavailable,
     #[error("codex stderr unavailable")]
@@ -680,14 +1019,258 @@ impl DirectoryContext {
     }
 }
 
+fn command_output_text(output: &CommandOutput) -> String {
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    let stdout = stdout.trim_end();
+    let stderr = stderr.trim_end();
+    if stdout.is_empty() {
+        stderr.to_string()
+    } else if stderr.is_empty() {
+        stdout.to_string()
+    } else {
+        format!("{stdout}\n{stderr}")
+    }
+}
+
+fn parse_version_output(output: &str) -> CodexVersionInfo {
+    let raw = output.trim().to_string();
+    let mut semantic = None;
+    let mut channel = infer_release_channel(&raw);
+    let mut commit = extract_commit_hash(&raw);
+
+    for token in raw.split_whitespace() {
+        let candidate = token
+            .trim_matches(|c: char| matches!(c, '(' | ')' | ',' | ';'))
+            .trim_start_matches('v');
+        if commit.is_none() {
+            commit = cleaned_hex(candidate);
+        }
+        if let Ok(version) = Version::parse(candidate) {
+            semantic = Some((version.major, version.minor, version.patch));
+            channel = release_channel_for_version(&version);
+            break;
+        }
+    }
+
+    CodexVersionInfo {
+        raw,
+        semantic,
+        commit,
+        channel,
+    }
+}
+
+fn release_channel_for_version(version: &Version) -> CodexReleaseChannel {
+    if version.pre.is_empty() {
+        CodexReleaseChannel::Stable
+    } else {
+        let prerelease = version.pre.as_str().to_ascii_lowercase();
+        if prerelease.contains("beta") {
+            CodexReleaseChannel::Beta
+        } else if prerelease.contains("nightly") {
+            CodexReleaseChannel::Nightly
+        } else {
+            CodexReleaseChannel::Custom
+        }
+    }
+}
+
+fn infer_release_channel(raw: &str) -> CodexReleaseChannel {
+    let lower = raw.to_ascii_lowercase();
+    if lower.contains("beta") {
+        CodexReleaseChannel::Beta
+    } else if lower.contains("nightly") {
+        CodexReleaseChannel::Nightly
+    } else {
+        CodexReleaseChannel::Custom
+    }
+}
+
+fn extract_commit_hash(raw: &str) -> Option<String> {
+    let tokens: Vec<&str> = raw.split_whitespace().collect();
+    for window in tokens.windows(2) {
+        if window[0].eq_ignore_ascii_case("commit") {
+            if let Some(cleaned) = cleaned_hex(window[1]) {
+                return Some(cleaned);
+            }
+        }
+    }
+
+    for token in tokens {
+        if let Some(cleaned) = cleaned_hex(token) {
+            return Some(cleaned);
+        }
+    }
+    None
+}
+
+fn cleaned_hex(token: &str) -> Option<String> {
+    let trimmed = token
+        .trim_matches(|c: char| matches!(c, '(' | ')' | ',' | ';'))
+        .trim_start_matches("commit")
+        .trim_start_matches(':')
+        .trim_start_matches('g');
+    if trimmed.len() >= 7 && trimmed.chars().all(|c| c.is_ascii_hexdigit()) {
+        Some(trimmed.to_string())
+    } else {
+        None
+    }
+}
+
+fn parse_features_from_json(output: &str) -> Option<CodexFeatureFlags> {
+    let parsed: Value = serde_json::from_str(output).ok()?;
+    let mut tokens = HashSet::new();
+    collect_feature_tokens(&parsed, &mut tokens);
+    if tokens.is_empty() {
+        return None;
+    }
+
+    let mut flags = CodexFeatureFlags::default();
+    for token in tokens {
+        apply_feature_token(&mut flags, &token);
+    }
+    Some(flags)
+}
+
+fn collect_feature_tokens(value: &Value, tokens: &mut HashSet<String>) {
+    match value {
+        Value::String(value) => {
+            if !value.trim().is_empty() {
+                tokens.insert(value.clone());
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                collect_feature_tokens(item, tokens);
+            }
+        }
+        Value::Object(map) => {
+            for (key, value) in map {
+                if let Value::Bool(true) = value {
+                    tokens.insert(key.clone());
+                }
+                collect_feature_tokens(value, tokens);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn parse_features_from_text(output: &str) -> CodexFeatureFlags {
+    let mut flags = CodexFeatureFlags::default();
+    let lower = output.to_ascii_lowercase();
+    if lower.contains("features list") {
+        flags.supports_features_list = true;
+    }
+    if lower.contains("--output-schema") || lower.contains("output schema") {
+        flags.supports_output_schema = true;
+    }
+    if lower.contains("add-dir") || lower.contains("add dir") {
+        flags.supports_add_dir = true;
+    }
+    if lower.contains("login --mcp") || lower.contains("mcp login") {
+        flags.supports_mcp_login = true;
+    }
+    if lower.contains("login") && lower.contains("mcp") {
+        flags.supports_mcp_login = true;
+    }
+
+    for token in lower
+        .split(|c: char| c.is_ascii_whitespace() || c == ',' || c == ';' || c == '|')
+        .filter(|token| !token.is_empty())
+    {
+        apply_feature_token(&mut flags, token);
+    }
+    flags
+}
+
+fn parse_help_output(output: &str) -> CodexFeatureFlags {
+    let mut flags = parse_features_from_text(output);
+    let lower = output.to_ascii_lowercase();
+    if lower.contains("features list") {
+        flags.supports_features_list = true;
+    }
+    flags
+}
+
+fn merge_feature_flags(target: &mut CodexFeatureFlags, update: CodexFeatureFlags) {
+    target.supports_features_list |= update.supports_features_list;
+    target.supports_output_schema |= update.supports_output_schema;
+    target.supports_add_dir |= update.supports_add_dir;
+    target.supports_mcp_login |= update.supports_mcp_login;
+}
+
+fn detected_feature_flags(flags: &CodexFeatureFlags) -> bool {
+    flags.supports_output_schema || flags.supports_add_dir || flags.supports_mcp_login
+}
+
+fn should_run_help_fallback(flags: &CodexFeatureFlags) -> bool {
+    !flags.supports_features_list
+        || !flags.supports_output_schema
+        || !flags.supports_add_dir
+        || !flags.supports_mcp_login
+}
+
+fn normalize_feature_token(token: &str) -> String {
+    token
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
+fn apply_feature_token(flags: &mut CodexFeatureFlags, token: &str) {
+    let normalized = normalize_feature_token(token);
+    let compact = normalized.replace('_', "");
+    if normalized.contains("features_list") || compact.contains("featureslist") {
+        flags.supports_features_list = true;
+    }
+    if normalized.contains("output_schema") || compact.contains("outputschema") {
+        flags.supports_output_schema = true;
+    }
+    if normalized.contains("add_dir") || compact.contains("adddir") {
+        flags.supports_add_dir = true;
+    }
+    if normalized.contains("mcp_login")
+        || (normalized.contains("login") && normalized.contains("mcp"))
+    {
+        flags.supports_mcp_login = true;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
     use std::sync::{Mutex, OnceLock};
+    use std::time::Duration;
 
     fn env_guard() -> std::sync::MutexGuard<'static, ()> {
         static ENV_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
         ENV_MUTEX.get_or_init(|| Mutex::new(())).lock().unwrap()
+    }
+
+    fn clear_capability_cache() {
+        if let Ok(mut cache) = capability_cache().lock() {
+            cache.clear();
+        }
+    }
+
+    fn write_fake_codex(dir: &Path, script: &str) -> PathBuf {
+        let path = dir.join("codex");
+        fs::write(&path, script).unwrap();
+        let mut perms = fs::metadata(&path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&path, perms).unwrap();
+        path
     }
 
     #[test]
@@ -696,6 +1279,8 @@ mod tests {
         assert!(builder.model.is_none());
         assert_eq!(builder.timeout, DEFAULT_TIMEOUT);
         assert_eq!(builder.color_mode, ColorMode::Never);
+        assert!(builder.codex_home.is_none());
+        assert!(builder.create_home_dirs);
         assert!(builder.working_dir.is_none());
         assert!(builder.images.is_empty());
         assert!(!builder.json_output);
@@ -750,6 +1335,200 @@ mod tests {
         } else {
             env::remove_var(key);
         }
+    }
+
+    #[test]
+    fn command_env_sets_expected_overrides() {
+        let _guard = env_guard();
+        let rust_log_original = env::var_os(RUST_LOG_ENV);
+        env::remove_var(RUST_LOG_ENV);
+
+        let temp = tempfile::tempdir().unwrap();
+        let home = temp.path().join("codex_home");
+        let env_prep =
+            CommandEnvironment::new(PathBuf::from("/custom/codex"), Some(home.clone()), true);
+        let overrides = env_prep.environment_overrides().unwrap();
+        let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+
+        assert_eq!(
+            map.get(&OsString::from(CODEX_BINARY_ENV)),
+            Some(&OsString::from("/custom/codex"))
+        );
+        assert_eq!(
+            map.get(&OsString::from(CODEX_HOME_ENV)),
+            Some(&home.as_os_str().to_os_string())
+        );
+        assert_eq!(
+            map.get(&OsString::from(RUST_LOG_ENV)),
+            Some(&OsString::from(DEFAULT_RUST_LOG))
+        );
+
+        assert!(home.is_dir());
+        assert!(home.join("conversations").is_dir());
+        assert!(home.join("logs").is_dir());
+
+        match rust_log_original {
+            Some(value) => env::set_var(RUST_LOG_ENV, value),
+            None => env::remove_var(RUST_LOG_ENV),
+        }
+    }
+
+    #[test]
+    fn command_env_respects_existing_rust_log() {
+        let _guard = env_guard();
+        let rust_log_original = env::var_os(RUST_LOG_ENV);
+        env::set_var(RUST_LOG_ENV, "trace");
+
+        let env_prep = CommandEnvironment::new(PathBuf::from("codex"), None, true);
+        let overrides = env_prep.environment_overrides().unwrap();
+        let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+
+        assert_eq!(
+            map.get(&OsString::from(CODEX_BINARY_ENV)),
+            Some(&OsString::from("codex"))
+        );
+        assert!(!map.contains_key(&OsString::from(RUST_LOG_ENV)));
+
+        match rust_log_original {
+            Some(value) => env::set_var(RUST_LOG_ENV, value),
+            None => env::remove_var(RUST_LOG_ENV),
+        }
+    }
+
+    #[test]
+    fn command_env_can_skip_home_creation() {
+        let _guard = env_guard();
+        let rust_log_original = env::var_os(RUST_LOG_ENV);
+        env::remove_var(RUST_LOG_ENV);
+
+        let temp = tempfile::tempdir().unwrap();
+        let home = temp.path().join("codex_home");
+        let env_prep = CommandEnvironment::new(PathBuf::from("codex"), Some(home.clone()), false);
+        let overrides = env_prep.environment_overrides().unwrap();
+        let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+
+        assert!(!home.exists());
+        assert!(!home.join("conversations").exists());
+        assert!(!home.join("logs").exists());
+        assert_eq!(
+            map.get(&OsString::from(CODEX_HOME_ENV)),
+            Some(&home.as_os_str().to_os_string())
+        );
+
+        match rust_log_original {
+            Some(value) => env::set_var(RUST_LOG_ENV, value),
+            None => env::remove_var(RUST_LOG_ENV),
+        }
+    }
+
+    #[test]
+    fn parses_version_output_fields() {
+        let parsed = parse_version_output("codex v3.4.5-nightly (commit abc1234)");
+        assert_eq!(parsed.semantic, Some((3, 4, 5)));
+        assert_eq!(parsed.channel, CodexReleaseChannel::Nightly);
+        assert_eq!(parsed.commit.as_deref(), Some("abc1234"));
+        assert_eq!(
+            parsed.raw,
+            "codex v3.4.5-nightly (commit abc1234)".to_string()
+        );
+    }
+
+    #[test]
+    fn parses_features_from_json_and_text() {
+        let json = r#"{"features":["output_schema","add_dir"],"mcp_login":true}"#;
+        let parsed_json = parse_features_from_json(json).unwrap();
+        assert!(parsed_json.supports_output_schema);
+        assert!(parsed_json.supports_add_dir);
+        assert!(parsed_json.supports_mcp_login);
+
+        let text = "Features: output-schema add-dir login --mcp";
+        let parsed_text = parse_features_from_text(text);
+        assert!(parsed_text.supports_output_schema);
+        assert!(parsed_text.supports_add_dir);
+        assert!(parsed_text.supports_mcp_login);
+    }
+
+    #[test]
+    fn parses_help_output_flags() {
+        let help = "Usage: codex --output-schema ... add-dir ... login --mcp. See `codex features list`.";
+        let parsed = parse_help_output(help);
+        assert!(parsed.supports_output_schema);
+        assert!(parsed.supports_add_dir);
+        assert!(parsed.supports_mcp_login);
+        assert!(parsed.supports_features_list);
+    }
+
+    #[tokio::test]
+    async fn probe_capabilities_caches_and_invalidates() {
+        let _guard = env_guard();
+        clear_capability_cache();
+
+        let temp = tempfile::tempdir().unwrap();
+        let script_v1 = r#"#!/bin/bash
+if [[ "$1" == "--version" ]]; then
+  echo "codex 1.2.3-beta (commit cafe123)"
+elif [[ "$1" == "features" && "$2" == "list" && "$3" == "--json" ]]; then
+  echo '{"features":["output_schema","add_dir","mcp_login"]}'
+elif [[ "$1" == "features" && "$2" == "list" ]]; then
+  echo "output_schema add-dir login --mcp"
+elif [[ "$1" == "--help" ]]; then
+  echo "Usage: codex --output-schema add-dir login --mcp"
+fi
+"#;
+        let binary = write_fake_codex(temp.path(), script_v1);
+        let client = CodexClient::builder()
+            .binary(&binary)
+            .timeout(Duration::from_secs(5))
+            .build();
+
+        let first = client.probe_capabilities().await;
+        assert_eq!(
+            first.version.as_ref().and_then(|v| v.semantic),
+            Some((1, 2, 3))
+        );
+        assert_eq!(
+            first.version.as_ref().map(|v| v.channel),
+            Some(CodexReleaseChannel::Beta)
+        );
+        assert_eq!(
+            first.version.as_ref().and_then(|v| v.commit.as_deref()),
+            Some("cafe123")
+        );
+        assert!(first.features.supports_features_list);
+        assert!(first.features.supports_output_schema);
+        assert!(first.features.supports_add_dir);
+        assert!(first.features.supports_mcp_login);
+
+        let cached = client.probe_capabilities().await;
+        assert_eq!(cached, first);
+
+        let script_v2 = r#"#!/bin/bash
+if [[ "$1" == "--version" ]]; then
+  echo "codex 2.0.0 (commit deadbeef)"
+elif [[ "$1" == "features" && "$2" == "list" && "$3" == "--json" ]]; then
+  echo '{"features":["add_dir"]}'
+elif [[ "$1" == "features" && "$2" == "list" ]]; then
+  echo "add-dir"
+elif [[ "$1" == "--help" ]]; then
+  echo "Usage: codex add-dir"
+fi
+"#;
+        fs::write(&binary, script_v2).unwrap();
+        let mut perms = fs::metadata(&binary).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&binary, perms).unwrap();
+
+        let refreshed = client.probe_capabilities().await;
+        assert_ne!(refreshed.version, first.version);
+        assert_eq!(
+            refreshed.version.as_ref().and_then(|v| v.semantic),
+            Some((2, 0, 0))
+        );
+        assert!(refreshed.features.supports_features_list);
+        assert!(refreshed.features.supports_add_dir);
+        assert!(!refreshed.features.supports_output_schema);
+        assert!(!refreshed.features.supports_mcp_login);
+        clear_capability_cache();
     }
 
     #[test]
