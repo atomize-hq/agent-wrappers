@@ -523,7 +523,9 @@ pub fn capability_snapshot_matches_binary(snapshot: &CodexCapabilities, binary: 
         return false;
     }
     let current = current_fingerprint(&cache_key);
-    fingerprints_match(&snapshot.fingerprint, &current)
+    has_fingerprint_metadata(&snapshot.fingerprint)
+        && has_fingerprint_metadata(&current)
+        && fingerprints_match(&snapshot.fingerprint, &current)
 }
 
 /// High-level view of whether a specific feature can be used safely.
@@ -747,6 +749,24 @@ fn log_guard_skip(guard: &CapabilityGuard) {
     );
 }
 
+/// Cache interaction policy for capability probes.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CapabilityCachePolicy {
+    /// Use cached entries when fingerprints match; fall back to probing when
+    /// fingerprints differ or are missing and write fresh snapshots back.
+    PreferCache,
+    /// Always run probes, overwriting any existing cache entry for the binary (useful for TTL/backoff windows or hot-swaps that keep the same path).
+    Refresh,
+    /// Skip cache reads and writes to force an isolated snapshot.
+    Bypass,
+}
+
+impl Default for CapabilityCachePolicy {
+    fn default() -> Self {
+        CapabilityCachePolicy::PreferCache
+    }
+}
+
 /// Cache key for capability snapshots derived from a specific Codex binary path.
 ///
 /// Cache lookups should canonicalize the path when possible so symlinked binaries
@@ -780,12 +800,19 @@ fn capability_cache_key(binary: &Path) -> CapabilityCacheKey {
     }
 }
 
+fn has_fingerprint_metadata(fingerprint: &Option<BinaryFingerprint>) -> bool {
+    fingerprint.is_some()
+}
+
 fn cached_capabilities(
     key: &CapabilityCacheKey,
     fingerprint: &Option<BinaryFingerprint>,
 ) -> Option<CodexCapabilities> {
     let cache = capability_cache().lock().ok()?;
     let cached = cache.get(key)?;
+    if !has_fingerprint_metadata(&cached.fingerprint) || !has_fingerprint_metadata(fingerprint) {
+        return None;
+    }
     if fingerprints_match(&cached.fingerprint, fingerprint) {
         Some(cached.clone())
     } else {
@@ -794,8 +821,45 @@ fn cached_capabilities(
 }
 
 fn update_capability_cache(capabilities: CodexCapabilities) {
+    if !has_fingerprint_metadata(&capabilities.fingerprint) {
+        return;
+    }
     if let Ok(mut cache) = capability_cache().lock() {
         cache.insert(capabilities.cache_key.clone(), capabilities);
+    }
+}
+
+/// Returns all capability cache entries keyed by canonical binary path.
+pub fn capability_cache_entries() -> Vec<CodexCapabilities> {
+    capability_cache()
+        .lock()
+        .map(|cache| cache.values().cloned().collect())
+        .unwrap_or_default()
+}
+
+/// Returns the cached capabilities for a specific binary path if present.
+pub fn capability_cache_entry(binary: &Path) -> Option<CodexCapabilities> {
+    let key = capability_cache_key(binary);
+    capability_cache()
+        .lock()
+        .ok()
+        .and_then(|cache| cache.get(&key).cloned())
+}
+
+/// Removes the cached capabilities for a specific binary. Returns true when an entry was removed.
+pub fn clear_capability_cache_entry(binary: &Path) -> bool {
+    let key = capability_cache_key(binary);
+    capability_cache()
+        .lock()
+        .ok()
+        .map(|mut cache| cache.remove(&key).is_some())
+        .unwrap_or(false)
+}
+
+/// Clears all cached capability snapshots.
+pub fn clear_capability_cache() {
+    if let Ok(mut cache) = capability_cache().lock() {
+        cache.clear();
     }
 }
 
@@ -899,6 +963,7 @@ pub struct CodexClient {
     quiet: bool,
     mirror_stdout: bool,
     capability_overrides: CapabilityOverrides,
+    capability_cache_policy: CapabilityCachePolicy,
 }
 
 /// Current authentication state reported by `codex login status`.
@@ -1050,12 +1115,30 @@ impl CodexClient {
     /// Results are cached per canonical binary path and invalidated when file metadata changes.
     /// Caller-supplied overrides (see [`CodexClientBuilder::capability_overrides`]) can
     /// short-circuit probes or layer hints; snapshots are still cached against the current
-    /// binary fingerprint so changes on disk trigger revalidation.
+    /// binary fingerprint so changes on disk trigger revalidation. Missing fingerprints skip
+    /// cache reuse to force a re-probe. Cache interaction follows the policy configured on
+    /// the builder (see [`CodexClientBuilder::capability_cache_policy`]).
     /// Failures are logged and return conservative defaults so callers can gate optional flags.
     pub async fn probe_capabilities(&self) -> CodexCapabilities {
+        self.probe_capabilities_with_policy(self.capability_cache_policy)
+            .await
+    }
+
+    /// Probes capabilities with an explicit cache policy.
+    pub async fn probe_capabilities_with_policy(
+        &self,
+        cache_policy: CapabilityCachePolicy,
+    ) -> CodexCapabilities {
         let cache_key = capability_cache_key(self.command_env.binary_path());
         let fingerprint = current_fingerprint(&cache_key);
         let overrides = &self.capability_overrides;
+
+        let cache_reads_enabled =
+            matches!(cache_policy, CapabilityCachePolicy::PreferCache)
+                && has_fingerprint_metadata(&fingerprint);
+        let cache_writes_enabled =
+            !matches!(cache_policy, CapabilityCachePolicy::Bypass)
+                && has_fingerprint_metadata(&fingerprint);
 
         if let Some(snapshot) = overrides.snapshot.clone() {
             let capabilities = finalize_capabilities_with_overrides(
@@ -1065,25 +1148,55 @@ impl CodexClient {
                 fingerprint.clone(),
                 true,
             );
-            update_capability_cache(capabilities.clone());
+            if cache_writes_enabled {
+                update_capability_cache(capabilities.clone());
+            }
             return capabilities;
         }
 
-        if let Some(cached) = cached_capabilities(&cache_key, &fingerprint) {
-            if overrides.is_empty() {
-                return cached;
+        if cache_reads_enabled {
+            if let Some(cached) = cached_capabilities(&cache_key, &fingerprint) {
+                if overrides.is_empty() {
+                    return cached;
+                }
+                let merged = finalize_capabilities_with_overrides(
+                    cached,
+                    overrides,
+                    cache_key.clone(),
+                    fingerprint.clone(),
+                    false,
+                );
+                if cache_writes_enabled {
+                    update_capability_cache(merged.clone());
+                }
+                return merged;
             }
-            let merged = finalize_capabilities_with_overrides(
-                cached,
-                overrides,
-                cache_key.clone(),
-                fingerprint.clone(),
-                false,
-            );
-            update_capability_cache(merged.clone());
-            return merged;
         }
 
+        let probed = self
+            .probe_capabilities_uncached(&cache_key, fingerprint.clone())
+            .await;
+
+        let capabilities = finalize_capabilities_with_overrides(
+            probed,
+            overrides,
+            cache_key,
+            fingerprint,
+            false,
+        );
+
+        if cache_writes_enabled {
+            update_capability_cache(capabilities.clone());
+        }
+
+        capabilities
+    }
+
+    async fn probe_capabilities_uncached(
+        &self,
+        cache_key: &CapabilityCacheKey,
+        fingerprint: Option<BinaryFingerprint>,
+    ) -> CodexCapabilities {
         let mut plan = CapabilityProbePlan::default();
         let mut features = CodexFeatureFlags::default();
         let mut version = None;
@@ -1191,25 +1304,14 @@ impl CodexClient {
             }
         }
 
-        let capabilities = CodexCapabilities {
+        CodexCapabilities {
             cache_key: cache_key.clone(),
-            fingerprint: fingerprint.clone(),
+            fingerprint,
             version,
             features,
             probe_plan: plan,
             collected_at: SystemTime::now(),
-        };
-
-        let capabilities = finalize_capabilities_with_overrides(
-            capabilities,
-            overrides,
-            cache_key,
-            fingerprint,
-            false,
-        );
-
-        update_capability_cache(capabilities.clone());
-        capabilities
+        }
     }
 
     /// Computes an update advisory by comparing the probed Codex version against
@@ -1481,6 +1583,7 @@ pub struct CodexClientBuilder {
     quiet: bool,
     mirror_stdout: bool,
     capability_overrides: CapabilityOverrides,
+    capability_cache_policy: CapabilityCachePolicy,
 }
 
 impl CodexClientBuilder {
@@ -1627,6 +1730,25 @@ impl CodexClientBuilder {
         self
     }
 
+    /// Controls how capability probes interact with the in-process cache.
+    /// Use [`CapabilityCachePolicy::Refresh`] to enforce a TTL/backoff when
+    /// binaries are hot-swapped without changing fingerprints.
+    pub fn capability_cache_policy(mut self, policy: CapabilityCachePolicy) -> Self {
+        self.capability_cache_policy = policy;
+        self
+    }
+
+    /// Convenience to bypass the capability cache when a fresh snapshot is required.
+    /// Bypass skips cache reads and writes for the probe.
+    pub fn bypass_capability_cache(mut self, bypass: bool) -> Self {
+        self.capability_cache_policy = if bypass {
+            CapabilityCachePolicy::Bypass
+        } else {
+            CapabilityCachePolicy::PreferCache
+        };
+        self
+    }
+
     /// Builds the [`CodexClient`].
     pub fn build(self) -> CodexClient {
         let command_env =
@@ -1644,6 +1766,7 @@ impl CodexClientBuilder {
             quiet: self.quiet,
             mirror_stdout: self.mirror_stdout,
             capability_overrides: self.capability_overrides,
+            capability_cache_policy: self.capability_cache_policy,
         }
     }
 }
@@ -1665,6 +1788,7 @@ impl Default for CodexClientBuilder {
             quiet: false,
             mirror_stdout: true,
             capability_overrides: CapabilityOverrides::default(),
+            capability_cache_policy: CapabilityCachePolicy::default(),
         }
     }
 }
@@ -2232,12 +2356,6 @@ mod tests {
         ENV_MUTEX.get_or_init(|| Mutex::new(())).lock().unwrap()
     }
 
-    fn clear_capability_cache() {
-        if let Ok(mut cache) = capability_cache().lock() {
-            cache.clear();
-        }
-    }
-
     fn write_fake_codex(dir: &Path, script: &str) -> PathBuf {
         let path = dir.join("codex");
         fs::write(&path, script).unwrap();
@@ -2345,6 +2463,10 @@ mod tests {
         assert!(!builder.json_output);
         assert!(!builder.quiet);
         assert!(builder.capability_overrides.is_empty());
+        assert_eq!(
+            builder.capability_cache_policy,
+            CapabilityCachePolicy::PreferCache
+        );
     }
 
     #[test]
@@ -2608,6 +2730,12 @@ mod tests {
         };
 
         assert!(capability_snapshot_matches_binary(&snapshot, &binary));
+        let mut missing_fingerprint = snapshot.clone();
+        missing_fingerprint.fingerprint = None;
+        assert!(!capability_snapshot_matches_binary(
+            &missing_fingerprint,
+            &binary
+        ));
 
         fs::write(&binary, "#!/bin/bash\necho changed").unwrap();
         let mut perms = fs::metadata(&binary).unwrap().permissions();
@@ -2615,6 +2743,161 @@ mod tests {
         fs::set_permissions(&binary, perms).unwrap();
 
         assert!(!capability_snapshot_matches_binary(&snapshot, &binary));
+    }
+
+    #[test]
+    fn capability_cache_entries_exposes_cache_state() {
+        clear_capability_cache();
+
+        let temp = tempfile::tempdir().unwrap();
+        let binary = write_fake_codex(temp.path(), "#!/bin/bash\necho ok");
+        let cache_key = capability_cache_key(&binary);
+        let fingerprint = current_fingerprint(&cache_key);
+
+        let snapshot = CodexCapabilities {
+            cache_key: cache_key.clone(),
+            fingerprint: fingerprint.clone(),
+            version: Some(parse_version_output("codex 0.0.1")),
+            features: CodexFeatureFlags {
+                supports_features_list: true,
+                supports_output_schema: true,
+                supports_add_dir: false,
+                supports_mcp_login: false,
+            },
+            probe_plan: CapabilityProbePlan {
+                steps: vec![CapabilityProbeStep::VersionFlag],
+            },
+            collected_at: SystemTime::UNIX_EPOCH,
+        };
+
+        update_capability_cache(snapshot.clone());
+
+        let entries = capability_cache_entries();
+        assert!(entries.iter().any(|entry| entry.cache_key == cache_key));
+
+        let fetched = capability_cache_entry(&binary).expect("expected cache entry");
+        assert_eq!(fetched.cache_key, cache_key);
+        assert!(clear_capability_cache_entry(&binary));
+        assert!(capability_cache_entry(&binary).is_none());
+        assert!(capability_cache_entries().is_empty());
+        clear_capability_cache();
+    }
+
+    #[tokio::test]
+    async fn probe_reprobes_when_metadata_missing() {
+        let _guard = env_guard();
+        clear_capability_cache();
+
+        let temp = tempfile::tempdir().unwrap();
+        let binary = temp.path().join("missing_codex");
+        let cache_key = capability_cache_key(&binary);
+
+        {
+            let mut cache = capability_cache().lock().unwrap();
+            cache.insert(
+                cache_key.clone(),
+                CodexCapabilities {
+                    cache_key: cache_key.clone(),
+                    fingerprint: None,
+                    version: Some(parse_version_output("codex 9.9.9")),
+                    features: CodexFeatureFlags {
+                        supports_features_list: true,
+                        supports_output_schema: true,
+                        supports_add_dir: true,
+                        supports_mcp_login: true,
+                    },
+                    probe_plan: CapabilityProbePlan::default(),
+                    collected_at: SystemTime::UNIX_EPOCH,
+                },
+            );
+        }
+
+        let client = CodexClient::builder()
+            .binary(&binary)
+            .timeout(Duration::from_secs(1))
+            .build();
+
+        let capabilities = client.probe_capabilities().await;
+        assert!(!capabilities.features.supports_output_schema);
+        assert!(capabilities
+            .probe_plan
+            .steps
+            .contains(&CapabilityProbeStep::VersionFlag));
+
+        clear_capability_cache();
+    }
+
+    #[tokio::test]
+    async fn probe_refresh_policy_forces_new_snapshot() {
+        let _guard = env_guard();
+        clear_capability_cache();
+
+        let temp = tempfile::tempdir().unwrap();
+        let log_path = temp.path().join("probe.log");
+        let script = format!(
+            r#"#!/bin/bash
+echo "$@" >> "{log}"
+if [[ "$1" == "--version" ]]; then
+  echo "codex 1.0.0"
+elif [[ "$1" == "features" && "$2" == "list" && "$3" == "--json" ]]; then
+  echo '{{"features":["output_schema"]}}'
+elif [[ "$1" == "features" && "$2" == "list" ]]; then
+  echo "output_schema"
+fi
+"#,
+            log = log_path.display()
+        );
+        let binary = write_fake_codex(temp.path(), &script);
+        let client = CodexClient::builder()
+            .binary(&binary)
+            .timeout(Duration::from_secs(5))
+            .build();
+
+        let first = client.probe_capabilities().await;
+        assert!(first.features.supports_output_schema);
+        let first_lines = fs::read_to_string(&log_path).unwrap().lines().count();
+        assert!(first_lines >= 2);
+
+        let refreshed = client
+            .probe_capabilities_with_policy(CapabilityCachePolicy::Refresh)
+            .await;
+        assert!(refreshed.features.supports_output_schema);
+        let refreshed_lines = fs::read_to_string(&log_path).unwrap().lines().count();
+        assert!(
+            refreshed_lines > first_lines,
+            "expected refresh policy to re-run probes"
+        );
+        clear_capability_cache();
+    }
+
+    #[tokio::test]
+    async fn probe_bypass_policy_skips_cache_writes() {
+        let _guard = env_guard();
+        clear_capability_cache();
+
+        let temp = tempfile::tempdir().unwrap();
+        let script = r#"#!/bin/bash
+if [[ "$1" == "--version" ]]; then
+  echo "codex 1.0.0"
+elif [[ "$1" == "features" && "$2" == "list" && "$3" == "--json" ]]; then
+  echo '{"features":["output_schema"]}'
+elif [[ "$1" == "features" && "$2" == "list" ]]; then
+  echo "output_schema"
+fi
+"#;
+        let binary = write_fake_codex(temp.path(), script);
+
+        let client = CodexClient::builder()
+            .binary(&binary)
+            .timeout(Duration::from_secs(5))
+            .build();
+
+        let capabilities = client
+            .probe_capabilities_with_policy(CapabilityCachePolicy::Bypass)
+            .await;
+        assert!(capabilities.features.supports_output_schema);
+        assert!(capability_cache_entry(&binary).is_none());
+        clear_capability_cache();
     }
 
     #[test]
