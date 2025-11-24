@@ -181,7 +181,13 @@ fn print_event(event: StreamEvent) {
                 println!("Item event ({kind})");
             }
         }
-        "error" => println!("Error event: {}", event.error.unwrap_or_default()),
+        "error" => {
+            let message = event
+                .error
+                .or(event.message)
+                .unwrap_or_else(|| "Unknown error".to_string());
+            println!("Error event: {message}");
+        }
         other => {
             if let Some(message) = event.message.as_deref() {
                 println!("Event: {other} — {message}");
