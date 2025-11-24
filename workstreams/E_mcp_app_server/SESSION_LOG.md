@@ -24,3 +24,5 @@ Record per session: `[START ...] [END ...] Agent: <name> | Task(s): <IDs> | Bran
 [END 2025-11-24T08:53:52-05:00] Agent: Codex | Task(s): E10-app-runtime-api | Branch: ws/E_mcp_app_server | Notes: Merged task/E10-app-runtime-api
 [START 2025-11-24T09:07:22-05:00] Agent: Codex | Task(s): E11-app-runtime-lifecycle | Branch: ws/E_mcp_app_server | Notes: Session start
 [END 2025-11-24T09:18:35-05:00] Agent: Codex | Task(s): E11-app-runtime-lifecycle | Branch: ws/E_mcp_app_server | Notes: Merged task/E11-app-runtime-lifecycle
+[START 2025-11-24T13:17:02-05:00] Agent: Codex | Task(s): E12-app-runtime-pool | Branch: ws/E_mcp_app_server | Notes: Session start
+[END 2025-11-24T13:28:35-05:00] Agent: Codex | Task(s): E12-app-runtime-pool | Branch: ws/E_mcp_app_server | Notes: Merged task/E12-app-runtime-pool
