@@ -83,5 +83,14 @@
     "files": ["workstreams/F_versioning_features/BRIEF.md", "crates/codex/src/lib.rs"],
     "outputs": ["Backlog/follow-up notes", "kickoff prompt for next task"],
     "status": "done"
+  },
+  {
+    "id": "F10-release-docs-and-examples",
+    "title": "Publish release notes and examples for capability/versioning work",
+    "description": "Produce host-facing release/README notes covering capability guards, cache controls, overrides, advisories, and provide a concrete example showing disk snapshot reuse with fingerprint checks plus TTL/backoff guidance (Refresh vs Bypass) for hot-swap/FUSE scenarios.",
+    "dependencies": ["F9-post-workstream-review"],
+    "files": ["workstreams/F_versioning_features/BRIEF.md", "README.md", "crates/codex/src/lib.rs"],
+    "outputs": ["Release notes/README updates", "Example for snapshot reuse and cache TTL/backoff"],
+    "status": "doing"
   }
 ]

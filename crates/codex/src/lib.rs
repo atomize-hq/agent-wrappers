@@ -24,18 +24,39 @@
 //!   from `CODEX_BINARY` or `codex` on PATH, no forced `CODEX_HOME`, same spawning semantics).
 //!   Opting into `codex_home` enables app-scoped state isolation without affecting the host
 //!   process environment.
+//!
+//! ## Capability/versioning surfaces (Workstream F)
+//! - Capability probes (`probe_capabilities`) capture `--version`, `features list`, and `--help`
+//!   hints into a `CodexCapabilities` snapshot with `collected_at` timestamps and
+//!   `BinaryFingerprint` metadata for per-path cache invalidation.
+//! - Guard helpers (`guard_output_schema`, `guard_add_dir`, `guard_mcp_login`,
+//!   `guard_features_list`) keep optional flags disabled when support is unknown; hosts can log
+//!   guard notes to operators instead of invoking unsupported CLI flags.
+//! - Cache controls: `CapabilityCachePolicy::{PreferCache, Refresh, Bypass}` plus builder helpers
+//!   (`capability_cache_policy`, `bypass_capability_cache`) steer cache reuse. Use `Refresh` for
+//!   TTL/backoff windows or hot-swaps that reuse the same binary path; use `Bypass` when metadata
+//!   is missing (FUSE/overlay filesystems) or when you need an isolated probe.
+//! - Overrides + persistence: `capability_snapshot`, `capability_overrides` (version + feature
+//!   hints), `write_capabilities_snapshot` / `read_capabilities_snapshot`, and
+//!   `capability_snapshot_matches_binary` let hosts reuse snapshots across processes but fall back
+//!   to probes when fingerprints diverge.
+//! - Update advisories: `CodexLatestReleases` + `update_advisory_from_capabilities` compare probed
+//!   versions against caller-supplied release tables so hosts can prompt upgrades without this
+//!   crate performing network I/O.
 
 use std::{
     collections::{HashMap, HashSet},
     env,
     ffi::{OsStr, OsString},
-    fs,
+    fs as std_fs,
     io::{self as stdio, Write},
     path::{Path, PathBuf},
     process::ExitStatus,
     sync::{Mutex, OnceLock},
     time::{Duration, SystemTime},
 };
+
+use std::fs;
 
 use semver::{Prerelease, Version};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -459,10 +480,11 @@ pub fn read_capabilities_snapshot(
 ) -> Result<CodexCapabilities, CapabilitySnapshotError> {
     let path = path.as_ref();
     let resolved_format = resolve_snapshot_format(format, path)?;
-    let contents = std_fs::read_to_string(path).map_err(|source| CapabilitySnapshotError::ReadSnapshot {
-        path: path.to_path_buf(),
-        source,
-    })?;
+    let contents =
+        std_fs::read_to_string(path).map_err(|source| CapabilitySnapshotError::ReadSnapshot {
+            path: path.to_path_buf(),
+            source,
+        })?;
     deserialize_capabilities_snapshot(&contents, resolved_format)
 }
 
@@ -504,10 +526,11 @@ pub fn read_capability_overrides(
 ) -> Result<CapabilityOverrides, CapabilitySnapshotError> {
     let path = path.as_ref();
     let resolved_format = resolve_snapshot_format(format, path)?;
-    let contents = std_fs::read_to_string(path).map_err(|source| CapabilitySnapshotError::ReadSnapshot {
-        path: path.to_path_buf(),
-        source,
-    })?;
+    let contents =
+        std_fs::read_to_string(path).map_err(|source| CapabilitySnapshotError::ReadSnapshot {
+            path: path.to_path_buf(),
+            source,
+        })?;
     deserialize_capability_overrides(&contents, resolved_format)
 }
 
@@ -1131,12 +1154,10 @@ impl CodexClient {
         let fingerprint = current_fingerprint(&cache_key);
         let overrides = &self.capability_overrides;
 
-        let cache_reads_enabled =
-            matches!(cache_policy, CapabilityCachePolicy::PreferCache)
-                && has_fingerprint_metadata(&fingerprint);
-        let cache_writes_enabled =
-            !matches!(cache_policy, CapabilityCachePolicy::Bypass)
-                && has_fingerprint_metadata(&fingerprint);
+        let cache_reads_enabled = matches!(cache_policy, CapabilityCachePolicy::PreferCache)
+            && has_fingerprint_metadata(&fingerprint);
+        let cache_writes_enabled = !matches!(cache_policy, CapabilityCachePolicy::Bypass)
+            && has_fingerprint_metadata(&fingerprint);
 
         if let Some(snapshot) = overrides.snapshot.clone() {
             let capabilities = finalize_capabilities_with_overrides(
@@ -1175,13 +1196,8 @@ impl CodexClient {
             .probe_capabilities_uncached(&cache_key, fingerprint.clone())
             .await;
 
-        let capabilities = finalize_capabilities_with_overrides(
-            probed,
-            overrides,
-            cache_key,
-            fingerprint,
-            false,
-        );
+        let capabilities =
+            finalize_capabilities_with_overrides(probed, overrides, cache_key, fingerprint, false);
 
         if cache_writes_enabled {
             update_capability_cache(capabilities.clone());

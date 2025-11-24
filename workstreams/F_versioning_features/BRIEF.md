@@ -61,6 +61,6 @@ if let Some(child) = client.spawn_mcp_login_process().await? {
   - The in-process cache is intentionally scoped to the current process; long-lived hosts should periodically refresh using `Refresh` or `Bypass` and can layer a TTL on `CodexCapabilities.collected_at`.
   - Update advisories stay offline; hosts must supply latest release tables (npm/Homebrew/GitHub) before calling `update_advisory` / `update_advisory_from_capabilities` and should surface advisory.notes to operators.
 - Backlog/follow-ups to hand off:
-  - Publish a short release/README note explaining the new capability detection surfaces, guard helpers, and cache policies so downstream hosts know they exist.
-  - Add a host-facing example showing disk snapshot reuse + fingerprint checks + when to choose `Refresh` vs `Bypass` for TTL/backoff in hot-swap or FUSE-like environments.
+  - Done: release/README notes describing capability detection, guard helpers, cache policies, overrides, and advisories (see `crates/codex/README.md` and crate docs).
+  - Done: host-facing example showing disk snapshot reuse with fingerprint checks and `Refresh` vs `Bypass` guidance for TTL/backoff on hot-swap or FUSE-like paths (`crates/codex/examples/capability_snapshot.rs`).
   - Consider a helper that enforces a TTL using `collected_at` for hosts that want automatic refreshes when file metadata is missing/unreliable.
