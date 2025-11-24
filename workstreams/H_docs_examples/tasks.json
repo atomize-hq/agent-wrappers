@@ -91,5 +91,28 @@
       "Doc/example fixes"
     ],
     "status": "done"
+  },
+  {
+    "id": "H6-docs-handoff",
+    "title": "Docs handoff",
+    "description": "Finalize docs/examples handoff after QA; align README/rustdoc/EXAMPLES with latest APIs and samples; prep release summary for downstream consumers.",
+    "dependencies": [
+      "H5-docs-qa"
+    ],
+    "files": [
+      "README.md",
+      "crates/codex/EXAMPLES.md",
+      "crates/codex/src/lib.rs",
+      "crates/codex/examples"
+    ],
+    "tests": [
+      "cargo test -p codex --doc",
+      "cargo test -p codex --examples"
+    ],
+    "outputs": [
+      "Release-ready docs/examples",
+      "Handoff note"
+    ],
+    "status": "doing"
   }
 ]

@@ -15,3 +15,4 @@ Append entries: `[START ...] [END ...] Agent: <name> | Task(s): <IDs> | Branch: 
 
 [START 2025-11-24 03:40:38Z] Agent: Codex | Task(s): H5-docs-qa | Branch: ws/H_docs_examples | Notes: Starting QA task; will branch/worktree next
 [END 2025-11-24 03:48:46Z] Agent: Codex | Task(s): H5-docs-qa | Branch: ws/H_docs_examples | Notes: QA complete; merged doc/streaming fixes after cargo test -p codex --doc/--examples
+[START 2025-11-24 03:58:01Z] Agent: Codex | Task(s): H6-docs-handoff | Branch: ws/H_docs_examples | Notes: Starting docs/examples handoff; creating task branch/worktree next
