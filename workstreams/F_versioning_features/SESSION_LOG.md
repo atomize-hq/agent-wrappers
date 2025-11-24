@@ -16,3 +16,4 @@ Append entries: `[START ...] [END ...] Agent: <name> | Task(s): <IDs> | Branch: 
 [START 2025-11-23 22:38] Agent: Codex | Task(s): F7-capability-snapshot-serialization | Branch: ws/F_versioning_features | Notes: Kicking off snapshot persistence scope definition and planning
 [END 2025-11-23 22:49] Agent: Codex | Task(s): F7-capability-snapshot-serialization | Branch: ws/F_versioning_features | Notes: Snapshot serialization/persistence helpers merged with tests and docs
 [START 2025-11-24 03:54] Agent: Codex | Task(s): F8-capability-cache-controls | Branch: ws/F_versioning_features | Notes: Starting cache controls task and worktree setup
+[END 2025-11-24 04:10] Agent: Codex | Task(s): F8-capability-cache-controls | Branch: ws/F_versioning_features | Notes: Cache control helpers and policies merged with tests/docs; worktree closed
