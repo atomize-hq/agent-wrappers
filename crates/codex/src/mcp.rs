@@ -12,7 +12,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     env,
     ffi::OsString,
-    fs, io,
+    fmt, fs, io,
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -976,6 +976,12 @@ pub struct ManagedHttpRuntime {
 pub enum AppRuntimeError {
     #[error("runtime `{0}` not found")]
     NotFound(String),
+    #[error("failed to start runtime `{name}`: {source}")]
+    Start {
+        name: String,
+        #[source]
+        source: McpError,
+    },
 }
 
 /// Prepared app runtime with merged stdio config and metadata.
@@ -984,6 +990,51 @@ pub struct AppRuntimeHandle {
     pub name: String,
     pub metadata: Value,
     pub config: StdioServerConfig,
+}
+
+/// Running app-server instance with metadata preserved.
+pub struct ManagedAppRuntime {
+    pub name: String,
+    pub metadata: Value,
+    pub config: StdioServerConfig,
+    pub server: CodexAppServer,
+}
+
+impl fmt::Debug for ManagedAppRuntime {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ManagedAppRuntime")
+            .field("name", &self.name)
+            .field("metadata", &self.metadata)
+            .field("config", &self.config)
+            .finish()
+    }
+}
+
+impl ManagedAppRuntime {
+    /// Gracefully shut down the app-server.
+    pub async fn stop(&self) -> Result<(), McpError> {
+        self.server.shutdown().await
+    }
+}
+
+impl AppRuntimeHandle {
+    /// Launch the app-server using the prepared stdio config.
+    pub async fn start(self, client: ClientInfo) -> Result<ManagedAppRuntime, McpError> {
+        let AppRuntimeHandle {
+            name,
+            metadata,
+            config,
+        } = self;
+
+        let server = CodexAppServer::start(config.clone(), client).await?;
+
+        Ok(ManagedAppRuntime {
+            name,
+            metadata,
+            config,
+            server,
+        })
+    }
 }
 
 /// Non-destructive manager for app runtimes backed by launch-ready configs.
@@ -1027,6 +1078,22 @@ impl AppRuntimeManager {
             config: launcher.config,
         })
     }
+
+    /// Start an app-server runtime using the prepared config and metadata.
+    pub async fn start(
+        &self,
+        name: &str,
+        client: ClientInfo,
+    ) -> Result<ManagedAppRuntime, AppRuntimeError> {
+        let handle = self.prepare(name)?;
+        handle
+            .start(client)
+            .await
+            .map_err(|source| AppRuntimeError::Start {
+                name: name.to_string(),
+                source,
+            })
+    }
 }
 
 /// Read-only helpers around [`AppRuntimeManager`] backed by stored config.
@@ -1067,6 +1134,15 @@ impl AppRuntimeApi {
     /// Prepare a stdio config + metadata for a runtime.
     pub fn prepare(&self, name: &str) -> Result<AppRuntimeHandle, AppRuntimeError> {
         self.manager.prepare(name)
+    }
+
+    /// Start an app runtime and return a managed handle.
+    pub async fn start(
+        &self,
+        name: &str,
+        client: ClientInfo,
+    ) -> Result<ManagedAppRuntime, AppRuntimeError> {
+        self.manager.start(name, client).await
     }
 
     /// Convenience accessor for the merged stdio config.
@@ -1395,9 +1471,7 @@ impl McpConfigManager {
         self.write_table(table)
     }
 
-    fn read_app_runtimes(
-        &self,
-    ) -> Result<BTreeMap<String, AppRuntimeDefinition>, McpConfigError> {
+    fn read_app_runtimes(&self) -> Result<BTreeMap<String, AppRuntimeDefinition>, McpConfigError> {
         let table = self.load_table()?;
         self.parse_app_runtimes(table.get(APP_RUNTIMES_KEY))
     }
@@ -3965,8 +4039,14 @@ time.sleep(30)
         assert_eq!(alpha.name, "alpha");
         assert_eq!(alpha.metadata, serde_json::json!({"thread": "t-alpha"}));
         assert_eq!(alpha.config.binary, PathBuf::from("/bin/app-alpha"));
-        assert_eq!(alpha.config.code_home.as_deref(), Some(alpha_home.as_path()));
-        assert_eq!(alpha.config.current_dir.as_deref(), Some(alpha_cwd.as_path()));
+        assert_eq!(
+            alpha.config.code_home.as_deref(),
+            Some(alpha_home.as_path())
+        );
+        assert_eq!(
+            alpha.config.current_dir.as_deref(),
+            Some(alpha_cwd.as_path())
+        );
         assert!(alpha.config.mirror_stdio);
         assert_eq!(alpha.config.startup_timeout, Duration::from_millis(4200));
 
@@ -4017,21 +4097,114 @@ time.sleep(30)
             .iter()
             .find(|entry| entry.name == "beta")
             .expect("beta summary");
-        assert_eq!(
-            beta_summary.metadata,
-            serde_json::json!({"resume": true})
-        );
+        assert_eq!(beta_summary.metadata, serde_json::json!({"resume": true}));
 
         let after = fs::read_to_string(manager.config_path()).expect("read config after");
         assert_eq!(before, after);
     }
 
-    #[test]
-    fn app_runtime_api_not_found_errors() {
+    #[tokio::test]
+    async fn app_runtime_lifecycle_starts_and_stops_without_mutation() {
+        let (config_dir, manager) = temp_config_manager();
+        let (_server_dir, server_path) = write_fake_app_server();
+        let code_home = config_dir.path().join("app-lifecycle-home");
+
+        let mut env_map = BTreeMap::new();
+        env_map.insert("APP_RUNTIME_LIFECYCLE".into(), "runtime-env".into());
+
+        let metadata = serde_json::json!({"resume_thread": "thread-lifecycle"});
+        manager
+            .add_app_runtime(AddAppRuntimeRequest {
+                name: "lifecycle".into(),
+                definition: AppRuntimeDefinition {
+                    description: Some("app lifecycle".into()),
+                    tags: vec!["app".into()],
+                    env: env_map,
+                    code_home: None,
+                    current_dir: None,
+                    mirror_stdio: Some(true),
+                    startup_timeout_ms: Some(1500),
+                    binary: None,
+                    metadata: metadata.clone(),
+                },
+                overwrite: false,
+            })
+            .expect("add app runtime");
+
+        let defaults = StdioServerConfig {
+            binary: server_path.clone(),
+            code_home: Some(code_home.clone()),
+            current_dir: None,
+            env: vec![(
+                OsString::from("APP_RUNTIME_LIFECYCLE"),
+                OsString::from("default"),
+            )],
+            mirror_stdio: false,
+            startup_timeout: Duration::from_secs(3),
+        };
+
+        let before = fs::read_to_string(manager.config_path()).expect("read config before");
+        let api = AppRuntimeApi::from_config(&manager, &defaults).expect("build api");
+        let client = test_client();
+
+        let runtime = api
+            .start("lifecycle", client.clone())
+            .await
+            .expect("start runtime");
+        assert_eq!(runtime.name, "lifecycle");
+        assert_eq!(runtime.metadata, metadata);
+
+        let env_values: HashMap<OsString, OsString> = runtime.config.env.iter().cloned().collect();
+        assert_eq!(
+            env_values.get(&OsString::from("CODEX_HOME")),
+            Some(&code_home.as_os_str().to_os_string())
+        );
+        assert_eq!(
+            env_values.get(&OsString::from("APP_RUNTIME_LIFECYCLE")),
+            Some(&OsString::from("runtime-env"))
+        );
+
+        let thread = runtime
+            .server
+            .thread_start(ThreadStartParams {
+                thread_id: None,
+                metadata: serde_json::json!({"from": "lifecycle"}),
+            })
+            .await
+            .expect("thread start");
+        let thread_response = time::timeout(Duration::from_secs(2), thread.response)
+            .await
+            .expect("thread response timeout")
+            .expect("recv thread response")
+            .expect("thread response ok");
+        let thread_id = thread_response
+            .get("thread_id")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        assert!(!thread_id.is_empty());
+
+        runtime.stop().await.expect("shutdown runtime");
+
+        let after = fs::read_to_string(manager.config_path()).expect("read config after");
+        assert_eq!(before, after);
+
+        let prepared = api.prepare("lifecycle").expect("prepare after stop");
+        assert_eq!(prepared.metadata, metadata);
+    }
+
+    #[tokio::test]
+    async fn app_runtime_api_not_found_errors() {
         let api = AppRuntimeApi::new(Vec::new());
         match api.prepare("missing") {
             Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "missing"),
             other => panic!("unexpected result: {other:?}"),
+        }
+
+        let client = test_client();
+        match api.start("missing", client).await {
+            Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "missing"),
+            other => panic!("unexpected start result: {other:?}"),
         }
     }
 
