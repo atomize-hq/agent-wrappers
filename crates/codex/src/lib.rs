@@ -38,7 +38,9 @@
 //!   is missing (FUSE/overlay filesystems) or when you need an isolated probe.
 //! - TTL/backoff helper: `capability_cache_ttl_decision` inspects `collected_at` to tell hosts
 //!   when to force `Refresh`/`Bypass` during hot-swaps or when fingerprints are unavailable so
-//!   they can avoid hammering binaries on metadata-poor filesystems.
+//!   they can avoid hammering binaries on metadata-poor filesystems. Start with a ~5 minute TTL
+//!   for binaries with fingerprints; when metadata is missing on FUSE/overlay mounts, use a
+//!   modest TTL and backoff (e.g., 5->15 minutes) between probes.
 //! - Overrides + persistence: `capability_snapshot`, `capability_overrides` (version + feature
 //!   hints), `write_capabilities_snapshot` / `read_capabilities_snapshot`, and
 //!   `capability_snapshot_matches_binary` let hosts reuse snapshots across processes but fall back
@@ -568,6 +570,10 @@ pub struct CapabilityTtlDecision {
 /// without changing fingerprints. When the TTL has not elapsed, reuse the provided snapshot;
 /// when expired, force a probe with [`CapabilityCachePolicy::Refresh`] (fingerprints present)
 /// or [`CapabilityCachePolicy::Bypass`] (metadata missing).
+///
+/// Recommended defaults: start with a 5 minute TTL when fingerprints exist and prefer
+/// `Refresh` for hot-swaps that reuse the same path; when metadata is missing, expect `Bypass`
+/// and back off further (e.g., stretch the TTL toward 10-15 minutes) to avoid tight probe loops.
 ///
 /// Example:
 /// ```
