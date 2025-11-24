@@ -53,6 +53,6 @@
     "dependencies": ["F5-capability-consumers"],
     "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
     "tests": ["cargo test -p codex"],
-    "status": "doing"
+    "status": "done"
   }
 ]
