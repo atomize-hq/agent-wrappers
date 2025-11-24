@@ -37,6 +37,8 @@ use std::{
     time::{Duration, SystemTime},
 };
 
+use semver::{Prerelease, Version};
+use serde_json::Value;
 use tempfile::TempDir;
 use thiserror::Error;
 use tokio::{
@@ -44,8 +46,6 @@ use tokio::{
     process::Command,
     task, time,
 };
-use semver::Version;
-use serde_json::Value;
 use tracing::{debug, warn};
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(120);
@@ -110,6 +110,142 @@ pub enum CodexReleaseChannel {
     Nightly,
     /// Fallback for bespoke or vendor-patched builds.
     Custom,
+}
+
+impl std::fmt::Display for CodexReleaseChannel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let label = match self {
+            CodexReleaseChannel::Stable => "stable",
+            CodexReleaseChannel::Beta => "beta",
+            CodexReleaseChannel::Nightly => "nightly",
+            CodexReleaseChannel::Custom => "custom",
+        };
+        write!(f, "{label}")
+    }
+}
+
+/// Release metadata for a specific Codex build channel.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CodexRelease {
+    /// Release channel (stable/beta/nightly/custom).
+    pub channel: CodexReleaseChannel,
+    /// Parsed semantic version for comparison.
+    pub version: Version,
+}
+
+/// Caller-supplied table of known latest Codex releases.
+///
+/// The crate intentionally avoids network requests; hosts should populate this
+/// with data from their preferred distribution channel (e.g. `npm view
+/// @openai/codex version`, `brew info codex --json`, or the GitHub releases
+/// API) before requesting an update advisory.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CodexLatestReleases {
+    /// Latest stable release version.
+    pub stable: Option<Version>,
+    /// Latest beta pre-release when available.
+    pub beta: Option<Version>,
+    /// Latest nightly build when available.
+    pub nightly: Option<Version>,
+}
+
+impl CodexLatestReleases {
+    /// Returns the most appropriate latest release for the given channel,
+    /// falling back to a more stable track when channel-specific data is
+    /// missing.
+    pub fn select_for_channel(
+        &self,
+        channel: CodexReleaseChannel,
+    ) -> (Option<CodexRelease>, CodexReleaseChannel, bool) {
+        if let Some(release) = self.release_for_channel(channel) {
+            return (Some(release), channel, false);
+        }
+
+        let fallback = self
+            .stable
+            .as_ref()
+            .map(|version| CodexRelease {
+                channel: CodexReleaseChannel::Stable,
+                version: version.clone(),
+            })
+            .or_else(|| {
+                self.beta.as_ref().map(|version| CodexRelease {
+                    channel: CodexReleaseChannel::Beta,
+                    version: version.clone(),
+                })
+            })
+            .or_else(|| {
+                self.nightly.as_ref().map(|version| CodexRelease {
+                    channel: CodexReleaseChannel::Nightly,
+                    version: version.clone(),
+                })
+            });
+
+        let fallback_channel = fallback
+            .as_ref()
+            .map(|release| release.channel)
+            .unwrap_or(channel);
+        let fell_back = fallback_channel != channel;
+        (fallback, fallback_channel, fell_back)
+    }
+
+    fn release_for_channel(&self, channel: CodexReleaseChannel) -> Option<CodexRelease> {
+        match channel {
+            CodexReleaseChannel::Stable => self.stable.as_ref().map(|version| CodexRelease {
+                channel,
+                version: version.clone(),
+            }),
+            CodexReleaseChannel::Beta => self.beta.as_ref().map(|version| CodexRelease {
+                channel,
+                version: version.clone(),
+            }),
+            CodexReleaseChannel::Nightly => self.nightly.as_ref().map(|version| CodexRelease {
+                channel,
+                version: version.clone(),
+            }),
+            CodexReleaseChannel::Custom => None,
+        }
+    }
+}
+
+/// Update guidance derived from comparing local and latest Codex versions.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CodexUpdateAdvisory {
+    /// Local release as parsed from `codex --version`.
+    pub local_release: Option<CodexRelease>,
+    /// Latest release used for comparison (may be a fallback track).
+    pub latest_release: Option<CodexRelease>,
+    /// Channel chosen for comparison (local channel when available, otherwise stable).
+    pub comparison_channel: CodexReleaseChannel,
+    /// High-level outcome to drive host UX.
+    pub status: CodexUpdateStatus,
+    /// Human-readable hints callers can log or display.
+    pub notes: Vec<String>,
+}
+
+impl CodexUpdateAdvisory {
+    /// True when the host should prompt for or attempt an update.
+    pub fn is_update_recommended(&self) -> bool {
+        matches!(
+            self.status,
+            CodexUpdateStatus::UpdateRecommended | CodexUpdateStatus::UnknownLocalVersion
+        )
+    }
+}
+
+/// Enum summarizing whether an update is needed based on provided release data.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CodexUpdateStatus {
+    /// Local binary matches the latest known release for the comparison channel.
+    UpToDate,
+    /// A newer release exists for the comparison channel.
+    UpdateRecommended,
+    /// Local binary appears newer than the provided release table (e.g., dev build).
+    LocalNewerThanKnown,
+    /// No local version data was available (probe failure).
+    UnknownLocalVersion,
+    /// Caller did not provide a comparable latest release.
+    UnknownLatestVersion,
 }
 
 /// Feature gates for Codex CLI flags.
@@ -179,10 +315,8 @@ pub struct BinaryFingerprint {
     pub len: Option<u64>,
 }
 
-fn capability_cache(
-) -> &'static Mutex<HashMap<CapabilityCacheKey, CodexCapabilities>> {
-    static CACHE: OnceLock<Mutex<HashMap<CapabilityCacheKey, CodexCapabilities>>> =
-        OnceLock::new();
+fn capability_cache() -> &'static Mutex<HashMap<CapabilityCacheKey, CodexCapabilities>> {
+    static CACHE: OnceLock<Mutex<HashMap<CapabilityCacheKey, CodexCapabilities>>> = OnceLock::new();
     CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
@@ -399,10 +533,7 @@ impl CodexClient {
         let mut parsed_features = false;
 
         plan.steps.push(CapabilityProbeStep::FeaturesListJson);
-        match self
-            .run_basic_command(["features", "list", "--json"])
-            .await
-        {
+        match self.run_basic_command(["features", "list", "--json"]).await {
             Ok(output) => {
                 if !output.status.success() {
                     warn!(
@@ -491,6 +622,23 @@ impl CodexClient {
 
         update_capability_cache(capabilities.clone());
         capabilities
+    }
+
+    /// Computes an update advisory by comparing the probed Codex version against
+    /// caller-supplied latest releases.
+    ///
+    /// The crate does not fetch release metadata itself; hosts should populate
+    /// [`CodexLatestReleases`] using their preferred update channel (npm,
+    /// Homebrew, GitHub releases) and then call this helper. Results leverage
+    /// the capability probe cache; callers with an existing
+    /// [`CodexCapabilities`] snapshot can skip the probe by invoking
+    /// [`update_advisory_from_capabilities`].
+    pub async fn update_advisory(
+        &self,
+        latest_releases: &CodexLatestReleases,
+    ) -> CodexUpdateAdvisory {
+        let capabilities = self.probe_capabilities().await;
+        update_advisory_from_capabilities(&capabilities, latest_releases)
     }
 
     async fn invoke_codex_exec(&self, prompt: &str) -> Result<String, CodexError> {
@@ -1033,25 +1181,40 @@ fn command_output_text(output: &CommandOutput) -> String {
     }
 }
 
-fn parse_version_output(output: &str) -> CodexVersionInfo {
-    let raw = output.trim().to_string();
-    let mut semantic = None;
-    let mut channel = infer_release_channel(&raw);
-    let mut commit = extract_commit_hash(&raw);
-
+fn parse_semver_from_raw(raw: &str) -> Option<Version> {
     for token in raw.split_whitespace() {
         let candidate = token
             .trim_matches(|c: char| matches!(c, '(' | ')' | ',' | ';'))
             .trim_start_matches('v');
-        if commit.is_none() {
-            commit = cleaned_hex(candidate);
-        }
         if let Ok(version) = Version::parse(candidate) {
-            semantic = Some((version.major, version.minor, version.patch));
-            channel = release_channel_for_version(&version);
-            break;
+            return Some(version);
         }
     }
+    None
+}
+
+fn parse_version_output(output: &str) -> CodexVersionInfo {
+    let raw = output.trim().to_string();
+    let parsed_version = parse_semver_from_raw(&raw);
+    let semantic = parsed_version
+        .as_ref()
+        .map(|version| (version.major, version.minor, version.patch));
+    let mut commit = extract_commit_hash(&raw);
+    if commit.is_none() {
+        for token in raw.split_whitespace() {
+            let candidate = token
+                .trim_matches(|c: char| matches!(c, '(' | ')' | ',' | ';'))
+                .trim_start_matches('v');
+            if let Some(cleaned) = cleaned_hex(candidate) {
+                commit = Some(cleaned);
+                break;
+            }
+        }
+    }
+    let channel = parsed_version
+        .as_ref()
+        .map(release_channel_for_version)
+        .unwrap_or_else(|| infer_release_channel(&raw));
 
     CodexVersionInfo {
         raw,
@@ -1085,6 +1248,34 @@ fn infer_release_channel(raw: &str) -> CodexReleaseChannel {
     } else {
         CodexReleaseChannel::Custom
     }
+}
+
+fn codex_semver(info: &CodexVersionInfo) -> Option<Version> {
+    if let Some(parsed) = parse_semver_from_raw(&info.raw) {
+        return Some(parsed);
+    }
+    let (major, minor, patch) = info.semantic?;
+    let mut version = Version::new(major, minor, patch);
+    if version.pre.is_empty() {
+        match info.channel {
+            CodexReleaseChannel::Beta => {
+                version.pre = Prerelease::new("beta").ok()?;
+            }
+            CodexReleaseChannel::Nightly => {
+                version.pre = Prerelease::new("nightly").ok()?;
+            }
+            CodexReleaseChannel::Stable | CodexReleaseChannel::Custom => {}
+        }
+    }
+    Some(version)
+}
+
+fn codex_release_from_info(info: &CodexVersionInfo) -> Option<CodexRelease> {
+    let version = codex_semver(info)?;
+    Some(CodexRelease {
+        channel: info.channel,
+        version,
+    })
 }
 
 fn extract_commit_hash(raw: &str) -> Option<String> {
@@ -1244,6 +1435,106 @@ fn apply_feature_token(flags: &mut CodexFeatureFlags, token: &str) {
     }
 }
 
+/// Computes an update advisory for a previously probed binary.
+///
+/// Callers that already have a [`CodexCapabilities`] snapshot can use this
+/// helper to avoid re-running `codex --version`. Provide a [`CodexLatestReleases`]
+/// table sourced from your preferred distribution channel.
+pub fn update_advisory_from_capabilities(
+    capabilities: &CodexCapabilities,
+    latest_releases: &CodexLatestReleases,
+) -> CodexUpdateAdvisory {
+    let local_release = capabilities
+        .version
+        .as_ref()
+        .and_then(codex_release_from_info);
+    let preferred_channel = local_release
+        .as_ref()
+        .map(|release| release.channel)
+        .unwrap_or(CodexReleaseChannel::Stable);
+    let (latest_release, comparison_channel, fell_back) =
+        latest_releases.select_for_channel(preferred_channel);
+    let mut notes = Vec::new();
+
+    if fell_back {
+        notes.push(format!(
+            "No latest {preferred_channel} release provided; comparing against {comparison_channel}."
+        ));
+    }
+
+    let status = match (local_release.as_ref(), latest_release.as_ref()) {
+        (None, None) => CodexUpdateStatus::UnknownLatestVersion,
+        (None, Some(_)) => CodexUpdateStatus::UnknownLocalVersion,
+        (Some(_), None) => CodexUpdateStatus::UnknownLatestVersion,
+        (Some(local), Some(latest)) => {
+            if local.version < latest.version {
+                CodexUpdateStatus::UpdateRecommended
+            } else if local.version > latest.version {
+                CodexUpdateStatus::LocalNewerThanKnown
+            } else {
+                CodexUpdateStatus::UpToDate
+            }
+        }
+    };
+
+    match status {
+        CodexUpdateStatus::UpdateRecommended => {
+            if let (Some(local), Some(latest)) = (local_release.as_ref(), latest_release.as_ref()) {
+                notes.push(format!(
+                    "Local codex {local_version} is behind latest {comparison_channel} {latest_version}.",
+                    local_version = local.version,
+                    latest_version = latest.version
+                ));
+            }
+        }
+        CodexUpdateStatus::LocalNewerThanKnown => {
+            if let Some(local) = local_release.as_ref() {
+                let known = latest_release
+                    .as_ref()
+                    .map(|release| release.version.to_string())
+                    .unwrap_or_else(|| "unknown".to_string());
+                notes.push(format!(
+                    "Local codex {local_version} is newer than provided {comparison_channel} metadata (latest table: {known}).",
+                    local_version = local.version
+                ));
+            }
+        }
+        CodexUpdateStatus::UnknownLocalVersion => {
+            if let Some(latest) = latest_release.as_ref() {
+                notes.push(format!(
+                    "Latest known {comparison_channel} release is {latest_version}; local version could not be parsed.",
+                    latest_version = latest.version
+                ));
+            } else {
+                notes.push(
+                    "Local version could not be parsed and no latest release was provided."
+                        .to_string(),
+                );
+            }
+        }
+        CodexUpdateStatus::UnknownLatestVersion => notes.push(
+            "No latest Codex release information provided; update advisory unavailable."
+                .to_string(),
+        ),
+        CodexUpdateStatus::UpToDate => {
+            if let Some(latest) = latest_release.as_ref() {
+                notes.push(format!(
+                    "Local codex matches latest {comparison_channel} release {latest_version}.",
+                    latest_version = latest.version
+                ));
+            }
+        }
+    }
+
+    CodexUpdateAdvisory {
+        local_release,
+        latest_release,
+        comparison_channel,
+        status,
+        notes,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1251,7 +1542,7 @@ mod tests {
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
     use std::sync::{Mutex, OnceLock};
-    use std::time::Duration;
+    use std::time::{Duration, SystemTime};
 
     fn env_guard() -> std::sync::MutexGuard<'static, ()> {
         static ENV_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
@@ -1271,6 +1562,32 @@ mod tests {
         perms.set_mode(0o755);
         fs::set_permissions(&path, perms).unwrap();
         path
+    }
+
+    fn capabilities_with_version(raw_version: &str) -> CodexCapabilities {
+        CodexCapabilities {
+            cache_key: CapabilityCacheKey {
+                binary_path: PathBuf::from("codex"),
+            },
+            fingerprint: None,
+            version: Some(parse_version_output(raw_version)),
+            features: CodexFeatureFlags::default(),
+            probe_plan: CapabilityProbePlan::default(),
+            collected_at: SystemTime::now(),
+        }
+    }
+
+    fn capabilities_without_version() -> CodexCapabilities {
+        CodexCapabilities {
+            cache_key: CapabilityCacheKey {
+                binary_path: PathBuf::from("codex"),
+            },
+            fingerprint: None,
+            version: None,
+            features: CodexFeatureFlags::default(),
+            probe_plan: CapabilityProbePlan::default(),
+            collected_at: SystemTime::now(),
+        }
     }
 
     #[test]
@@ -1434,6 +1751,69 @@ mod tests {
     }
 
     #[test]
+    fn update_advisory_detects_newer_release() {
+        let capabilities = capabilities_with_version("codex 1.0.0");
+        let latest = CodexLatestReleases {
+            stable: Some(Version::parse("1.1.0").unwrap()),
+            ..Default::default()
+        };
+        let advisory = update_advisory_from_capabilities(&capabilities, &latest);
+        assert_eq!(advisory.status, CodexUpdateStatus::UpdateRecommended);
+        assert!(advisory.is_update_recommended());
+        assert_eq!(
+            advisory
+                .latest_release
+                .as_ref()
+                .map(|release| release.version.clone()),
+            latest.stable
+        );
+    }
+
+    #[test]
+    fn update_advisory_handles_unknown_local_version() {
+        let capabilities = capabilities_without_version();
+        let latest = CodexLatestReleases {
+            stable: Some(Version::parse("3.2.1").unwrap()),
+            ..Default::default()
+        };
+        let advisory = update_advisory_from_capabilities(&capabilities, &latest);
+        assert_eq!(advisory.status, CodexUpdateStatus::UnknownLocalVersion);
+        assert!(advisory.is_update_recommended());
+        assert!(advisory
+            .notes
+            .iter()
+            .any(|note| note.contains("could not be parsed")));
+    }
+
+    #[test]
+    fn update_advisory_marks_up_to_date() {
+        let capabilities = capabilities_with_version("codex 2.0.1");
+        let latest = CodexLatestReleases {
+            stable: Some(Version::parse("2.0.1").unwrap()),
+            ..Default::default()
+        };
+        let advisory = update_advisory_from_capabilities(&capabilities, &latest);
+        assert_eq!(advisory.status, CodexUpdateStatus::UpToDate);
+        assert!(!advisory.is_update_recommended());
+    }
+
+    #[test]
+    fn update_advisory_falls_back_when_channel_missing() {
+        let capabilities = capabilities_with_version("codex 2.0.0-beta");
+        let latest = CodexLatestReleases {
+            stable: Some(Version::parse("2.0.1").unwrap()),
+            ..Default::default()
+        };
+        let advisory = update_advisory_from_capabilities(&capabilities, &latest);
+        assert_eq!(advisory.comparison_channel, CodexReleaseChannel::Stable);
+        assert_eq!(advisory.status, CodexUpdateStatus::UpdateRecommended);
+        assert!(advisory
+            .notes
+            .iter()
+            .any(|note| note.contains("comparing against stable")));
+    }
+
+    #[test]
     fn parses_features_from_json_and_text() {
         let json = r#"{"features":["output_schema","add_dir"],"mcp_login":true}"#;
         let parsed_json = parse_features_from_json(json).unwrap();
@@ -1450,7 +1830,8 @@ mod tests {
 
     #[test]
     fn parses_help_output_flags() {
-        let help = "Usage: codex --output-schema ... add-dir ... login --mcp. See `codex features list`.";
+        let help =
+            "Usage: codex --output-schema ... add-dir ... login --mcp. See `codex features list`.";
         let parsed = parse_help_output(help);
         assert!(parsed.supports_output_schema);
         assert!(parsed.supports_add_dir);
