@@ -329,6 +329,84 @@ impl CodexClient {
         }
     }
 
+    /// Applies the most recent Codex diff by invoking `codex apply` and captures stdout/stderr.
+    pub async fn apply(&self) -> Result<ApplyDiffArtifacts, CodexError> {
+        self.apply_or_diff("apply").await
+    }
+
+    /// Shows the most recent Codex diff by invoking `codex diff` and captures stdout/stderr.
+    pub async fn diff(&self) -> Result<ApplyDiffArtifacts, CodexError> {
+        self.apply_or_diff("diff").await
+    }
+
+    async fn apply_or_diff(&self, subcommand: &str) -> Result<ApplyDiffArtifacts, CodexError> {
+        let dir_ctx = self.directory_context()?;
+
+        let mut command = Command::new(&self.binary);
+        command
+            .arg(subcommand)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .current_dir(dir_ctx.path());
+
+        apply_rust_log_default(&mut command);
+
+        let mut child = command.spawn().map_err(|source| CodexError::Spawn {
+            binary: self.binary.clone(),
+            source,
+        })?;
+
+        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+
+        let stdout_task = tokio::spawn(tee_stream(
+            stdout,
+            ConsoleTarget::Stdout,
+            self.mirror_stdout,
+        ));
+        let stderr_task = tokio::spawn(tee_stream(
+            stderr,
+            ConsoleTarget::Stderr,
+            !self.quiet,
+        ));
+
+        let wait_task = async move {
+            let status = child
+                .wait()
+                .await
+                .map_err(|source| CodexError::Wait { source })?;
+            let stdout_bytes = stdout_task
+                .await
+                .map_err(CodexError::Join)?
+                .map_err(CodexError::CaptureIo)?;
+            let stderr_bytes = stderr_task
+                .await
+                .map_err(CodexError::Join)?
+                .map_err(CodexError::CaptureIo)?;
+            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+        };
+
+        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+            wait_task.await?
+        } else {
+            match time::timeout(self.timeout, wait_task).await {
+                Ok(result) => result?,
+                Err(_) => {
+                    return Err(CodexError::Timeout {
+                        timeout: self.timeout,
+                    });
+                }
+            }
+        };
+
+        Ok(ApplyDiffArtifacts {
+            status,
+            stdout: String::from_utf8(stdout_bytes)?,
+            stderr: String::from_utf8(stderr_bytes)?,
+        })
+    }
+
     async fn invoke_codex_exec(&self, prompt: &str) -> Result<String, CodexError> {
         let dir_ctx = self.directory_context()?;
 
@@ -1156,6 +1234,14 @@ pub struct ExecCompletion {
     pub schema_path: Option<PathBuf>,
 }
 
+/// Captured output from `codex apply` or `codex diff`.
+#[derive(Clone, Debug)]
+pub struct ApplyDiffArtifacts {
+    pub status: ExitStatus,
+    pub stdout: String,
+    pub stderr: String,
+}
+
 /// Errors that may occur while consuming the JSONL stream.
 #[derive(Debug, Error)]
 pub enum ExecStreamError {
@@ -1381,6 +1467,8 @@ mod tests {
     use super::*;
     use futures_util::{pin_mut, StreamExt};
     use serde_json::json;
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
     use std::sync::{Mutex, OnceLock};
     use tokio::io::AsyncWriteExt;
 
@@ -1727,6 +1815,90 @@ mod tests {
         env::set_var("RUST_LOG", "info");
 
         assert_eq!(default_rust_log_value(), None);
+
+        if let Some(value) = original {
+            env::set_var("RUST_LOG", value);
+        } else {
+            env::remove_var("RUST_LOG");
+        }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn apply_and_diff_capture_outputs_and_status() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = dir.path().join("codex");
+        std::fs::write(
+            &script_path,
+            r#"#!/usr/bin/env bash
+set -e
+cmd="$1"
+if [[ "$cmd" == "apply" ]]; then
+  echo "applied"
+  echo "apply-stderr" >&2
+  exit 0
+elif [[ "$cmd" == "diff" ]]; then
+  echo "diff-body"
+  echo "diff-stderr" >&2
+  exit 3
+else
+  echo "unknown $cmd" >&2
+  exit 99
+fi
+"#,
+        )
+        .unwrap();
+        let mut perms = std::fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&script_path, perms).unwrap();
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+
+        let apply = client.apply().await.unwrap();
+        assert!(apply.status.success());
+        assert_eq!(apply.stdout.trim(), "applied");
+        assert_eq!(apply.stderr.trim(), "apply-stderr");
+
+        let diff = client.diff().await.unwrap();
+        assert!(!diff.status.success());
+        assert_eq!(diff.status.code(), Some(3));
+        assert_eq!(diff.stdout.trim(), "diff-body");
+        assert_eq!(diff.stderr.trim(), "diff-stderr");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn apply_respects_rust_log_default() {
+        let _guard = env_guard();
+        let original = env::var_os("RUST_LOG");
+        env::remove_var("RUST_LOG");
+
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = dir.path().join("codex-rust-log");
+        std::fs::write(
+            &script_path,
+            r#"#!/usr/bin/env bash
+echo "${RUST_LOG:-missing}"
+exit 0
+"#,
+        )
+        .unwrap();
+        let mut perms = std::fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&script_path, perms).unwrap();
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+
+        let apply = client.apply().await.unwrap();
+        assert_eq!(apply.stdout.trim(), "error");
 
         if let Some(value) = original {
             env::set_var("RUST_LOG", value);
