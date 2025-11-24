@@ -53,3 +53,14 @@ if let Some(child) = client.spawn_mcp_login_process().await? {
 - Use `CapabilityCachePolicy::Refresh` to force a fresh probe and overwrite the cache even when the fingerprint is unchanged (good for TTL/backoff windows or hot-swaps that reuse the same path). Use `CapabilityCachePolicy::Bypass` when you want a fresh snapshot without touching the cache.
 - When metadata/fingerprints are unavailable (e.g., FUSE/overlay filesystems), probes bypass the cache automatically and avoid writing entries; callers should apply a backoff/TTL (e.g., re-probe every few minutes) to avoid hammering the binary when repeated stats fail.
 - For hot-swapped binaries, prefer clearing the per-binary cache entry or forcing a `Refresh` probe after deploys; otherwise rely on fingerprint invalidation plus a modest TTL (`collected_at` timestamp) so long-running hosts do not carry stale capability data.
+
+## Post-workstream audit (F9)
+- Workstream deliverables shipped: capability model + feature guards with cache policies, override + snapshot persistence helpers, and update advisory plumbing with semver-aware parsing/tests.
+- Host integration notes:
+  - Share capability snapshots across processes by persisting them via `write_capabilities_snapshot` / `read_capabilities_snapshot`, checking `capability_snapshot_matches_binary`, and optionally applying `CapabilityCachePolicy::Refresh` after deploys to refresh fingerprints.
+  - The in-process cache is intentionally scoped to the current process; long-lived hosts should periodically refresh using `Refresh` or `Bypass` and can layer a TTL on `CodexCapabilities.collected_at`.
+  - Update advisories stay offline; hosts must supply latest release tables (npm/Homebrew/GitHub) before calling `update_advisory` / `update_advisory_from_capabilities` and should surface advisory.notes to operators.
+- Backlog/follow-ups to hand off:
+  - Publish a short release/README note explaining the new capability detection surfaces, guard helpers, and cache policies so downstream hosts know they exist.
+  - Add a host-facing example showing disk snapshot reuse + fingerprint checks + when to choose `Refresh` vs `Bypass` for TTL/backoff in hot-swap or FUSE-like environments.
+  - Consider a helper that enforces a TTL using `collected_at` for hosts that want automatic refreshes when file metadata is missing/unreliable.

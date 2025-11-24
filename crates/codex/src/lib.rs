@@ -2679,6 +2679,35 @@ mod tests {
     }
 
     #[test]
+    fn update_advisory_handles_local_newer_than_known() {
+        let capabilities = capabilities_with_version("codex 2.0.0");
+        let latest = CodexLatestReleases {
+            stable: Some(Version::parse("1.9.9").unwrap()),
+            ..Default::default()
+        };
+        let advisory = update_advisory_from_capabilities(&capabilities, &latest);
+        assert_eq!(advisory.status, CodexUpdateStatus::LocalNewerThanKnown);
+        assert!(!advisory.is_update_recommended());
+        assert!(advisory
+            .notes
+            .iter()
+            .any(|note| note.contains("newer than provided")));
+    }
+
+    #[test]
+    fn update_advisory_handles_missing_latest_metadata() {
+        let capabilities = capabilities_with_version("codex 1.0.0");
+        let latest = CodexLatestReleases::default();
+        let advisory = update_advisory_from_capabilities(&capabilities, &latest);
+        assert_eq!(advisory.status, CodexUpdateStatus::UnknownLatestVersion);
+        assert!(!advisory.is_update_recommended());
+        assert!(advisory
+            .notes
+            .iter()
+            .any(|note| note.contains("advisory unavailable")));
+    }
+
+    #[test]
     fn capability_snapshots_serialize_to_json_and_toml() {
         let snapshot = sample_capabilities_snapshot();
 
