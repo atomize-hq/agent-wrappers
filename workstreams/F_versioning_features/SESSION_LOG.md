@@ -20,3 +20,4 @@ Append entries: `[START ...] [END ...] Agent: <name> | Task(s): <IDs> | Branch: 
 [START 2025-11-24 07:13] Agent: Codex | Task(s): F9-post-workstream-review | Branch: ws/F_versioning_features | Notes: Starting post-workstream review and audit
 [END 2025-11-24 07:19] Agent: Codex | Task(s): F9-post-workstream-review | Branch: ws/F_versioning_features | Notes: Audit complete; added advisory tests and handoff notes; merged task branch
 [START 2025-11-24 13:50] Agent: Codex | Task(s): F10-release-docs-and-examples | Branch: ws/F_versioning_features | Notes: Starting release docs/examples task and worktree setup
+[END 2025-11-24 13:58] Agent: Codex | Task(s): F10-release-docs-and-examples | Branch: ws/F_versioning_features | Notes: Release notes + cache policy example merged; ready for next kickoff
