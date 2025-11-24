@@ -63,6 +63,16 @@
     "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
     "tests": ["cargo test -p codex"],
     "outputs": ["Helper API docs/examples for snapshot persistence"],
-    "status": "doing"
+    "status": "done"
+  },
+  {
+    "id": "F8-capability-cache-controls",
+    "title": "Expose capability cache controls",
+    "description": "Add public helpers to inspect and clear capability cache entries, force re-probes when metadata is missing, and optionally bypass caching for callers that want fresh snapshots. Document recommended usage and TTL/backoff guidance for hosts that hot-swap binaries.",
+    "dependencies": ["F7-capability-snapshot-serialization"],
+    "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Docs for cache management APIs"],
+    "status": "todo"
   }
 ]

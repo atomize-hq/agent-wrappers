@@ -14,3 +14,4 @@ Append entries: `[START ...] [END ...] Agent: <name> | Task(s): <IDs> | Branch: 
 [START 2025-11-23 22:14] Agent: Codex | Task(s): F6-capability-overrides | Branch: ws/F_versioning_features | Notes: Starting capability overrides task and worktree setup
 [END 2025-11-23 22:29] Agent: Codex | Task(s): F6-capability-overrides | Branch: ws/F_versioning_features | Notes: Capability overrides merged with cache-aware plumbing, tests, and docs
 [START 2025-11-23 22:38] Agent: Codex | Task(s): F7-capability-snapshot-serialization | Branch: ws/F_versioning_features | Notes: Kicking off snapshot persistence scope definition and planning
+[END 2025-11-23 22:49] Agent: Codex | Task(s): F7-capability-snapshot-serialization | Branch: ws/F_versioning_features | Notes: Snapshot serialization/persistence helpers merged with tests and docs
