@@ -11,6 +11,7 @@
   {
     "id": "E2-implement-mcp-server",
     "title": "Implement MCP server launcher and codex/codex-reply wrappers",
+    "status": "done",
     "description": "Add code to spawn codex mcp-server with env from Workstream A, manage stdin/stdout tasks, and expose async calls for codex and codex-reply (conversationId + prompt, plus optional model/cwd/sandbox/approval/config). Stream codex/event notifications (task_complete, approvals, errors) to caller and support cancellation.",
     "dependencies": ["E1-design-mcp-app"],
     "files": ["crates/codex/src/lib.rs"],
