@@ -3,6 +3,7 @@
     "id": "F1-design-capability-model",
     "title": "Design capability and version model",
     "description": "Define structs to hold binary version info and feature flags (e.g., supports_output_schema, supports_add_dir, supports_mcp_login). Plan probing strategy: codex --version, codex features list, optional --help parsing. Document caching keyed by binary path.",
+    "status": "done",
     "dependencies": [],
     "files": ["workstreams/F_versioning_features/BRIEF.md"],
     "outputs": ["Design note/doc comments"]
@@ -13,6 +14,7 @@
     "description": "Implement functions to run codex --version and codex features list using env from Workstream A; parse outputs into capability model; cache results per binary path. Handle failures gracefully with defaults and warnings.",
     "dependencies": ["F1-design-capability-model"],
     "files": ["crates/codex/src/lib.rs"],
+    "status": "done",
     "tests": ["cargo test -p codex"],
     "notes": "Do not assume network; keep probes local." 
   },
@@ -23,6 +25,63 @@
     "dependencies": ["F2-implement-probes"],
     "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
     "tests": ["cargo test -p codex"],
-    "outputs": ["Docs describing integration"]
+    "outputs": ["Docs describing integration"],
+    "status": "done"
+  },
+  {
+    "id": "F4-capability-guards",
+    "title": "Gate wrapper behavior behind capability probes",
+    "description": "Use probed capabilities to guard optional Codex flags (output-schema, add-dir, login --mcp). Add helper(s) that let hosts opt-in to features only when supported and degrade gracefully otherwise.",
+    "dependencies": ["F3-update-advisory"],
+    "files": ["crates/codex/src/lib.rs"],
+    "tests": ["cargo test -p codex"],
+    "status": "done"
+  },
+  {
+    "id": "F5-capability-consumers",
+    "title": "Wire capability guards into host flows",
+    "description": "Wire guard helpers into host-facing flows so optional Codex flags are only used when supported. Provide examples/docs showing consumption and graceful degradation when capabilities are unknown.",
+    "dependencies": ["F4-capability-guards"],
+    "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
+    "tests": ["cargo test -p codex"],
+    "status": "done"
+  },
+  {
+    "id": "F6-capability-overrides",
+    "title": "Allow host capability overrides",
+    "description": "Allow hosts to supply/override capability snapshots (version + feature flags) so guard consumers can skip probes for pinned/bundled Codex builds and opt into vendor-specific flags. Document override precedence, cache invalidation, and how to combine manual hints with probe results.",
+    "dependencies": ["F5-capability-consumers"],
+    "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
+    "tests": ["cargo test -p codex"],
+    "status": "done"
+  },
+  {
+    "id": "F7-capability-snapshot-serialization",
+    "title": "Persist capability snapshots",
+    "description": "Add serialization helpers to export/import capability snapshots and override data (JSON/TOML), including disk save/load utilities keyed by canonical binary path/fingerprint so hosts can reuse probe results across processes. Ensure manual snapshots still honor override precedence and cache invalidation.",
+    "dependencies": ["F6-capability-overrides"],
+    "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Helper API docs/examples for snapshot persistence"],
+    "status": "done"
+  },
+  {
+    "id": "F8-capability-cache-controls",
+    "title": "Expose capability cache controls",
+    "description": "Add public helpers to inspect and clear capability cache entries, force re-probes when metadata is missing, and optionally bypass caching for callers that want fresh snapshots. Document recommended usage and TTL/backoff guidance for hosts that hot-swap binaries.",
+    "dependencies": ["F7-capability-snapshot-serialization"],
+    "files": ["crates/codex/src/lib.rs", "workstreams/F_versioning_features/BRIEF.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Docs for cache management APIs"],
+    "status": "done"
+  },
+  {
+    "id": "F9-post-workstream-review",
+    "title": "Post-workstream review and handoff",
+    "description": "Audit Workstream F deliverables for gaps (docs/tests/cache guidance), capture remaining follow-ups (release notes, host integration notes, backlog items) and prep clean handoff.",
+    "dependencies": ["F8-capability-cache-controls"],
+    "files": ["workstreams/F_versioning_features/BRIEF.md", "crates/codex/src/lib.rs"],
+    "outputs": ["Backlog/follow-up notes", "kickoff prompt for next task"],
+    "status": "done"
   }
 ]

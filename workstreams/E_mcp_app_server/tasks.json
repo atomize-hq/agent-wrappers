@@ -2,6 +2,7 @@
   {
     "id": "E1-design-mcp-app",
     "title": "Design MCP/app-server APIs and lifecycle",
+    "status": "done",
     "description": "Specify Rust APIs to spawn/stop codex mcp-server and app-server (stdio JSON-RPC) using bundled binary + CODEX_HOME. Define request/notification types (codex/codex-reply params, thread/turn methods), approval/cancel handling, and error model. Note dependency on Workstream A env-prep helper for spawning.",
     "dependencies": [],
     "files": ["workstreams/E_mcp_app_server/BRIEF.md"],
@@ -10,6 +11,7 @@
   {
     "id": "E2-implement-mcp-server",
     "title": "Implement MCP server launcher and codex/codex-reply wrappers",
+    "status": "done",
     "description": "Add code to spawn codex mcp-server with env from Workstream A, manage stdin/stdout tasks, and expose async calls for codex and codex-reply (conversationId + prompt, plus optional model/cwd/sandbox/approval/config). Stream codex/event notifications (task_complete, approvals, errors) to caller and support cancellation.",
     "dependencies": ["E1-design-mcp-app"],
     "files": ["crates/codex/src/lib.rs"],
@@ -19,6 +21,7 @@
   {
     "id": "E3-implement-app-server",
     "title": "Implement app-server launcher and thread/turn helpers",
+    "status": "done",
     "description": "Add code to spawn codex app-server over stdio, send initialize + thread/start/resume, turn/start/interrupt, and stream task_complete and item notifications. Share transport code with E2 where possible.",
     "dependencies": ["E1-design-mcp-app"],
     "files": ["crates/codex/src/lib.rs"],
@@ -28,10 +31,82 @@
   {
     "id": "E4-tests-examples",
     "title": "Tests and examples for MCP/app-server",
+    "status": "done",
     "description": "Add integration-style tests with fake stdio or fixtures to validate request/notification handling, cancellations, and shutdown. Add examples demonstrating codex/codex-reply long-running continuation and app-server thread/turn usage (coordinate with H).",
     "dependencies": ["E2-implement-mcp-server", "E3-implement-app-server"],
     "files": ["crates/codex/examples", "crates/codex/src/lib.rs"],
     "tests": ["cargo test -p codex"],
     "outputs": ["Example files", "README updates"]
+  },
+  {
+    "id": "E5-mcp-management",
+    "title": "MCP config management commands",
+    "status": "done",
+    "description": "Implement MCP config CRUD and auth helpers (list/get/add/remove/login/logout) with JSON-serializable inputs/outputs, env injection on add, and support for [mcp_servers] stdio + streamable_http definitions (headers, bearer env vars, timeouts, tool enable/disable).",
+    "dependencies": ["E1-design-mcp-app"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["API + helpers", "Config JSON schema"]
+  },
+  {
+    "id": "E6-mcp-runtime-config",
+    "title": "Resolve MCP runtime configs",
+    "status": "done",
+    "description": "Wire MCP config/runtime resolution so stdio and streamable_http entries from [mcp_servers] can be loaded and turned into runnable configs (stdio spawn params + HTTP client metadata), including tool enable/disable hints and bearer env var handling.",
+    "dependencies": ["E5-mcp-management"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Config runtime helpers", "Tests for stdio + HTTP auth/tool hints"],
+    "notes": "Ensure JSON-serializable inputs/outputs and reuse Workstream A env helpers"
+  },
+  {
+    "id": "E7-mcp-runtime-launchers",
+    "title": "MCP runtime launcher/connectors",
+    "status": "done",
+    "description": "Hook resolved MCP runtime configs into launcher/connector helpers that can spin up stdio servers (using Workstream A env prep) or connect to streamable HTTP endpoints with headers/timeouts applied. Surface tool enable/disable hints alongside the runtime configs.",
+    "dependencies": ["E6-mcp-runtime-config"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Runtime launcher helpers", "Tests for env merges, HTTP timeouts, tool hints"]
+  },
+  {
+    "id": "E8-mcp-runtime-manager",
+    "title": "MCP runtime manager",
+    "status": "done",
+    "description": "Build a lightweight runtime manager that consumes resolved MCP runtime launchers/connectors, starts/stops stdio servers with Workstream A env prep, and exposes non-destructive HTTP connector metadata with tool hints intact.",
+    "dependencies": ["E7-mcp-runtime-launchers"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Runtime manager helpers", "Tests for stdio start/stop, tool hints, HTTP connector retrieval"]
+  },
+  {
+    "id": "E9-mcp-runtime-api",
+    "title": "MCP runtime API surface",
+    "status": "done",
+    "description": "Expose a small API surface around the MCP runtime manager so callers can list available runtimes and fetch launch-ready stdio/http configs (Workstream A env prep intact) without mutating stored config.",
+    "dependencies": ["E8-mcp-runtime-manager"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Public helpers for listing/preparing runtimes", "Tests for stdio + HTTP retrieval without mutation"]
+  },
+  {
+    "id": "E10-app-runtime-api",
+    "title": "App runtime API surface",
+    "status": "done",
+    "description": "Expose a lightweight API surface around the app-server helpers so callers can list available runtimes/metadata and prepare launch-ready stdio configs (Workstream A env prep intact) without mutating stored config or thread state.",
+    "dependencies": ["E3-implement-app-server"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Public app runtime helpers", "Tests for listing/preparing app runtimes without mutation"]
+  },
+  {
+    "id": "E11-app-runtime-lifecycle",
+    "title": "App runtime lifecycle helpers",
+    "status": "done",
+    "description": "Build lifecycle helpers around the app-runtime API so callers can launch and stop app-server instances from prepared configs (Workstream A env prep intact) while preserving runtime metadata and avoiding mutation of stored config or thread state.",
+    "dependencies": ["E10-app-runtime-api"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["App runtime lifecycle helpers", "Tests for start/stop without metadata mutation"]
   }
 ]
