@@ -21,5 +21,9 @@ Every example under `crates/codex/examples/` corresponds to a specific `codex ex
 
 Use these pairs as a checklist when validating parity between the Rust wrapper and the raw Codex CLI.
 
-Additional examples:
-- `cargo run -p codex --example app_server_turns -- "<prompt>" [thread-id]`: drive `codex app-server` threads/turns and optionally issue interrupts.
+## MCP + app-server examples
+
+| Wrapper example | Behavior | Notes |
+| --- | --- | --- |
+| `cargo run -p codex --example mcp_codex_flow -- "<prompt>" ["<follow up>"]` | Launches `codex mcp-server`, sends `codex/codex`, streams `codex/event`, and optionally cancels or issues a follow-up `codex/codex-reply`. | Respects `CODEX_BINARY`/`CODEX_HOME`; uses `CANCEL_AFTER_MS` to trigger `$ /cancelRequest`; does not write to `[mcp_servers]`. |
+| `cargo run -p codex --example app_server_turns -- "<prompt>" [thread-id]` | Starts or resumes a thread, sends `turn/start`, streams items/task_complete, and can issue `turn/interrupt` after the first item. | Respects `CODEX_BINARY`/`CODEX_HOME`; uses `INTERRUPT_AFTER_MS` to delay interrupts; leaves stored app runtime definitions and thread metadata untouched. |
