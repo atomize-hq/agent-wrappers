@@ -9,7 +9,9 @@ keywords = ["codex", "cli", "wrapper", "agent"]
 categories = ["api-bindings", "command-line-interface"]
 
 [dependencies]
-tokio = { version = "1.38", features = ["process", "io-util", "macros", "rt", "rt-multi-thread", "time"] }
-thiserror = "1.0"
-tracing = "0.1"
-tempfile = "3.12"
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tempfile = { workspace = true }
+serde_json = { workspace = true }
+semver = { workspace = true }
