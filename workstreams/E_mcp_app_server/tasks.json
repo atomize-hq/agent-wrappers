@@ -78,5 +78,15 @@
     "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
     "tests": ["cargo test -p codex"],
     "outputs": ["Runtime manager helpers", "Tests for stdio start/stop, tool hints, HTTP connector retrieval"]
+  },
+  {
+    "id": "E9-mcp-runtime-api",
+    "title": "MCP runtime API surface",
+    "status": "done",
+    "description": "Expose a small API surface around the MCP runtime manager so callers can list available runtimes and fetch launch-ready stdio/http configs (Workstream A env prep intact) without mutating stored config.",
+    "dependencies": ["E8-mcp-runtime-manager"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Public helpers for listing/preparing runtimes", "Tests for stdio + HTTP retrieval without mutation"]
   }
 ]
