@@ -37,5 +37,15 @@
     "files": ["crates/codex/examples", "crates/codex/src/lib.rs"],
     "tests": ["cargo test -p codex"],
     "outputs": ["Example files", "README updates"]
+  },
+  {
+    "id": "E5-mcp-management",
+    "title": "MCP config management commands",
+    "status": "doing",
+    "description": "Implement MCP config CRUD and auth helpers (list/get/add/remove/login/logout) with JSON-serializable inputs/outputs, env injection on add, and support for [mcp_servers] stdio + streamable_http definitions (headers, bearer env vars, timeouts, tool enable/disable).",
+    "dependencies": ["E1-design-mcp-app"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["API + helpers", "Config JSON schema"]
   }
 ]
