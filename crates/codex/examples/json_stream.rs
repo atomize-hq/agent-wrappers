@@ -1,7 +1,7 @@
 //! Streams Codex JSONL output in real time and reports where the last message is saved.
 //! Usage:
 //! ```powershell
-//! cargo run -p codex --example json_stream -- --output-last-message ./last_message.txt -- "Summarize repo status"
+//! cargo run -p codex --example json_stream -- --output-last-message ./last_message.txt --log-events ./events.log -- "Summarize repo status"
 //! ```
 
 use codex::{CodexClient, ExecStreamRequest, ItemDeltaPayload, ItemPayload, ThreadEvent};
@@ -10,7 +10,7 @@ use std::{env, error::Error, path::PathBuf, time::Duration};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let (prompt, output_last_message) = parse_args()?;
+    let (prompt, output_last_message, json_event_log) = parse_args()?;
     let client = CodexClient::builder()
         .json(true)
         .quiet(true)
@@ -23,6 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             idle_timeout: Some(Duration::from_secs(30)),
             output_last_message,
             output_schema: None,
+            json_event_log,
         })
         .await?;
 
@@ -48,13 +49,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn parse_args() -> Result<(String, Option<PathBuf>), Box<dyn Error>> {
+fn parse_args() -> Result<(String, Option<PathBuf>, Option<PathBuf>), Box<dyn Error>> {
     let mut args = env::args().skip(1).peekable();
     if matches!(args.peek().map(|s| s.as_str()), Some("--")) {
         args.next();
     }
 
     let mut output_last_message = None;
+    let mut json_event_log = None;
     let mut prompt_parts = Vec::new();
 
     while let Some(arg) = args.next() {
@@ -63,6 +65,9 @@ fn parse_args() -> Result<(String, Option<PathBuf>), Box<dyn Error>> {
                 .next()
                 .ok_or("Provide a path after --output-last-message")?;
             output_last_message = Some(PathBuf::from(path));
+        } else if arg == "--log-events" {
+            let path = args.next().ok_or("Provide a path after --log-events")?;
+            json_event_log = Some(PathBuf::from(path));
         } else {
             prompt_parts.push(arg);
         }
@@ -72,7 +77,7 @@ fn parse_args() -> Result<(String, Option<PathBuf>), Box<dyn Error>> {
         return Err("Provide a prompt".into());
     }
 
-    Ok((prompt_parts.join(" "), output_last_message))
+    Ok((prompt_parts.join(" "), output_last_message, json_event_log))
 }
 
 fn summarize_event(event: &ThreadEvent) -> String {

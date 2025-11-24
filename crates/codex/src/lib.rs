@@ -25,7 +25,8 @@ use tempfile::TempDir;
 use thiserror::Error;
 use tokio::{
     fs,
-    io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
+    fs::OpenOptions,
+    io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
     process::Command,
     sync::mpsc,
     task, time,
@@ -58,6 +59,7 @@ pub struct CodexClient {
     json_output: bool,
     quiet: bool,
     mirror_stdout: bool,
+    json_event_log: Option<PathBuf>,
 }
 
 /// Current authentication state reported by `codex login status`.
@@ -113,6 +115,7 @@ impl CodexClient {
             idle_timeout,
             output_last_message,
             output_schema,
+            json_event_log,
         } = request;
 
         let dir_ctx = self.directory_context()?;
@@ -153,9 +156,7 @@ impl CodexClient {
             command.arg("--output-schema").arg(schema_path);
         }
 
-        if env::var_os("RUST_LOG").is_none() {
-            command.env("RUST_LOG", "error");
-        }
+        apply_rust_log_default(&mut command);
 
         let mut child = command.spawn().map_err(|source| CodexError::Spawn {
             binary: self.binary.clone(),
@@ -179,7 +180,18 @@ impl CodexClient {
         let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
 
         let (tx, rx) = mpsc::channel(32);
-        let stdout_task = tokio::spawn(forward_json_events(stdout, tx, self.mirror_stdout));
+        let json_log = prepare_json_log(
+            json_event_log
+                .or_else(|| self.json_event_log.clone())
+                .filter(|path| !path.as_os_str().is_empty()),
+        )
+        .await?;
+        let stdout_task = tokio::spawn(forward_json_events(
+            stdout,
+            tx,
+            self.mirror_stdout,
+            json_log,
+        ));
         let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
 
         let events = EventChannelStream::new(rx, idle_timeout);
@@ -241,9 +253,7 @@ impl CodexClient {
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true);
 
-        if env::var_os("RUST_LOG").is_none() {
-            command.env("RUST_LOG", "error");
-        }
+        apply_rust_log_default(&mut command);
 
         command.spawn().map_err(|source| CodexError::Spawn {
             binary: self.binary.clone(),
@@ -348,9 +358,7 @@ impl CodexClient {
             command.arg("--json");
         }
 
-        if env::var_os("RUST_LOG").is_none() {
-            command.env("RUST_LOG", "error");
-        }
+        apply_rust_log_default(&mut command);
 
         let mut child = command.spawn().map_err(|source| CodexError::Spawn {
             binary: self.binary.clone(),
@@ -454,9 +462,7 @@ impl CodexClient {
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true);
 
-        if env::var_os("RUST_LOG").is_none() {
-            command.env("RUST_LOG", "error");
-        }
+        apply_rust_log_default(&mut command);
 
         let mut child = command.spawn().map_err(|source| CodexError::Spawn {
             binary: self.binary.clone(),
@@ -524,6 +530,7 @@ pub struct CodexClientBuilder {
     json_output: bool,
     quiet: bool,
     mirror_stdout: bool,
+    json_event_log: Option<PathBuf>,
 }
 
 impl CodexClientBuilder {
@@ -598,6 +605,13 @@ impl CodexClientBuilder {
         self
     }
 
+    /// Tees each JSONL event line from [`CodexClient::stream_exec`] into a log file.
+    /// The log is appended to when it already exists.
+    pub fn json_event_log(mut self, path: impl Into<PathBuf>) -> Self {
+        self.json_event_log = Some(path.into());
+        self
+    }
+
     /// Builds the [`CodexClient`].
     pub fn build(self) -> CodexClient {
         CodexClient {
@@ -610,6 +624,7 @@ impl CodexClientBuilder {
             json_output: self.json_output,
             quiet: self.quiet,
             mirror_stdout: self.mirror_stdout,
+            json_event_log: self.json_event_log,
         }
     }
 }
@@ -626,6 +641,7 @@ impl Default for CodexClientBuilder {
             json_output: false,
             quiet: false,
             mirror_stdout: true,
+            json_event_log: None,
         }
     }
 }
@@ -1089,6 +1105,8 @@ pub struct ExecStreamRequest {
     /// Optional file path passed through to `--output-schema` so clients can persist the schema
     /// describing the item envelope structure seen during the run.
     pub output_schema: Option<PathBuf>,
+    /// Optional file path that receives a tee of every raw JSONL event line as it streams in.
+    pub json_event_log: Option<PathBuf>,
 }
 
 /// Ergonomic container for the streaming surface; produced by `stream_exec` (implemented in D2).
@@ -1136,6 +1154,49 @@ pub enum ExecStreamError {
     IdleTimeout { idle_for: Duration },
     #[error("codex JSON stream closed unexpectedly")]
     ChannelClosed,
+}
+
+async fn prepare_json_log(path: Option<PathBuf>) -> Result<Option<JsonLogSink>, ExecStreamError> {
+    match path {
+        Some(path) => {
+            let sink = JsonLogSink::new(path)
+                .await
+                .map_err(|err| ExecStreamError::from(CodexError::CaptureIo(err)))?;
+            Ok(Some(sink))
+        }
+        None => Ok(None),
+    }
+}
+
+#[derive(Debug)]
+struct JsonLogSink {
+    writer: BufWriter<fs::File>,
+}
+
+impl JsonLogSink {
+    async fn new(path: PathBuf) -> Result<Self, std::io::Error> {
+        if let Some(parent) = path.parent() {
+            if !parent.as_os_str().is_empty() {
+                fs::create_dir_all(parent).await?;
+            }
+        }
+
+        let file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .await?;
+
+        Ok(Self {
+            writer: BufWriter::new(file),
+        })
+    }
+
+    async fn write_line(&mut self, line: &str) -> Result<(), std::io::Error> {
+        self.writer.write_all(line.as_bytes()).await?;
+        self.writer.write_all(b"\n").await?;
+        self.writer.flush().await
+    }
 }
 
 struct EventChannelStream {
@@ -1207,6 +1268,7 @@ async fn forward_json_events<R>(
     reader: R,
     sender: mpsc::Sender<Result<ThreadEvent, ExecStreamError>>,
     mirror_stdout: bool,
+    mut log: Option<JsonLogSink>,
 ) -> Result<(), ExecStreamError>
 where
     R: AsyncRead + Unpin,
@@ -1223,6 +1285,12 @@ where
 
         if line.trim().is_empty() {
             continue;
+        }
+
+        if let Some(sink) = log.as_mut() {
+            sink.write_line(&line)
+                .await
+                .map_err(|err| ExecStreamError::from(CodexError::CaptureIo(err)))?;
         }
 
         if mirror_stdout {
@@ -1337,7 +1405,7 @@ mod tests {
 
         let (mut writer, reader) = tokio::io::duplex(4096);
         let (tx, rx) = mpsc::channel(8);
-        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false));
+        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false, None));
 
         for line in &lines {
             writer.write_all(line.as_bytes()).await.unwrap();
@@ -1398,7 +1466,7 @@ mod tests {
     async fn json_stream_propagates_parse_errors() {
         let (mut writer, reader) = tokio::io::duplex(1024);
         let (tx, rx) = mpsc::channel(4);
-        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false));
+        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false, None));
 
         writer
             .write_all(br#"{"type":"thread.started","thread_id":"thread-err"}"#)
@@ -1422,6 +1490,118 @@ mod tests {
             Err(ExecStreamError::Parse { line, .. }) => assert_eq!(line, "this is not json"),
             other => panic!("expected parse error, got {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn json_stream_tees_logs_before_forwarding() {
+        let lines = vec![
+            r#"{"type":"thread.started","thread_id":"tee-thread"}"#.to_string(),
+            r#"{"type":"turn.started","thread_id":"tee-thread","turn_id":"turn-tee"}"#.to_string(),
+        ];
+
+        let dir = tempfile::tempdir().unwrap();
+        let log_path = dir.path().join("events.log");
+
+        let (mut writer, reader) = tokio::io::duplex(2048);
+        let (tx, rx) = mpsc::channel(4);
+        let log_sink = JsonLogSink::new(log_path.clone()).await.unwrap();
+        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false, Some(log_sink)));
+
+        let stream = EventChannelStream::new(rx, None);
+        pin_mut!(stream);
+
+        writer.write_all(lines[0].as_bytes()).await.unwrap();
+        writer.write_all(b"\n").await.unwrap();
+
+        let first = stream.next().await.unwrap().unwrap();
+        assert!(matches!(first, ThreadEvent::ThreadStarted(_)));
+
+        let logged = fs::read_to_string(&log_path).await.unwrap();
+        assert_eq!(logged, format!("{}\n", lines[0]));
+
+        writer.write_all(lines[1].as_bytes()).await.unwrap();
+        writer.write_all(b"\n").await.unwrap();
+        writer.shutdown().await.unwrap();
+
+        let second = stream.next().await.unwrap().unwrap();
+        assert!(matches!(second, ThreadEvent::TurnStarted(_)));
+        assert!(stream.next().await.is_none());
+
+        forward_handle.await.unwrap().unwrap();
+
+        let final_log = fs::read_to_string(&log_path).await.unwrap();
+        assert_eq!(final_log, format!("{}\n{}\n", lines[0], lines[1]));
+    }
+
+    #[tokio::test]
+    async fn json_event_log_captures_apply_diff_and_tool_payloads() {
+        let diff = "@@ -1 +1 @@\n-fn foo() {}\n+fn bar() {}";
+        let lines = vec![
+            r#"{"type":"thread.started","thread_id":"log-thread"}"#.to_string(),
+            serde_json::to_string(&json!({
+                "type": "item.started",
+                "thread_id": "log-thread",
+                "turn_id": "turn-log",
+                "item_id": "apply-1",
+                "item_type": "file_change",
+                "content": {
+                    "path": "src/main.rs",
+                    "change": "apply",
+                    "diff": diff,
+                    "stdout": "patched\n"
+                }
+            }))
+            .unwrap(),
+            serde_json::to_string(&json!({
+                "type": "item.delta",
+                "thread_id": "log-thread",
+                "turn_id": "turn-log",
+                "item_id": "apply-1",
+                "item_type": "file_change",
+                "delta": {
+                    "diff": diff,
+                    "stderr": "warning",
+                    "exit_code": 2
+                }
+            }))
+            .unwrap(),
+            serde_json::to_string(&json!({
+                "type": "item.delta",
+                "thread_id": "log-thread",
+                "turn_id": "turn-log",
+                "item_id": "tool-1",
+                "item_type": "mcp_tool_call",
+                "delta": {
+                    "result": {"paths": ["a.rs", "b.rs"]},
+                    "status": "completed"
+                }
+            }))
+            .unwrap(),
+        ];
+
+        let dir = tempfile::tempdir().unwrap();
+        let log_path = dir.path().join("json.log");
+
+        let (mut writer, reader) = tokio::io::duplex(4096);
+        let (tx, rx) = mpsc::channel(8);
+        let log_sink = JsonLogSink::new(log_path.clone()).await.unwrap();
+        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false, Some(log_sink)));
+
+        for line in &lines {
+            writer.write_all(line.as_bytes()).await.unwrap();
+            writer.write_all(b"\n").await.unwrap();
+        }
+        writer.shutdown().await.unwrap();
+
+        let stream = EventChannelStream::new(rx, None);
+        pin_mut!(stream);
+        let events: Vec<_> = stream.collect().await;
+        forward_handle.await.unwrap().unwrap();
+
+        assert_eq!(events.len(), lines.len());
+
+        let log_contents = fs::read_to_string(&log_path).await.unwrap();
+        assert_eq!(log_contents, lines.join("\n") + "\n");
     }
 
     #[tokio::test]
@@ -1449,6 +1629,7 @@ mod tests {
         assert!(builder.images.is_empty());
         assert!(!builder.json_output);
         assert!(!builder.quiet);
+        assert!(builder.json_event_log.is_none());
     }
 
     #[test]
@@ -1466,6 +1647,12 @@ mod tests {
     fn builder_sets_json_flag() {
         let client = CodexClient::builder().json(true).build();
         assert!(client.json_output);
+    }
+
+    #[test]
+    fn builder_sets_json_event_log() {
+        let client = CodexClient::builder().json_event_log("events.log").build();
+        assert_eq!(client.json_event_log, Some(PathBuf::from("events.log")));
     }
 
     #[test]
@@ -1498,6 +1685,36 @@ mod tests {
             env::set_var(key, value);
         } else {
             env::remove_var(key);
+        }
+    }
+
+    #[test]
+    fn default_rust_log_is_error_when_unset() {
+        let _guard = env_guard();
+        let original = env::var_os("RUST_LOG");
+        env::remove_var("RUST_LOG");
+
+        assert_eq!(default_rust_log_value(), Some("error"));
+
+        if let Some(value) = original {
+            env::set_var("RUST_LOG", value);
+        } else {
+            env::remove_var("RUST_LOG");
+        }
+    }
+
+    #[test]
+    fn default_rust_log_respects_existing_env() {
+        let _guard = env_guard();
+        let original = env::var_os("RUST_LOG");
+        env::set_var("RUST_LOG", "info");
+
+        assert_eq!(default_rust_log_value(), None);
+
+        if let Some(value) = original {
+            env::set_var("RUST_LOG", value);
+        } else {
+            env::remove_var("RUST_LOG");
         }
     }
 
@@ -1544,6 +1761,16 @@ mod tests {
             }
             other => panic!("unexpected status: {other:?}"),
         }
+    }
+}
+
+fn default_rust_log_value() -> Option<&'static str> {
+    env::var_os("RUST_LOG").is_none().then_some("error")
+}
+
+fn apply_rust_log_default(command: &mut Command) {
+    if let Some(value) = default_rust_log_value() {
+        command.env("RUST_LOG", value);
     }
 }
 
