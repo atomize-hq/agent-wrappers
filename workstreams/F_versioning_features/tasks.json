@@ -74,5 +74,14 @@
     "tests": ["cargo test -p codex"],
     "outputs": ["Docs for cache management APIs"],
     "status": "done"
+  },
+  {
+    "id": "F9-post-workstream-review",
+    "title": "Post-workstream review and handoff",
+    "description": "Audit Workstream F deliverables for gaps (docs/tests/cache guidance), capture remaining follow-ups (release notes, host integration notes, backlog items) and prep clean handoff.",
+    "dependencies": ["F8-capability-cache-controls"],
+    "files": ["workstreams/F_versioning_features/BRIEF.md", "crates/codex/src/lib.rs"],
+    "outputs": ["Backlog/follow-up notes", "kickoff prompt for next task"],
+    "status": "done"
   }
 ]
