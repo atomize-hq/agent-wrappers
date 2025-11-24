@@ -264,6 +264,69 @@ pub struct CodexFeatureFlags {
     pub supports_mcp_login: bool,
 }
 
+/// Optional overrides for feature detection that can be layered onto probe results.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CapabilityFeatureOverrides {
+    /// Override for `codex features list` support; `None` defers to probes.
+    pub supports_features_list: Option<bool>,
+    /// Override for `--output-schema` support; `None` defers to probes.
+    pub supports_output_schema: Option<bool>,
+    /// Override for `codex add-dir` support; `None` defers to probes.
+    pub supports_add_dir: Option<bool>,
+    /// Override for `codex login --mcp` support; `None` defers to probes.
+    pub supports_mcp_login: Option<bool>,
+}
+
+impl CapabilityFeatureOverrides {
+    /// Returns true when no overrides are set.
+    pub fn is_empty(&self) -> bool {
+        self.supports_features_list.is_none()
+            && self.supports_output_schema.is_none()
+            && self.supports_add_dir.is_none()
+            && self.supports_mcp_login.is_none()
+    }
+
+    /// Builds overrides that mirror every provided feature flag, including false values.
+    pub fn from_flags(flags: CodexFeatureFlags) -> Self {
+        CapabilityFeatureOverrides {
+            supports_features_list: Some(flags.supports_features_list),
+            supports_output_schema: Some(flags.supports_output_schema),
+            supports_add_dir: Some(flags.supports_add_dir),
+            supports_mcp_login: Some(flags.supports_mcp_login),
+        }
+    }
+
+    /// Builds overrides that only force-enable flags that are true in the input set.
+    pub fn enabling(flags: CodexFeatureFlags) -> Self {
+        CapabilityFeatureOverrides {
+            supports_features_list: flags.supports_features_list.then_some(true),
+            supports_output_schema: flags.supports_output_schema.then_some(true),
+            supports_add_dir: flags.supports_add_dir.then_some(true),
+            supports_mcp_login: flags.supports_mcp_login.then_some(true),
+        }
+    }
+}
+
+/// Caller-supplied capability data that can short-circuit or adjust probing.
+/// Manual snapshots override cached/probed data, and feature/version overrides
+/// apply on top of whichever snapshot is returned.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CapabilityOverrides {
+    /// Manual snapshot to return instead of probing when present (after applying feature/version overrides).
+    pub snapshot: Option<CodexCapabilities>,
+    /// Version override applied after probing.
+    pub version: Option<CodexVersionInfo>,
+    /// Feature-level overrides merged into probed or manual capabilities.
+    pub features: CapabilityFeatureOverrides,
+}
+
+impl CapabilityOverrides {
+    /// Returns true when no override data is present.
+    pub fn is_empty(&self) -> bool {
+        self.snapshot.is_none() && self.version.is_none() && self.features.is_empty()
+    }
+}
+
 /// High-level view of whether a specific feature can be used safely.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CapabilitySupport {
@@ -379,6 +442,8 @@ pub enum CapabilityProbeStep {
     FeaturesListText,
     /// Parse `codex --help` to spot known flags (e.g., `--output-schema`, `add-dir`, `login --mcp`) when the features list is missing.
     HelpFallback,
+    /// Caller-supplied capability overrides were applied to the snapshot.
+    ManualOverride,
 }
 
 impl CodexCapabilities {
@@ -555,6 +620,71 @@ fn fingerprints_match(
     cached == fresh
 }
 
+fn finalize_capabilities_with_overrides(
+    mut capabilities: CodexCapabilities,
+    overrides: &CapabilityOverrides,
+    cache_key: CapabilityCacheKey,
+    fingerprint: Option<BinaryFingerprint>,
+    manual_source: bool,
+) -> CodexCapabilities {
+    capabilities.cache_key = cache_key;
+    capabilities.fingerprint = fingerprint;
+
+    let mut applied = manual_source;
+
+    if let Some(version) = overrides.version.clone() {
+        capabilities.version = Some(version);
+        applied = true;
+    }
+
+    if apply_feature_overrides(&mut capabilities.features, &overrides.features) {
+        applied = true;
+    }
+
+    if applied
+        && !capabilities
+            .probe_plan
+            .steps
+            .contains(&CapabilityProbeStep::ManualOverride)
+    {
+        capabilities
+            .probe_plan
+            .steps
+            .push(CapabilityProbeStep::ManualOverride);
+    }
+
+    capabilities
+}
+
+fn apply_feature_overrides(
+    features: &mut CodexFeatureFlags,
+    overrides: &CapabilityFeatureOverrides,
+) -> bool {
+    let mut applied = false;
+
+    if let Some(value) = overrides.supports_features_list {
+        features.supports_features_list = value;
+        applied = true;
+    }
+
+    if let Some(value) = overrides.supports_output_schema {
+        features.supports_output_schema = value;
+        applied = true;
+    }
+
+    if let Some(value) = overrides.supports_add_dir {
+        features.supports_add_dir = value;
+        applied = true;
+    }
+
+    if let Some(value) = overrides.supports_mcp_login {
+        features.supports_mcp_login = value;
+        applied = true;
+    }
+
+    applied
+}
+
 /// High-level client for interacting with `codex exec`.
 #[derive(Clone, Debug)]
 pub struct CodexClient {
@@ -569,6 +699,7 @@ pub struct CodexClient {
     output_schema: bool,
     quiet: bool,
     mirror_stdout: bool,
+    capability_overrides: CapabilityOverrides,
 }
 
 /// Current authentication state reported by `codex login status`.
@@ -718,13 +849,40 @@ impl CodexClient {
     /// Probes the configured binary for version/build metadata and supported feature flags.
     ///
     /// Results are cached per canonical binary path and invalidated when file metadata changes.
+    /// Caller-supplied overrides (see [`CodexClientBuilder::capability_overrides`]) can
+    /// short-circuit probes or layer hints; snapshots are still cached against the current
+    /// binary fingerprint so changes on disk trigger revalidation.
     /// Failures are logged and return conservative defaults so callers can gate optional flags.
     pub async fn probe_capabilities(&self) -> CodexCapabilities {
         let cache_key = capability_cache_key(self.command_env.binary_path());
         let fingerprint = current_fingerprint(&cache_key);
+        let overrides = &self.capability_overrides;
+
+        if let Some(snapshot) = overrides.snapshot.clone() {
+            let capabilities = finalize_capabilities_with_overrides(
+                snapshot,
+                overrides,
+                cache_key.clone(),
+                fingerprint.clone(),
+                true,
+            );
+            update_capability_cache(capabilities.clone());
+            return capabilities;
+        }
 
         if let Some(cached) = cached_capabilities(&cache_key, &fingerprint) {
-            return cached;
+            if overrides.is_empty() {
+                return cached;
+            }
+            let merged = finalize_capabilities_with_overrides(
+                cached,
+                overrides,
+                cache_key.clone(),
+                fingerprint.clone(),
+                false,
+            );
+            update_capability_cache(merged.clone());
+            return merged;
         }
 
         let mut plan = CapabilityProbePlan::default();
@@ -835,13 +993,21 @@ impl CodexClient {
         }
 
         let capabilities = CodexCapabilities {
-            cache_key,
-            fingerprint,
+            cache_key: cache_key.clone(),
+            fingerprint: fingerprint.clone(),
             version,
             features,
             probe_plan: plan,
             collected_at: SystemTime::now(),
         };
+
+        let capabilities = finalize_capabilities_with_overrides(
+            capabilities,
+            overrides,
+            cache_key,
+            fingerprint,
+            false,
+        );
 
         update_capability_cache(capabilities.clone());
         capabilities
@@ -1115,6 +1281,7 @@ pub struct CodexClientBuilder {
     output_schema: bool,
     quiet: bool,
     mirror_stdout: bool,
+    capability_overrides: CapabilityOverrides,
 }
 
 impl CodexClientBuilder {
@@ -1229,6 +1396,36 @@ impl CodexClientBuilder {
         self
     }
 
+    /// Supplies manual capability data to skip probes or adjust feature flags.
+    pub fn capability_overrides(mut self, overrides: CapabilityOverrides) -> Self {
+        self.capability_overrides = overrides;
+        self
+    }
+
+    /// Convenience to apply feature overrides or vendor hints without touching versions.
+    pub fn capability_feature_overrides(mut self, overrides: CapabilityFeatureOverrides) -> Self {
+        self.capability_overrides.features = overrides;
+        self
+    }
+
+    /// Convenience to opt into specific feature flags while leaving other probes intact.
+    pub fn capability_feature_hints(mut self, features: CodexFeatureFlags) -> Self {
+        self.capability_overrides.features = CapabilityFeatureOverrides::enabling(features);
+        self
+    }
+
+    /// Supplies a precomputed capability snapshot for pinned or bundled Codex builds.
+    pub fn capability_snapshot(mut self, snapshot: CodexCapabilities) -> Self {
+        self.capability_overrides.snapshot = Some(snapshot);
+        self
+    }
+
+    /// Overrides the probed version data with caller-provided metadata.
+    pub fn capability_version_override(mut self, version: CodexVersionInfo) -> Self {
+        self.capability_overrides.version = Some(version);
+        self
+    }
+
     /// Builds the [`CodexClient`].
     pub fn build(self) -> CodexClient {
         let command_env =
@@ -1245,6 +1442,7 @@ impl CodexClientBuilder {
             output_schema: self.output_schema,
             quiet: self.quiet,
             mirror_stdout: self.mirror_stdout,
+            capability_overrides: self.capability_overrides,
         }
     }
 }
@@ -1265,6 +1463,7 @@ impl Default for CodexClientBuilder {
             output_schema: false,
             quiet: false,
             mirror_stdout: true,
+            capability_overrides: CapabilityOverrides::default(),
         }
     }
 }
@@ -1898,6 +2097,7 @@ mod tests {
         assert!(builder.images.is_empty());
         assert!(!builder.json_output);
         assert!(!builder.quiet);
+        assert!(builder.capability_overrides.is_empty());
     }
 
     #[test]
@@ -2191,6 +2391,162 @@ mod tests {
 
         let features_list = capabilities.guard_features_list();
         assert_eq!(features_list.support, CapabilitySupport::Unknown);
+    }
+
+    #[tokio::test]
+    async fn capability_snapshot_short_circuits_probes() {
+        let _guard = env_guard();
+        clear_capability_cache();
+
+        let temp = tempfile::tempdir().unwrap();
+        let log_path = temp.path().join("probe.log");
+        let script = format!(
+            r#"#!/bin/bash
+echo "$@" >> "{log}"
+exit 99
+"#,
+            log = log_path.display()
+        );
+        let binary = write_fake_codex(temp.path(), &script);
+
+        let snapshot = CodexCapabilities {
+            cache_key: CapabilityCacheKey {
+                binary_path: PathBuf::from("codex"),
+            },
+            fingerprint: None,
+            version: Some(parse_version_output("codex 9.9.9-custom")),
+            features: CodexFeatureFlags {
+                supports_features_list: true,
+                supports_output_schema: true,
+                supports_add_dir: false,
+                supports_mcp_login: true,
+            },
+            probe_plan: CapabilityProbePlan::default(),
+            collected_at: SystemTime::now(),
+        };
+
+        let client = CodexClient::builder()
+            .binary(&binary)
+            .capability_snapshot(snapshot)
+            .timeout(Duration::from_secs(5))
+            .build();
+
+        let capabilities = client.probe_capabilities().await;
+        assert_eq!(
+            capabilities.cache_key.binary_path,
+            fs::canonicalize(&binary).unwrap()
+        );
+        assert!(capabilities.fingerprint.is_some());
+        assert!(capabilities.features.supports_output_schema);
+        assert!(capabilities.features.supports_mcp_login);
+        assert_eq!(
+            capabilities.version.as_ref().and_then(|v| v.semantic),
+            Some((9, 9, 9))
+        );
+        assert!(capabilities
+            .probe_plan
+            .steps
+            .contains(&CapabilityProbeStep::ManualOverride));
+        assert!(!log_path.exists());
+    }
+
+    #[tokio::test]
+    async fn capability_feature_overrides_apply_to_cached_entries() {
+        let _guard = env_guard();
+        clear_capability_cache();
+
+        let temp = tempfile::tempdir().unwrap();
+        let script = r#"#!/bin/bash
+if [[ "$1" == "--version" ]]; then
+  echo "codex 1.0.0"
+elif [[ "$1" == "features" && "$2" == "list" && "$3" == "--json" ]]; then
+  echo '{"features":[]}'
+elif [[ "$1" == "features" && "$2" == "list" ]]; then
+  echo "features list"
+elif [[ "$1" == "--help" ]]; then
+  echo "Usage: codex exec"
+fi
+"#;
+        let binary = write_fake_codex(temp.path(), script);
+
+        let base_client = CodexClient::builder()
+            .binary(&binary)
+            .timeout(Duration::from_secs(5))
+            .build();
+        let base_capabilities = base_client.probe_capabilities().await;
+        assert!(base_capabilities.features.supports_features_list);
+        assert!(!base_capabilities.features.supports_output_schema);
+
+        let overrides = CapabilityFeatureOverrides::enabling(CodexFeatureFlags {
+            supports_features_list: false,
+            supports_output_schema: true,
+            supports_add_dir: false,
+            supports_mcp_login: true,
+        });
+
+        let client = CodexClient::builder()
+            .binary(&binary)
+            .capability_feature_overrides(overrides)
+            .timeout(Duration::from_secs(5))
+            .build();
+
+        let capabilities = client.probe_capabilities().await;
+        assert!(capabilities.features.supports_output_schema);
+        assert!(capabilities.features.supports_mcp_login);
+        assert!(capabilities
+            .probe_plan
+            .steps
+            .contains(&CapabilityProbeStep::ManualOverride));
+        assert_eq!(
+            capabilities.guard_output_schema().support,
+            CapabilitySupport::Supported
+        );
+    }
+
+    #[tokio::test]
+    async fn capability_version_override_replaces_probe_version() {
+        let _guard = env_guard();
+        clear_capability_cache();
+
+        let temp = tempfile::tempdir().unwrap();
+        let script = r#"#!/bin/bash
+if [[ "$1" == "--version" ]]; then
+  echo "codex 0.1.0"
+elif [[ "$1" == "features" && "$2" == "list" && "$3" == "--json" ]]; then
+  echo '{"features":["add_dir"]}'
+elif [[ "$1" == "features" && "$2" == "list" ]]; then
+  echo "add_dir"
+elif [[ "$1" == "--help" ]]; then
+  echo "Usage: codex add-dir"
+fi
+"#;
+        let binary = write_fake_codex(temp.path(), script);
+        let version_override = parse_version_output("codex 9.9.9-nightly (commit beefcafe)");
+
+        let client = CodexClient::builder()
+            .binary(&binary)
+            .timeout(Duration::from_secs(5))
+            .capability_version_override(version_override)
+            .build();
+
+        let capabilities = client.probe_capabilities().await;
+        assert_eq!(
+            capabilities.version.as_ref().and_then(|v| v.semantic),
+            Some((9, 9, 9))
+        );
+        assert!(matches!(
+            capabilities.version.as_ref().map(|v| v.channel),
+            Some(CodexReleaseChannel::Nightly)
+        ));
+        assert!(capabilities.features.supports_add_dir);
+        assert!(capabilities
+            .probe_plan
+            .steps
+            .contains(&CapabilityProbeStep::ManualOverride));
+        assert_eq!(
+            capabilities.guard_add_dir().support,
+            CapabilitySupport::Supported
+        );
     }
 
     #[tokio::test]
