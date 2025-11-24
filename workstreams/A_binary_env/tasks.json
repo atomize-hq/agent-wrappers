@@ -40,8 +40,19 @@
     "dependencies": ["A3-tests-docs"],
     "files": ["crates/codex/src/lib.rs", "crates/codex/tests", "crates/codex/examples"],
     "outputs": ["Integration-style tests exercising all spawn paths with overridden env/binary"],
-    "status": "doing",
+    "status": "done",
     "tests": ["cargo test -p codex"],
     "notes": "Use fake codex binary to assert env/args without hitting real service; cover exec, login/status/logout, MCP/app-server helpers."
+  },
+  {
+    "id": "A5-home-path-helpers",
+    "title": "Expose CODEX_HOME layout helpers",
+    "description": "Expose helpers to compute CODEX_HOME layout (config/auth/.credentials/history/log paths and conversations directory) so host apps can discover files when using an app-scoped home.",
+    "dependencies": ["A4-integration-smoke"],
+    "files": ["crates/codex/src/lib.rs", "crates/codex/EXAMPLES.md"],
+    "outputs": ["Public helper(s) describing CODEX_HOME layout and log paths"],
+    "status": "todo",
+    "tests": ["cargo test -p codex"],
+    "notes": "Keep helpers read-only unless create_home_dirs is true; document expected file locations for host apps."
   }
 ]
