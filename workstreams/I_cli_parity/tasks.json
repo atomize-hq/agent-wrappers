@@ -15,7 +15,7 @@
   {
     "id": "I2-implement-flags-config-overrides",
     "title": "Implement missing flags and config override plumbing",
-    "description": "Add builder/request fields and command wiring for missing flags and arbitrary config overrides. Wire reasoning/verbosity setters. Ensure exec/resume and any other wrapped subcommands apply the new options. Preserve existing defaults.",
+    "description": "Add builder/request fields and command wiring for missing flags and arbitrary config overrides. Wire reasoning/verbosity/summaries setters and generic `--config key=value` overrides. Ensure exec/resume and any other wrapped subcommands apply the new options. Preserve existing defaults.",
     "dependencies": ["I1-design-parity-apis"],
     "files": [
       "crates/codex/src/lib.rs"
