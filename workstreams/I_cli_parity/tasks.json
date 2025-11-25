@@ -97,6 +97,20 @@
       "README.md"
     ],
     "tests": ["cargo test -p codex"],
+    "status": "done"
+  },
+  {
+    "id": "I9-sandbox-followups",
+    "title": "Sandbox wrap-up and follow-ons",
+    "description": "Audit sandbox wrapper behavior across platforms (macOS denial logging, Windows helper expectations), add sample/demo usage, and note any capability gating or post-run gaps before closing the workstream.",
+    "dependencies": ["I8-sandbox-command-impl"],
+    "files": [
+      "crates/codex/src/lib.rs",
+      "README.md",
+      "CLI_MATRIX.md",
+      "crates/codex/examples"
+    ],
+    "tests": ["cargo test -p codex"],
     "status": "todo"
   }
 ]
