@@ -21,7 +21,7 @@
       "crates/codex/src/lib.rs"
     ],
     "tests": ["cargo test -p codex"],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "I3-tests-docs-examples",
