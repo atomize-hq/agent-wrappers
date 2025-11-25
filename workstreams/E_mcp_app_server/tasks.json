@@ -115,9 +115,10 @@
     "status": "done",
     "description": "Build a pooled lifecycle manager around the app-runtime API so callers can start, reuse, and stop codex app-server instances from prepared configs (Workstream A env prep intact) while keeping runtime metadata/resume hints intact and never mutating stored config or thread data.",
     "dependencies": ["E11-app-runtime-lifecycle"],
-    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md", "workstreams/E_mcp_app_server/kickoff_prompts/12_E12-app-runtime-pool.md"],
     "tests": ["cargo test -p codex"],
-    "outputs": ["App runtime pool manager", "Tests for pooled start/reuse/stop"]
+    "outputs": ["App runtime pool manager", "Tests for pooled start/reuse/stop"],
+    "notes": "Followed kickoff prompt guidance; keep metadata/config non-destructive."
   },
   {
     "id": "E13-app-runtime-pool-api",

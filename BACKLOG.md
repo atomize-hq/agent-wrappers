@@ -47,6 +47,9 @@ High-priority items to make the Rust wrapper production-ready, cover Codex CLI s
 1. Add examples for MCP server/app-server usage, JSON streaming, resume/apply, feature toggles, CODEX_HOME override, and bundled binary selection.
 2. API docs describing env resolution, event schema, approval/sandbox policies.
 
+## Cross-cutting: Auth orchestration
+- Add orchestration around `auth.json`/`.credentials.json` materialization when `CODEX_HOME` is set, so isolated homes can reuse or copy authenticated state without re-running `codex login`. Provide helpers to detect and copy existing auth files into a target `CODEX_HOME` safely.
+
 ## References: neighboring crates
 - `codex-helper` (proxy/failover/logging; rewrites ~/.codex/config.toml to point Codex at local proxy; manages multi-upstream, quota-aware routing; sessions/usage diagnostics). Consider ideas for multi-provider routing and config backup/restore, not code.
 - `llm-link` (multi-provider proxy with app presets for Codex CLI/Zed/Claude Code, supports OpenAI/Ollama/Anthropic etc., hot reload config, dynamic model discovery). Useful patterns for multi-protocol adapters, but likely out of scope for core Codex wrapper.

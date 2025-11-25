@@ -2,6 +2,7 @@
 //! optionally cancel, and send a follow-up `codex/codex-reply`.
 //! Usage:
 //! `cargo run -p codex --example mcp_codex_flow -- "<prompt>" ["<follow up prompt>"]`
+//! Gate with `crates/codex/examples/feature_detection.rs` if your binary might not expose MCP endpoints.
 //! Environment:
 //! - `CODEX_BINARY` (optional): path to the `codex` binary (defaults to `codex` in PATH).
 //! - `CODEX_HOME` (optional): CODEX_HOME to pass through.
