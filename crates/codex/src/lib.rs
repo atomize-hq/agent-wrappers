@@ -1915,6 +1915,9 @@ impl Default for CodexClient {
 }
 
 /// Builder for [`CodexClient`].
+///
+/// Workstream I1 (CLI parity) documents planned builder/request extensions for missing
+/// CLI flags and config overrides in `workstreams/I_cli_parity/design_notes/I1-design-parity-apis.md`.
 #[derive(Clone, Debug)]
 pub struct CodexClientBuilder {
     binary: PathBuf,
