@@ -64,3 +64,4 @@ This is a static inventory from `codex --help` and subcommand help, plus known `
 - CODEX_HOME is now supported in the wrapper via builder (`codex_home`, `create_home_dirs`); env is applied per spawn with `CODEX_BINARY` and default `RUST_LOG`.
 - Auth/session remains basic (login/status/logout only).
 - Tests primarily live in inline unit tests (lib.rs, mcp.rs) and examples/doc-tests; no end-to-end coverage with a real CLI binary yet.
+- `run_sandbox` wraps `codex sandbox <macos|linux|windows>` with `--full-auto`, macOS `--log-denials`, and request `--config/--enable/--disable` flags; other CLI overrides (approval/profile/search/sandbox) are intentionally not forwarded on this subcommand.

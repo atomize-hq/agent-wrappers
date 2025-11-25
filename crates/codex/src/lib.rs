@@ -29,6 +29,7 @@
 //! - [`CodexClient::send_prompt`] for a single prompt/response with optional `--json` output.
 //! - [`CodexClient::stream_exec`] for typed, real-time JSONL events from `codex exec --json`, returning an [`ExecStream`] with an event stream plus a completion future.
 //! - [`CodexClient::apply`] / [`CodexClient::diff`] to run `codex apply/diff`, echo stdout/stderr according to the builder (`mirror_stdout` / `quiet`), and return captured output + exit status.
+//! - [`CodexClient::run_sandbox`] to wrap `codex sandbox <platform>` (macOS/Linux/Windows), pass `--full-auto`/`--log-denials`/`--config`/`--enable`/`--disable`, and return the inner command status + output.
 //!
 //! ## Streaming, events, and artifacts
 //! - `.json(true)` requests JSONL streaming. Expect `thread.started`/`thread.resumed`, `turn.started`/`turn.completed`/`turn.failed`, and `item.created`/`item.updated` with `item.type` such as `agent_message`, `reasoning`, `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, or `todo_list` plus optional `status`/`content`/`input`. Errors surface as `{"type":"error","message":...}`.
@@ -1780,6 +1781,120 @@ impl CodexClient {
         })
     }
 
+    /// Runs `codex sandbox <platform> [--full-auto|--log-denials] [--config/--enable/--disable] -- <COMMAND...>`.
+    ///
+    /// Captures stdout/stderr and mirrors them according to the builder (`mirror_stdout` / `quiet`). Unlike
+    /// `apply`/`diff`, non-zero exit codes are returned in [`SandboxRun::status`] without being wrapped in
+    /// [`CodexError::NonZeroExit`]. macOS denial logging is enabled via [`SandboxCommandRequest::log_denials`]
+    /// and ignored on other platforms.
+    pub async fn run_sandbox(
+        &self,
+        request: SandboxCommandRequest,
+    ) -> Result<SandboxRun, CodexError> {
+        if request.command.is_empty() {
+            return Err(CodexError::EmptySandboxCommand);
+        }
+
+        let SandboxCommandRequest {
+            platform,
+            command,
+            full_auto,
+            log_denials,
+            config_overrides,
+            feature_toggles,
+            working_dir,
+        } = request;
+
+        let working_dir = self.sandbox_working_dir(working_dir)?;
+
+        let mut process = Command::new(self.command_env.binary_path());
+        process
+            .arg("sandbox")
+            .arg(platform.subcommand())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .current_dir(&working_dir);
+
+        if full_auto {
+            process.arg("--full-auto");
+        }
+
+        if log_denials && matches!(platform, SandboxPlatform::Macos) {
+            process.arg("--log-denials");
+        }
+
+        for override_ in config_overrides {
+            process.arg("--config");
+            process.arg(format!("{}={}", override_.key, override_.value));
+        }
+
+        for feature in feature_toggles.enable {
+            process.arg("--enable");
+            process.arg(feature);
+        }
+
+        for feature in feature_toggles.disable {
+            process.arg("--disable");
+            process.arg(feature);
+        }
+
+        process.arg("--");
+        process.args(&command);
+
+        self.command_env.apply(&mut process)?;
+
+        let mut child = process.spawn().map_err(|source| CodexError::Spawn {
+            binary: self.command_env.binary_path().to_path_buf(),
+            source,
+        })?;
+
+        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+
+        let stdout_task = tokio::spawn(tee_stream(
+            stdout,
+            ConsoleTarget::Stdout,
+            self.mirror_stdout,
+        ));
+        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+
+        let wait_task = async move {
+            let status = child
+                .wait()
+                .await
+                .map_err(|source| CodexError::Wait { source })?;
+            let stdout_bytes = stdout_task
+                .await
+                .map_err(CodexError::Join)?
+                .map_err(CodexError::CaptureIo)?;
+            let stderr_bytes = stderr_task
+                .await
+                .map_err(CodexError::Join)?
+                .map_err(CodexError::CaptureIo)?;
+            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+        };
+
+        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+            wait_task.await?
+        } else {
+            match time::timeout(self.timeout, wait_task).await {
+                Ok(result) => result?,
+                Err(_) => {
+                    return Err(CodexError::Timeout {
+                        timeout: self.timeout,
+                    });
+                }
+            }
+        };
+
+        Ok(SandboxRun {
+            status,
+            stdout: String::from_utf8(stdout_bytes)?,
+            stderr: String::from_utf8(stderr_bytes)?,
+        })
+    }
+
     /// Probes the configured binary for version/build metadata and supported feature flags.
     ///
     /// Results are cached per canonical binary path and invalidated when file metadata changes.
@@ -2158,6 +2273,18 @@ impl CodexClient {
 
         let temp = tempfile::tempdir().map_err(CodexError::TempDir)?;
         Ok(DirectoryContext::Ephemeral(temp))
+    }
+
+    fn sandbox_working_dir(&self, request_dir: Option<PathBuf>) -> Result<PathBuf, CodexError> {
+        if let Some(dir) = request_dir {
+            return Ok(dir);
+        }
+
+        if let Some(dir) = &self.working_dir {
+            return Ok(dir.clone());
+        }
+
+        env::current_dir().map_err(|source| CodexError::WorkingDirectory { source })
     }
 
     async fn run_basic_command<S, I>(&self, args: I) -> Result<CommandOutput, CodexError>
@@ -3218,10 +3345,17 @@ pub enum CodexError {
     InvalidUtf8(#[from] std::string::FromUtf8Error),
     #[error("prompt must not be empty")]
     EmptyPrompt,
+    #[error("sandbox command must not be empty")]
+    EmptySandboxCommand,
     #[error("API key must not be empty")]
     EmptyApiKey,
     #[error("failed to create temporary working directory: {0}")]
     TempDir(#[source] std::io::Error),
+    #[error("failed to resolve working directory: {source}")]
+    WorkingDirectory {
+        #[source]
+        source: std::io::Error,
+    },
     #[error("failed to prepare CODEX_HOME at `{path}`: {source}")]
     PrepareCodexHome {
         path: PathBuf,
@@ -3772,6 +3906,114 @@ impl ResumeRequest {
         };
         self
     }
+}
+
+/// Sandbox platform variant; maps to platform subcommands of `codex sandbox`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SandboxPlatform {
+    Macos,
+    Linux,
+    Windows,
+}
+
+impl SandboxPlatform {
+    fn subcommand(self) -> &'static str {
+        match self {
+            SandboxPlatform::Macos => "macos",
+            SandboxPlatform::Linux => "linux",
+            SandboxPlatform::Windows => "windows",
+        }
+    }
+}
+
+/// Feature toggles forwarded to `--enable/--disable`.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct FeatureToggles {
+    pub enable: Vec<String>,
+    pub disable: Vec<String>,
+}
+
+/// Request to run an arbitrary command inside a Codex-provided sandbox.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SandboxCommandRequest {
+    /// Target platform subcommand; maps to `macos` (alias `seatbelt`), `linux` (alias `landlock`), or `windows`.
+    pub platform: SandboxPlatform,
+    /// Trailing command arguments to execute. Must be non-empty to avoid the upstream CLI panic.
+    pub command: Vec<OsString>,
+    /// Request the workspace-write sandbox preset (`--full-auto`).
+    pub full_auto: bool,
+    /// Stream macOS sandbox denials after the child process exits (no-op on other platforms).
+    pub log_denials: bool,
+    /// Additional `--config key=value` overrides to pass through.
+    pub config_overrides: Vec<ConfigOverride>,
+    /// Feature toggles forwarded to `--enable`/`--disable`.
+    pub feature_toggles: FeatureToggles,
+    /// Working directory for the spawned command; falls back to the builder value, then the current process directory.
+    pub working_dir: Option<PathBuf>,
+}
+
+impl SandboxCommandRequest {
+    pub fn new<I, S>(platform: SandboxPlatform, command: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<OsString>,
+    {
+        Self {
+            platform,
+            command: command.into_iter().map(Into::into).collect(),
+            full_auto: false,
+            log_denials: false,
+            config_overrides: Vec::new(),
+            feature_toggles: FeatureToggles::default(),
+            working_dir: None,
+        }
+    }
+
+    pub fn full_auto(mut self, enable: bool) -> Self {
+        self.full_auto = enable;
+        self
+    }
+
+    pub fn log_denials(mut self, enable: bool) -> Self {
+        self.log_denials = enable;
+        self
+    }
+
+    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.config_overrides.push(ConfigOverride::new(key, value));
+        self
+    }
+
+    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+        self.config_overrides.push(ConfigOverride::from_raw(raw));
+        self
+    }
+
+    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+        self.feature_toggles.enable.push(name.into());
+        self
+    }
+
+    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+        self.feature_toggles.disable.push(name.into());
+        self
+    }
+
+    pub fn working_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+        self.working_dir = Some(dir.into());
+        self
+    }
+}
+
+/// Captured output from `codex sandbox <platform>`.
+#[derive(Clone, Debug)]
+pub struct SandboxRun {
+    /// Exit status returned by the inner command (mirrors the sandbox helper).
+    pub status: ExitStatus,
+    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
+    pub stdout: String,
+    /// Captured stderr (mirrored unless `quiet` is set).
+    pub stderr: String,
 }
 
 /// Ergonomic container for the streaming surface; produced by `stream_exec` (implemented in D2).
@@ -4675,6 +4917,190 @@ mod tests {
         perms.set_mode(0o755);
         std_fs::set_permissions(&path, perms).unwrap();
         path
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn sandbox_maps_platform_flags_and_command() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+echo "$PWD"
+printf "%s\n" "$@"
+"#,
+        );
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+
+        let request = SandboxCommandRequest::new(
+            SandboxPlatform::Linux,
+            [OsString::from("echo"), OsString::from("hello world")],
+        )
+        .full_auto(true)
+        .log_denials(true)
+        .config_override("foo", "bar")
+        .enable_feature("alpha")
+        .disable_feature("beta");
+
+        let run = client.run_sandbox(request).await.unwrap();
+        let mut lines = run.stdout.lines();
+        let pwd = lines.next().unwrap();
+        assert_eq!(Path::new(pwd), env::current_dir().unwrap().as_path());
+
+        let args: Vec<_> = lines.map(str::to_string).collect();
+        assert!(!args.contains(&"--log-denials".to_string()));
+        assert_eq!(
+            args,
+            vec![
+                "sandbox",
+                "linux",
+                "--full-auto",
+                "--config",
+                "foo=bar",
+                "--enable",
+                "alpha",
+                "--disable",
+                "beta",
+                "--",
+                "echo",
+                "hello world"
+            ]
+        );
+        assert!(run.status.success());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn sandbox_includes_log_denials_on_macos() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+printf "%s\n" "$@"
+"#,
+        );
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+
+        let run = client
+            .run_sandbox(
+                SandboxCommandRequest::new(SandboxPlatform::Macos, ["ls"]).log_denials(true),
+            )
+            .await
+            .unwrap();
+        let args: Vec<_> = run.stdout.lines().collect();
+        assert!(args.contains(&"--log-denials"));
+        assert_eq!(args[0], "sandbox");
+        assert_eq!(args[1], "macos");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn sandbox_honors_working_dir_precedence() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+echo "$PWD"
+"#,
+        );
+
+        let request_dir = dir.path().join("request_cwd");
+        let builder_dir = dir.path().join("builder_cwd");
+        std_fs::create_dir_all(&request_dir).unwrap();
+        std_fs::create_dir_all(&builder_dir).unwrap();
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .working_dir(&builder_dir)
+            .build();
+
+        let run_request = client
+            .run_sandbox(
+                SandboxCommandRequest::new(SandboxPlatform::Windows, ["echo", "cwd"])
+                    .working_dir(&request_dir),
+            )
+            .await
+            .unwrap();
+        let request_pwd = run_request.stdout.lines().next().unwrap();
+        assert_eq!(Path::new(request_pwd), request_dir.as_path());
+
+        let run_builder = client
+            .run_sandbox(SandboxCommandRequest::new(
+                SandboxPlatform::Windows,
+                ["echo", "builder"],
+            ))
+            .await
+            .unwrap();
+        let builder_pwd = run_builder.stdout.lines().next().unwrap();
+        assert_eq!(Path::new(builder_pwd), builder_dir.as_path());
+
+        let client_default = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+        let run_default = client_default
+            .run_sandbox(SandboxCommandRequest::new(
+                SandboxPlatform::Windows,
+                ["echo", "default"],
+            ))
+            .await
+            .unwrap();
+        let default_pwd = run_default.stdout.lines().next().unwrap();
+        assert_eq!(
+            Path::new(default_pwd),
+            env::current_dir().unwrap().as_path()
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn sandbox_returns_non_zero_status_without_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+echo "failing"
+exit 7
+"#,
+        );
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+        let run = client
+            .run_sandbox(SandboxCommandRequest::new(
+                SandboxPlatform::Linux,
+                ["false"],
+            ))
+            .await
+            .unwrap();
+
+        assert!(!run.status.success());
+        assert_eq!(run.status.code(), Some(7));
+        assert_eq!(run.stdout.trim(), "failing");
+    }
+
+    #[tokio::test]
+    async fn sandbox_rejects_empty_command() {
+        let client = CodexClient::builder().build();
+        let request = SandboxCommandRequest::new(SandboxPlatform::Linux, Vec::<OsString>::new());
+        let err = client.run_sandbox(request).await.unwrap_err();
+        assert!(matches!(err, CodexError::EmptySandboxCommand));
     }
 
     fn capabilities_with_version(raw_version: &str) -> CodexCapabilities {

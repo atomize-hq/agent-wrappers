@@ -95,6 +95,31 @@ println!("{reply}");
 - Approvals and cancellations surface as events in MCP/app-server flows; see the server examples for approval-required hooks around apply.
 - Example `crates/codex/examples/resume_apply.rs` covers the full flow with `--sample` payloads (resume stream, diff preview, apply result) and lets you skip the apply step with `--no-apply`.
 
+## Sandbox Command
+- `run_sandbox` wraps `codex sandbox <macos|linux|windows>` and returns stdout/stderr + the inner command status (non-zero statuses are not converted into errors). `mirror_stdout`/`quiet` from the builder control console mirroring.
+- Flags: `full_auto(true)` maps to `--full-auto`, `log_denials(true)` maps to the macOS-only `--log-denials`, and request `config_overrides`/`feature_toggles` become `--config/--enable/--disable`. Other CLI overrides (approval/search/profile/sandbox) are intentionally not forwarded on this subcommand.
+- Working dir precedence: request `.working_dir(...)` → builder `.working_dir(...)` → current process dir (no temp dirs).
+- Example:
+  ```rust,no_run
+  use codex::{CodexClient, SandboxCommandRequest, SandboxPlatform};
+
+  # async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+  let client = CodexClient::builder().mirror_stdout(false).quiet(true).build();
+  let run = client
+      .run_sandbox(
+          SandboxCommandRequest::new(
+              SandboxPlatform::Linux,
+              ["bash", "-lc", "ls -la /tmp"],
+          )
+          .full_auto(true)
+          .config_override("features.experimental_sandbox", "true"),
+      )
+      .await?;
+  println!("exit: {:?}", run.status.code());
+  println!("stdout:\n{}", run.stdout);
+  # Ok(()) }
+  ```
+
 ## MCP + App-Server Flows
 - The CLI ships stdio servers for Model Context Protocol and the app-server APIs. Examples cover the JSON-RPC wiring, approvals, and shutdown:
 - `crates/codex/examples/mcp_codex_flow.rs`: start `codex mcp-server --stdio`, call `tools/codex`, and follow up with `codex/codex-reply` when a conversation ID is returned (supports `--sample`).
