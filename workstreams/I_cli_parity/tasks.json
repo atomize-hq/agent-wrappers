@@ -1,0 +1,51 @@
+[
+  {
+    "id": "I1-design-parity-apis",
+    "title": "Design builder/request APIs for missing CLI flags and config overrides",
+    "description": "Specify how to surface missing CLI flags (`--config`, `--ask-for-approval`, `--sandbox`, `--full-auto`, `--dangerously-bypass-approvals-and-sandbox`, `--cd`, `--local-provider`, `--search`, `--last`, `--all`) and config overrides (including reasoning/verbosity). Decide on builder vs per-request fields, defaults, and compatibility.",
+    "dependencies": [],
+    "files": [
+      "workstreams/I_cli_parity/BRIEF.md",
+      "CLI_MATRIX.md",
+      "crates/codex/src/lib.rs"
+    ],
+    "outputs": ["Design note/doc comments committed to repo"],
+    "status": "pending"
+  },
+  {
+    "id": "I2-implement-flags-config-overrides",
+    "title": "Implement missing flags and config override plumbing",
+    "description": "Add builder/request fields and command wiring for missing flags and arbitrary config overrides. Wire reasoning/verbosity setters. Ensure exec/resume and any other wrapped subcommands apply the new options. Preserve existing defaults.",
+    "dependencies": ["I1-design-parity-apis"],
+    "files": [
+      "crates/codex/src/lib.rs"
+    ],
+    "tests": ["cargo test -p codex"],
+    "status": "pending"
+  },
+  {
+    "id": "I3-tests-docs-examples",
+    "title": "Add tests and update docs/examples",
+    "description": "Add unit tests for new flags/config overrides; verify backward compatibility. Update README, CLI_MATRIX.md references, and EXAMPLES to show new builder fields and usage. Add example snippets where helpful.",
+    "dependencies": ["I2-implement-flags-config-overrides"],
+    "files": [
+      "crates/codex/src/lib.rs",
+      "README.md",
+      "crates/codex/EXAMPLES.md",
+      "crates/codex/examples"
+    ],
+    "tests": ["cargo test -p codex", "cargo test -p codex --doc", "cargo test -p codex --examples"],
+    "status": "pending"
+  },
+  {
+    "id": "I4-auth-session-helper",
+    "title": "Optional: Auth/session helper",
+    "description": "Add a small helper to check login status and trigger login flows (ChatGPT/API key) using app-scoped CODEX_HOME, without mutating caller env. Make it optional if scope/time is tight.",
+    "dependencies": ["I2-implement-flags-config-overrides"],
+    "files": [
+      "crates/codex/src/lib.rs"
+    ],
+    "tests": ["cargo test -p codex"],
+    "status": "optional"
+  }
+]
