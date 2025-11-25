@@ -23,6 +23,7 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 | --- | --- | --- |
 | `$env:CODEX_BINARY="C:\\bin\\codex-nightly.exe"; cargo run -p codex --example env_binary -- "Nightly sanity check"` | `C:\\bin\\codex-nightly.exe exec "Nightly sanity check" --skip-git-repo-check` | Honors `CODEX_BINARY` override. |
 | `CODEX_BUNDLED_PATH=/opt/myapp/codex cargo run -p codex --example bundled_binary -- "Quick health check"` | `CODEX_BINARY=/opt/myapp/codex codex exec "Quick health check" --skip-git-repo-check` | Binary order: `CODEX_BINARY` > `CODEX_BUNDLED_PATH` > `<crate>/bin/codex`. |
+| `cargo run -p codex --example bundled_binary_home -- "Health check prompt"` | `CODEX_HOME="C:\\data\\codex" C:\\apps\\codex\\bin\\codex.exe exec "Health check prompt" --skip-git-repo-check` | Bundled binary with app-scoped `CODEX_HOME`; prints `CodexHomeLayout` paths and can create the isolated tree before spawning. |
 | `CODEX_HOME=/tmp/codex-demo cargo run -p codex --example codex_home -- "Show CODEX_HOME contents"` | `CODEX_HOME=/tmp/codex-demo codex exec "Show CODEX_HOME contents" --skip-git-repo-check` | App-scoped `CODEX_HOME` showing config/auth/history/log paths. |
 
 ## Streaming & Logging
@@ -44,12 +45,66 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 
 | Wrapper example | Native command | Notes |
 | --- | --- | --- |
+| `cargo run -p codex --example mcp_codex_flow -- "Draft a plan" ["Tighten scope"]` | `codex mcp-server --stdio` then call `codex/codex` + `codex/codex-reply` | Typed `codex::mcp` helper that streams `codex/event`, supports `$ /cancelRequest`, and chains a follow-up when the first call returns a conversation ID; gate with `feature_detection` if the binary lacks MCP endpoints. |
 | `cargo run -p codex --example mcp_codex_tool -- "Summarize repo status"` | `codex mcp-server` then send `tools/codex` JSON-RPC call | Streams codex tool notifications (approval/task_complete); `--sample` and optional `CODEX_HOME` for isolation. |
 | `CODEX_CONVERSATION_ID=abc123 cargo run -p codex --example mcp_codex_reply -- "Continue the prior run"` | `codex mcp-server` then call `tools/codex-reply` with `conversationId=abc123` | Resume a session via `codex-reply`; needs `CODEX_CONVERSATION_ID` or first arg; `--sample` available. |
+| `cargo run -p codex --example app_server_turns -- "Draft a release note" [thread-id]` | `codex app-server` then `thread/start` or `thread/resume` plus `turn/start` (optional `turn/interrupt`) | Uses the `codex::mcp` app-server client to stream items and task_complete notices, optionally resuming a thread and sending `turn/interrupt` after a delay; pair with `feature_detection` if the binary omits app-server support. |
 | `cargo run -p codex --example app_server_thread_turn -- "Draft a release note"` | `codex app-server` then send `thread/start` and `turn/start` | App-server thread/turn notifications; supports `--sample` and optional `CODEX_HOME` for state isolation. |
+
+## Capabilities
+
+| Wrapper example | Native command | Notes |
+| --- | --- | --- |
+| `cargo run -p codex --example capability_snapshot -- ./codex ./codex-capabilities.json auto` | `codex --version && codex features list --json` | Persists capability snapshots with fingerprint checks, refresh/backoff guidance, and bypass mode for FUSE/overlay paths. |
 
 ## Feature Detection
 
 | Wrapper example | Native command | Notes |
 | --- | --- | --- |
 | `cargo run -p codex --example feature_detection` | `codex --version` and `codex features list` | Probes version + feature list (per-binary cache), gates streaming/log-tee/resume/apply/artifact flags, and emits upgrade advisories; falls back to sample data. |
+
+## Capability TTL helper
+`capability_cache_ttl_decision` provides a TTL/backoff wrapper around cached snapshots so hosts know when to reuse, refresh, or bypass:
+
+```rust
+use codex::{capability_cache_entry, capability_cache_ttl_decision, CapabilityCachePolicy, CodexClient};
+use std::time::{Duration, SystemTime};
+
+async fn decide(client: &CodexClient, binary: &std::path::Path) {
+    let cached = capability_cache_entry(binary);
+    let decision = capability_cache_ttl_decision(cached.as_ref(), Duration::from_secs(300), SystemTime::now());
+
+    let capabilities = if let Some(snapshot) = cached.filter(|_| !decision.should_probe) {
+        snapshot
+    } else {
+        client.probe_capabilities_with_policy(decision.policy).await
+    };
+
+    if decision.policy == CapabilityCachePolicy::Bypass {
+        // Metadata missing (FUSE/overlay); stretch the TTL toward 10-15 minutes to reduce probe churn.
+    }
+
+    let _ = capabilities;
+}
+```
+- `Refresh` is recommended for hot-swaps that reuse the same path even when fingerprints look unchanged.
+- `Bypass` is returned when metadata is missing; avoid cache writes and apply a growing TTL/backoff to avoid hammering the binary.
+
+## Discovering `CODEX_HOME` layout
+
+Use `CodexHomeLayout` to inspect where Codex stores config, credentials, history, conversations, and logs when you set an app-scoped `CODEX_HOME`:
+
+```rust
+use codex::CodexHomeLayout;
+
+let layout = CodexHomeLayout::new("/apps/myhub/codex");
+println!("Config: {}", layout.config_path().display());
+println!("History: {}", layout.history_path().display());
+println!("Conversations: {}", layout.conversations_dir().display());
+println!("Logs: {}", layout.logs_dir().display());
+
+// Optional: create the CODEX_HOME directories yourself before spawning Codex.
+layout.materialize(true).expect("failed to prepare CODEX_HOME");
+```
+
+Use these pairs as a checklist when validating parity between the Rust wrapper and the raw Codex CLI.

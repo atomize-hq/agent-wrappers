@@ -1,6 +1,6 @@
 # Codex Rust Wrapper
 
-Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, and server flows. The crate shells out to `codex`, applies safe defaults (temp working dirs, timeouts, quiet stderr mirroring), and lets you pick either a packaged binary or an env-provided one.
+Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, apply/diff helpers, and server flows. The crate shells out to `codex`, applies safe defaults (temp working dirs, timeouts, quiet stderr mirroring), supports bundled binaries, and offers capability-aware streaming plus typed MCP/app-server helpers.
 
 ## Getting Started
 - Add the dependency:  
@@ -22,7 +22,7 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 
 ## Bundled Binary & `CODEX_HOME`
 - Ship Codex with your app by setting `CODEX_BINARY` or calling `.binary("/opt/myapp/bin/codex")`. The `bundled_binary` example shows falling back to `CODEX_BUNDLED_PATH` and a local `bin/codex` hint.
-- Isolate state with `CODEX_HOME` (config/auth/history/logs live under that directory: `config.toml`, `auth.json`, `.credentials.json`, `history.jsonl`, `conversations/*.jsonl`, `logs/codex-*.log`). The crate uses the current process env for every spawn.
+- Isolate state with `CODEX_HOME` (config/auth/history/logs live under that directory: `config.toml`, `auth.json`, `.credentials.json`, `history.jsonl`, `conversations/*.jsonl`, `logs/codex-*.log`). The crate uses the current process env for every spawn. `CodexClientBuilder::create_home_dirs` can pre-create the layout, and `CodexHomeLayout` inspects paths under an isolated home.
 - Quick isolated run (see `crates/codex/examples/codex_home.rs`):
   ```rust
   std::env::set_var("CODEX_HOME", "/tmp/my-app-codex");
@@ -39,6 +39,7 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
   - `RUST_LOG=error` if unset to keep the console quiet
   - model-specific reasoning config for `gpt-5*`/`gpt-5.1*` defaults to **medium** effort to avoid unsupported “minimal” errors on current models
 - Other builder flags: `.model("gpt-5-codex")`, `.image("/path/mock.png")`, `.json(true)` (pipes prompt via stdin), `.quiet(true)`.
+- `ExecStreamRequest` supports `idle_timeout` (fails fast on silent streams), `output_last_message`/`output_schema` for artifacts, and `json_event_log` to tee raw JSONL before parsing.
 - Example `crates/codex/examples/send_prompt.rs` covers the baseline; `working_dir(_json).rs`, `timeout*.rs`, `image_json.rs`, `color_always.rs`, `quiet.rs`, and `no_stdout_mirror.rs` expand on inputs and output handling.
 
 ## Streaming Output & Artifacts
@@ -50,6 +51,7 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
   - `crates/codex/examples/stream_with_log.rs`: mirrors JSON events to stdout and tees them to `CODEX_LOG_PATH` (default `codex-stream.log`); also supports `--sample` and can defer to the binary's built-in log tee feature when advertised via `codex features list`.
   - `crates/codex/examples/json_stream.rs`: simplest `--json` usage when you just want the raw stream buffered.
 - Artifacts: Codex can persist the final assistant message and the output schema alongside streaming output; point them at writable locations per the `stream_last_message` example. Apply/diff flows also surface stdout/stderr/exit (see below) so you can log or mirror them alongside the JSON stream.
+- Apply/diff output also arrives inside `file_change` events and any configured `json_event_log` tee when you stream.
 
 ## Resume, Diff, and Apply
 - Resume an existing conversation with `codex resume --json --skip-git-repo-check --last` (or `--id <conversationId>`/`CODEX_CONVERSATION_ID`). Expect `thread.resumed` followed by the usual `thread/turn/item` stream plus `turn.failed` on idle timeouts; reuse the streaming examples to consume it.
@@ -59,8 +61,10 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 
 ## MCP + App-Server Flows
 - The CLI ships stdio servers for Model Context Protocol and the app-server APIs. Examples cover the JSON-RPC wiring, approvals, and shutdown:
+- `crates/codex/examples/mcp_codex_flow.rs`: start `codex mcp-server --stdio`, call `tools/codex`, and follow up with `codex/codex-reply` when a conversation ID is returned (supports `--sample`).
 - `crates/codex/examples/mcp_codex_tool.rs`: start `codex mcp-server`, call `tools/codex` with prompt/cwd/model/sandbox, and watch `approval_required`/`task_complete` notifications (includes `turn_id`/`sandbox` and supports `--sample`).
 - `crates/codex/examples/mcp_codex_reply.rs`: resume a session via `tools/codex-reply`, taking `CODEX_CONVERSATION_ID` or a CLI arg; supports `--sample`.
+- `crates/codex/examples/app_server_turns.rs`: start/resume threads, stream items/task_complete, and optionally send `turn/interrupt`.
 - `crates/codex/examples/app_server_thread_turn.rs`: launch `codex app-server`, send `thread/start` then `turn/start`, and stream task notifications (thread/turn IDs echoed; `--sample` supported).
 - Pass `CODEX_HOME` for isolated server state and `CODEX_BINARY` (or `.binary(...)`) to pin the binary version used by the servers.
 

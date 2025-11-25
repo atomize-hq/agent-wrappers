@@ -117,8 +117,8 @@
   },
   {
     "id": "H7-docs-backlog",
-    "title": "Docs backlog sweep",
-    "description": "Sweep remaining doc/example backlog items: fold in streaming/log-tee/API changes from Workstream D, document apply/resume/apply/diff flows, sync capability hooks/caching guidance with latest codex features list output.",
+    "title": "Docs backlog and live validation",
+    "description": "Capture and address remaining docs/example backlog: run streaming/MCP/app-server samples against a live Codex binary, reconcile capability probe notes with Workstream F, and add any missing typed-stream/log-tee helper documentation while folding in streaming/log-tee/apply/resume changes.",
     "dependencies": [
       "H6-docs-handoff"
     ],
@@ -126,14 +126,16 @@
       "README.md",
       "crates/codex/EXAMPLES.md",
       "crates/codex/src/lib.rs",
-      "crates/codex/examples"
+      "crates/codex/examples",
+      "workstreams/H_docs_examples/kickoff_prompts/07_H7-docs-backlog.md"
     ],
     "tests": [
       "cargo test -p codex --doc",
       "cargo test -p codex --examples"
     ],
     "outputs": [
-      "Updated docs/examples",
+      "Backlog list + addressed fixes",
+      "Validated examples against live Codex (notes)",
       "Upgrade advisories/gaps note"
     ],
     "status": "done"
@@ -151,7 +153,7 @@
       "crates/codex/src/lib.rs",
       "crates/codex/examples",
       "workstreams/H_docs_examples/BRIEF.md",
-      "workstreams/H_docs_examples/kickoff_prompts"
+      "workstreams/H_docs_examples/kickoff_prompts/08_H8-docs-post-review.md"
     ],
     "tests": [
       "cargo test -p codex --doc",
@@ -175,7 +177,8 @@
       "crates/codex/EXAMPLES.md",
       "crates/codex/src/lib.rs",
       "crates/codex/examples",
-      "workstreams/H_docs_examples"
+      "workstreams/H_docs_examples",
+      "workstreams/H_docs_examples/kickoff_prompts/09_H9-docs-integration-fixture.md"
     ],
     "tests": [
       "cargo test -p codex --doc",
@@ -201,7 +204,8 @@
       "crates/codex/src/lib.rs",
       "crates/codex/examples",
       "crates/codex/examples/fixtures",
-      "workstreams/H_docs_examples"
+      "workstreams/H_docs_examples",
+      "workstreams/H_docs_examples/kickoff_prompts/10_H10-docs-live-fixture.md"
     ],
     "tests": [
       "cargo test -p codex --doc",
@@ -226,7 +230,8 @@
       "crates/codex/EXAMPLES.md",
       "crates/codex/src/lib.rs",
       "crates/codex/examples",
-      "workstreams/H_docs_examples"
+      "workstreams/H_docs_examples",
+      "workstreams/H_docs_examples/kickoff_prompts/11_H11-docs-typed-streaming-api.md"
     ],
     "tests": [
       "cargo test -p codex --doc",
