@@ -111,13 +111,43 @@
   },
   {
     "id": "E12-app-runtime-pool",
-    "title": "App runtime pool and reuse",
-    "status": "pending",
-    "description": "Design and implement an app-server runtime pool so multiple prepared runtimes can be started, reused, and stopped safely with metadata intact. Include lifecycle coordination, limits, and cleanup of stale handles; ensure compatibility with capability guards and existing app runtime helpers.",
+    "title": "App runtime pooled manager",
+    "status": "done",
+    "description": "Build a pooled lifecycle manager around the app-runtime API so callers can start, reuse, and stop codex app-server instances from prepared configs (Workstream A env prep intact) while keeping runtime metadata/resume hints intact and never mutating stored config or thread data.",
     "dependencies": ["E11-app-runtime-lifecycle"],
-    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "workstreams/E_mcp_app_server/kickoff_prompts/12_E12-app-runtime-pool.md"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md", "workstreams/E_mcp_app_server/kickoff_prompts/12_E12-app-runtime-pool.md"],
     "tests": ["cargo test -p codex"],
-    "outputs": ["Pool implementation and tests (start/reuse/stop)", "Updated docs/examples if APIs surface publicly"],
-    "notes": "Follow kickoff prompt for branch/worktree flow; keep metadata/config non-destructive."
+    "outputs": ["App runtime pool manager", "Tests for pooled start/reuse/stop"],
+    "notes": "Followed kickoff prompt guidance; keep metadata/config non-destructive."
+  },
+  {
+    "id": "E13-app-runtime-pool-api",
+    "title": "App runtime pool public API",
+    "status": "done",
+    "description": "Expose a public API around the app-runtime pool so callers can list available and running app runtimes, start/reuse/stop/stop-all from prepared configs (Workstream A env prep intact) while keeping metadata/resume hints intact and never mutating stored definitions or thread data.",
+    "dependencies": ["E12-app-runtime-pool"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Public app runtime pool API", "Tests for pooled listing + lifecycle without metadata mutation"]
+  },
+  {
+    "id": "E14-post-workstream-review",
+    "title": "Post-workstream review for MCP + app-server",
+    "status": "done",
+    "description": "Polish pass to verify MCP/app-server APIs and pooled app runtimes are documented, consistent, and covered by tests/examples without mutating stored config or thread metadata.",
+    "dependencies": ["E13-app-runtime-pool-api"],
+    "files": ["crates/codex/src/mcp.rs", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Docs/tests adjustments", "Post-workstream review fixes"]
+  },
+  {
+    "id": "E15-handoff-prep",
+    "title": "Handoff prep for MCP + app-server",
+    "status": "done",
+    "description": "Produce the handoff package for the MCP and app-server surfaces: tighten README/docs around runtime/pool APIs, capture release notes/checklist, and verify shipped examples/tests match documented behavior without mutating stored config or thread metadata.",
+    "dependencies": ["E14-post-workstream-review"],
+    "files": ["crates/codex/README.md", "crates/codex/EXAMPLES.md", "workstreams/E_mcp_app_server/BRIEF.md", "BACKLOG.md"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Handoff notes/checklist", "Doc polish for MCP/app runtimes and pool"]
   }
 ]

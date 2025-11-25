@@ -13,6 +13,7 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 | `cargo run -p codex --example working_dir_json -- "C:\\path\\to\\repo" "Summarize repo status"` | `echo "Summarize repo status" \| codex exec --skip-git-repo-check --json --cd "C:\\path\\to\\repo"` | Combines working dir override with JSON streaming. |
 | `cargo run -p codex --example select_model -- gpt-5-codex -- "Explain rustfmt defaults"` | `codex exec "Explain rustfmt defaults" --skip-git-repo-check --model gpt-5-codex` | Picks a specific model. |
 | `cargo run -p codex --example color_always -- "Show colorful output"` | `codex exec "Show colorful output" --skip-git-repo-check --color always` | Forces ANSI color codes. |
+| `cargo run -p codex --example send_prompt --color never -- "Show monochrome"` | `codex exec "Show monochrome" --skip-git-repo-check --color never` | Color example also works for `auto`/`never`. |
 | `cargo run -p codex --example image_json -- "C:\\path\\to\\mockup.png" "Describe the screenshot"` | `echo "Describe the screenshot" \| codex exec --skip-git-repo-check --json --image "C:\\path\\to\\mockup.png"` | Attach an image while streaming JSON quietly. |
 | `cargo run -p codex --example quiet -- "Run without tool noise"` | `codex exec "Run without tool noise" --skip-git-repo-check --quiet` | Suppress stderr mirroring. |
 | `cargo run -p codex --example no_stdout_mirror -- "Stream quietly"` | `codex exec "Stream quietly" --skip-git-repo-check > out.txt` | Disable stdout mirroring to capture output yourself. |
@@ -62,6 +63,12 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 | Wrapper example | Native command | Notes |
 | --- | --- | --- |
 | `cargo run -p codex --example feature_detection` | `codex --version` and `codex features list` | Probes version + feature list (per-binary cache), gates streaming/log-tee/resume/apply/artifact flags, and emits upgrade advisories; falls back to sample data. |
+
+## Ingestion harness
+
+| Wrapper example | Native command | Notes |
+| --- | --- | --- |
+| `cargo run -p ingestion --example ingest_to_codex -- --instructions "Summarize the documents" --model gpt-5-codex --json --include-prompt --image "C:\\Docs\\mockup.png" C:\\Docs\\spec.pdf` | `codex exec --skip-git-repo-check --json --model gpt-5-codex --image "C:\\Docs\\mockup.png" "<constructed prompt covering spec.pdf>"` | Builds a multi-document prompt before calling `codex exec`; supports images and optional prompt echo. |
 
 ## Capability TTL helper
 `capability_cache_ttl_decision` provides a TTL/backoff wrapper around cached snapshots so hosts know when to reuse, refresh, or bypass:
