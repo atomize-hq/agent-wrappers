@@ -2,7 +2,7 @@
   {
     "id": "I1-design-parity-apis",
     "title": "Design builder/request APIs for missing CLI flags and config overrides",
-    "description": "Specify how to surface missing CLI flags (`--config`, `--ask-for-approval`, `--sandbox`, `--full-auto`, `--dangerously-bypass-approvals-and-sandbox`, `--cd`, `--local-provider`, `--search`, `--last`, `--all`) and config overrides (including reasoning/verbosity). Decide on builder vs per-request fields, defaults, and compatibility.",
+    "description": "Specify how to surface missing CLI flags (`--config`, `--ask-for-approval`, `--sandbox`, `--full-auto`, `--dangerously-bypass-approvals-and-sandbox`, `--cd`, `--local-provider`, `--search`, `--last`, `--all`) and config overrides (including reasoning/verbosity). Decide on builder vs per-request fields, defaults, and compatibility. Research the CLI/config surface (help + CLI_MATRIX) and update this workstream's tasks/kickoffs if scope changes to keep the plan robust/expandable.",
     "dependencies": [],
     "files": [
       "workstreams/I_cli_parity/BRIEF.md",
