@@ -1,76 +1,66 @@
-//! Minimal async wrapper over the [OpenAI Codex CLI](https://github.com/openai/codex).
+//! Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, and server flows.
 //!
-//! The CLI ships both an interactive TUI (`codex`) and a headless automation mode (`codex exec`).
-//! This crate targets the latter: it shells out to `codex exec`, enforces sensible defaults
-//! (non-interactive color handling, timeouts, optional model selection), and returns whatever
-//! the CLI prints to stdout (the agent's final response per upstream docs).
+//! Shells out to `codex exec`, enforces sensible defaults (non-interactive color handling, timeouts, optional model selection), and supports single-response, streaming, and server flows.
 //!
-//! ## Binary + CODEX_HOME design (Workstream A)
-//! - `CodexClientBuilder` will grow environment knobs: `binary_path: PathBuf` (default still
-//!   `default_binary_path()`), `codex_home: Option<PathBuf>`, and `create_home_dirs: bool`
-//!   (defaults to `true` when `codex_home` is set) that ensures the on-disk layout exists.
-//!   The existing `binary(...)` setter remains; new `codex_home(...)` /
-//!   `create_home_dirs(...)` methods are additive.
-//! - A shared `CommandEnvironment` helper will prepare every `tokio::process::Command`
-//!   (exec/login/status/logout/MCP/app-server) without mutating the parent env. It applies
-//!   `CODEX_HOME` when provided, mirrors the resolved binary into `CODEX_BINARY`, reuses the
-//!   default `RUST_LOG` fallback, and can pre-create `conversations/` and `logs/` directories
-//!   when asked.
-//! - Expected `CODEX_HOME` contents: root holds `config.toml`, `auth.json`, `.credentials.json`,
-//!   and `history.jsonl`; `conversations/` stores `*.jsonl` transcripts; `logs/` stores
-//!   `codex-*.log`. When `codex_home` is unset no directories are created and the ambient
-//!   `CODEX_HOME` (if any) is inherited.
-//! - Backward compatibility: callers that ignore the new options keep today's behavior (binary
-//!   from `CODEX_BINARY` or `codex` on PATH, no forced `CODEX_HOME`, same spawning semantics).
-//!   Opting into `codex_home` enables app-scoped state isolation without affecting the host
-//!   process environment.
+//! Surfaces:
+//! - [`CodexClient::send_prompt`] for a single prompt/response with optional `--json` output.
+//! - [`CodexClient::stream_exec`] for typed, real-time JSONL events from `codex exec --json`, returning an [`ExecStream`] with an event stream plus a completion future.
+//! - [`CodexClient::apply`] / [`CodexClient::diff`] to run `codex apply/diff`, echo stdout/stderr according to the builder (`mirror_stdout` / `quiet`), and return captured output + exit status.
+//!
+//! Binary and `CODEX_HOME` isolation:
+//! - Point at a bundled Codex binary with [`CodexClientBuilder::binary`] or honor `CODEX_BINARY`/`PATH` fallbacks; examples also support a `CODEX_BUNDLED_PATH` hint and a local `bin/codex`.
+//! - Scope Codex data via [`CodexClientBuilder::codex_home`] and optionally create the layout with [`CodexClientBuilder::create_home_dirs`]; overrides are applied per spawn without mutating the parent environment.
+//! - Use [`CodexHomeLayout`] to inspect `config.toml`, `auth.json`, `.credentials.json`, `history.jsonl`, `conversations/`, and `logs/` paths under an isolated home.
+//!
+//! Streaming, logging, and defaults:
+//! - Wrapper defaults: temp working dir per call (unless `working_dir` is set), `--skip-git-repo-check`, 120s timeout (use `Duration::ZERO` to disable), ANSI colors off, `RUST_LOG=error` if unset.
+//! - Set `json_event_log` on the builder or [`ExecStreamRequest`] to tee raw JSONL lines to disk before parsing. Logs append to existing files, flush per line, and create parent directories.
+//! - Disable `mirror_stdout` when parsing JSON so stdout stays under caller control; `quiet` controls stderr mirroring.
+//! - Streaming apply/diff output (stdout/stderr/exit) flows into `file_change` events and any configured `json_event_log` tee before parsing. `ExecStreamRequest` supports `idle_timeout`, `output_last_message`, and `output_schema` for artifact handling.
+//! - Events include `thread.started`, `turn.started`/`turn.completed`/`turn.failed`, and `item.created`/`item.updated` with `item.type` such as `agent_message`, `reasoning`, `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, or `todo_list` plus optional `status`/`content`/`input`.
+//!
+//! Servers and capability detection:
+//! - Use `codex::mcp` to launch `codex mcp-server --stdio` / `codex app-server --stdio`, stream JSON-RPC events, and manage runtime config (`crates/codex/examples/mcp_codex_flow.rs`, `crates/codex/examples/mcp_codex_tool.rs`, `crates/codex/examples/mcp_codex_reply.rs`, `crates/codex/examples/app_server_turns.rs`, `crates/codex/examples/app_server_thread_turn.rs`).
+//! - Gate optional flags with `crates/codex/examples/feature_detection.rs`, which parses `codex --version` + `codex features list` to decide whether to enable streaming, log tee, or app-server endpoints and to emit upgrade advisories (hooks into `CodexCapabilities` and `CapabilityGuard`).
+//!
+//! More end-to-end flows and CLI mappings live in `README.md` and `crates/codex/EXAMPLES.md`.
 //!
 //! ## Capability/versioning surfaces (Workstream F)
-//! - Capability probes (`probe_capabilities`) capture `--version`, `features list`, and `--help`
-//!   hints into a `CodexCapabilities` snapshot with `collected_at` timestamps and
-//!   `BinaryFingerprint` metadata for per-path cache invalidation.
-//! - Guard helpers (`guard_output_schema`, `guard_add_dir`, `guard_mcp_login`,
-//!   `guard_features_list`) keep optional flags disabled when support is unknown; hosts can log
-//!   guard notes to operators instead of invoking unsupported CLI flags.
-//! - Cache controls: `CapabilityCachePolicy::{PreferCache, Refresh, Bypass}` plus builder helpers
-//!   (`capability_cache_policy`, `bypass_capability_cache`) steer cache reuse. Use `Refresh` for
-//!   TTL/backoff windows or hot-swaps that reuse the same binary path; use `Bypass` when metadata
-//!   is missing (FUSE/overlay filesystems) or when you need an isolated probe.
-//! - TTL/backoff helper: `capability_cache_ttl_decision` inspects `collected_at` to tell hosts
-//!   when to force `Refresh`/`Bypass` during hot-swaps or when fingerprints are unavailable so
-//!   they can avoid hammering binaries on metadata-poor filesystems. Start with a ~5 minute TTL
-//!   for binaries with fingerprints; when metadata is missing on FUSE/overlay mounts, use a
-//!   modest TTL and backoff (e.g., 5->15 minutes) between probes.
-//! - Overrides + persistence: `capability_snapshot`, `capability_overrides` (version + feature
-//!   hints), `write_capabilities_snapshot` / `read_capabilities_snapshot`, and
-//!   `capability_snapshot_matches_binary` let hosts reuse snapshots across processes but fall back
-//!   to probes when fingerprints diverge.
-//! - Update advisories: `CodexLatestReleases` + `update_advisory_from_capabilities` compare probed
-//!   versions against caller-supplied release tables so hosts can prompt upgrades without this
-//!   crate performing network I/O.
+//! - `probe_capabilities` captures `--version`, `features list`, and `--help` hints into a `CodexCapabilities` snapshot with `collected_at` timestamps and `BinaryFingerprint` metadata keyed by canonical binary path.
+//! - Guard helpers (`guard_output_schema`, `guard_add_dir`, `guard_mcp_login`, `guard_features_list`) keep optional flags disabled when support is unknown and return operator-facing notes for unsupported features.
+//! - Cache controls: `CapabilityCachePolicy::{PreferCache, Refresh, Bypass}` plus builder helpers steer cache reuse. Use `Refresh` for TTL/backoff windows or hot-swaps that reuse the same binary path; use `Bypass` when metadata is missing (FUSE/overlay filesystems) or when you need an isolated probe.
+//! - TTL/backoff helper: `capability_cache_ttl_decision` inspects `collected_at` to suggest when to reuse, refresh, or bypass cached snapshots and stretches the recommended policy when metadata is missing.
+//! - Overrides + persistence: `capability_snapshot`, `capability_overrides`, `write_capabilities_snapshot`, `read_capabilities_snapshot`, and `capability_snapshot_matches_binary` let hosts reuse snapshots across processes and fall back to probes when fingerprints diverge.
+
+pub mod mcp;
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     env,
     ffi::{OsStr, OsString},
     fs as std_fs,
+    future::Future,
     io::{self as stdio, Write},
     path::{Path, PathBuf},
+    pin::Pin,
     process::ExitStatus,
     sync::{Mutex, OnceLock},
-    time::{Duration, SystemTime},
+    task::{Context, Poll},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use std::fs;
-
+use futures_core::Stream;
 use semver::{Prerelease, Version};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use tempfile::TempDir;
 use thiserror::Error;
 use tokio::{
-    io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
+    fs,
+    fs::OpenOptions,
+    io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
     process::Command,
+    sync::mpsc,
     task, time,
 };
 use tracing::{debug, warn};
@@ -91,7 +81,6 @@ const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
 const CODEX_HOME_ENV: &str = "CODEX_HOME";
 const RUST_LOG_ENV: &str = "RUST_LOG";
 const DEFAULT_RUST_LOG: &str = "error";
-
 /// Snapshot of Codex CLI capabilities derived from probing a specific binary.
 ///
 /// Instances of this type are intended to be cached per binary path so callers can
@@ -574,28 +563,6 @@ pub struct CapabilityTtlDecision {
 /// Recommended defaults: start with a 5 minute TTL when fingerprints exist and prefer
 /// `Refresh` for hot-swaps that reuse the same path; when metadata is missing, expect `Bypass`
 /// and back off further (e.g., stretch the TTL toward 10-15 minutes) to avoid tight probe loops.
-///
-/// Example:
-/// ```
-/// # use codex::capability_cache_ttl_decision;
-/// # use codex::capability_cache_entry;
-/// # use codex::CapabilityCachePolicy;
-/// # use codex::CodexClient;
-/// # use std::time::{Duration, SystemTime};
-/// # async fn demo(client: CodexClient, binary: &std::path::Path) {
-/// let cached = capability_cache_entry(binary);
-/// let ttl = Duration::from_secs(300);
-/// let decision = capability_cache_ttl_decision(cached.as_ref(), ttl, SystemTime::now());
-/// let capabilities = if let Some(snapshot) = cached.filter(|_| !decision.should_probe) {
-///     snapshot
-/// } else {
-///     client
-///         .probe_capabilities_with_policy(decision.policy)
-///         .await
-/// };
-/// # let _ = capabilities;
-/// # }
-/// ```
 pub fn capability_cache_ttl_decision(
     snapshot: Option<&CodexCapabilities>,
     ttl: Duration,
@@ -1054,6 +1021,11 @@ fn apply_feature_overrides(
 }
 
 /// High-level client for interacting with `codex exec`.
+///
+/// Spawns the CLI with safe defaults (`--skip-git-repo-check`, temp working dirs unless
+/// `working_dir` is set, 120s timeout unless zero, ANSI colors off, `RUST_LOG=error` if unset),
+/// mirrors stdout by default, and returns whatever the CLI printed. See the crate docs for
+/// streaming/log tee/server patterns and example links.
 #[derive(Clone, Debug)]
 pub struct CodexClient {
     command_env: CommandEnvironment,
@@ -1067,6 +1039,7 @@ pub struct CodexClient {
     output_schema: bool,
     quiet: bool,
     mirror_stdout: bool,
+    json_event_log: Option<PathBuf>,
     capability_overrides: CapabilityOverrides,
     capability_cache_policy: CapabilityCachePolicy,
 }
@@ -1100,7 +1073,29 @@ impl CodexClient {
         CodexClientBuilder::default()
     }
 
+    /// Returns the configured `CODEX_HOME` layout, if one was provided.
+    /// This does not create any directories on disk; pair with
+    /// [`CodexClientBuilder::create_home_dirs`] to control materialization.
+    pub fn codex_home_layout(&self) -> Option<CodexHomeLayout> {
+        self.command_env.codex_home_layout()
+    }
+
     /// Sends `prompt` to `codex exec` and returns its stdout (the final agent message) on success.
+    ///
+    /// When `.json(true)` is enabled the CLI emits JSONL events (`thread.started`, `turn.started`,
+    /// `item.created`, `turn.completed`, or `error`). The stream is mirrored to stdout unless
+    /// `.mirror_stdout(false)`; the returned string contains the buffered lines for offline parsing.
+    /// For per-event handling, see `crates/codex/examples/stream_events.rs`.
+    ///
+    /// ```rust,no_run
+    /// use codex::CodexClient;
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = CodexClient::builder().json(true).mirror_stdout(false).build();
+    /// let jsonl = client.send_prompt("Stream repo status").await?;
+    /// println!("{jsonl}");
+    /// # Ok(()) }
+    /// ```
     pub async fn send_prompt(&self, prompt: impl AsRef<str>) -> Result<String, CodexError> {
         let prompt = prompt.as_ref();
         if prompt.trim().is_empty() {
@@ -1108,6 +1103,151 @@ impl CodexClient {
         }
 
         self.invoke_codex_exec(prompt).await
+    }
+
+    /// Streams structured JSONL events from `codex exec --json`.
+    ///
+    /// Respects `mirror_stdout` (raw JSON echoing) and tees raw lines to `json_event_log` when
+    /// configured on the builder or request. Returns an [`ExecStream`] with both the parsed event
+    /// stream and a completion future that reports `--output-last-message`/schema paths.
+    pub async fn stream_exec(
+        &self,
+        request: ExecStreamRequest,
+    ) -> Result<ExecStream, ExecStreamError> {
+        if request.prompt.trim().is_empty() {
+            return Err(CodexError::EmptyPrompt.into());
+        }
+
+        let ExecStreamRequest {
+            prompt,
+            idle_timeout,
+            output_last_message,
+            output_schema,
+            json_event_log,
+        } = request;
+
+        let dir_ctx = self.directory_context()?;
+        let dir_path = dir_ctx.path().to_path_buf();
+        let last_message_path =
+            output_last_message.unwrap_or_else(|| unique_temp_path("codex_last_message_", "txt"));
+
+        let mut command = Command::new(self.command_env.binary_path());
+        command
+            .arg("exec")
+            .arg("--color")
+            .arg(ColorMode::Never.as_str())
+            .arg("--skip-git-repo-check")
+            .arg("--json")
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .stdin(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .current_dir(&dir_path);
+
+        if let Some(config) = reasoning_config_for(self.model.as_deref()) {
+            for (key, value) in config {
+                command.arg("--config").arg(format!("{key}={value}"));
+            }
+        }
+
+        if let Some(model) = &self.model {
+            command.arg("--model").arg(model);
+        }
+
+        for image in &self.images {
+            command.arg("--image").arg(image);
+        }
+
+        command.arg("--output-last-message").arg(&last_message_path);
+
+        if let Some(schema_path) = &output_schema {
+            command.arg("--output-schema").arg(schema_path);
+        }
+
+        self.command_env.apply(&mut command)?;
+
+        let mut child = command.spawn().map_err(|source| CodexError::Spawn {
+            binary: self.command_env.binary_path().to_path_buf(),
+            source,
+        })?;
+
+        {
+            let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
+            stdin
+                .write_all(prompt.as_bytes())
+                .await
+                .map_err(CodexError::StdinWrite)?;
+            stdin
+                .write_all(b"\n")
+                .await
+                .map_err(CodexError::StdinWrite)?;
+            stdin.shutdown().await.map_err(CodexError::StdinWrite)?;
+        }
+
+        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+
+        let (tx, rx) = mpsc::channel(32);
+        let json_log = prepare_json_log(
+            json_event_log
+                .or_else(|| self.json_event_log.clone())
+                .filter(|path| !path.as_os_str().is_empty()),
+        )
+        .await?;
+        let stdout_task = tokio::spawn(forward_json_events(
+            stdout,
+            tx,
+            self.mirror_stdout,
+            json_log,
+        ));
+        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+
+        let events = EventChannelStream::new(rx, idle_timeout);
+        let timeout = self.timeout;
+        let schema_path = output_schema.clone();
+        let completion = Box::pin(async move {
+            let _dir_ctx = dir_ctx;
+            let wait_task = async move {
+                let status = child
+                    .wait()
+                    .await
+                    .map_err(|source| CodexError::Wait { source })?;
+                let stdout_result = stdout_task.await.map_err(CodexError::Join)?;
+                stdout_result?;
+                let stderr_bytes = stderr_task
+                    .await
+                    .map_err(CodexError::Join)?
+                    .map_err(CodexError::CaptureIo)?;
+                if !status.success() {
+                    return Err(CodexError::NonZeroExit {
+                        status,
+                        stderr: String::from_utf8(stderr_bytes).unwrap_or_default(),
+                    }
+                    .into());
+                }
+                let last_message = read_last_message(&last_message_path).await;
+                Ok(ExecCompletion {
+                    status,
+                    last_message_path: Some(last_message_path),
+                    last_message,
+                    schema_path,
+                })
+            };
+
+            if timeout.is_zero() {
+                wait_task.await
+            } else {
+                match time::timeout(timeout, wait_task).await {
+                    Ok(result) => result,
+                    Err(_) => Err(CodexError::Timeout { timeout }.into()),
+                }
+            }
+        });
+
+        Ok(ExecStream {
+            events: Box::pin(events),
+            completion,
+        })
     }
 
     /// Spawns a `codex login` session using the default ChatGPT OAuth flow.
@@ -1213,6 +1353,88 @@ impl CodexClient {
         } else {
             Ok(CodexLogoutStatus::LoggedOut)
         }
+    }
+
+    /// Applies the most recent Codex diff by invoking `codex apply`.
+    ///
+    /// Stdout mirrors to the console when `mirror_stdout` is enabled; stderr mirrors unless `quiet`
+    /// is set. Output and exit status are always captured and returned, and `RUST_LOG=error` is
+    /// injected for the child process when the environment variable is unset.
+    pub async fn apply(&self) -> Result<ApplyDiffArtifacts, CodexError> {
+        self.apply_or_diff("apply").await
+    }
+
+    /// Shows the most recent Codex diff by invoking `codex diff`.
+    ///
+    /// Mirrors stdout/stderr using the same `mirror_stdout`/`quiet` defaults as `apply`, but always
+    /// returns the captured output alongside the child exit status. Applies the same `RUST_LOG`
+    /// defaulting behavior when the variable is unset.
+    pub async fn diff(&self) -> Result<ApplyDiffArtifacts, CodexError> {
+        self.apply_or_diff("diff").await
+    }
+
+    async fn apply_or_diff(&self, subcommand: &str) -> Result<ApplyDiffArtifacts, CodexError> {
+        let dir_ctx = self.directory_context()?;
+
+        let mut command = Command::new(self.command_env.binary_path());
+        command
+            .arg(subcommand)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .current_dir(dir_ctx.path());
+
+        self.command_env.apply(&mut command)?;
+
+        let mut child = command.spawn().map_err(|source| CodexError::Spawn {
+            binary: self.command_env.binary_path().to_path_buf(),
+            source,
+        })?;
+
+        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+
+        let stdout_task = tokio::spawn(tee_stream(
+            stdout,
+            ConsoleTarget::Stdout,
+            self.mirror_stdout,
+        ));
+        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+
+        let wait_task = async move {
+            let status = child
+                .wait()
+                .await
+                .map_err(|source| CodexError::Wait { source })?;
+            let stdout_bytes = stdout_task
+                .await
+                .map_err(CodexError::Join)?
+                .map_err(CodexError::CaptureIo)?;
+            let stderr_bytes = stderr_task
+                .await
+                .map_err(CodexError::Join)?
+                .map_err(CodexError::CaptureIo)?;
+            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+        };
+
+        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+            wait_task.await?
+        } else {
+            match time::timeout(self.timeout, wait_task).await {
+                Ok(result) => result?,
+                Err(_) => {
+                    return Err(CodexError::Timeout {
+                        timeout: self.timeout,
+                    });
+                }
+            }
+        };
+
+        Ok(ApplyDiffArtifacts {
+            status,
+            stdout: String::from_utf8(stdout_bytes)?,
+            stderr: String::from_utf8(stderr_bytes)?,
+        })
     }
 
     /// Probes the configured binary for version/build metadata and supported feature flags.
@@ -1680,6 +1902,7 @@ pub struct CodexClientBuilder {
     output_schema: bool,
     quiet: bool,
     mirror_stdout: bool,
+    json_event_log: Option<PathBuf>,
     capability_overrides: CapabilityOverrides,
     capability_cache_policy: CapabilityCachePolicy,
 }
@@ -1690,7 +1913,11 @@ impl CodexClientBuilder {
         Self::default()
     }
 
-    /// Sets the path to the Codex binary. Defaults to `codex`.
+    /// Sets the path to the Codex binary.
+    ///
+    /// Defaults to `CODEX_BINARY` when present or `codex` on `PATH`. Use this to pin a packaged
+    /// binary; `crates/codex/examples/bundled_binary.rs` demonstrates a `CODEX_BUNDLED_PATH`
+    /// fallback.
     pub fn binary(mut self, binary: impl Into<PathBuf>) -> Self {
         self.binary = binary.into();
         self
@@ -1770,6 +1997,11 @@ impl CodexClientBuilder {
     }
 
     /// Enables Codex's JSONL output mode (`--json`).
+    ///
+    /// Prompts are piped via stdin when enabled. Events include `thread.started`,
+    /// `turn.started`/`turn.completed`, and `item.created` with `item.type` such as
+    /// `agent_message` or `reasoning`. Pair with `.mirror_stdout(false)` if you plan to parse the
+    /// stream instead of just mirroring it.
     pub fn json(mut self, enable: bool) -> Self {
         self.json_output = enable;
         self
@@ -1790,9 +2022,18 @@ impl CodexClientBuilder {
     }
 
     /// Controls whether Codex stdout should be mirrored to the console while
-    /// also being captured. Disable this when you plan to parse JSONL output.
+    /// also being captured. Disable this when you plan to parse JSONL output or
+    /// tee the stream to a log file (see `crates/codex/examples/stream_with_log.rs`).
     pub fn mirror_stdout(mut self, enable: bool) -> Self {
         self.mirror_stdout = enable;
+        self
+    }
+
+    /// Tees each JSONL event line from [`CodexClient::stream_exec`] into a log file.
+    /// Logs append to existing files, flush after each line, and create parent directories as
+    /// needed. [`ExecStreamRequest::json_event_log`] overrides this default per request.
+    pub fn json_event_log(mut self, path: impl Into<PathBuf>) -> Self {
+        self.json_event_log = Some(path.into());
         self
     }
 
@@ -1863,6 +2104,7 @@ impl CodexClientBuilder {
             output_schema: self.output_schema,
             quiet: self.quiet,
             mirror_stdout: self.mirror_stdout,
+            json_event_log: self.json_event_log,
             capability_overrides: self.capability_overrides,
             capability_cache_policy: self.capability_cache_policy,
         }
@@ -1885,6 +2127,7 @@ impl Default for CodexClientBuilder {
             output_schema: false,
             quiet: false,
             mirror_stdout: true,
+            json_event_log: None,
             capability_overrides: CapabilityOverrides::default(),
             capability_cache_policy: CapabilityCachePolicy::default(),
         }
@@ -1924,7 +2167,7 @@ fn reasoning_config_for(model: Option<&str>) -> Option<&'static [(&'static str, 
 #[derive(Clone, Debug)]
 struct CommandEnvironment {
     binary: PathBuf,
-    codex_home: Option<CodexHome>,
+    codex_home: Option<CodexHomeLayout>,
     create_home_dirs: bool,
 }
 
@@ -1932,7 +2175,7 @@ impl CommandEnvironment {
     fn new(binary: PathBuf, codex_home: Option<PathBuf>, create_home_dirs: bool) -> Self {
         Self {
             binary,
-            codex_home: codex_home.map(CodexHome::new),
+            codex_home: codex_home.map(CodexHomeLayout::new),
             create_home_dirs,
         }
     }
@@ -1941,11 +2184,13 @@ impl CommandEnvironment {
         &self.binary
     }
 
+    fn codex_home_layout(&self) -> Option<CodexHomeLayout> {
+        self.codex_home.clone()
+    }
+
     fn environment_overrides(&self) -> Result<Vec<(OsString, OsString)>, CodexError> {
         if let Some(home) = &self.codex_home {
-            if self.create_home_dirs {
-                home.ensure_layout()?;
-            }
+            home.materialize(self.create_home_dirs)?;
         }
 
         let mut envs = Vec::new();
@@ -1961,11 +2206,8 @@ impl CommandEnvironment {
             ));
         }
 
-        if env::var_os(RUST_LOG_ENV).is_none() {
-            envs.push((
-                OsString::from(RUST_LOG_ENV),
-                OsString::from(DEFAULT_RUST_LOG),
-            ));
+        if let Some(value) = default_rust_log_value() {
+            envs.push((OsString::from(RUST_LOG_ENV), OsString::from(value)));
         }
 
         Ok(envs)
@@ -1979,33 +2221,69 @@ impl CommandEnvironment {
     }
 }
 
-#[derive(Clone, Debug)]
-struct CodexHome {
+/// Describes the on-disk layout used by the Codex CLI when `CODEX_HOME` is set.
+///
+/// Files are rooted next to `config.toml`, `auth.json`, `.credentials.json`, and
+/// `history.jsonl`; `conversations/` holds transcript JSONL files and `logs/`
+/// holds `codex-*.log` outputs. Call [`Self::materialize`] to create the
+/// directories when standing up an app-scoped home.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CodexHomeLayout {
     root: PathBuf,
 }
 
-impl CodexHome {
-    fn new(root: PathBuf) -> Self {
-        Self { root }
+impl CodexHomeLayout {
+    /// Creates a new layout description rooted at `root`.
+    pub fn new(root: impl Into<PathBuf>) -> Self {
+        Self { root: root.into() }
     }
 
-    fn root(&self) -> &Path {
+    /// Returns the `CODEX_HOME` root.
+    pub fn root(&self) -> &Path {
         self.root.as_path()
     }
 
-    fn conversations_dir(&self) -> PathBuf {
+    /// Path to `config.toml` under `CODEX_HOME`.
+    pub fn config_path(&self) -> PathBuf {
+        self.root.join("config.toml")
+    }
+
+    /// Path to `auth.json` under `CODEX_HOME`.
+    pub fn auth_path(&self) -> PathBuf {
+        self.root.join("auth.json")
+    }
+
+    /// Path to `.credentials.json` under `CODEX_HOME`.
+    pub fn credentials_path(&self) -> PathBuf {
+        self.root.join(".credentials.json")
+    }
+
+    /// Path to `history.jsonl` under `CODEX_HOME`.
+    pub fn history_path(&self) -> PathBuf {
+        self.root.join("history.jsonl")
+    }
+
+    /// Directory containing conversation transcripts.
+    pub fn conversations_dir(&self) -> PathBuf {
         self.root.join("conversations")
     }
 
-    fn logs_dir(&self) -> PathBuf {
+    /// Directory containing Codex log files.
+    pub fn logs_dir(&self) -> PathBuf {
         self.root.join("logs")
     }
 
-    fn ensure_layout(&self) -> Result<(), CodexError> {
+    /// Creates the `CODEX_HOME` root and its known subdirectories when
+    /// `create_home_dirs` is `true`. No-op when disabled.
+    pub fn materialize(&self, create_home_dirs: bool) -> Result<(), CodexError> {
+        if !create_home_dirs {
+            return Ok(());
+        }
+
         let conversations = self.conversations_dir();
         let logs = self.logs_dir();
         for path in [self.root(), conversations.as_path(), logs.as_path()] {
-            fs::create_dir_all(path).map_err(|source| CodexError::PrepareCodexHome {
+            std_fs::create_dir_all(path).map_err(|source| CodexError::PrepareCodexHome {
                 path: path.to_path_buf(),
                 source,
             })?;
@@ -2056,6 +2334,650 @@ pub enum CodexError {
     StdinWrite(#[source] std::io::Error),
     #[error("failed to join codex output task: {0}")]
     Join(#[from] tokio::task::JoinError),
+}
+
+/// Single JSONL event emitted by `codex exec --json`.
+///
+/// Each line on stdout maps to a [`ThreadEvent`] with lifecycle edges:
+/// - `thread.started` is emitted once per invocation.
+/// - `turn.started` begins the turn associated with the provided prompt.
+/// - one or more `item.*` events stream output and tool activity.
+/// - `turn.completed` or `turn.failed` closes the stream; `error` captures transport-level failures.
+///
+/// Item variants mirror the upstream `item_type` field: `agent_message`, `reasoning`,
+/// `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, `todo_list`, and `error`.
+/// Unknown or future fields are preserved in `extra` maps to keep the parser forward-compatible.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "type")]
+pub enum ThreadEvent {
+    #[serde(rename = "thread.started")]
+    ThreadStarted(ThreadStarted),
+    #[serde(rename = "turn.started")]
+    TurnStarted(TurnStarted),
+    #[serde(rename = "turn.completed")]
+    TurnCompleted(TurnCompleted),
+    #[serde(rename = "turn.failed")]
+    TurnFailed(TurnFailed),
+    #[serde(rename = "item.started")]
+    ItemStarted(ItemEnvelope<ItemSnapshot>),
+    #[serde(rename = "item.delta")]
+    ItemDelta(ItemDelta),
+    #[serde(rename = "item.completed")]
+    ItemCompleted(ItemEnvelope<ItemSnapshot>),
+    #[serde(rename = "item.failed")]
+    ItemFailed(ItemEnvelope<ItemFailure>),
+    #[serde(rename = "error")]
+    Error(EventError),
+}
+
+/// Marks the start of a new thread.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ThreadStarted {
+    pub thread_id: String,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Indicates the CLI accepted a new turn within a thread.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TurnStarted {
+    pub thread_id: String,
+    pub turn_id: String,
+    /// Original input text when upstream echoes it; may be omitted for security reasons.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input_text: Option<String>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Reports a completed turn.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TurnCompleted {
+    pub thread_id: String,
+    pub turn_id: String,
+    /// Identifier of the last output item when provided by the CLI.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_item_id: Option<String>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Indicates a turn-level failure.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TurnFailed {
+    pub thread_id: String,
+    pub turn_id: String,
+    pub error: EventError,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Shared wrapper for item events that always include thread/turn context.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ItemEnvelope<T> {
+    pub thread_id: String,
+    pub turn_id: String,
+    #[serde(flatten)]
+    pub item: T,
+}
+
+/// Snapshot of an item at start/completion time.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ItemSnapshot {
+    #[serde(rename = "item_id", alias = "id")]
+    pub item_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<u32>,
+    #[serde(default)]
+    pub status: ItemStatus,
+    #[serde(flatten)]
+    pub payload: ItemPayload,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta describing the next piece of an item.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ItemDelta {
+    pub thread_id: String,
+    pub turn_id: String,
+    #[serde(rename = "item_id")]
+    pub item_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<u32>,
+    #[serde(flatten)]
+    pub delta: ItemDeltaPayload,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Terminal item failure event.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ItemFailure {
+    #[serde(rename = "item_id", alias = "id")]
+    pub item_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<u32>,
+    pub error: EventError,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Fully-typed item payload for start/completed events.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "item_type", content = "content", rename_all = "snake_case")]
+pub enum ItemPayload {
+    AgentMessage(TextContent),
+    Reasoning(TextContent),
+    CommandExecution(CommandExecutionState),
+    FileChange(FileChangeState),
+    McpToolCall(McpToolCallState),
+    WebSearch(WebSearchState),
+    TodoList(TodoListState),
+    Error(EventError),
+}
+
+/// Delta form of an item payload. Each delta should be applied in order to reconstruct the item.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "item_type", content = "delta", rename_all = "snake_case")]
+pub enum ItemDeltaPayload {
+    AgentMessage(TextDelta),
+    Reasoning(TextDelta),
+    CommandExecution(CommandExecutionDelta),
+    FileChange(FileChangeDelta),
+    McpToolCall(McpToolCallDelta),
+    WebSearch(WebSearchDelta),
+    TodoList(TodoListDelta),
+    Error(EventError),
+}
+
+/// Item status supplied by the CLI for bookkeeping.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ItemStatus {
+    InProgress,
+    Completed,
+    Failed,
+    #[serde(other)]
+    Unknown,
+}
+
+impl Default for ItemStatus {
+    fn default() -> Self {
+        ItemStatus::InProgress
+    }
+}
+
+/// Human-readable content emitted by the agent.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TextContent {
+    pub text: String,
+}
+
+/// Incremental content fragment for streaming items.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TextDelta {
+    pub text_delta: String,
+}
+
+/// Snapshot of a command execution, including accumulated stdout/stderr.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CommandExecutionState {
+    pub command: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stdout: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stderr: String,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta for command execution.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CommandExecutionDelta {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stdout: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stderr: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// File change or diff applied by the agent.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FileChangeState {
+    pub path: PathBuf,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub change: Option<FileChangeKind>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diff: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stdout: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stderr: String,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta describing a file change.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FileChangeDelta {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diff: Option<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stdout: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stderr: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Type of file operation being reported.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum FileChangeKind {
+    Apply,
+    Diff,
+    #[serde(other)]
+    Unknown,
+}
+
+/// State of an MCP tool call.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct McpToolCallState {
+    pub server_name: String,
+    pub tool_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub arguments: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<Value>,
+    #[serde(default)]
+    pub status: ToolCallStatus,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta for MCP tool call output.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct McpToolCallDelta {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<Value>,
+    #[serde(default)]
+    pub status: ToolCallStatus,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Lifecycle state for a tool call.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolCallStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    #[serde(other)]
+    Unknown,
+}
+
+impl Default for ToolCallStatus {
+    fn default() -> Self {
+        ToolCallStatus::Pending
+    }
+}
+
+/// Details of a web search step.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct WebSearchState {
+    pub query: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub results: Option<Value>,
+    #[serde(default)]
+    pub status: WebSearchStatus,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta for search results.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct WebSearchDelta {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub results: Option<Value>,
+    #[serde(default)]
+    pub status: WebSearchStatus,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Search progress indicator.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum WebSearchStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    #[serde(other)]
+    Unknown,
+}
+
+impl Default for WebSearchStatus {
+    fn default() -> Self {
+        WebSearchStatus::Pending
+    }
+}
+
+/// Checklist maintained by the agent.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TodoListState {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<TodoItem>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta for todo list mutations.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TodoListDelta {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<TodoItem>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Single todo item.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TodoItem {
+    pub title: String,
+    #[serde(default)]
+    pub completed: bool,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Error payload shared by turn/item failures.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct EventError {
+    pub message: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Options configuring a streaming exec invocation.
+#[derive(Clone, Debug)]
+pub struct ExecStreamRequest {
+    /// User prompt that will be forwarded to `codex exec`.
+    pub prompt: String,
+    /// Per-event idle timeout. If no JSON lines arrive before the duration elapses,
+    /// [`ExecStreamError::IdleTimeout`] is returned.
+    pub idle_timeout: Option<Duration>,
+    /// Optional file path passed through to `--output-last-message`. When unset, the wrapper
+    /// will request a temporary path and return it in [`ExecCompletion::last_message_path`].
+    pub output_last_message: Option<PathBuf>,
+    /// Optional file path passed through to `--output-schema` so clients can persist the schema
+    /// describing the item envelope structure seen during the run.
+    pub output_schema: Option<PathBuf>,
+    /// Optional file path that receives a tee of every raw JSONL event line as it streams in.
+    /// Appends to existing files, flushes each line, and creates parent directories. Overrides
+    /// [`CodexClientBuilder::json_event_log`] for this request when provided.
+    pub json_event_log: Option<PathBuf>,
+}
+
+/// Ergonomic container for the streaming surface; produced by `stream_exec` (implemented in D2).
+///
+/// `events` yields parsed [`ThreadEvent`] values as soon as each JSONL line arrives from the CLI.
+/// `completion` resolves once the Codex process exits and is the place to surface `--output-last-message`
+/// and `--output-schema` paths after streaming finishes.
+pub struct ExecStream {
+    pub events: DynThreadEventStream,
+    pub completion: DynExecCompletion,
+}
+
+/// Type-erased stream of events from the Codex CLI.
+pub type DynThreadEventStream =
+    Pin<Box<dyn Stream<Item = Result<ThreadEvent, ExecStreamError>> + Send>>;
+
+/// Type-erased completion future that resolves when streaming stops.
+pub type DynExecCompletion =
+    Pin<Box<dyn Future<Output = Result<ExecCompletion, ExecStreamError>> + Send>>;
+
+/// Summary returned when the codex child process exits.
+#[derive(Clone, Debug)]
+pub struct ExecCompletion {
+    pub status: ExitStatus,
+    /// Path that codex wrote when `--output-last-message` was enabled. The wrapper may eagerly
+    /// read the file and populate `last_message` when feasible.
+    pub last_message_path: Option<PathBuf>,
+    pub last_message: Option<String>,
+    /// Path to the JSON schema requested via `--output-schema`, if provided by the caller.
+    pub schema_path: Option<PathBuf>,
+}
+
+/// Captured output from `codex apply` or `codex diff`.
+#[derive(Clone, Debug)]
+pub struct ApplyDiffArtifacts {
+    /// Exit status returned by the subcommand.
+    pub status: ExitStatus,
+    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
+    pub stdout: String,
+    /// Captured stderr (mirrored unless `quiet` is set).
+    pub stderr: String,
+}
+
+/// Errors that may occur while consuming the JSONL stream.
+#[derive(Debug, Error)]
+pub enum ExecStreamError {
+    #[error(transparent)]
+    Codex(#[from] CodexError),
+    #[error("failed to parse codex JSONL event: {source}: `{line}`")]
+    Parse {
+        line: String,
+        #[source]
+        source: serde_json::Error,
+    },
+    #[error("codex JSON stream idle for {idle_for:?}")]
+    IdleTimeout { idle_for: Duration },
+    #[error("codex JSON stream closed unexpectedly")]
+    ChannelClosed,
+}
+
+async fn prepare_json_log(path: Option<PathBuf>) -> Result<Option<JsonLogSink>, ExecStreamError> {
+    match path {
+        Some(path) => {
+            let sink = JsonLogSink::new(path)
+                .await
+                .map_err(|err| ExecStreamError::from(CodexError::CaptureIo(err)))?;
+            Ok(Some(sink))
+        }
+        None => Ok(None),
+    }
+}
+
+#[derive(Debug)]
+struct JsonLogSink {
+    writer: BufWriter<fs::File>,
+}
+
+impl JsonLogSink {
+    async fn new(path: PathBuf) -> Result<Self, std::io::Error> {
+        if let Some(parent) = path.parent() {
+            if !parent.as_os_str().is_empty() {
+                fs::create_dir_all(parent).await?;
+            }
+        }
+
+        let file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .await?;
+
+        Ok(Self {
+            writer: BufWriter::new(file),
+        })
+    }
+
+    async fn write_line(&mut self, line: &str) -> Result<(), std::io::Error> {
+        self.writer.write_all(line.as_bytes()).await?;
+        self.writer.write_all(b"\n").await?;
+        self.writer.flush().await
+    }
+}
+
+struct EventChannelStream {
+    rx: mpsc::Receiver<Result<ThreadEvent, ExecStreamError>>,
+    idle_timeout: Option<Duration>,
+    idle_timer: Option<Pin<Box<time::Sleep>>>,
+}
+
+impl EventChannelStream {
+    fn new(
+        rx: mpsc::Receiver<Result<ThreadEvent, ExecStreamError>>,
+        idle_timeout: Option<Duration>,
+    ) -> Self {
+        Self {
+            rx,
+            idle_timeout,
+            idle_timer: None,
+        }
+    }
+
+    fn reset_timer(&mut self) {
+        self.idle_timer = self
+            .idle_timeout
+            .map(|duration| Box::pin(time::sleep(duration)));
+    }
+}
+
+impl Stream for EventChannelStream {
+    type Item = Result<ThreadEvent, ExecStreamError>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+
+        if let Some(timer) = this.idle_timer.as_mut() {
+            if let Poll::Ready(()) = timer.as_mut().poll(cx) {
+                let idle_for = this.idle_timeout.expect("idle_timer implies timeout");
+                this.idle_timer = None;
+                return Poll::Ready(Some(Err(ExecStreamError::IdleTimeout { idle_for })));
+            }
+        }
+
+        match this.rx.poll_recv(cx) {
+            Poll::Ready(Some(item)) => {
+                if this.idle_timeout.is_some() {
+                    this.reset_timer();
+                }
+                Poll::Ready(Some(item))
+            }
+            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Pending => {
+                if this.idle_timer.is_none() {
+                    if let Some(duration) = this.idle_timeout {
+                        let mut sleep = Box::pin(time::sleep(duration));
+                        if let Poll::Ready(()) = sleep.as_mut().poll(cx) {
+                            return Poll::Ready(Some(Err(ExecStreamError::IdleTimeout {
+                                idle_for: duration,
+                            })));
+                        }
+                        this.idle_timer = Some(sleep);
+                    }
+                }
+                Poll::Pending
+            }
+        }
+    }
+}
+
+async fn forward_json_events<R>(
+    reader: R,
+    sender: mpsc::Sender<Result<ThreadEvent, ExecStreamError>>,
+    mirror_stdout: bool,
+    mut log: Option<JsonLogSink>,
+) -> Result<(), ExecStreamError>
+where
+    R: AsyncRead + Unpin,
+{
+    let mut lines = BufReader::new(reader).lines();
+    loop {
+        let line = match lines.next_line().await {
+            Ok(Some(line)) => line,
+            Ok(None) => break,
+            Err(err) => {
+                return Err(CodexError::CaptureIo(err).into());
+            }
+        };
+
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        if let Some(sink) = log.as_mut() {
+            sink.write_line(&line)
+                .await
+                .map_err(|err| ExecStreamError::from(CodexError::CaptureIo(err)))?;
+        }
+
+        if mirror_stdout {
+            if let Err(err) = task::block_in_place(|| {
+                let mut out = stdio::stdout();
+                out.write_all(line.as_bytes())?;
+                out.write_all(b"\n")?;
+                out.flush()
+            }) {
+                return Err(CodexError::CaptureIo(err).into());
+            }
+        }
+
+        let parsed =
+            serde_json::from_str::<ThreadEvent>(&line).map_err(|source| ExecStreamError::Parse {
+                line: line.clone(),
+                source,
+            });
+        let send_result = match parsed {
+            Ok(event) => sender.send(Ok(event)).await,
+            Err(err) => {
+                let _ = sender.send(Err(err)).await;
+                break;
+            }
+        };
+        if send_result.is_err() {
+            break;
+        }
+    }
+
+    Ok(())
+}
+
+async fn read_last_message(path: &Path) -> Option<String> {
+    match fs::read_to_string(path).await {
+        Ok(contents) => Some(contents),
+        Err(_) => None,
+    }
+}
+
+fn unique_temp_path(prefix: &str, extension: &str) -> PathBuf {
+    let mut path = env::temp_dir();
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_else(|_| Duration::from_secs(0))
+        .as_nanos();
+    path.push(format!(
+        "{prefix}{timestamp}_{}.{}",
+        std::process::id(),
+        extension
+    ));
+    path
 }
 
 enum DirectoryContext {
@@ -2443,15 +3365,266 @@ pub fn update_advisory_from_capabilities(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures_util::{pin_mut, StreamExt};
+    use serde_json::json;
     use std::collections::HashMap;
-    use std::fs;
+    use std::fs as std_fs;
+    #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
     use std::sync::{Mutex, OnceLock};
     use std::time::{Duration, SystemTime};
+    use tokio::{fs, io::AsyncWriteExt};
 
     fn env_guard() -> std::sync::MutexGuard<'static, ()> {
         static ENV_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
         ENV_MUTEX.get_or_init(|| Mutex::new(())).lock().unwrap()
+    }
+
+    #[tokio::test]
+    async fn json_stream_preserves_order_and_parses_tool_calls() {
+        let lines = vec![
+            r#"{"type":"thread.started","thread_id":"thread-1"}"#.to_string(),
+            serde_json::to_string(&json!({
+                "type": "item.started",
+                "thread_id": "thread-1",
+                "turn_id": "turn-1",
+                "item_id": "item-1",
+                "item_type": "mcp_tool_call",
+                "content": {
+                    "server_name": "files",
+                    "tool_name": "list",
+                    "status": "running"
+                }
+            }))
+            .unwrap(),
+            serde_json::to_string(&json!({
+                "type": "item.delta",
+                "thread_id": "thread-1",
+                "turn_id": "turn-1",
+                "item_id": "item-1",
+                "item_type": "mcp_tool_call",
+                "delta": {
+                    "result": {"paths": ["foo.rs"]},
+                    "status": "completed"
+                }
+            }))
+            .unwrap(),
+        ];
+
+        let (mut writer, reader) = tokio::io::duplex(4096);
+        let (tx, rx) = mpsc::channel(8);
+        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false, None));
+
+        for line in &lines {
+            writer.write_all(line.as_bytes()).await.unwrap();
+            writer.write_all(b"\n").await.unwrap();
+        }
+        writer.shutdown().await.unwrap();
+
+        let stream = EventChannelStream::new(rx, None);
+        pin_mut!(stream);
+        let events: Vec<_> = stream.collect().await;
+        forward_handle.await.unwrap().unwrap();
+
+        assert_eq!(events.len(), lines.len(), "events: {events:?}");
+
+        match &events[0] {
+            Ok(ThreadEvent::ThreadStarted(event)) => {
+                assert_eq!(event.thread_id, "thread-1");
+            }
+            other => panic!("unexpected first event: {other:?}"),
+        }
+
+        match &events[1] {
+            Ok(ThreadEvent::ItemStarted(envelope)) => {
+                assert_eq!(envelope.thread_id, "thread-1");
+                assert_eq!(envelope.turn_id, "turn-1");
+                match &envelope.item.payload {
+                    ItemPayload::McpToolCall(state) => {
+                        assert_eq!(state.server_name, "files");
+                        assert_eq!(state.tool_name, "list");
+                        assert_eq!(state.status, ToolCallStatus::Running);
+                    }
+                    other => panic!("unexpected payload: {other:?}"),
+                }
+            }
+            other => panic!("unexpected second event: {other:?}"),
+        }
+
+        match &events[2] {
+            Ok(ThreadEvent::ItemDelta(delta)) => {
+                assert_eq!(delta.item_id, "item-1");
+                match &delta.delta {
+                    ItemDeltaPayload::McpToolCall(call_delta) => {
+                        assert_eq!(call_delta.status, ToolCallStatus::Completed);
+                        let result = call_delta
+                            .result
+                            .as_ref()
+                            .expect("tool call delta result is captured");
+                        assert_eq!(result["paths"][0], "foo.rs");
+                    }
+                    other => panic!("unexpected delta payload: {other:?}"),
+                }
+            }
+            other => panic!("unexpected third event: {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn json_stream_propagates_parse_errors() {
+        let (mut writer, reader) = tokio::io::duplex(1024);
+        let (tx, rx) = mpsc::channel(4);
+        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false, None));
+
+        writer
+            .write_all(br#"{"type":"thread.started","thread_id":"thread-err"}"#)
+            .await
+            .unwrap();
+        writer.write_all(b"\nthis is not json\n").await.unwrap();
+        writer.shutdown().await.unwrap();
+
+        let stream = EventChannelStream::new(rx, None);
+        pin_mut!(stream);
+        let events: Vec<_> = stream.collect().await;
+        forward_handle.await.unwrap().unwrap();
+
+        assert_eq!(events.len(), 2);
+        assert!(matches!(
+            events[0],
+            Ok(ThreadEvent::ThreadStarted(ThreadStarted { ref thread_id, .. }))
+                if thread_id == "thread-err"
+        ));
+        match &events[1] {
+            Err(ExecStreamError::Parse { line, .. }) => assert_eq!(line, "this is not json"),
+            other => panic!("expected parse error, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn json_stream_tees_logs_before_forwarding() {
+        let lines = vec![
+            r#"{"type":"thread.started","thread_id":"tee-thread"}"#.to_string(),
+            r#"{"type":"turn.started","thread_id":"tee-thread","turn_id":"turn-tee"}"#.to_string(),
+        ];
+
+        let dir = tempfile::tempdir().unwrap();
+        let log_path = dir.path().join("events.log");
+
+        let (mut writer, reader) = tokio::io::duplex(2048);
+        let (tx, rx) = mpsc::channel(4);
+        let log_sink = JsonLogSink::new(log_path.clone()).await.unwrap();
+        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false, Some(log_sink)));
+
+        let stream = EventChannelStream::new(rx, None);
+        pin_mut!(stream);
+
+        writer.write_all(lines[0].as_bytes()).await.unwrap();
+        writer.write_all(b"\n").await.unwrap();
+
+        let first = stream.next().await.unwrap().unwrap();
+        assert!(matches!(first, ThreadEvent::ThreadStarted(_)));
+
+        let logged = fs::read_to_string(&log_path).await.unwrap();
+        assert_eq!(logged, format!("{}\n", lines[0]));
+
+        writer.write_all(lines[1].as_bytes()).await.unwrap();
+        writer.write_all(b"\n").await.unwrap();
+        writer.shutdown().await.unwrap();
+
+        let second = stream.next().await.unwrap().unwrap();
+        assert!(matches!(second, ThreadEvent::TurnStarted(_)));
+        assert!(stream.next().await.is_none());
+
+        forward_handle.await.unwrap().unwrap();
+
+        let final_log = fs::read_to_string(&log_path).await.unwrap();
+        assert_eq!(final_log, format!("{}\n{}\n", lines[0], lines[1]));
+    }
+
+    #[tokio::test]
+    async fn json_event_log_captures_apply_diff_and_tool_payloads() {
+        let diff = "@@ -1 +1 @@\n-fn foo() {}\n+fn bar() {}";
+        let lines = vec![
+            r#"{"type":"thread.started","thread_id":"log-thread"}"#.to_string(),
+            serde_json::to_string(&json!({
+                "type": "item.started",
+                "thread_id": "log-thread",
+                "turn_id": "turn-log",
+                "item_id": "apply-1",
+                "item_type": "file_change",
+                "content": {
+                    "path": "src/main.rs",
+                    "change": "apply",
+                    "diff": diff,
+                    "stdout": "patched\n"
+                }
+            }))
+            .unwrap(),
+            serde_json::to_string(&json!({
+                "type": "item.delta",
+                "thread_id": "log-thread",
+                "turn_id": "turn-log",
+                "item_id": "apply-1",
+                "item_type": "file_change",
+                "delta": {
+                    "diff": diff,
+                    "stderr": "warning",
+                    "exit_code": 2
+                }
+            }))
+            .unwrap(),
+            serde_json::to_string(&json!({
+                "type": "item.delta",
+                "thread_id": "log-thread",
+                "turn_id": "turn-log",
+                "item_id": "tool-1",
+                "item_type": "mcp_tool_call",
+                "delta": {
+                    "result": {"paths": ["a.rs", "b.rs"]},
+                    "status": "completed"
+                }
+            }))
+            .unwrap(),
+        ];
+
+        let dir = tempfile::tempdir().unwrap();
+        let log_path = dir.path().join("json.log");
+
+        let (mut writer, reader) = tokio::io::duplex(4096);
+        let (tx, rx) = mpsc::channel(8);
+        let log_sink = JsonLogSink::new(log_path.clone()).await.unwrap();
+        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false, Some(log_sink)));
+
+        for line in &lines {
+            writer.write_all(line.as_bytes()).await.unwrap();
+            writer.write_all(b"\n").await.unwrap();
+        }
+        writer.shutdown().await.unwrap();
+
+        let stream = EventChannelStream::new(rx, None);
+        pin_mut!(stream);
+        let events: Vec<_> = stream.collect().await;
+        forward_handle.await.unwrap().unwrap();
+
+        assert_eq!(events.len(), lines.len());
+
+        let log_contents = fs::read_to_string(&log_path).await.unwrap();
+        assert_eq!(log_contents, lines.join("\n") + "\n");
+    }
+
+    #[tokio::test]
+    async fn event_channel_stream_times_out_when_idle() {
+        let (_tx, rx) = mpsc::channel(1);
+        let stream = EventChannelStream::new(rx, Some(Duration::from_millis(5)));
+        pin_mut!(stream);
+
+        let next = stream.next().await;
+        match next {
+            Some(Err(ExecStreamError::IdleTimeout { idle_for })) => {
+                assert_eq!(idle_for, Duration::from_millis(5));
+            }
+            other => panic!("expected idle timeout, got {other:?}"),
+        }
     }
 
     fn write_fake_codex(dir: &Path, script: &str) -> PathBuf {
@@ -2576,6 +3749,7 @@ mod tests {
         assert!(builder.images.is_empty());
         assert!(!builder.json_output);
         assert!(!builder.quiet);
+        assert!(builder.json_event_log.is_none());
         assert!(builder.capability_overrides.is_empty());
         assert_eq!(
             builder.capability_cache_policy,
@@ -2598,6 +3772,12 @@ mod tests {
     fn builder_sets_json_flag() {
         let client = CodexClient::builder().json(true).build();
         assert!(client.json_output);
+    }
+
+    #[test]
+    fn builder_sets_json_event_log() {
+        let client = CodexClient::builder().json_event_log("events.log").build();
+        assert_eq!(client.json_event_log, Some(PathBuf::from("events.log")));
     }
 
     #[test]
@@ -2634,6 +3814,52 @@ mod tests {
     }
 
     #[test]
+    fn default_binary_falls_back_when_env_missing() {
+        let _guard = env_guard();
+        let key = CODEX_BINARY_ENV;
+        let original = env::var_os(key);
+        env::remove_var(key);
+
+        assert_eq!(default_binary_path(), PathBuf::from("codex"));
+
+        if let Some(value) = original {
+            env::set_var(key, value);
+        } else {
+            env::remove_var(key);
+        }
+    }
+
+    #[test]
+    fn default_rust_log_is_error_when_unset() {
+        let _guard = env_guard();
+        let original = env::var_os("RUST_LOG");
+        env::remove_var("RUST_LOG");
+
+        assert_eq!(default_rust_log_value(), Some("error"));
+
+        if let Some(value) = original {
+            env::set_var("RUST_LOG", value);
+        } else {
+            env::remove_var("RUST_LOG");
+        }
+    }
+
+    #[test]
+    fn default_rust_log_respects_existing_env() {
+        let _guard = env_guard();
+        let original = env::var_os("RUST_LOG");
+        env::set_var("RUST_LOG", "info");
+
+        assert_eq!(default_rust_log_value(), None);
+
+        if let Some(value) = original {
+            env::set_var("RUST_LOG", value);
+        } else {
+            env::remove_var("RUST_LOG");
+        }
+    }
+
+    #[test]
     fn command_env_sets_expected_overrides() {
         let _guard = env_guard();
         let rust_log_original = env::var_os(RUST_LOG_ENV);
@@ -2666,6 +3892,155 @@ mod tests {
         match rust_log_original {
             Some(value) => env::set_var(RUST_LOG_ENV, value),
             None => env::remove_var(RUST_LOG_ENV),
+        }
+    }
+
+    #[test]
+    fn command_env_applies_home_and_binary_per_command() {
+        let _guard = env_guard();
+        let binary_key = CODEX_BINARY_ENV;
+        let home_key = CODEX_HOME_ENV;
+        let rust_log_key = RUST_LOG_ENV;
+        let original_binary = env::var_os(binary_key);
+        let original_home = env::var_os(home_key);
+        let original_rust_log = env::var_os(rust_log_key);
+
+        env::set_var(binary_key, "/tmp/ignored_codex");
+        env::set_var(home_key, "/tmp/ambient_home");
+        env::remove_var(rust_log_key);
+
+        let temp = tempfile::tempdir().unwrap();
+        let home = temp.path().join("scoped_home");
+        let env_prep = CommandEnvironment::new(
+            PathBuf::from("/app/bundled/codex"),
+            Some(home.clone()),
+            true,
+        );
+
+        let mut command = Command::new("echo");
+        env_prep.apply(&mut command).unwrap();
+
+        let envs: HashMap<OsString, Option<OsString>> = command
+            .as_std()
+            .get_envs()
+            .map(|(key, value)| (key.to_os_string(), value.map(|v| v.to_os_string())))
+            .collect();
+
+        assert_eq!(
+            envs.get(&OsString::from(binary_key)),
+            Some(&Some(OsString::from("/app/bundled/codex")))
+        );
+        assert_eq!(
+            envs.get(&OsString::from(home_key)),
+            Some(&Some(home.as_os_str().to_os_string()))
+        );
+        assert_eq!(
+            envs.get(&OsString::from(rust_log_key)),
+            Some(&Some(OsString::from(DEFAULT_RUST_LOG)))
+        );
+        assert_eq!(
+            env::var_os(home_key),
+            Some(OsString::from("/tmp/ambient_home"))
+        );
+        assert!(home.is_dir());
+        assert!(home.join("conversations").is_dir());
+        assert!(home.join("logs").is_dir());
+
+        match original_binary {
+            Some(value) => env::set_var(binary_key, value),
+            None => env::remove_var(binary_key),
+        }
+        match original_home {
+            Some(value) => env::set_var(home_key, value),
+            None => env::remove_var(home_key),
+        }
+        match original_rust_log {
+            Some(value) => env::set_var(rust_log_key, value),
+            None => env::remove_var(rust_log_key),
+        }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn apply_and_diff_capture_outputs_and_status() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = dir.path().join("codex");
+        std::fs::write(
+            &script_path,
+            r#"#!/usr/bin/env bash
+set -e
+cmd="$1"
+if [[ "$cmd" == "apply" ]]; then
+  echo "applied"
+  echo "apply-stderr" >&2
+  exit 0
+elif [[ "$cmd" == "diff" ]]; then
+  echo "diff-body"
+  echo "diff-stderr" >&2
+  exit 3
+else
+  echo "unknown $cmd" >&2
+  exit 99
+fi
+"#,
+        )
+        .unwrap();
+        let mut perms = std::fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&script_path, perms).unwrap();
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+
+        let apply = client.apply().await.unwrap();
+        assert!(apply.status.success());
+        assert_eq!(apply.stdout.trim(), "applied");
+        assert_eq!(apply.stderr.trim(), "apply-stderr");
+
+        let diff = client.diff().await.unwrap();
+        assert!(!diff.status.success());
+        assert_eq!(diff.status.code(), Some(3));
+        assert_eq!(diff.stdout.trim(), "diff-body");
+        assert_eq!(diff.stderr.trim(), "diff-stderr");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn apply_respects_rust_log_default() {
+        let _guard = env_guard();
+        let original = env::var_os("RUST_LOG");
+        env::remove_var("RUST_LOG");
+
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = dir.path().join("codex-rust-log");
+        std::fs::write(
+            &script_path,
+            r#"#!/usr/bin/env bash
+echo "${RUST_LOG:-missing}"
+exit 0
+"#,
+        )
+        .unwrap();
+        let mut perms = std::fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&script_path, perms).unwrap();
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+
+        let apply = client.apply().await.unwrap();
+        assert_eq!(apply.stdout.trim(), "error");
+
+        if let Some(value) = original {
+            env::set_var("RUST_LOG", value);
+        } else {
+            env::remove_var("RUST_LOG");
         }
     }
 
@@ -2715,6 +4090,49 @@ mod tests {
             Some(value) => env::set_var(RUST_LOG_ENV, value),
             None => env::remove_var(RUST_LOG_ENV),
         }
+    }
+
+    #[test]
+    fn codex_home_layout_exposes_paths() {
+        let root = PathBuf::from("/tmp/codex_layout_root");
+        let layout = CodexHomeLayout::new(&root);
+
+        assert_eq!(layout.root(), root.as_path());
+        assert_eq!(layout.config_path(), root.join("config.toml"));
+        assert_eq!(layout.auth_path(), root.join("auth.json"));
+        assert_eq!(layout.credentials_path(), root.join(".credentials.json"));
+        assert_eq!(layout.history_path(), root.join("history.jsonl"));
+        assert_eq!(layout.conversations_dir(), root.join("conversations"));
+        assert_eq!(layout.logs_dir(), root.join("logs"));
+    }
+
+    #[test]
+    fn codex_home_layout_respects_materialization_flag() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("codex_home_layout");
+        let layout = CodexHomeLayout::new(&root);
+
+        layout.materialize(false).unwrap();
+        assert!(!root.exists());
+
+        layout.materialize(true).unwrap();
+        assert!(root.is_dir());
+        assert!(layout.conversations_dir().is_dir());
+        assert!(layout.logs_dir().is_dir());
+    }
+
+    #[test]
+    fn codex_client_returns_configured_home_layout() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("app_codex_home");
+        let client = CodexClient::builder().codex_home(&root).build();
+
+        let layout = client.codex_home_layout().expect("layout missing");
+        assert_eq!(layout.root(), root.as_path());
+        assert!(!root.exists());
+
+        let client_without_home = CodexClient::builder().build();
+        assert!(client_without_home.codex_home_layout().is_none());
     }
 
     #[test]
@@ -3562,10 +4980,10 @@ elif [[ "$1" == "--help" ]]; then
   echo "Usage: codex add-dir"
 fi
 "#;
-        fs::write(&binary, script_v2).unwrap();
-        let mut perms = fs::metadata(&binary).unwrap().permissions();
+        std_fs::write(&binary, script_v2).unwrap();
+        let mut perms = std_fs::metadata(&binary).unwrap().permissions();
         perms.set_mode(0o755);
-        fs::set_permissions(&binary, perms).unwrap();
+        std_fs::set_permissions(&binary, perms).unwrap();
 
         let refreshed = client.probe_capabilities().await;
         assert_ne!(refreshed.version, first.version);
@@ -3624,6 +5042,12 @@ fi
             other => panic!("unexpected status: {other:?}"),
         }
     }
+}
+
+fn default_rust_log_value() -> Option<&'static str> {
+    env::var_os(RUST_LOG_ENV)
+        .is_none()
+        .then_some(DEFAULT_RUST_LOG)
 }
 
 fn default_binary_path() -> PathBuf {
