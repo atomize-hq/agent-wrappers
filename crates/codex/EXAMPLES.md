@@ -17,6 +17,7 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 | `cargo run -p codex --example image_json -- "C:\\path\\to\\mockup.png" "Describe the screenshot"` | `echo "Describe the screenshot" \| codex exec --skip-git-repo-check --json --image "C:\\path\\to\\mockup.png"` | Attach an image while streaming JSON quietly. |
 | `cargo run -p codex --example quiet -- "Run without tool noise"` | `codex exec "Run without tool noise" --skip-git-repo-check --quiet` | Suppress stderr mirroring. |
 | `cargo run -p codex --example no_stdout_mirror -- "Stream quietly"` | `codex exec "Stream quietly" --skip-git-repo-check > out.txt` | Disable stdout mirroring to capture output yourself. |
+| `cargo run -p codex --example cli_overrides -- "Draft release notes"` | `codex exec "Draft release notes" --skip-git-repo-check --ask-for-approval on-request --sandbox workspace-write --local-provider ollama --config model_verbosity=high --config features.search=true --config model_reasoning_effort=low --search [--cd /tmp/repo]` | CLI parity example showing builder safety/config overrides plus per-request search/CD tweaks. |
 
 ## Binary & CODEX_HOME
 

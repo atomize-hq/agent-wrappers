@@ -23,6 +23,15 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 ## Bundled Binary & `CODEX_HOME`
 - Ship Codex with your app by setting `CODEX_BINARY` or calling `.binary("/opt/myapp/bin/codex")`. The `bundled_binary` example shows falling back to `CODEX_BUNDLED_PATH` and a local `bin/codex` hint.
 - Isolate state with `CODEX_HOME` (config/auth/history/logs live under that directory: `config.toml`, `auth.json`, `.credentials.json`, `history.jsonl`, `conversations/*.jsonl`, `logs/codex-*.log`). The crate uses the current process env for every spawn. `CodexClientBuilder::create_home_dirs` can pre-create the layout, and `CodexHomeLayout` inspects paths under an isolated home.
+- `AuthSessionHelper` checks `codex login status` and can start ChatGPT or API key logins with an app-scoped `CODEX_HOME` without mutating the parent env:
+  ```rust
+  let auth = codex::AuthSessionHelper::new("/tmp/my-app-codex");
+  if let Some(mut login) = auth.ensure_chatgpt_login().await? {
+      // Surface login URL/output; dropping the child cancels the helper.
+      let _ = login.wait().await?;
+  }
+  let status = auth.ensure_api_key_login("sk-my-key").await?;
+  ```
 - Quick isolated run (see `crates/codex/examples/codex_home.rs`):
   ```rust
   std::env::set_var("CODEX_HOME", "/tmp/my-app-codex");
@@ -41,6 +50,32 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 - Other builder flags: `.model("gpt-5-codex")`, `.image("/path/mock.png")`, `.json(true)` (pipes prompt via stdin), `.quiet(true)`.
 - `ExecStreamRequest` supports `idle_timeout` (fails fast on silent streams), `output_last_message`/`output_schema` for artifacts, and `json_event_log` to tee raw JSONL before parsing.
 - Example `crates/codex/examples/send_prompt.rs` covers the baseline; `working_dir(_json).rs`, `timeout*.rs`, `image_json.rs`, `color_always.rs`, `quiet.rs`, and `no_stdout_mirror.rs` expand on inputs and output handling.
+
+## CLI Parity Overrides
+- Builder methods mirror CLI flags and config overrides: `.config_override(_raw|s)`, `.reasoning_*`, `.approval_policy(...)`, `.sandbox_mode(...)`, `.full_auto(true)`, `.dangerously_bypass_approvals_and_sandbox(true)`, `.cd(...)`, `.local_provider(...)`, `.search(...)`, `.auto_reasoning_defaults(false)`. Config overrides carry across exec/resume/apply/diff; per-request patches win on conflict.
+- Per-call overlays use `ExecRequest`/`ResumeRequest`: add config overrides, toggle search, swap `cd`, or change safety policy for a single run. Resume supports `.last()`/`.all()` selectors matching `--last`/`--all`.
+- GPT-5* reasoning defaults stay enabled unless you set reasoning/config overrides or flip `auto_reasoning_defaults(false)` on the builder or request.
+
+```rust,no_run
+use codex::{ApprovalPolicy, CodexClient, ExecRequest, LocalProvider, SandboxMode};
+
+# async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+let client = CodexClient::builder()
+    .approval_policy(ApprovalPolicy::OnRequest)
+    .sandbox_mode(SandboxMode::WorkspaceWrite)
+    .local_provider(LocalProvider::Ollama)
+    .config_override("model_verbosity", "high")
+    .search(true)
+    .build();
+
+let request = ExecRequest::new("Draft release notes")
+    .config_override("model_reasoning_effort", "low")
+    .search(false);
+let reply = client.send_prompt_with(request).await?;
+println!("{reply}");
+# Ok(()) }
+```
+- See `crates/codex/examples/cli_overrides.rs` for a runnable parity example.
 
 ## Streaming Output & Artifacts
 - Event schema: JSONL lines carry `type` plus thread/turn IDs and status. Expect `thread.started` (or `thread.resumed` when continuing a run), `turn.started/turn.completed/turn.failed`, and `item.created/item.updated` where `item.type` can be `agent_message`, `reasoning`, `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, or `todo_list` with optional `status`/`content`/`input`. Errors surface as `{"type":"error","message":...}`. Examples ship `--sample` payloads so you can inspect shapes without a binary.

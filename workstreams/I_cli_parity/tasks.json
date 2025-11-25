@@ -10,7 +10,7 @@
       "crates/codex/src/lib.rs"
     ],
     "outputs": ["Design note/doc comments committed to repo"],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "I2-implement-flags-config-overrides",
@@ -21,7 +21,7 @@
       "crates/codex/src/lib.rs"
     ],
     "tests": ["cargo test -p codex"],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "I3-tests-docs-examples",
@@ -35,7 +35,7 @@
       "crates/codex/examples"
     ],
     "tests": ["cargo test -p codex", "cargo test -p codex --doc", "cargo test -p codex --examples"],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "I4-auth-session-helper",
@@ -46,6 +46,19 @@
       "crates/codex/src/lib.rs"
     ],
     "tests": ["cargo test -p codex"],
-    "status": "optional"
+    "status": "done"
+  },
+  {
+    "id": "I5-tbd",
+    "title": "Scope next CLI parity/auth follow-ups",
+    "description": "Triage remaining gaps after I4. Decide if further CLI parity/auth/session work is needed (docs, examples, API polish, additional flows). If needed, add/clarify next tasks; otherwise mark workstream complete.",
+    "dependencies": ["I4-auth-session-helper"],
+    "files": [
+      "workstreams/I_cli_parity/BRIEF.md",
+      "workstreams/I_cli_parity/tasks.json",
+      "README.md",
+      "crates/codex/src/lib.rs"
+    ],
+    "status": "done"
   }
 ]
