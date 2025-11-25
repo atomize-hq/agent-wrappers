@@ -35,7 +35,7 @@
       "crates/codex/examples"
     ],
     "tests": ["cargo test -p codex", "cargo test -p codex --doc", "cargo test -p codex --examples"],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "I4-auth-session-helper",
