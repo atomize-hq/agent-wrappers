@@ -51,8 +51,9 @@ if let Some(child) = client.spawn_mcp_login_process().await? {
 - Inspect or reset cache entries via `capability_cache_entries`, `capability_cache_entry`, `clear_capability_cache_entry`, and `clear_capability_cache` (useful for hosts that want to mirror/evict probe results after deployments).
 - Cache interaction is driven by `CapabilityCachePolicy` (builder: `capability_cache_policy`, convenience: `bypass_capability_cache`; per-call: `probe_capabilities_with_policy`). Default is `PreferCache`, which uses fingerprint-aware invalidation and skips cache reuse/writes when file metadata is missing.
 - Use `CapabilityCachePolicy::Refresh` to force a fresh probe and overwrite the cache even when the fingerprint is unchanged (good for TTL/backoff windows or hot-swaps that reuse the same path). Use `CapabilityCachePolicy::Bypass` when you want a fresh snapshot without touching the cache.
-- When metadata/fingerprints are unavailable (e.g., FUSE/overlay filesystems), probes bypass the cache automatically and avoid writing entries; callers should apply a backoff/TTL (e.g., re-probe every few minutes) to avoid hammering the binary when repeated stats fail.
-- For hot-swapped binaries, prefer clearing the per-binary cache entry or forcing a `Refresh` probe after deploys; otherwise rely on fingerprint invalidation plus a modest TTL (`collected_at` timestamp) so long-running hosts do not carry stale capability data.
+- TTL/backoff helper: `capability_cache_ttl_decision` consumes `collected_at` and fingerprint presence to pick `Refresh` vs `Bypass`; start with a ~5 minute TTL when fingerprints exist and stretch the window toward 10-15 minutes on FUSE/overlay paths where metadata keeps missing.
+- When metadata/fingerprints are unavailable (e.g., FUSE/overlay filesystems), probes bypass the cache automatically and avoid writing entries; callers should apply a backoff/TTL (start around 5 minutes and stretch toward 10-15) to avoid hammering the binary when repeated stats fail.
+- For hot-swapped binaries, prefer clearing the per-binary cache entry or forcing a `Refresh` probe after deploys (the TTL helper does this automatically when the window is exceeded); otherwise rely on fingerprint invalidation plus a modest TTL so long-running hosts do not carry stale capability data.
 
 ## Post-workstream audit (F9)
 - Workstream deliverables shipped: capability model + feature guards with cache policies, override + snapshot persistence helpers, and update advisory plumbing with semver-aware parsing/tests.
@@ -61,6 +62,6 @@ if let Some(child) = client.spawn_mcp_login_process().await? {
   - The in-process cache is intentionally scoped to the current process; long-lived hosts should periodically refresh using `Refresh` or `Bypass` and can layer a TTL on `CodexCapabilities.collected_at`.
   - Update advisories stay offline; hosts must supply latest release tables (npm/Homebrew/GitHub) before calling `update_advisory` / `update_advisory_from_capabilities` and should surface advisory.notes to operators.
 - Backlog/follow-ups to hand off:
-  - Publish a short release/README note explaining the new capability detection surfaces, guard helpers, and cache policies so downstream hosts know they exist.
-  - Add a host-facing example showing disk snapshot reuse + fingerprint checks + when to choose `Refresh` vs `Bypass` for TTL/backoff in hot-swap or FUSE-like environments.
-  - Consider a helper that enforces a TTL using `collected_at` for hosts that want automatic refreshes when file metadata is missing/unreliable.
+  - Done: release/README notes describing capability detection, guard helpers, cache policies, overrides, and advisories (see `crates/codex/README.md` and crate docs).
+  - Done: host-facing example showing disk snapshot reuse with fingerprint checks and `Refresh` vs `Bypass` guidance for TTL/backoff on hot-swap or FUSE-like paths (`crates/codex/examples/capability_snapshot.rs`).
+  - Done: TTL/backoff helper (`capability_cache_ttl_decision`) that inspects `collected_at` and fingerprint presence to decide between `Refresh` and `Bypass` when metadata is missing or binaries are hot-swapped.

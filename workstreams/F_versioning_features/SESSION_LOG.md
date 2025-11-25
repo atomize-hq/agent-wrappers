@@ -46,3 +46,10 @@ Kickoff prompt for next integration (E → integration/adfh):
 - Merge `ws/E_mcp_app_server` on top, reconciling MCP/app-server docs/examples with capability guards and existing streaming/apply guidance.
 - Keep crate versions aligned with the integration line (codex 0.2.0); regenerate `Cargo.lock` if deps shift and run `cargo test -p codex`, `cargo test -p codex --doc`, and `cargo test -p codex --examples`.
 - Update integration logs after the merge and prepare the following kickoff.
+
+[START 2025-11-24 13:50] Agent: Codex | Task(s): F10-release-docs-and-examples | Branch: ws/F_versioning_features | Notes: Starting release docs/examples task and worktree setup
+[END 2025-11-24 13:58] Agent: Codex | Task(s): F10-release-docs-and-examples | Branch: ws/F_versioning_features | Notes: Release notes + cache policy example merged; ready for next kickoff
+[START 2025-11-24 14:18] Agent: Codex | Task(s): F11-capability-ttl-helper | Branch: ws/F_versioning_features | Notes: Starting capability TTL/backoff helper task and worktree setup
+[END 2025-11-24 14:28] Agent: Codex | Task(s): F11-capability-ttl-helper | Branch: ws/F_versioning_features | Notes: TTL/backoff helper merged with tests and docs; cache policy guidance wired
+[START 2025-11-24 14:40] Agent: Codex | Task(s): F12-capability-ttl-docs | Branch: ws/F_versioning_features | Notes: Starting TTL helper docs task and worktree setup
+[END 2025-11-24 14:59] Agent: Codex | Task(s): F12-capability-ttl-docs | Branch: ws/F_versioning_features | Notes: TTL helper docs/examples merged; cache TTL/backoff guidance updated

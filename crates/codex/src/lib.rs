@@ -24,6 +24,13 @@
 //! - Gate optional flags with `crates/codex/examples/feature_detection.rs`, which parses `codex --version` + `codex features list` to decide whether to enable streaming, log tee, or app-server endpoints and to emit upgrade advisories (hooks into `CodexCapabilities` and `CapabilityGuard`).
 //!
 //! More end-to-end flows and CLI mappings live in `README.md` and `crates/codex/EXAMPLES.md`.
+//!
+//! ## Capability/versioning surfaces (Workstream F)
+//! - `probe_capabilities` captures `--version`, `features list`, and `--help` hints into a `CodexCapabilities` snapshot with `collected_at` timestamps and `BinaryFingerprint` metadata keyed by canonical binary path.
+//! - Guard helpers (`guard_output_schema`, `guard_add_dir`, `guard_mcp_login`, `guard_features_list`) keep optional flags disabled when support is unknown and return operator-facing notes for unsupported features.
+//! - Cache controls: `CapabilityCachePolicy::{PreferCache, Refresh, Bypass}` plus builder helpers steer cache reuse. Use `Refresh` for TTL/backoff windows or hot-swaps that reuse the same binary path; use `Bypass` when metadata is missing (FUSE/overlay filesystems) or when you need an isolated probe.
+//! - TTL/backoff helper: `capability_cache_ttl_decision` inspects `collected_at` to suggest when to reuse, refresh, or bypass cached snapshots and stretches the recommended policy when metadata is missing.
+//! - Overrides + persistence: `capability_snapshot`, `capability_overrides`, `write_capabilities_snapshot`, `read_capabilities_snapshot`, and `capability_snapshot_matches_binary` let hosts reuse snapshots across processes and fall back to probes when fingerprints diverge.
 
 pub mod mcp;
 
@@ -534,6 +541,63 @@ pub fn capability_snapshot_matches_binary(snapshot: &CodexCapabilities, binary: 
     has_fingerprint_metadata(&snapshot.fingerprint)
         && has_fingerprint_metadata(&current)
         && fingerprints_match(&snapshot.fingerprint, &current)
+}
+
+/// Result of applying a TTL/backoff window to a capability snapshot.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CapabilityTtlDecision {
+    /// True when the snapshot is outside the TTL window and callers should re-run probes.
+    pub should_probe: bool,
+    /// Recommended cache policy for the next probe (`Refresh` when fingerprints exist, `Bypass` when metadata is missing).
+    pub policy: CapabilityCachePolicy,
+}
+
+/// Decides whether a cached capability snapshot should be refreshed based on `collected_at`.
+///
+/// Callers can use this to apply a TTL/backoff in environments where filesystem metadata is
+/// missing or unreliable (e.g., FUSE/overlay filesystems) and when binaries are hot-swapped
+/// without changing fingerprints. When the TTL has not elapsed, reuse the provided snapshot;
+/// when expired, force a probe with [`CapabilityCachePolicy::Refresh`] (fingerprints present)
+/// or [`CapabilityCachePolicy::Bypass`] (metadata missing).
+///
+/// Recommended defaults: start with a 5 minute TTL when fingerprints exist and prefer
+/// `Refresh` for hot-swaps that reuse the same path; when metadata is missing, expect `Bypass`
+/// and back off further (e.g., stretch the TTL toward 10-15 minutes) to avoid tight probe loops.
+pub fn capability_cache_ttl_decision(
+    snapshot: Option<&CodexCapabilities>,
+    ttl: Duration,
+    now: SystemTime,
+) -> CapabilityTtlDecision {
+    let default_policy = CapabilityCachePolicy::PreferCache;
+    let Some(snapshot) = snapshot else {
+        return CapabilityTtlDecision {
+            should_probe: true,
+            policy: default_policy,
+        };
+    };
+
+    let expired = now
+        .duration_since(snapshot.collected_at)
+        .map(|elapsed| elapsed >= ttl)
+        .unwrap_or(true);
+
+    if !expired {
+        return CapabilityTtlDecision {
+            should_probe: false,
+            policy: default_policy,
+        };
+    }
+
+    let policy = if snapshot.fingerprint.is_some() {
+        CapabilityCachePolicy::Refresh
+    } else {
+        CapabilityCachePolicy::Bypass
+    };
+
+    CapabilityTtlDecision {
+        should_probe: true,
+        policy,
+    }
 }
 
 /// High-level view of whether a specific feature can be used safely.
@@ -3657,6 +3721,22 @@ mod tests {
         }
     }
 
+    fn capability_snapshot_with_metadata(
+        collected_at: SystemTime,
+        fingerprint: Option<BinaryFingerprint>,
+    ) -> CodexCapabilities {
+        CodexCapabilities {
+            cache_key: CapabilityCacheKey {
+                binary_path: PathBuf::from("/tmp/codex"),
+            },
+            fingerprint,
+            version: None,
+            features: CodexFeatureFlags::default(),
+            probe_plan: CapabilityProbePlan::default(),
+            collected_at,
+        }
+    }
+
     #[test]
     fn builder_defaults_are_sane() {
         let builder = CodexClient::builder();
@@ -4262,6 +4342,62 @@ exit 0
         assert!(capability_cache_entry(&binary).is_none());
         assert!(capability_cache_entries().is_empty());
         clear_capability_cache();
+    }
+
+    #[test]
+    fn capability_ttl_decision_reuses_fresh_snapshot() {
+        let collected_at = SystemTime::UNIX_EPOCH + Duration::from_secs(10);
+        let snapshot = capability_snapshot_with_metadata(
+            collected_at,
+            Some(BinaryFingerprint {
+                canonical_path: Some(PathBuf::from("/tmp/codex")),
+                modified: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(1)),
+                len: Some(123),
+            }),
+        );
+
+        let decision = capability_cache_ttl_decision(
+            Some(&snapshot),
+            Duration::from_secs(300),
+            SystemTime::UNIX_EPOCH + Duration::from_secs(100),
+        );
+        assert!(!decision.should_probe);
+        assert_eq!(decision.policy, CapabilityCachePolicy::PreferCache);
+    }
+
+    #[test]
+    fn capability_ttl_decision_refreshes_after_ttl_with_fingerprint() {
+        let collected_at = SystemTime::UNIX_EPOCH + Duration::from_secs(1);
+        let snapshot = capability_snapshot_with_metadata(
+            collected_at,
+            Some(BinaryFingerprint {
+                canonical_path: Some(PathBuf::from("/tmp/codex")),
+                modified: Some(SystemTime::UNIX_EPOCH + Duration::from_secs(1)),
+                len: Some(321),
+            }),
+        );
+
+        let decision = capability_cache_ttl_decision(
+            Some(&snapshot),
+            Duration::from_secs(5),
+            SystemTime::UNIX_EPOCH + Duration::from_secs(10),
+        );
+        assert!(decision.should_probe);
+        assert_eq!(decision.policy, CapabilityCachePolicy::Refresh);
+    }
+
+    #[test]
+    fn capability_ttl_decision_bypasses_when_metadata_missing() {
+        let collected_at = SystemTime::UNIX_EPOCH + Duration::from_secs(2);
+        let snapshot = capability_snapshot_with_metadata(collected_at, None);
+
+        let decision = capability_cache_ttl_decision(
+            Some(&snapshot),
+            Duration::from_secs(5),
+            SystemTime::UNIX_EPOCH + Duration::from_secs(10),
+        );
+        assert!(decision.should_probe);
+        assert_eq!(decision.policy, CapabilityCachePolicy::Bypass);
     }
 
     #[tokio::test]

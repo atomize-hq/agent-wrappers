@@ -86,12 +86,31 @@
   },
   {
     "id": "F10-release-docs-and-examples",
-    "title": "Release docs/examples for capability probing",
-    "description": "Document and polish capability probing/caching/update advisory features for release: README/EXAMPLES updates, crate-level docs, and example snippets showing guarded flags and probes. Ensure examples align with latest APIs and integration state.",
+    "title": "Publish release notes and examples for capability/versioning work",
+    "description": "Produce host-facing release/README notes covering capability guards, cache controls, overrides, advisories, and provide a concrete example showing disk snapshot reuse with fingerprint checks plus TTL/backoff guidance (Refresh vs Bypass) for hot-swap/FUSE scenarios.",
     "dependencies": ["F9-post-workstream-review"],
-    "files": ["README.md", "crates/codex/EXAMPLES.md", "crates/codex/src/lib.rs", "workstreams/F_versioning_features/kickoff_prompts/F10-release-docs-and-examples.md"],
-    "tests": ["cargo test -p codex", "cargo test -p codex --doc", "cargo test -p codex --examples"],
-    "outputs": ["Updated docs/examples for capability probing"],
-    "status": "pending"
+    "files": ["workstreams/F_versioning_features/BRIEF.md", "crates/codex/README.md", "crates/codex/src/lib.rs", "crates/codex/EXAMPLES.md"],
+    "outputs": ["Release notes/README updates", "Example for snapshot reuse and cache TTL/backoff"],
+    "status": "done"
+  },
+  {
+    "id": "F11-capability-ttl-helper",
+    "title": "Add capability TTL/backoff helper",
+    "description": "Add helper that enforces a TTL/backoff on capability snapshots using collected_at, especially when fingerprints are missing/unreliable (FUSE/overlays). Surface simple API hosts can call to decide when to force CapabilityCachePolicy::Refresh/Bypass, with docs and tests covering TTL expiry, hot-swap reuse, and metadata-missing paths.",
+    "dependencies": ["F10-release-docs-and-examples"],
+    "files": ["workstreams/F_versioning_features/BRIEF.md", "crates/codex/src/lib.rs"],
+    "tests": ["cargo test -p codex"],
+    "outputs": ["Docs for TTL/backoff helper and host usage"],
+    "status": "done"
+  },
+  {
+    "id": "F12-capability-ttl-docs",
+    "title": "Document capability TTL/backoff helper",
+    "description": "Document the capability_cache_ttl_decision helper for hosts, covering TTL/backoff defaults, when to reuse snapshots, and when to force CapabilityCachePolicy::Refresh or Bypass for hot-swaps and metadata-missing paths. Update README/BRIEF/examples with a small usage snippet.",
+    "dependencies": ["F11-capability-ttl-helper"],
+    "files": ["workstreams/F_versioning_features/BRIEF.md", "crates/codex/README.md", "crates/codex/EXAMPLES.md", "crates/codex/src/lib.rs"],
+    "tests": [],
+    "outputs": ["Docs/examples for TTL helper usage"],
+    "status": "done"
   }
 ]

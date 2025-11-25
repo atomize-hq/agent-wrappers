@@ -1,6 +1,6 @@
 # Codex Wrapper Examples vs. Native CLI
 
-Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. Wrapper calls (`cargo run -p codex --example ...`) run with safe defaults: `--skip-git-repo-check`, temp working dirs unless overridden, 120s timeout, ANSI color disabled, and `RUST_LOG=error` unless set. Select the binary with `CODEX_BINARY` or `.binary(...)`; set `CODEX_HOME` to keep config/auth/history/logs under an app-scoped directory. Examples labeled `--sample` print mocked data (covering `thread/turn/item` events and MCP/app-server notifications) when you do not have a binary handy.
+Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. Wrapper calls (`cargo run -p codex --example ...`) run with safe defaults: `--skip-git-repo-check`, temp working dirs unless overridden, 120s timeout, ANSI color disabled, and `RUST_LOG=error` unless set. Select the binary with `CODEX_BINARY` or `.binary(...)`; set `CODEX_HOME` to keep config/auth/history/logs under an app-scoped directory. Examples labeled `--sample` print mocked data when you do not have a binary handy.
 
 ## Basics
 
@@ -13,6 +13,7 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 | `cargo run -p codex --example working_dir_json -- "C:\\path\\to\\repo" "Summarize repo status"` | `echo "Summarize repo status" \| codex exec --skip-git-repo-check --json --cd "C:\\path\\to\\repo"` | Combines working dir override with JSON streaming. |
 | `cargo run -p codex --example select_model -- gpt-5-codex -- "Explain rustfmt defaults"` | `codex exec "Explain rustfmt defaults" --skip-git-repo-check --model gpt-5-codex` | Picks a specific model. |
 | `cargo run -p codex --example color_always -- "Show colorful output"` | `codex exec "Show colorful output" --skip-git-repo-check --color always` | Forces ANSI color codes. |
+| `cargo run -p codex --example send_prompt --color never -- "Show monochrome"` | `codex exec "Show monochrome" --skip-git-repo-check --color never` | Works with `auto`/`never` color choices. |
 | `cargo run -p codex --example image_json -- "C:\\path\\to\\mockup.png" "Describe the screenshot"` | `echo "Describe the screenshot" \| codex exec --skip-git-repo-check --json --image "C:\\path\\to\\mockup.png"` | Attach an image while streaming JSON quietly. |
 | `cargo run -p codex --example quiet -- "Run without tool noise"` | `codex exec "Run without tool noise" --skip-git-repo-check --quiet` | Suppress stderr mirroring. |
 | `cargo run -p codex --example no_stdout_mirror -- "Stream quietly"` | `codex exec "Stream quietly" --skip-git-repo-check > out.txt` | Disable stdout mirroring to capture output yourself. |
@@ -45,11 +46,45 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 | `cargo run -p codex --example app_server_turns -- "Draft a release note" [thread-id]` | `codex app-server --stdio` then `thread/start` or `thread/resume` plus `turn/start` (optional `turn/interrupt`) | Uses the `codex::mcp` app-server client to stream items and task_complete notices, optionally resuming a thread and sending `turn/interrupt` after a delay; pair with `feature_detection` if the binary omits app-server support. |
 | `cargo run -p codex --example app_server_thread_turn -- "Draft a release note"` | `codex app-server --stdio` then send `thread/start` and `turn/start` | App-server thread/turn notifications; supports `--sample` and optional `CODEX_HOME` for state isolation. |
 
+## Capabilities & ingestion
+
+| Wrapper example | Native command | Notes |
+| --- | --- | --- |
+| `cargo run -p codex --example capability_snapshot -- ./codex ./codex-capabilities.json auto` | `codex --version && codex features list --json` | Persists capability snapshots with fingerprint checks, refresh/backoff guidance, and bypass mode for FUSE/overlay paths. |
+| `cargo run -p ingestion --example ingest_to_codex -- --instructions "Summarize the documents" --model gpt-5-codex --json --include-prompt --image "C:\\Docs\\mockup.png" C:\\Docs\\spec.pdf` | `codex exec --skip-git-repo-check --json --model gpt-5-codex --image "C:\\Docs\\mockup.png" "<constructed prompt covering spec.pdf>"` | Full ingestion harness: builds the multi-document prompt before calling `codex exec`. |
+
 ## Feature Detection
 
 | Wrapper example | Native command | Notes |
 | --- | --- | --- |
 | `cargo run -p codex --example feature_detection` | `codex --version` and `codex features list` | Probes version + feature list, gates streaming/log-tee/artifact flags, and emits upgrade advisories; falls back to sample data. |
+
+## Capability TTL helper
+`capability_cache_ttl_decision` provides a TTL/backoff wrapper around cached snapshots so hosts know when to reuse, refresh, or bypass:
+
+```rust
+use codex::{capability_cache_entry, capability_cache_ttl_decision, CapabilityCachePolicy, CodexClient};
+use std::time::{Duration, SystemTime};
+
+async fn decide(client: &CodexClient, binary: &std::path::Path) {
+    let cached = capability_cache_entry(binary);
+    let decision = capability_cache_ttl_decision(cached.as_ref(), Duration::from_secs(300), SystemTime::now());
+
+    let capabilities = if let Some(snapshot) = cached.filter(|_| !decision.should_probe) {
+        snapshot
+    } else {
+        client.probe_capabilities_with_policy(decision.policy).await
+    };
+
+    if decision.policy == CapabilityCachePolicy::Bypass {
+        // Metadata missing (FUSE/overlay); stretch the TTL toward 10-15 minutes to reduce probe churn.
+    }
+
+    let _ = capabilities;
+}
+```
+- `Refresh` is recommended for hot-swaps that reuse the same path even when fingerprints look unchanged.
+- `Bypass` is returned when metadata is missing; avoid cache writes and apply a growing TTL/backoff to avoid hammering the binary.
 
 ## Discovering `CODEX_HOME` layout
 
