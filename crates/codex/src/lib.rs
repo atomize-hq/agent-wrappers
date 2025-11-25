@@ -1144,9 +1144,7 @@ impl AuthSessionHelper {
     ///
     /// Returns `Ok(None)` when already logged in; otherwise returns the spawned login child so the
     /// caller can surface output/URLs. Dropping the child kills the login helper.
-    pub async fn ensure_chatgpt_login(
-        &self,
-    ) -> Result<Option<tokio::process::Child>, CodexError> {
+    pub async fn ensure_chatgpt_login(&self) -> Result<Option<tokio::process::Child>, CodexError> {
         match self.status().await? {
             CodexAuthStatus::LoggedIn(_) => Ok(None),
             CodexAuthStatus::LoggedOut => self.client.spawn_login_process().map(Some),
@@ -2415,6 +2413,13 @@ impl CodexClientBuilder {
         self
     }
 
+    /// Selects a Codex config profile (`--profile`).
+    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+        let profile = profile.into();
+        self.cli_overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+        self
+    }
+
     /// Sets `model_reasoning_effort` via `--config`.
     pub fn reasoning_effort(mut self, effort: ReasoningEffort) -> Self {
         self.cli_overrides.reasoning.effort = Some(effort);
@@ -2870,6 +2875,7 @@ pub struct CliOverrides {
     pub approval_policy: Option<ApprovalPolicy>,
     pub sandbox_mode: Option<SandboxMode>,
     pub safety_override: SafetyOverride,
+    pub profile: Option<String>,
     pub cd: Option<PathBuf>,
     pub local_provider: Option<LocalProvider>,
     pub search: FlagState,
@@ -2884,6 +2890,7 @@ impl Default for CliOverrides {
             approval_policy: None,
             sandbox_mode: None,
             safety_override: SafetyOverride::Inherit,
+            profile: None,
             cd: None,
             local_provider: None,
             search: FlagState::Inherit,
@@ -2900,6 +2907,7 @@ pub struct CliOverridesPatch {
     pub approval_policy: Option<ApprovalPolicy>,
     pub sandbox_mode: Option<SandboxMode>,
     pub safety_override: Option<SafetyOverride>,
+    pub profile: Option<String>,
     pub cd: Option<PathBuf>,
     pub local_provider: Option<LocalProvider>,
     pub search: FlagState,
@@ -2912,6 +2920,7 @@ struct ResolvedCliOverrides {
     approval_policy: Option<ApprovalPolicy>,
     sandbox_mode: Option<SandboxMode>,
     safety_override: SafetyOverride,
+    profile: Option<String>,
     cd: Option<PathBuf>,
     local_provider: Option<LocalProvider>,
     search: FlagState,
@@ -2979,6 +2988,7 @@ fn resolve_cli_overrides(
     let approval_policy = patch.approval_policy.or(builder.approval_policy);
     let sandbox_mode = patch.sandbox_mode.or(builder.sandbox_mode);
     let safety_override = patch.safety_override.unwrap_or(builder.safety_override);
+    let profile = patch.profile.clone().or_else(|| builder.profile.clone());
     let cd = patch.cd.clone().or_else(|| builder.cd.clone());
     let local_provider = patch.local_provider.or(builder.local_provider);
     let search = match patch.search {
@@ -2991,6 +3001,7 @@ fn resolve_cli_overrides(
         approval_policy,
         sandbox_mode,
         safety_override,
+        profile,
         cd,
         local_provider,
         search,
@@ -3002,6 +3013,11 @@ fn cli_override_args(resolved: &ResolvedCliOverrides, include_search: bool) -> V
     for config in &resolved.config_overrides {
         args.push(OsString::from("--config"));
         args.push(OsString::from(format!("{}={}", config.key, config.value)));
+    }
+
+    if let Some(profile) = &resolved.profile {
+        args.push(OsString::from("--profile"));
+        args.push(OsString::from(profile));
     }
 
     match resolved.safety_override {
@@ -3637,6 +3653,12 @@ impl ExecRequest {
         self
     }
 
+    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+        let profile = profile.into();
+        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+        self
+    }
+
     pub fn search(mut self, enable: bool) -> Self {
         self.overrides.search = if enable {
             FlagState::Enable
@@ -3733,6 +3755,12 @@ impl ResumeRequest {
         self.overrides
             .config_overrides
             .push(ConfigOverride::from_raw(raw));
+        self
+    }
+
+    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+        let profile = profile.into();
+        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
         self
     }
 
@@ -6123,12 +6151,33 @@ fi
     }
 
     #[test]
+    fn request_profile_override_replaces_builder_value() {
+        let mut builder_overrides = CliOverrides::default();
+        builder_overrides.profile = Some("builder".to_string());
+
+        let mut patch = CliOverridesPatch::default();
+        patch.profile = Some("request".to_string());
+
+        let resolved = resolve_cli_overrides(&builder_overrides, &patch, None);
+        let args: Vec<_> = cli_override_args(&resolved, true)
+            .iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+        assert!(args.windows(2).any(|window| {
+            window.get(0).map(String::as_str) == Some("--profile")
+                && window.get(1).map(String::as_str) == Some("request")
+        }));
+        assert!(!args.contains(&"builder".to_string()));
+    }
+
+    #[test]
     fn cli_override_args_apply_safety_precedence() {
         let mut resolved = ResolvedCliOverrides {
             config_overrides: Vec::new(),
             approval_policy: None,
             sandbox_mode: None,
             safety_override: SafetyOverride::FullAuto,
+            profile: None,
             cd: None,
             local_provider: None,
             search: FlagState::Enable,
@@ -6156,6 +6205,7 @@ fi
             approval_policy: Some(ApprovalPolicy::OnRequest),
             sandbox_mode: Some(SandboxMode::WorkspaceWrite),
             safety_override: SafetyOverride::DangerouslyBypass,
+            profile: Some("team".to_string()),
             cd: Some(PathBuf::from("/tmp/worktree")),
             local_provider: Some(LocalProvider::Ollama),
             search: FlagState::Enable,
@@ -6168,6 +6218,8 @@ fi
         assert!(args.contains(&"--config".to_string()));
         assert!(args.contains(&"foo=bar".to_string()));
         assert!(args.contains(&"--dangerously-bypass-approvals-and-sandbox".to_string()));
+        assert!(args.contains(&"--profile".to_string()));
+        assert!(args.contains(&"team".to_string()));
         assert!(args.contains(&"--cd".to_string()));
         assert!(args.contains(&"/tmp/worktree".to_string()));
         assert!(args.contains(&"--local-provider".to_string()));
@@ -6521,10 +6573,7 @@ exit 2
 
         let log = std_fs::read_to_string(&log_path).unwrap();
         assert!(log.lines().any(|line| line == "login"));
-        assert_eq!(
-            log.lines().filter(|line| line == &"login").count(),
-            1
-        );
+        assert_eq!(log.lines().filter(|line| line == &"login").count(), 1);
     }
 
     #[test]

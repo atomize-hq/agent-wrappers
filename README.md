@@ -52,8 +52,8 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 - Example `crates/codex/examples/send_prompt.rs` covers the baseline; `working_dir(_json).rs`, `timeout*.rs`, `image_json.rs`, `color_always.rs`, `quiet.rs`, and `no_stdout_mirror.rs` expand on inputs and output handling.
 
 ## CLI Parity Overrides
-- Builder methods mirror CLI flags and config overrides: `.config_override(_raw|s)`, `.reasoning_*`, `.approval_policy(...)`, `.sandbox_mode(...)`, `.full_auto(true)`, `.dangerously_bypass_approvals_and_sandbox(true)`, `.cd(...)`, `.local_provider(...)`, `.search(...)`, `.auto_reasoning_defaults(false)`. Config overrides carry across exec/resume/apply/diff; per-request patches win on conflict.
-- Per-call overlays use `ExecRequest`/`ResumeRequest`: add config overrides, toggle search, swap `cd`, or change safety policy for a single run. Resume supports `.last()`/`.all()` selectors matching `--last`/`--all`.
+- Builder methods mirror CLI flags and config overrides: `.config_override(_raw|s)`, `.reasoning_*`, `.approval_policy(...)`, `.sandbox_mode(...)`, `.full_auto(true)`, `.dangerously_bypass_approvals_and_sandbox(true)`, `.profile(...)`, `.cd(...)`, `.local_provider(...)`, `.search(...)`, `.auto_reasoning_defaults(false)`. Config overrides carry across exec/resume/apply/diff; per-request patches win on conflict.
+- Per-call overlays use `ExecRequest`/`ResumeRequest`: add config overrides, toggle search, swap `cd`/`profile`, or change safety policy for a single run. Resume supports `.last()`/`.all()` selectors matching `--last`/`--all`.
 - GPT-5* reasoning defaults stay enabled unless you set reasoning/config overrides or flip `auto_reasoning_defaults(false)` on the builder or request.
 
 ```rust,no_run
@@ -63,6 +63,7 @@ use codex::{ApprovalPolicy, CodexClient, ExecRequest, LocalProvider, SandboxMode
 let client = CodexClient::builder()
     .approval_policy(ApprovalPolicy::OnRequest)
     .sandbox_mode(SandboxMode::WorkspaceWrite)
+    .profile("staging")
     .local_provider(LocalProvider::Ollama)
     .config_override("model_verbosity", "high")
     .search(true)

@@ -4,6 +4,7 @@ Objective: Bring the Rust wrapper to full parity with Codex CLI 0.61 flags/optio
 
 Scope
 - Add builder/request fields to pass all missing flags: `--config` overrides, `--ask-for-approval`, `--sandbox`, `--full-auto`, `--dangerously-bypass-approvals-and-sandbox`, `--cd`, `--local-provider`, `--search`, `--last`, `--all`.
+- Surface config profile selection (`--profile <CONFIG_PROFILE>`) alongside other CLI parity fields.
 - Expose config override support (`--config key=value`) and/or targeted setters for reasoning/verbosity/summaries; wire through per-command.
 - Ensure CODEX_HOME env prep remains applied per spawn.
 - (Stretch) Add a higher-level auth/session helper that can check login status and prompt login as needed (optional if time).
