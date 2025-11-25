@@ -60,5 +60,43 @@
       "crates/codex/src/lib.rs"
     ],
     "status": "done"
+  },
+  {
+    "id": "I6-profile-flag",
+    "title": "Add --profile support",
+    "description": "Surface the CLI `--profile <CONFIG_PROFILE>` flag in the Rust wrapper (builder/request) and pass through to the Codex CLI. Update docs/tests as needed.",
+    "dependencies": ["I4-auth-session-helper"],
+    "files": [
+      "crates/codex/src/lib.rs",
+      "README.md",
+      "workstreams/I_cli_parity/BRIEF.md"
+    ],
+    "tests": ["cargo test -p codex"],
+    "status": "done"
+  },
+  {
+    "id": "I7-sandbox-command-design",
+    "title": "Design sandbox command wrapper",
+    "description": "Map `codex sandbox` (and aliases/subcommands) to the Rust wrapper: options/positional args, platform variants, and post-run script behavior. Decide minimal surface and ergonomics, note limitations, and plan tests/docs.",
+    "dependencies": ["I6-profile-flag"],
+    "files": [
+      "workstreams/I_cli_parity/BRIEF.md",
+      "CLI_MATRIX.md",
+      "crates/codex/src/lib.rs",
+      "README.md"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "I8-sandbox-command-impl",
+    "title": "Implement sandbox command wrapper",
+    "description": "Add Rust wrapper support for `codex sandbox` per I7 design: API surface, command wiring (including optional script-on-finish), tests, and docs/examples.",
+    "dependencies": ["I7-sandbox-command-design"],
+    "files": [
+      "crates/codex/src/lib.rs",
+      "README.md"
+    ],
+    "tests": ["cargo test -p codex"],
+    "status": "todo"
   }
 ]
