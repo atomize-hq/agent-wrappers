@@ -5,6 +5,7 @@
 //! ## Setup: binary + `CODEX_HOME`
 //! - Defaults pull `CODEX_BINARY` or `codex` on `PATH`; call [`CodexClientBuilder::binary`] to pin a bundled binary (examples fall back to `CODEX_BUNDLED_PATH` or `bin/codex` hints).
 //! - Isolate state with [`CodexClientBuilder::codex_home`] (config/auth/history/logs live under that directory) and optionally create the layout with [`CodexClientBuilder::create_home_dirs`]. [`CodexHomeLayout`] inspects `config.toml`, `auth.json`, `.credentials.json`, `history.jsonl`, `conversations/`, and `logs/`.
+//! - [`AuthSessionHelper`] checks `codex login status` and can launch ChatGPT or API key login flows with an app-scoped `CODEX_HOME` without mutating the parent process env.
 //! - Wrapper defaults: temp working dir per call unless `working_dir` is set, `--skip-git-repo-check`, 120s timeout (use `Duration::ZERO` to disable), ANSI colors off, `RUST_LOG=error` if unset.
 //! - Model defaults: `gpt-5*`/`gpt-5.1*` (including codex variants) get `model_reasoning_effort="medium"`/`model_reasoning_summary="auto"`/`model_verbosity="low"` to avoid unsupported “minimal” combos.
 //!
@@ -1095,6 +1096,77 @@ pub enum CodexLogoutStatus {
     AlreadyLoggedOut,
 }
 
+/// Helper for checking Codex auth state and triggering login flows with an app-scoped `CODEX_HOME`.
+///
+/// All commands run with per-process env overrides; the parent process env is never mutated.
+#[derive(Clone, Debug)]
+pub struct AuthSessionHelper {
+    client: CodexClient,
+}
+
+impl AuthSessionHelper {
+    /// Creates a helper that pins `CODEX_HOME` to `app_codex_home` for every login call.
+    pub fn new(app_codex_home: impl Into<PathBuf>) -> Self {
+        let client = CodexClient::builder()
+            .codex_home(app_codex_home)
+            .create_home_dirs(true)
+            .build();
+        Self { client }
+    }
+
+    /// Wraps an existing `CodexClient` (useful when you already configured the binary path).
+    pub fn with_client(client: CodexClient) -> Self {
+        Self { client }
+    }
+
+    /// Returns the underlying `CodexClient`.
+    pub fn client(&self) -> CodexClient {
+        self.client.clone()
+    }
+
+    /// Reports the current login status under the configured `CODEX_HOME`.
+    pub async fn status(&self) -> Result<CodexAuthStatus, CodexError> {
+        self.client.login_status().await
+    }
+
+    /// Logs in with an API key when logged out; otherwise returns the current status.
+    pub async fn ensure_api_key_login(
+        &self,
+        api_key: impl AsRef<str>,
+    ) -> Result<CodexAuthStatus, CodexError> {
+        match self.status().await? {
+            logged @ CodexAuthStatus::LoggedIn(_) => Ok(logged),
+            CodexAuthStatus::LoggedOut => self.client.login_with_api_key(api_key).await,
+        }
+    }
+
+    /// Starts the ChatGPT OAuth login flow when no credentials are present.
+    ///
+    /// Returns `Ok(None)` when already logged in; otherwise returns the spawned login child so the
+    /// caller can surface output/URLs. Dropping the child kills the login helper.
+    pub async fn ensure_chatgpt_login(
+        &self,
+    ) -> Result<Option<tokio::process::Child>, CodexError> {
+        match self.status().await? {
+            CodexAuthStatus::LoggedIn(_) => Ok(None),
+            CodexAuthStatus::LoggedOut => self.client.spawn_login_process().map(Some),
+        }
+    }
+
+    /// Directly spawns the ChatGPT login process.
+    pub fn spawn_chatgpt_login(&self) -> Result<tokio::process::Child, CodexError> {
+        self.client.spawn_login_process()
+    }
+
+    /// Directly logs in with an API key without checking prior state.
+    pub async fn login_with_api_key(
+        &self,
+        api_key: impl AsRef<str>,
+    ) -> Result<CodexAuthStatus, CodexError> {
+        self.client.login_with_api_key(api_key).await
+    }
+}
+
 impl CodexClient {
     /// Returns a [`CodexClientBuilder`] preloaded with safe defaults.
     pub fn builder() -> CodexClientBuilder {
@@ -1552,16 +1624,38 @@ impl CodexClient {
         Ok(Some(child))
     }
 
+    /// Logs in with a provided API key by invoking `codex login --api-key <key>`.
+    pub async fn login_with_api_key(
+        &self,
+        api_key: impl AsRef<str>,
+    ) -> Result<CodexAuthStatus, CodexError> {
+        let api_key = api_key.as_ref().trim();
+        if api_key.is_empty() {
+            return Err(CodexError::EmptyApiKey);
+        }
+
+        let output = self
+            .run_basic_command(["login", "--api-key", api_key])
+            .await?;
+        let combined = preferred_output_channel(&output);
+
+        if output.status.success() {
+            parse_login_success(&combined).ok_or_else(|| CodexError::NonZeroExit {
+                status: output.status,
+                stderr: combined,
+            })
+        } else {
+            Err(CodexError::NonZeroExit {
+                status: output.status,
+                stderr: combined,
+            })
+        }
+    }
+
     /// Returns the current Codex authentication state by invoking `codex login status`.
     pub async fn login_status(&self) -> Result<CodexAuthStatus, CodexError> {
         let output = self.run_basic_command(["login", "status"]).await?;
-        let stderr = String::from_utf8(output.stderr.clone()).unwrap_or_default();
-        let stdout = String::from_utf8(output.stdout.clone()).unwrap_or_default();
-        let combined = if stderr.trim().is_empty() {
-            stdout
-        } else {
-            stderr
-        };
+        let combined = preferred_output_channel(&output);
 
         if output.status.success() {
             parse_login_success(&combined).ok_or_else(|| CodexError::NonZeroExit {
@@ -1581,13 +1675,7 @@ impl CodexClient {
     /// Removes cached credentials via `codex logout`.
     pub async fn logout(&self) -> Result<CodexLogoutStatus, CodexError> {
         let output = self.run_basic_command(["logout"]).await?;
-        let stderr = String::from_utf8(output.stderr).unwrap_or_default();
-        let stdout = String::from_utf8(output.stdout).unwrap_or_default();
-        let combined = if stderr.trim().is_empty() {
-            stdout
-        } else {
-            stderr
-        };
+        let combined = preferred_output_channel(&output);
 
         if !output.status.success() {
             return Err(CodexError::NonZeroExit {
@@ -3114,6 +3202,8 @@ pub enum CodexError {
     InvalidUtf8(#[from] std::string::FromUtf8Error),
     #[error("prompt must not be empty")]
     EmptyPrompt,
+    #[error("API key must not be empty")]
+    EmptyApiKey,
     #[error("failed to create temporary working directory: {0}")]
     TempDir(#[source] std::io::Error),
     #[error("failed to prepare CODEX_HOME at `{path}`: {source}")]
@@ -6268,6 +6358,175 @@ fi
         assert_eq!(ColorMode::Never.as_str(), "never");
     }
 
+    #[tokio::test]
+    async fn auth_helper_uses_app_scoped_home_without_mutating_env() {
+        let _guard = env_guard();
+        let temp = tempfile::tempdir().unwrap();
+        let log_path = temp.path().join("auth.log");
+        let app_home = temp.path().join("app-home");
+        let caller_home = temp.path().join("caller-home");
+        let previous_home = env::var("CODEX_HOME").ok();
+        env::set_var("CODEX_HOME", &caller_home);
+        env::set_var("AUTH_HELPER_LOG", &log_path);
+
+        let script = r#"#!/usr/bin/env bash
+set -e
+echo "args:$*" >> "$AUTH_HELPER_LOG"
+echo "CODEX_HOME=${CODEX_HOME:-missing}" >> "$AUTH_HELPER_LOG"
+if [[ "$1" == "login" && "$2" == "status" ]]; then
+  echo "Logged in using ChatGPT"
+  exit 0
+fi
+echo "Not logged in" >&2
+exit 1
+"#;
+        let binary = write_fake_codex(temp.path(), script);
+        let helper = AuthSessionHelper::with_client(
+            CodexClient::builder()
+                .binary(&binary)
+                .codex_home(&app_home)
+                .build(),
+        );
+
+        let status = helper.status().await.unwrap();
+        assert!(matches!(
+            status,
+            CodexAuthStatus::LoggedIn(CodexAuthMethod::ChatGpt)
+        ));
+
+        let logged = std_fs::read_to_string(&log_path).unwrap();
+        assert!(logged.contains("args:login status"));
+        assert!(logged.contains(&format!("CODEX_HOME={}", app_home.display())));
+
+        assert_eq!(
+            env::var("CODEX_HOME").unwrap(),
+            caller_home.display().to_string()
+        );
+
+        env::remove_var("AUTH_HELPER_LOG");
+        if let Some(previous) = previous_home {
+            env::set_var("CODEX_HOME", previous);
+        } else {
+            env::remove_var("CODEX_HOME");
+        }
+    }
+
+    #[tokio::test]
+    async fn ensure_api_key_login_runs_when_logged_out() {
+        let _guard = env_guard();
+        let temp = tempfile::tempdir().unwrap();
+        let log_path = temp.path().join("login.log");
+        let state_path = temp.path().join("api-key-state");
+        let script = format!(
+            r#"#!/usr/bin/env bash
+set -e
+echo "$@" >> "{log}"
+if [[ "$1" == "login" && "$2" == "status" ]]; then
+  if [[ -f "{state}" ]]; then
+    echo "Logged in using an API key - sk-already"
+    exit 0
+  fi
+  echo "Not logged in" >&2
+  exit 1
+fi
+if [[ "$1" == "login" && "$2" == "--api-key" ]]; then
+  echo "Logged in using an API key - $3" > "{state}"
+  echo "Logged in using an API key - $3"
+  exit 0
+fi
+echo "unexpected args: $*" >&2
+exit 2
+"#,
+            log = log_path.display(),
+            state = state_path.display()
+        );
+        let binary = write_fake_codex(temp.path(), &script);
+        let helper = AuthSessionHelper::with_client(
+            CodexClient::builder()
+                .binary(&binary)
+                .codex_home(temp.path().join("app-home"))
+                .build(),
+        );
+
+        let status = helper.ensure_api_key_login("sk-test-key").await.unwrap();
+        match status {
+            CodexAuthStatus::LoggedIn(CodexAuthMethod::ApiKey { masked_key }) => {
+                assert_eq!(masked_key.as_deref(), Some("sk-test-key"));
+            }
+            other => panic!("unexpected status: {other:?}"),
+        }
+
+        let second = helper.ensure_api_key_login("sk-other").await.unwrap();
+        assert!(matches!(
+            second,
+            CodexAuthStatus::LoggedIn(CodexAuthMethod::ApiKey { .. })
+        ));
+
+        let log = std_fs::read_to_string(&log_path).unwrap();
+        assert!(log.contains("login status"));
+        assert!(log.contains("login --api-key sk-test-key"));
+        assert_eq!(
+            log.lines()
+                .filter(|line| line.contains("--api-key"))
+                .count(),
+            1
+        );
+    }
+
+    #[tokio::test]
+    async fn ensure_chatgpt_login_launches_when_needed() {
+        let _guard = env_guard();
+        let temp = tempfile::tempdir().unwrap();
+        let log_path = temp.path().join("chatgpt.log");
+        let state_path = temp.path().join("chatgpt-state");
+        let script = format!(
+            r#"#!/usr/bin/env bash
+set -e
+echo "$@" >> "{log}"
+if [[ "$1" == "login" && "$2" == "status" ]]; then
+  if [[ -f "{state}" ]]; then
+    echo "Logged in using ChatGPT"
+    exit 0
+  fi
+  echo "Not logged in" >&2
+  exit 1
+fi
+if [[ "$1" == "login" && -z "$2" ]]; then
+  echo "Logged in using ChatGPT" > "{state}"
+  echo "Logged in using ChatGPT"
+  exit 0
+fi
+echo "unknown args: $*" >&2
+exit 2
+"#,
+            log = log_path.display(),
+            state = state_path.display()
+        );
+        let binary = write_fake_codex(temp.path(), &script);
+        let helper = AuthSessionHelper::with_client(
+            CodexClient::builder()
+                .binary(&binary)
+                .codex_home(temp.path().join("app-home"))
+                .build(),
+        );
+
+        let child = helper.ensure_chatgpt_login().await.unwrap();
+        let child = child.expect("expected ChatGPT login child");
+        let output = child.wait_with_output().await.unwrap();
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("Logged in using ChatGPT"));
+
+        let second = helper.ensure_chatgpt_login().await.unwrap();
+        assert!(second.is_none());
+
+        let log = std_fs::read_to_string(&log_path).unwrap();
+        assert!(log.lines().any(|line| line == "login"));
+        assert_eq!(
+            log.lines().filter(|line| line == &"login").count(),
+            1
+        );
+    }
+
     #[test]
     fn parses_chatgpt_login() {
         let message = "Logged in using ChatGPT";
@@ -6360,6 +6619,16 @@ fn parse_login_success(output: &str) -> Option<CodexAuthStatus> {
         }));
     }
     None
+}
+
+fn preferred_output_channel(output: &CommandOutput) -> String {
+    let stderr = String::from_utf8(output.stderr.clone()).unwrap_or_default();
+    let stdout = String::from_utf8(output.stdout.clone()).unwrap_or_default();
+    if stderr.trim().is_empty() {
+        stdout
+    } else {
+        stderr
+    }
 }
 
 struct CommandOutput {
