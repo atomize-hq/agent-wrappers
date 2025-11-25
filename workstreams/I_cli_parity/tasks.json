@@ -47,5 +47,18 @@
     ],
     "tests": ["cargo test -p codex"],
     "status": "done"
+  },
+  {
+    "id": "I5-tbd",
+    "title": "Scope next CLI parity/auth follow-ups",
+    "description": "Triage remaining gaps after I4. Decide if further CLI parity/auth/session work is needed (docs, examples, API polish, additional flows). If needed, add/clarify next tasks; otherwise mark workstream complete.",
+    "dependencies": ["I4-auth-session-helper"],
+    "files": [
+      "workstreams/I_cli_parity/BRIEF.md",
+      "workstreams/I_cli_parity/tasks.json",
+      "README.md",
+      "crates/codex/src/lib.rs"
+    ],
+    "status": "done"
   }
 ]
