@@ -1067,6 +1067,7 @@ pub struct CodexClient {
     quiet: bool,
     mirror_stdout: bool,
     json_event_log: Option<PathBuf>,
+    cli_overrides: CliOverrides,
     capability_overrides: CapabilityOverrides,
     capability_cache_policy: CapabilityCachePolicy,
 }
@@ -1125,12 +1126,17 @@ impl CodexClient {
     /// # Ok(()) }
     /// ```
     pub async fn send_prompt(&self, prompt: impl AsRef<str>) -> Result<String, CodexError> {
-        let prompt = prompt.as_ref();
-        if prompt.trim().is_empty() {
+        self.send_prompt_with(ExecRequest::new(prompt.as_ref()))
+            .await
+    }
+
+    /// Sends an exec request with per-call CLI overrides.
+    pub async fn send_prompt_with(&self, request: ExecRequest) -> Result<String, CodexError> {
+        if request.prompt.trim().is_empty() {
             return Err(CodexError::EmptyPrompt);
         }
 
-        self.invoke_codex_exec(prompt).await
+        self.invoke_codex_exec(request).await
     }
 
     /// Streams structured JSONL events from `codex exec --json`.
@@ -1141,6 +1147,16 @@ impl CodexClient {
     pub async fn stream_exec(
         &self,
         request: ExecStreamRequest,
+    ) -> Result<ExecStream, ExecStreamError> {
+        self.stream_exec_with_overrides(request, CliOverridesPatch::default())
+            .await
+    }
+
+    /// Streams JSONL events with per-request CLI overrides.
+    pub async fn stream_exec_with_overrides(
+        &self,
+        request: ExecStreamRequest,
+        overrides: CliOverridesPatch,
     ) -> Result<ExecStream, ExecStreamError> {
         if request.prompt.trim().is_empty() {
             return Err(CodexError::EmptyPrompt.into());
@@ -1158,12 +1174,20 @@ impl CodexClient {
         let dir_path = dir_ctx.path().to_path_buf();
         let last_message_path =
             output_last_message.unwrap_or_else(|| unique_temp_path("codex_last_message_", "txt"));
+        let needs_capabilities = output_schema.is_some() || !self.add_dirs.is_empty();
+        let capabilities = if needs_capabilities {
+            Some(self.probe_capabilities().await)
+        } else {
+            None
+        };
+        let resolved_overrides =
+            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
 
         let mut command = Command::new(self.command_env.binary_path());
         command
             .arg("exec")
             .arg("--color")
-            .arg(ColorMode::Never.as_str())
+            .arg(self.color_mode.as_str())
             .arg("--skip-git-repo-check")
             .arg("--json")
             .stdout(std::process::Stdio::piped())
@@ -1172,14 +1196,23 @@ impl CodexClient {
             .kill_on_drop(true)
             .current_dir(&dir_path);
 
-        if let Some(config) = reasoning_config_for(self.model.as_deref()) {
-            for (key, value) in config {
-                command.arg("--config").arg(format!("{key}={value}"));
-            }
-        }
+        apply_cli_overrides(&mut command, &resolved_overrides, true);
 
         if let Some(model) = &self.model {
             command.arg("--model").arg(model);
+        }
+
+        if let Some(capabilities) = &capabilities {
+            if !self.add_dirs.is_empty() {
+                let guard = capabilities.guard_add_dir();
+                if guard_is_supported(&guard) {
+                    for dir in &self.add_dirs {
+                        command.arg("--add-dir").arg(dir);
+                    }
+                } else {
+                    log_guard_skip(&guard);
+                }
+            }
         }
 
         for image in &self.images {
@@ -1189,7 +1222,16 @@ impl CodexClient {
         command.arg("--output-last-message").arg(&last_message_path);
 
         if let Some(schema_path) = &output_schema {
-            command.arg("--output-schema").arg(schema_path);
+            if let Some(capabilities) = &capabilities {
+                let guard = capabilities.guard_output_schema();
+                if guard_is_supported(&guard) {
+                    command.arg("--output-schema").arg(schema_path);
+                } else {
+                    log_guard_skip(&guard);
+                }
+            } else {
+                command.arg("--output-schema").arg(schema_path);
+            }
         }
 
         self.command_env.apply(&mut command)?;
@@ -1210,6 +1252,187 @@ impl CodexClient {
                 .await
                 .map_err(CodexError::StdinWrite)?;
             stdin.shutdown().await.map_err(CodexError::StdinWrite)?;
+        }
+
+        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+
+        let (tx, rx) = mpsc::channel(32);
+        let json_log = prepare_json_log(
+            json_event_log
+                .or_else(|| self.json_event_log.clone())
+                .filter(|path| !path.as_os_str().is_empty()),
+        )
+        .await?;
+        let stdout_task = tokio::spawn(forward_json_events(
+            stdout,
+            tx,
+            self.mirror_stdout,
+            json_log,
+        ));
+        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+
+        let events = EventChannelStream::new(rx, idle_timeout);
+        let timeout = self.timeout;
+        let schema_path = output_schema.clone();
+        let completion = Box::pin(async move {
+            let _dir_ctx = dir_ctx;
+            let wait_task = async move {
+                let status = child
+                    .wait()
+                    .await
+                    .map_err(|source| CodexError::Wait { source })?;
+                let stdout_result = stdout_task.await.map_err(CodexError::Join)?;
+                stdout_result?;
+                let stderr_bytes = stderr_task
+                    .await
+                    .map_err(CodexError::Join)?
+                    .map_err(CodexError::CaptureIo)?;
+                if !status.success() {
+                    return Err(CodexError::NonZeroExit {
+                        status,
+                        stderr: String::from_utf8(stderr_bytes).unwrap_or_default(),
+                    }
+                    .into());
+                }
+                let last_message = read_last_message(&last_message_path).await;
+                Ok(ExecCompletion {
+                    status,
+                    last_message_path: Some(last_message_path),
+                    last_message,
+                    schema_path,
+                })
+            };
+
+            if timeout.is_zero() {
+                wait_task.await
+            } else {
+                match time::timeout(timeout, wait_task).await {
+                    Ok(result) => result,
+                    Err(_) => Err(CodexError::Timeout { timeout }.into()),
+                }
+            }
+        });
+
+        Ok(ExecStream {
+            events: Box::pin(events),
+            completion,
+        })
+    }
+
+    /// Streams structured events from `codex resume --json`.
+    pub async fn stream_resume(
+        &self,
+        request: ResumeRequest,
+    ) -> Result<ExecStream, ExecStreamError> {
+        if let Some(prompt) = &request.prompt {
+            if prompt.trim().is_empty() {
+                return Err(CodexError::EmptyPrompt.into());
+            }
+        }
+
+        let ResumeRequest {
+            selector,
+            prompt,
+            idle_timeout,
+            output_last_message,
+            output_schema,
+            json_event_log,
+            overrides,
+        } = request;
+
+        let dir_ctx = self.directory_context()?;
+        let dir_path = dir_ctx.path().to_path_buf();
+        let last_message_path =
+            output_last_message.unwrap_or_else(|| unique_temp_path("codex_last_message_", "txt"));
+        let needs_capabilities = output_schema.is_some() || !self.add_dirs.is_empty();
+        let capabilities = if needs_capabilities {
+            Some(self.probe_capabilities().await)
+        } else {
+            None
+        };
+        let resolved_overrides =
+            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+
+        let mut command = Command::new(self.command_env.binary_path());
+        command
+            .arg("resume")
+            .arg("--color")
+            .arg(self.color_mode.as_str())
+            .arg("--skip-git-repo-check")
+            .arg("--json")
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .stdin(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .current_dir(&dir_path);
+
+        apply_cli_overrides(&mut command, &resolved_overrides, true);
+
+        match selector {
+            ResumeSelector::Id(id) => {
+                command.arg(id);
+            }
+            ResumeSelector::Last => {
+                command.arg("--last");
+            }
+            ResumeSelector::All => {
+                command.arg("--all");
+            }
+        }
+
+        if let Some(model) = &self.model {
+            command.arg("--model").arg(model);
+        }
+
+        if let Some(capabilities) = &capabilities {
+            if !self.add_dirs.is_empty() {
+                let guard = capabilities.guard_add_dir();
+                if guard_is_supported(&guard) {
+                    for dir in &self.add_dirs {
+                        command.arg("--add-dir").arg(dir);
+                    }
+                } else {
+                    log_guard_skip(&guard);
+                }
+            }
+        }
+
+        command.arg("--output-last-message").arg(&last_message_path);
+
+        if let Some(schema_path) = &output_schema {
+            if let Some(capabilities) = &capabilities {
+                let guard = capabilities.guard_output_schema();
+                if guard_is_supported(&guard) {
+                    command.arg("--output-schema").arg(schema_path);
+                } else {
+                    log_guard_skip(&guard);
+                }
+            } else {
+                command.arg("--output-schema").arg(schema_path);
+            }
+        }
+
+        self.command_env.apply(&mut command)?;
+
+        let mut child = command.spawn().map_err(|source| CodexError::Spawn {
+            binary: self.command_env.binary_path().to_path_buf(),
+            source,
+        })?;
+
+        if let Some(prompt) = &prompt {
+            let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
+            stdin
+                .write_all(prompt.as_bytes())
+                .await
+                .map_err(CodexError::StdinWrite)?;
+            stdin
+                .write_all(b"\n")
+                .await
+                .map_err(CodexError::StdinWrite)?;
+            stdin.shutdown().await.map_err(CodexError::StdinWrite)?;
+        } else {
+            let _ = child.stdin.take();
         }
 
         let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
@@ -1403,6 +1626,11 @@ impl CodexClient {
 
     async fn apply_or_diff(&self, subcommand: &str) -> Result<ApplyDiffArtifacts, CodexError> {
         let dir_ctx = self.directory_context()?;
+        let resolved_overrides = resolve_cli_overrides(
+            &self.cli_overrides,
+            &CliOverridesPatch::default(),
+            self.model.as_deref(),
+        );
 
         let mut command = Command::new(self.command_env.binary_path());
         command
@@ -1412,6 +1640,7 @@ impl CodexClient {
             .kill_on_drop(true)
             .current_dir(dir_ctx.path());
 
+        apply_cli_overrides(&mut command, &resolved_overrides, false);
         self.command_env.apply(&mut command)?;
 
         let mut child = command.spawn().map_err(|source| CodexError::Spawn {
@@ -1679,7 +1908,8 @@ impl CodexClient {
         update_advisory_from_capabilities(&capabilities, latest_releases)
     }
 
-    async fn invoke_codex_exec(&self, prompt: &str) -> Result<String, CodexError> {
+    async fn invoke_codex_exec(&self, request: ExecRequest) -> Result<String, CodexError> {
+        let ExecRequest { prompt, overrides } = request;
         let dir_ctx = self.directory_context()?;
         let needs_capabilities = self.output_schema || !self.add_dirs.is_empty();
         let capabilities = if needs_capabilities {
@@ -1688,6 +1918,8 @@ impl CodexClient {
             None
         };
 
+        let resolved_overrides =
+            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
         let mut command = Command::new(self.command_env.binary_path());
         command
             .arg("exec")
@@ -1699,9 +1931,11 @@ impl CodexClient {
             .kill_on_drop(true)
             .current_dir(dir_ctx.path());
 
+        apply_cli_overrides(&mut command, &resolved_overrides, true);
+
         let send_prompt_via_stdin = self.json_output;
         if !send_prompt_via_stdin {
-            command.arg(prompt);
+            command.arg(&prompt);
         }
         let stdin_mode = if send_prompt_via_stdin {
             std::process::Stdio::piped()
@@ -1709,12 +1943,6 @@ impl CodexClient {
             std::process::Stdio::null()
         };
         command.stdin(stdin_mode);
-
-        if let Some(config) = reasoning_config_for(self.model.as_deref()) {
-            for (key, value) in config {
-                command.arg("--config").arg(format!("{key}={value}"));
-            }
-        }
 
         if let Some(model) = &self.model {
             command.arg("--model").arg(model);
@@ -1934,6 +2162,7 @@ pub struct CodexClientBuilder {
     quiet: bool,
     mirror_stdout: bool,
     json_event_log: Option<PathBuf>,
+    cli_overrides: CliOverrides,
     capability_overrides: CapabilityOverrides,
     capability_cache_policy: CapabilityCachePolicy,
 }
@@ -2068,6 +2297,126 @@ impl CodexClientBuilder {
         self
     }
 
+    /// Adds a `--config key=value` override that will be applied to every Codex invocation.
+    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.cli_overrides
+            .config_overrides
+            .push(ConfigOverride::new(key, value));
+        self
+    }
+
+    /// Adds a preformatted `--config key=value` override without parsing the input.
+    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+        self.cli_overrides
+            .config_overrides
+            .push(ConfigOverride::from_raw(raw));
+        self
+    }
+
+    /// Replaces the config overrides with the provided collection.
+    pub fn config_overrides<I, K, V>(mut self, overrides: I) -> Self
+    where
+        I: IntoIterator<Item = (K, V)>,
+        K: Into<String>,
+        V: Into<String>,
+    {
+        self.cli_overrides.config_overrides = overrides
+            .into_iter()
+            .map(|(key, value)| ConfigOverride::new(key, value))
+            .collect();
+        self
+    }
+
+    /// Sets `model_reasoning_effort` via `--config`.
+    pub fn reasoning_effort(mut self, effort: ReasoningEffort) -> Self {
+        self.cli_overrides.reasoning.effort = Some(effort);
+        self
+    }
+
+    /// Sets `model_reasoning_summary` via `--config`.
+    pub fn reasoning_summary(mut self, summary: ReasoningSummary) -> Self {
+        self.cli_overrides.reasoning.summary = Some(summary);
+        self
+    }
+
+    /// Sets `model_verbosity` via `--config`.
+    pub fn reasoning_verbosity(mut self, verbosity: ModelVerbosity) -> Self {
+        self.cli_overrides.reasoning.verbosity = Some(verbosity);
+        self
+    }
+
+    /// Sets `model_reasoning_summary_format` via `--config`.
+    pub fn reasoning_summary_format(mut self, format: ReasoningSummaryFormat) -> Self {
+        self.cli_overrides.reasoning.summary_format = Some(format);
+        self
+    }
+
+    /// Sets `model_supports_reasoning_summaries` via `--config`.
+    pub fn supports_reasoning_summaries(mut self, enable: bool) -> Self {
+        self.cli_overrides.reasoning.supports_summaries = Some(enable);
+        self
+    }
+
+    /// Controls whether GPT-5* reasoning defaults should be injected automatically.
+    pub fn auto_reasoning_defaults(mut self, enable: bool) -> Self {
+        self.cli_overrides.auto_reasoning_defaults = enable;
+        self
+    }
+
+    /// Sets the approval policy for Codex subprocesses.
+    pub fn approval_policy(mut self, policy: ApprovalPolicy) -> Self {
+        self.cli_overrides.approval_policy = Some(policy);
+        self
+    }
+
+    /// Sets the sandbox mode for Codex subprocesses.
+    pub fn sandbox_mode(mut self, mode: SandboxMode) -> Self {
+        self.cli_overrides.sandbox_mode = Some(mode);
+        self
+    }
+
+    /// Applies the `--full-auto` safety override unless explicit sandbox/approval options are set.
+    pub fn full_auto(mut self, enable: bool) -> Self {
+        self.cli_overrides.safety_override = if enable {
+            SafetyOverride::FullAuto
+        } else {
+            SafetyOverride::Inherit
+        };
+        self
+    }
+
+    /// Applies the `--dangerously-bypass-approvals-and-sandbox` override.
+    pub fn dangerously_bypass_approvals_and_sandbox(mut self, enable: bool) -> Self {
+        self.cli_overrides.safety_override = if enable {
+            SafetyOverride::DangerouslyBypass
+        } else {
+            SafetyOverride::Inherit
+        };
+        self
+    }
+
+    /// Applies `--cd <dir>` to Codex invocations while keeping the process cwd set to `working_dir`.
+    pub fn cd(mut self, dir: impl Into<PathBuf>) -> Self {
+        self.cli_overrides.cd = Some(dir.into());
+        self
+    }
+
+    /// Selects a local provider backend (`--local-provider`).
+    pub fn local_provider(mut self, provider: LocalProvider) -> Self {
+        self.cli_overrides.local_provider = Some(provider);
+        self
+    }
+
+    /// Controls whether `--search` is passed through to Codex.
+    pub fn search(mut self, enable: bool) -> Self {
+        self.cli_overrides.search = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+
     /// Supplies manual capability data to skip probes or adjust feature flags.
     pub fn capability_overrides(mut self, overrides: CapabilityOverrides) -> Self {
         self.capability_overrides = overrides;
@@ -2136,6 +2485,7 @@ impl CodexClientBuilder {
             quiet: self.quiet,
             mirror_stdout: self.mirror_stdout,
             json_event_log: self.json_event_log,
+            cli_overrides: self.cli_overrides,
             capability_overrides: self.capability_overrides,
             capability_cache_policy: self.capability_cache_policy,
         }
@@ -2159,6 +2509,7 @@ impl Default for CodexClientBuilder {
             quiet: false,
             mirror_stdout: true,
             json_event_log: None,
+            cli_overrides: CliOverrides::default(),
             capability_overrides: CapabilityOverrides::default(),
             capability_cache_policy: CapabilityCachePolicy::default(),
         }
@@ -2186,14 +2537,430 @@ impl ColorMode {
     }
 }
 
+/// Approval policy used by `--ask-for-approval`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ApprovalPolicy {
+    Untrusted,
+    OnFailure,
+    OnRequest,
+    Never,
+}
+
+impl ApprovalPolicy {
+    const fn as_str(self) -> &'static str {
+        match self {
+            ApprovalPolicy::Untrusted => "untrusted",
+            ApprovalPolicy::OnFailure => "on-failure",
+            ApprovalPolicy::OnRequest => "on-request",
+            ApprovalPolicy::Never => "never",
+        }
+    }
+}
+
+/// Sandbox isolation level.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SandboxMode {
+    ReadOnly,
+    WorkspaceWrite,
+    DangerFullAccess,
+}
+
+impl SandboxMode {
+    const fn as_str(self) -> &'static str {
+        match self {
+            SandboxMode::ReadOnly => "read-only",
+            SandboxMode::WorkspaceWrite => "workspace-write",
+            SandboxMode::DangerFullAccess => "danger-full-access",
+        }
+    }
+}
+
+/// Safety overrides that collapse approval/sandbox behavior.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SafetyOverride {
+    Inherit,
+    FullAuto,
+    DangerouslyBypass,
+}
+
+impl Default for SafetyOverride {
+    fn default() -> Self {
+        SafetyOverride::Inherit
+    }
+}
+
+/// Local provider selection for OSS backends.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LocalProvider {
+    LmStudio,
+    Ollama,
+    Custom,
+}
+
+impl LocalProvider {
+    const fn as_str(self) -> &'static str {
+        match self {
+            LocalProvider::LmStudio => "lmstudio",
+            LocalProvider::Ollama => "ollama",
+            LocalProvider::Custom => "custom",
+        }
+    }
+}
+
+/// Three-state flag used when requests can override builder defaults.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FlagState {
+    Inherit,
+    Enable,
+    Disable,
+}
+
+impl Default for FlagState {
+    fn default() -> Self {
+        FlagState::Inherit
+    }
+}
+
+/// Config values for `model_reasoning_effort`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ReasoningEffort {
+    Minimal,
+    Low,
+    Medium,
+    High,
+}
+
+impl ReasoningEffort {
+    const fn as_str(self) -> &'static str {
+        match self {
+            ReasoningEffort::Minimal => "minimal",
+            ReasoningEffort::Low => "low",
+            ReasoningEffort::Medium => "medium",
+            ReasoningEffort::High => "high",
+        }
+    }
+}
+
+/// Config values for `model_reasoning_summary`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ReasoningSummary {
+    Auto,
+    Concise,
+    Detailed,
+    None,
+}
+
+impl ReasoningSummary {
+    const fn as_str(self) -> &'static str {
+        match self {
+            ReasoningSummary::Auto => "auto",
+            ReasoningSummary::Concise => "concise",
+            ReasoningSummary::Detailed => "detailed",
+            ReasoningSummary::None => "none",
+        }
+    }
+}
+
+/// Config values for `model_verbosity`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ModelVerbosity {
+    Low,
+    Medium,
+    High,
+}
+
+impl ModelVerbosity {
+    const fn as_str(self) -> &'static str {
+        match self {
+            ModelVerbosity::Low => "low",
+            ModelVerbosity::Medium => "medium",
+            ModelVerbosity::High => "high",
+        }
+    }
+}
+
+/// Config values for `model_reasoning_summary_format`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ReasoningSummaryFormat {
+    None,
+    Experimental,
+}
+
+impl ReasoningSummaryFormat {
+    const fn as_str(self) -> &'static str {
+        match self {
+            ReasoningSummaryFormat::None => "none",
+            ReasoningSummaryFormat::Experimental => "experimental",
+        }
+    }
+}
+
+/// Represents a single `--config key=value` override.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ConfigOverride {
+    pub key: String,
+    pub value: String,
+}
+
+impl ConfigOverride {
+    pub fn new(key: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            key: key.into(),
+            value: value.into(),
+        }
+    }
+
+    pub fn from_raw(raw: impl Into<String>) -> Self {
+        let raw = raw.into();
+        let (key, value) = raw
+            .split_once('=')
+            .map(|(key, value)| (key.to_string(), value.to_string()))
+            .unwrap_or_else(|| (raw.clone(), String::new()));
+        ConfigOverride { key, value }
+    }
+
+    fn is_reasoning_key(&self) -> bool {
+        REASONING_CONFIG_KEYS.contains(&self.key.as_str())
+    }
+}
+
+/// Structured reasoning overrides converted into config entries.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ReasoningOverrides {
+    pub effort: Option<ReasoningEffort>,
+    pub summary: Option<ReasoningSummary>,
+    pub verbosity: Option<ModelVerbosity>,
+    pub summary_format: Option<ReasoningSummaryFormat>,
+    pub supports_summaries: Option<bool>,
+}
+
+impl ReasoningOverrides {
+    fn has_overrides(&self) -> bool {
+        self.effort.is_some()
+            || self.summary.is_some()
+            || self.verbosity.is_some()
+            || self.summary_format.is_some()
+            || self.supports_summaries.is_some()
+    }
+
+    fn append_overrides(&self, configs: &mut Vec<ConfigOverride>) {
+        if let Some(value) = self.effort {
+            configs.push(ConfigOverride::new(
+                "model_reasoning_effort",
+                value.as_str(),
+            ));
+        }
+        if let Some(value) = self.summary {
+            configs.push(ConfigOverride::new(
+                "model_reasoning_summary",
+                value.as_str(),
+            ));
+        }
+        if let Some(value) = self.verbosity {
+            configs.push(ConfigOverride::new("model_verbosity", value.as_str()));
+        }
+        if let Some(value) = self.summary_format {
+            configs.push(ConfigOverride::new(
+                "model_reasoning_summary_format",
+                value.as_str(),
+            ));
+        }
+        if let Some(value) = self.supports_summaries {
+            configs.push(ConfigOverride::new(
+                "model_supports_reasoning_summaries",
+                value.to_string(),
+            ));
+        }
+    }
+}
+
+/// Builder-scoped CLI overrides.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CliOverrides {
+    pub config_overrides: Vec<ConfigOverride>,
+    pub reasoning: ReasoningOverrides,
+    pub approval_policy: Option<ApprovalPolicy>,
+    pub sandbox_mode: Option<SandboxMode>,
+    pub safety_override: SafetyOverride,
+    pub cd: Option<PathBuf>,
+    pub local_provider: Option<LocalProvider>,
+    pub search: FlagState,
+    pub auto_reasoning_defaults: bool,
+}
+
+impl Default for CliOverrides {
+    fn default() -> Self {
+        Self {
+            config_overrides: Vec::new(),
+            reasoning: ReasoningOverrides::default(),
+            approval_policy: None,
+            sandbox_mode: None,
+            safety_override: SafetyOverride::Inherit,
+            cd: None,
+            local_provider: None,
+            search: FlagState::Inherit,
+            auto_reasoning_defaults: true,
+        }
+    }
+}
+
+/// Request-level overlay of builder overrides.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CliOverridesPatch {
+    pub config_overrides: Vec<ConfigOverride>,
+    pub reasoning: ReasoningOverrides,
+    pub approval_policy: Option<ApprovalPolicy>,
+    pub sandbox_mode: Option<SandboxMode>,
+    pub safety_override: Option<SafetyOverride>,
+    pub cd: Option<PathBuf>,
+    pub local_provider: Option<LocalProvider>,
+    pub search: FlagState,
+    pub auto_reasoning_defaults: Option<bool>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ResolvedCliOverrides {
+    config_overrides: Vec<ConfigOverride>,
+    approval_policy: Option<ApprovalPolicy>,
+    sandbox_mode: Option<SandboxMode>,
+    safety_override: SafetyOverride,
+    cd: Option<PathBuf>,
+    local_provider: Option<LocalProvider>,
+    search: FlagState,
+}
+
+impl ResolvedCliOverrides {
+    fn search_enabled(&self) -> bool {
+        matches!(self.search, FlagState::Enable)
+    }
+}
+
+const REASONING_CONFIG_KEYS: &[&str] = &[
+    "model_reasoning_effort",
+    "model_reasoning_summary",
+    "model_verbosity",
+    "model_reasoning_summary_format",
+    "model_supports_reasoning_summaries",
+];
+
 fn reasoning_config_for(model: Option<&str>) -> Option<&'static [(&'static str, &'static str)]> {
-    let name = model.map(|value| value.to_ascii_lowercase());
-    match name.as_deref() {
-        Some(name) if name.starts_with("gpt-5.1-codex") => Some(DEFAULT_REASONING_CONFIG_GPT5_1),
-        Some(name) if name.starts_with("gpt-5.1") => Some(DEFAULT_REASONING_CONFIG_GPT5_1),
-        Some(name) if name == "gpt-5-codex" => Some(DEFAULT_REASONING_CONFIG_GPT5_CODEX),
-        Some(name) if name.starts_with("gpt-5") => Some(DEFAULT_REASONING_CONFIG_GPT5),
-        _ => Some(DEFAULT_REASONING_CONFIG_GPT5),
+    let Some(name) = model.map(|value| value.to_ascii_lowercase()) else {
+        return None;
+    };
+    match name.as_str() {
+        name if name.starts_with("gpt-5.1-codex") => Some(DEFAULT_REASONING_CONFIG_GPT5_1),
+        name if name.starts_with("gpt-5.1") => Some(DEFAULT_REASONING_CONFIG_GPT5_1),
+        name if name == "gpt-5-codex" => Some(DEFAULT_REASONING_CONFIG_GPT5_CODEX),
+        name if name.starts_with("gpt-5") => Some(DEFAULT_REASONING_CONFIG_GPT5),
+        _ => None,
+    }
+}
+
+fn has_reasoning_config_override(overrides: &[ConfigOverride]) -> bool {
+    overrides.iter().any(ConfigOverride::is_reasoning_key)
+}
+
+fn resolve_cli_overrides(
+    builder: &CliOverrides,
+    patch: &CliOverridesPatch,
+    model: Option<&str>,
+) -> ResolvedCliOverrides {
+    let auto_reasoning_defaults = patch
+        .auto_reasoning_defaults
+        .unwrap_or(builder.auto_reasoning_defaults);
+
+    let has_reasoning_overrides = builder.reasoning.has_overrides()
+        || patch.reasoning.has_overrides()
+        || has_reasoning_config_override(&builder.config_overrides)
+        || has_reasoning_config_override(&patch.config_overrides);
+
+    let mut config_overrides = Vec::new();
+    if auto_reasoning_defaults && !has_reasoning_overrides {
+        if let Some(defaults) = reasoning_config_for(model) {
+            for (key, value) in defaults {
+                config_overrides.push(ConfigOverride::new(*key, *value));
+            }
+        }
+    }
+
+    config_overrides.extend(builder.config_overrides.clone());
+    builder.reasoning.append_overrides(&mut config_overrides);
+    config_overrides.extend(patch.config_overrides.clone());
+    patch.reasoning.append_overrides(&mut config_overrides);
+
+    let approval_policy = patch.approval_policy.or(builder.approval_policy);
+    let sandbox_mode = patch.sandbox_mode.or(builder.sandbox_mode);
+    let safety_override = patch.safety_override.unwrap_or(builder.safety_override);
+    let cd = patch.cd.clone().or_else(|| builder.cd.clone());
+    let local_provider = patch.local_provider.or(builder.local_provider);
+    let search = match patch.search {
+        FlagState::Inherit => builder.search,
+        other => other,
+    };
+
+    ResolvedCliOverrides {
+        config_overrides,
+        approval_policy,
+        sandbox_mode,
+        safety_override,
+        cd,
+        local_provider,
+        search,
+    }
+}
+
+fn cli_override_args(resolved: &ResolvedCliOverrides, include_search: bool) -> Vec<OsString> {
+    let mut args = Vec::new();
+    for config in &resolved.config_overrides {
+        args.push(OsString::from("--config"));
+        args.push(OsString::from(format!("{}={}", config.key, config.value)));
+    }
+
+    match resolved.safety_override {
+        SafetyOverride::DangerouslyBypass => {
+            args.push(OsString::from("--dangerously-bypass-approvals-and-sandbox"));
+        }
+        other => {
+            if let Some(policy) = resolved.approval_policy {
+                args.push(OsString::from("--ask-for-approval"));
+                args.push(OsString::from(policy.as_str()));
+            }
+
+            if let Some(mode) = resolved.sandbox_mode {
+                args.push(OsString::from("--sandbox"));
+                args.push(OsString::from(mode.as_str()));
+            } else if resolved.approval_policy.is_none()
+                && matches!(other, SafetyOverride::FullAuto)
+            {
+                args.push(OsString::from("--full-auto"));
+            }
+        }
+    }
+
+    if let Some(cd) = &resolved.cd {
+        args.push(OsString::from("--cd"));
+        args.push(cd.as_os_str().to_os_string());
+    }
+
+    if let Some(provider) = resolved.local_provider {
+        args.push(OsString::from("--local-provider"));
+        args.push(OsString::from(provider.as_str()));
+    }
+
+    if include_search && resolved.search_enabled() {
+        args.push(OsString::from("--search"));
+    }
+
+    args
+}
+
+fn apply_cli_overrides(
+    command: &mut Command,
+    resolved: &ResolvedCliOverrides,
+    include_search: bool,
+) {
+    for arg in cli_override_args(resolved, include_search) {
+        command.arg(arg);
     }
 }
 
@@ -2746,6 +3513,50 @@ pub struct EventError {
     pub extra: BTreeMap<String, Value>,
 }
 
+/// Options configuring a single exec request.
+#[derive(Clone, Debug)]
+pub struct ExecRequest {
+    pub prompt: String,
+    pub overrides: CliOverridesPatch,
+}
+
+impl ExecRequest {
+    pub fn new(prompt: impl Into<String>) -> Self {
+        Self {
+            prompt: prompt.into(),
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+
+    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.overrides
+            .config_overrides
+            .push(ConfigOverride::new(key, value));
+        self
+    }
+
+    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+        self.overrides
+            .config_overrides
+            .push(ConfigOverride::from_raw(raw));
+        self
+    }
+
+    pub fn search(mut self, enable: bool) -> Self {
+        self.overrides.search = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+}
+
 /// Options configuring a streaming exec invocation.
 #[derive(Clone, Debug)]
 pub struct ExecStreamRequest {
@@ -2764,6 +3575,85 @@ pub struct ExecStreamRequest {
     /// Appends to existing files, flushes each line, and creates parent directories. Overrides
     /// [`CodexClientBuilder::json_event_log`] for this request when provided.
     pub json_event_log: Option<PathBuf>,
+}
+
+/// Selector for `codex resume` targets.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ResumeSelector {
+    Id(String),
+    Last,
+    All,
+}
+
+/// Options configuring a streaming resume invocation.
+#[derive(Clone, Debug)]
+pub struct ResumeRequest {
+    pub selector: ResumeSelector,
+    pub prompt: Option<String>,
+    pub idle_timeout: Option<Duration>,
+    pub output_last_message: Option<PathBuf>,
+    pub output_schema: Option<PathBuf>,
+    pub json_event_log: Option<PathBuf>,
+    pub overrides: CliOverridesPatch,
+}
+
+impl ResumeRequest {
+    pub fn new(selector: ResumeSelector) -> Self {
+        Self {
+            selector,
+            prompt: None,
+            idle_timeout: None,
+            output_last_message: None,
+            output_schema: None,
+            json_event_log: None,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn with_id(id: impl Into<String>) -> Self {
+        Self::new(ResumeSelector::Id(id.into()))
+    }
+
+    pub fn last() -> Self {
+        Self::new(ResumeSelector::Last)
+    }
+
+    pub fn all() -> Self {
+        Self::new(ResumeSelector::All)
+    }
+
+    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+        self.prompt = Some(prompt.into());
+        self
+    }
+
+    pub fn idle_timeout(mut self, idle_timeout: Duration) -> Self {
+        self.idle_timeout = Some(idle_timeout);
+        self
+    }
+
+    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.overrides
+            .config_overrides
+            .push(ConfigOverride::new(key, value));
+        self
+    }
+
+    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+        self.overrides
+            .config_overrides
+            .push(ConfigOverride::from_raw(raw));
+        self
+    }
+
+    pub fn search(mut self, enable: bool) -> Self {
+        self.overrides.search = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
 }
 
 /// Ergonomic container for the streaming surface; produced by `stream_exec` (implemented in D2).
@@ -3783,6 +4673,18 @@ mod tests {
         assert!(!builder.json_output);
         assert!(!builder.quiet);
         assert!(builder.json_event_log.is_none());
+        assert!(builder.cli_overrides.config_overrides.is_empty());
+        assert!(!builder.cli_overrides.reasoning.has_overrides());
+        assert!(builder.cli_overrides.approval_policy.is_none());
+        assert!(builder.cli_overrides.sandbox_mode.is_none());
+        assert_eq!(
+            builder.cli_overrides.safety_override,
+            SafetyOverride::Inherit
+        );
+        assert!(builder.cli_overrides.cd.is_none());
+        assert!(builder.cli_overrides.local_provider.is_none());
+        assert_eq!(builder.cli_overrides.search, FlagState::Inherit);
+        assert!(builder.cli_overrides.auto_reasoning_defaults);
         assert!(builder.capability_overrides.is_empty());
         assert_eq!(
             builder.capability_cache_policy,
@@ -5045,10 +5947,124 @@ fi
             reasoning_config_for(Some("gpt-5-codex")).unwrap(),
             DEFAULT_REASONING_CONFIG_GPT5_CODEX
         );
-        assert_eq!(
-            reasoning_config_for(None).unwrap(),
-            DEFAULT_REASONING_CONFIG_GPT5
-        );
+        assert!(reasoning_config_for(None).is_none());
+        assert!(reasoning_config_for(Some("gpt-4.1-mini")).is_none());
+    }
+
+    #[test]
+    fn resolve_cli_overrides_respects_reasoning_defaults() {
+        let builder = CliOverrides::default();
+        let patch = CliOverridesPatch::default();
+
+        let resolved = resolve_cli_overrides(&builder, &patch, Some("gpt-5"));
+        let keys: Vec<_> = resolved
+            .config_overrides
+            .iter()
+            .map(|override_| override_.key.as_str())
+            .collect();
+        assert!(keys.contains(&"model_reasoning_effort"));
+        assert!(keys.contains(&"model_reasoning_summary"));
+        assert!(keys.contains(&"model_verbosity"));
+
+        let resolved_without_model = resolve_cli_overrides(&builder, &patch, None);
+        assert!(resolved_without_model.config_overrides.is_empty());
+    }
+
+    #[test]
+    fn explicit_reasoning_overrides_disable_defaults() {
+        let mut builder = CliOverrides::default();
+        builder
+            .config_overrides
+            .push(ConfigOverride::new("model_reasoning_effort", "high"));
+
+        let resolved =
+            resolve_cli_overrides(&builder, &CliOverridesPatch::default(), Some("gpt-5"));
+        assert_eq!(resolved.config_overrides.len(), 1);
+        assert_eq!(resolved.config_overrides[0].value, "high");
+    }
+
+    #[test]
+    fn request_config_overrides_follow_builder_order() {
+        let mut builder_overrides = CliOverrides::default();
+        builder_overrides.auto_reasoning_defaults = false;
+        builder_overrides
+            .config_overrides
+            .push(ConfigOverride::new("foo", "bar"));
+
+        let mut patch = CliOverridesPatch::default();
+        patch
+            .config_overrides
+            .push(ConfigOverride::new("foo", "baz"));
+
+        let resolved = resolve_cli_overrides(&builder_overrides, &patch, None);
+        let values: Vec<_> = resolved
+            .config_overrides
+            .iter()
+            .map(|override_| override_.value.as_str())
+            .collect();
+        assert_eq!(values, vec!["bar", "baz"]);
+    }
+
+    #[test]
+    fn cli_override_args_apply_safety_precedence() {
+        let mut resolved = ResolvedCliOverrides {
+            config_overrides: Vec::new(),
+            approval_policy: None,
+            sandbox_mode: None,
+            safety_override: SafetyOverride::FullAuto,
+            cd: None,
+            local_provider: None,
+            search: FlagState::Enable,
+        };
+        let args = cli_override_args(&resolved, true);
+        let args: Vec<_> = args
+            .iter()
+            .map(|value| value.to_string_lossy().into_owned())
+            .collect();
+        assert!(args.contains(&"--full-auto".to_string()));
+        assert!(args.contains(&"--search".to_string()));
+        assert!(!args.contains(&"--ask-for-approval".to_string()));
+
+        resolved.approval_policy = Some(ApprovalPolicy::OnRequest);
+        let args_with_policy = cli_override_args(&resolved, true);
+        let args_with_policy: Vec<_> = args_with_policy
+            .iter()
+            .map(|value| value.to_string_lossy().into_owned())
+            .collect();
+        assert!(!args_with_policy.contains(&"--full-auto".to_string()));
+        assert!(args_with_policy.contains(&"--ask-for-approval".to_string()));
+
+        let resolved = ResolvedCliOverrides {
+            config_overrides: vec![ConfigOverride::new("foo", "bar")],
+            approval_policy: Some(ApprovalPolicy::OnRequest),
+            sandbox_mode: Some(SandboxMode::WorkspaceWrite),
+            safety_override: SafetyOverride::DangerouslyBypass,
+            cd: Some(PathBuf::from("/tmp/worktree")),
+            local_provider: Some(LocalProvider::Ollama),
+            search: FlagState::Enable,
+        };
+        let args = cli_override_args(&resolved, true);
+        let args: Vec<_> = args
+            .iter()
+            .map(|value| value.to_string_lossy().into_owned())
+            .collect();
+        assert!(args.contains(&"--config".to_string()));
+        assert!(args.contains(&"foo=bar".to_string()));
+        assert!(args.contains(&"--dangerously-bypass-approvals-and-sandbox".to_string()));
+        assert!(args.contains(&"--cd".to_string()));
+        assert!(args.contains(&"/tmp/worktree".to_string()));
+        assert!(args.contains(&"--local-provider".to_string()));
+        assert!(args.contains(&"ollama".to_string()));
+        assert!(args.contains(&"--search".to_string()));
+        assert!(!args.contains(&"--ask-for-approval".to_string()));
+        assert!(!args.contains(&"--sandbox".to_string()));
+
+        let args_without_search = cli_override_args(&resolved, false);
+        let args_without_search: Vec<_> = args_without_search
+            .iter()
+            .map(|value| value.to_string_lossy().into_owned())
+            .collect();
+        assert!(!args_without_search.contains(&"--search".to_string()));
     }
 
     #[test]
