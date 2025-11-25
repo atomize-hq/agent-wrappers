@@ -10,7 +10,7 @@
       "crates/codex/src/lib.rs"
     ],
     "outputs": ["Design note/doc comments committed to repo"],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "I2-implement-flags-config-overrides",
