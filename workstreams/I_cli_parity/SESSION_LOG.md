@@ -11,3 +11,5 @@ Template: `[START yyyy-mm-ddTHH:MMZ] [END yyyy-mm-ddTHH:MMZ] Agent: <name> | Tas
 [START 2025-11-25T16:13Z] [END 2025-11-25T16:26Z] Agent: Codex | Task(s): I3-tests-docs-examples | Branch: ws/I_cli_parity | Notes: Added CLI override tests, docs, and cli_overrides example; merged task branch; cargo test -p codex
 
 [START 2025-11-25T16:29Z] [END 2025-11-25T16:41Z] Agent: Codex | Task(s): I4-auth-session-helper | Branch: ws/I_cli_parity | Notes: Added auth session helper + API-key login path, docs, and tests; merged task branch back; cargo test -p codex
+
+[START 2025-11-25T16:50Z] [END 2025-11-25T16:54Z] Agent: Codex | Task(s): I5-tbd | Branch: ws/I_cli_parity | Notes: Triaged follow-ups, none needed; added I5 closure to tasks.json and merged task branch; no tests (planning-only)
