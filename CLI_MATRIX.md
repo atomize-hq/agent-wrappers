@@ -60,7 +60,7 @@ This is a static inventory from `codex --help` and subcommand help, plus known `
 - Misc: `model_providers` map entries; search toggles (if present); review toggles.
 
 ## Notes / Gaps vs Wrapper
-- CLI supports arbitrary `--config key=value`; our wrapper only injects hardcoded reasoning defaults and does not expose a general override API or explicit setters for reasoning/verbosity.
+- CLI parity flags/config are exposed on the builder and per-request patches: config overrides (including reasoning/verbosity), approval/sandbox/full-auto/danger-bypass, `cd`, `local-provider`, `search`, and resume selectors. GPT-5* reasoning defaults stay opt-out via overrides or `auto_reasoning_defaults(false)`.
 - CODEX_HOME is now supported in the wrapper via builder (`codex_home`, `create_home_dirs`); env is applied per spawn with `CODEX_BINARY` and default `RUST_LOG`.
 - Auth/session remains basic (login/status/logout only).
-- Tests remain limited to inline unit tests (lib.rs, mcp.rs); examples/doc-tests provide some coverage.
+- Tests primarily live in inline unit tests (lib.rs, mcp.rs) and examples/doc-tests; no end-to-end coverage with a real CLI binary yet.

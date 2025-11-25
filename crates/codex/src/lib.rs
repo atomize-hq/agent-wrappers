@@ -5984,6 +5984,16 @@ fi
     }
 
     #[test]
+    fn request_can_disable_auto_reasoning_defaults() {
+        let builder = CliOverrides::default();
+        let mut patch = CliOverridesPatch::default();
+        patch.auto_reasoning_defaults = Some(false);
+
+        let resolved = resolve_cli_overrides(&builder, &patch, Some("gpt-5"));
+        assert!(resolved.config_overrides.is_empty());
+    }
+
+    #[test]
     fn request_config_overrides_follow_builder_order() {
         let mut builder_overrides = CliOverrides::default();
         builder_overrides.auto_reasoning_defaults = false;
@@ -6003,6 +6013,23 @@ fi
             .map(|override_| override_.value.as_str())
             .collect();
         assert_eq!(values, vec!["bar", "baz"]);
+    }
+
+    #[test]
+    fn request_search_override_can_disable_builder_flag() {
+        let mut builder_overrides = CliOverrides::default();
+        builder_overrides.search = FlagState::Enable;
+
+        let mut patch = CliOverridesPatch::default();
+        patch.search = FlagState::Disable;
+
+        let resolved = resolve_cli_overrides(&builder_overrides, &patch, None);
+        let args = cli_override_args(&resolved, true);
+        let args: Vec<_> = args
+            .iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+        assert!(!args.contains(&"--search".to_string()));
     }
 
     #[test]
@@ -6065,6 +6092,173 @@ fi
             .map(|value| value.to_string_lossy().into_owned())
             .collect();
         assert!(!args_without_search.contains(&"--search".to_string()));
+    }
+
+    #[tokio::test]
+    async fn exec_applies_cli_overrides_and_request_patch() {
+        let _guard = env_guard();
+        clear_capability_cache();
+
+        let temp = tempfile::tempdir().unwrap();
+        let log_path = temp.path().join("exec.log");
+        let builder_cd = temp.path().join("builder-cd");
+        let request_cd = temp.path().join("request-cd");
+        let script = format!(
+            r#"#!/bin/bash
+echo "$@" >> "{log}"
+if [[ "$1" == "exec" ]]; then
+  echo "ok"
+fi
+"#,
+            log = log_path.display()
+        );
+        let binary = write_fake_codex(temp.path(), &script);
+        let client = CodexClient::builder()
+            .binary(&binary)
+            .timeout(Duration::from_secs(5))
+            .mirror_stdout(false)
+            .quiet(true)
+            .auto_reasoning_defaults(false)
+            .config_override("foo", "bar")
+            .reasoning_summary(ReasoningSummary::Concise)
+            .approval_policy(ApprovalPolicy::OnRequest)
+            .sandbox_mode(SandboxMode::WorkspaceWrite)
+            .cd(&builder_cd)
+            .local_provider(LocalProvider::Custom)
+            .search(true)
+            .build();
+
+        let mut request = ExecRequest::new("list flags")
+            .config_override("extra", "value")
+            .search(false);
+        request.overrides.cd = Some(request_cd.clone());
+        request.overrides.safety_override = Some(SafetyOverride::DangerouslyBypass);
+
+        let response = client.send_prompt_with(request).await.unwrap();
+        assert_eq!(response.trim(), "ok");
+
+        let logged = std_fs::read_to_string(&log_path).unwrap();
+        assert!(logged.contains("--config"));
+        assert!(logged.contains("foo=bar"));
+        assert!(logged.contains("extra=value"));
+        assert!(logged.contains("model_reasoning_summary=concise"));
+        assert!(logged.contains("--dangerously-bypass-approvals-and-sandbox"));
+        assert!(logged.contains(&request_cd.display().to_string()));
+        assert!(!logged.contains(&builder_cd.display().to_string()));
+        assert!(logged.contains("--local-provider"));
+        assert!(logged.contains("custom"));
+        assert!(!logged.contains("--ask-for-approval"));
+        assert!(!logged.contains("--sandbox"));
+        assert!(!logged.contains("--search"));
+    }
+
+    #[tokio::test]
+    async fn resume_applies_search_and_selector_overrides() {
+        let _guard = env_guard();
+        clear_capability_cache();
+
+        let temp = tempfile::tempdir().unwrap();
+        let log_path = temp.path().join("resume.log");
+        let builder_cd = temp.path().join("builder-cd");
+        let request_cd = temp.path().join("request-cd");
+        let script = format!(
+            r#"#!/bin/bash
+echo "$@" >> "{log}"
+if [[ "$1" == "resume" ]]; then
+  echo '{{"type":"thread.started","thread_id":"thread-1"}}'
+  echo '{{"type":"turn.started","thread_id":"thread-1","turn_id":"turn-1"}}'
+  echo '{{"type":"turn.completed","thread_id":"thread-1","turn_id":"turn-1"}}'
+fi
+"#,
+            log = log_path.display()
+        );
+        let binary = write_fake_codex(temp.path(), &script);
+        let client = CodexClient::builder()
+            .binary(&binary)
+            .timeout(Duration::from_secs(5))
+            .mirror_stdout(false)
+            .quiet(true)
+            .config_override("resume_hint", "enabled")
+            .approval_policy(ApprovalPolicy::OnRequest)
+            .sandbox_mode(SandboxMode::WorkspaceWrite)
+            .local_provider(LocalProvider::Ollama)
+            .cd(&builder_cd)
+            .search(true)
+            .build();
+
+        let request_last = ResumeRequest::last().prompt("continue");
+        let stream = client.stream_resume(request_last).await.unwrap();
+        let events: Vec<_> = stream.events.collect().await;
+        assert_eq!(events.len(), 3);
+        stream.completion.await.unwrap();
+
+        let mut request_all = ResumeRequest::all().prompt("summarize");
+        request_all.overrides.search = FlagState::Disable;
+        request_all.overrides.safety_override = Some(SafetyOverride::DangerouslyBypass);
+        request_all.overrides.cd = Some(request_cd.clone());
+        let stream_all = client.stream_resume(request_all).await.unwrap();
+        let _ = stream_all.events.collect::<Vec<_>>().await;
+        stream_all.completion.await.unwrap();
+
+        let logged: Vec<_> = std_fs::read_to_string(&log_path)
+            .unwrap()
+            .lines()
+            .map(str::to_string)
+            .collect();
+        assert!(logged.len() >= 2);
+
+        assert!(logged[0].contains("--last"));
+        assert!(logged[0].contains("--search"));
+        assert!(logged[0].contains("resume_hint=enabled"));
+        assert!(logged[0].contains("--ask-for-approval"));
+        assert!(logged[0].contains("--sandbox"));
+        assert!(logged[0].contains(&builder_cd.display().to_string()));
+        assert!(logged[0].contains("ollama"));
+
+        assert!(logged[1].contains("--all"));
+        assert!(logged[1].contains("--dangerously-bypass-approvals-and-sandbox"));
+        assert!(logged[1].contains(&request_cd.display().to_string()));
+        assert!(!logged[1].contains(&builder_cd.display().to_string()));
+        assert!(!logged[1].contains("--ask-for-approval"));
+        assert!(!logged[1].contains("--sandbox"));
+        assert!(!logged[1].contains("--search"));
+    }
+
+    #[tokio::test]
+    async fn apply_respects_cli_overrides_without_search() {
+        let _guard = env_guard();
+        clear_capability_cache();
+
+        let temp = tempfile::tempdir().unwrap();
+        let log_path = temp.path().join("apply.log");
+        let script = format!(
+            r#"#!/bin/bash
+echo "$@" >> "{log}"
+if [[ "$1" == "apply" ]]; then
+  echo "applied"
+fi
+"#,
+            log = log_path.display()
+        );
+        let binary = write_fake_codex(temp.path(), &script);
+        let client = CodexClient::builder()
+            .binary(&binary)
+            .timeout(Duration::from_secs(5))
+            .mirror_stdout(false)
+            .quiet(true)
+            .cd(temp.path().join("apply-cd"))
+            .config_override("feature.toggle", "true")
+            .search(true)
+            .build();
+
+        let artifacts = client.apply().await.unwrap();
+        assert_eq!(artifacts.stdout.trim(), "applied");
+
+        let logged = std_fs::read_to_string(&log_path).unwrap();
+        assert!(logged.contains("--config"));
+        assert!(logged.contains("feature.toggle=true"));
+        assert!(logged.contains("apply-cd"));
+        assert!(!logged.contains("--search"));
     }
 
     #[test]

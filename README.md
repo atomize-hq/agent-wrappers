@@ -42,6 +42,32 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 - `ExecStreamRequest` supports `idle_timeout` (fails fast on silent streams), `output_last_message`/`output_schema` for artifacts, and `json_event_log` to tee raw JSONL before parsing.
 - Example `crates/codex/examples/send_prompt.rs` covers the baseline; `working_dir(_json).rs`, `timeout*.rs`, `image_json.rs`, `color_always.rs`, `quiet.rs`, and `no_stdout_mirror.rs` expand on inputs and output handling.
 
+## CLI Parity Overrides
+- Builder methods mirror CLI flags and config overrides: `.config_override(_raw|s)`, `.reasoning_*`, `.approval_policy(...)`, `.sandbox_mode(...)`, `.full_auto(true)`, `.dangerously_bypass_approvals_and_sandbox(true)`, `.cd(...)`, `.local_provider(...)`, `.search(...)`, `.auto_reasoning_defaults(false)`. Config overrides carry across exec/resume/apply/diff; per-request patches win on conflict.
+- Per-call overlays use `ExecRequest`/`ResumeRequest`: add config overrides, toggle search, swap `cd`, or change safety policy for a single run. Resume supports `.last()`/`.all()` selectors matching `--last`/`--all`.
+- GPT-5* reasoning defaults stay enabled unless you set reasoning/config overrides or flip `auto_reasoning_defaults(false)` on the builder or request.
+
+```rust,no_run
+use codex::{ApprovalPolicy, CodexClient, ExecRequest, LocalProvider, SandboxMode};
+
+# async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+let client = CodexClient::builder()
+    .approval_policy(ApprovalPolicy::OnRequest)
+    .sandbox_mode(SandboxMode::WorkspaceWrite)
+    .local_provider(LocalProvider::Ollama)
+    .config_override("model_verbosity", "high")
+    .search(true)
+    .build();
+
+let request = ExecRequest::new("Draft release notes")
+    .config_override("model_reasoning_effort", "low")
+    .search(false);
+let reply = client.send_prompt_with(request).await?;
+println!("{reply}");
+# Ok(()) }
+```
+- See `crates/codex/examples/cli_overrides.rs` for a runnable parity example.
+
 ## Streaming Output & Artifacts
 - Event schema: JSONL lines carry `type` plus thread/turn IDs and status. Expect `thread.started` (or `thread.resumed` when continuing a run), `turn.started/turn.completed/turn.failed`, and `item.created/item.updated` where `item.type` can be `agent_message`, `reasoning`, `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, or `todo_list` with optional `status`/`content`/`input`. Errors surface as `{"type":"error","message":...}`. Examples ship `--sample` payloads so you can inspect shapes without a binary.
 - Sample streaming/resume/apply payloads live under `crates/codex/examples/fixtures/*` and power the `--sample` flags in examples; refresh them whenever the CLI JSON surface changes so docs stay aligned.
