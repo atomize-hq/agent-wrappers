@@ -11,6 +11,7 @@ This is a static inventory from `codex --help` and subcommand help, plus known `
 - `features` subcommands: `list`.
 - `execpolicy` subcommands: `check`.
 - `sandbox` subcommands (platform): `macos`, `linux`, `windows` (not shown in `--help` but present in code/docs).
+- Utilities: `responses-api-proxy`, `stdio-to-uds`.
 
 ## Positional Args
 - Top-level: `[PROMPT]` (interactive/TUI).
@@ -71,6 +72,8 @@ This is a static inventory from `codex --help` and subcommand help, plus known `
 - `generate_app_server_bindings` wraps `codex app-server generate-ts`/`generate-json-schema`, forwards shared overrides (config/profile/search/approval/sandbox/local-provider/cd), creates the `--out` directory, supports TypeScript `--prettier`, and surfaces non-zero exits as `NonZeroExit`.
 - `run_sandbox` wraps `codex sandbox <macos|linux|windows>` with `--full-auto`, macOS `--log-denials`, and request `--config/--enable/--disable` flags; other CLI overrides (approval/profile/search/sandbox) are intentionally not forwarded on this subcommand.
 - Sandbox caveats: macOS is the only platform that emits denial logs; Linux relies on the bundled `codex-linux-sandbox` helper; Windows sandboxing is experimental and depends on the upstream helper. The wrapper does not gate availability—unsupported/misconfigured installs will return non-zero statuses via `SandboxRun`.
+- `start_responses_api_proxy` wraps `codex responses-api-proxy`, writes the API key to stdin, forwards `--port`/`--server-info`/`--http-shutdown`/`--upstream-url`, and exposes a helper to parse `{port,pid}` from the server-info file when requested. Stdout/stderr stay piped; drain them if you need long-running logs.
+- `stdio_to_uds` wraps `codex stdio-to-uds <SOCKET_PATH>` with piped stdio so callers can bridge Unix domain sockets manually; working dir follows the request override, then the builder, then the current process dir. Keep stdout/stderr drained to avoid backpressure when the relay emits output.
 - CLI `--oss` is not surfaced; rely on `local_provider`/model selection or add a follow-up if mapping is needed.
 - Direct `--enable`/`--disable` toggles are only exposed on sandbox runs; use `config_override("features.<name>", "true/false")` for other commands if the flags are required.
 - The wrapper does not cover `codex cloud exec` or the shell-completion helper; call the CLI directly when needed.

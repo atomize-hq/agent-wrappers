@@ -33,6 +33,8 @@
 //! - [`CodexClient::run_sandbox`] to wrap `codex sandbox <platform>` (macOS/Linux/Windows), pass `--full-auto`/`--log-denials`/`--config`/`--enable`/`--disable`, and return the inner command status + output. macOS is the only platform that emits denial logs; Linux depends on the bundled `codex-linux-sandbox`; Windows sandboxing is experimental and relies on the upstream helper (no capability gating—non-zero exits bubble through).
 //! - [`CodexClient::check_execpolicy`] to evaluate shell commands against Starlark execpolicy files with repeatable `--policy` flags, optional pretty JSON, and parsed decision output (allow/prompt/forbidden or noMatch).
 //! - [`CodexClient::list_features`] to wrap `codex features list` with optional `--json` parsing, shared config/profile overrides, and parsed feature entries (name/stage/enabled).
+//! - [`CodexClient::start_responses_api_proxy`] to launch the `codex responses-api-proxy` helper with an API key piped via stdin plus optional port/server-info/upstream/shutdown flags.
+//! - [`CodexClient::stdio_to_uds`] to spawn `codex stdio-to-uds <SOCKET_PATH>` with piped stdio so callers can bridge Unix domain sockets manually.
 //!
 //! ## Streaming, events, and artifacts
 //! - `.json(true)` requests JSONL streaming. Expect `thread.started`/`thread.resumed`, `turn.started`/`turn.completed`/`turn.failed`, and `item.created`/`item.updated` with `item.type` such as `agent_message`, `reasoning`, `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, or `todo_list` plus optional `status`/`content`/`input`. Errors surface as `{"type":"error","message":...}`.
@@ -1991,6 +1993,117 @@ impl CodexClient {
         })
     }
 
+    /// Starts the `codex responses-api-proxy` helper with a supplied API key.
+    ///
+    /// Forwards optional `--port`, `--server-info`, `--http-shutdown`, and `--upstream-url` flags.
+    /// The API key is written to stdin immediately after spawn, stdout/stderr remain piped for callers
+    /// to drain, and the returned handle owns the child process plus any `--server-info` path used.
+    pub async fn start_responses_api_proxy(
+        &self,
+        request: ResponsesApiProxyRequest,
+    ) -> Result<ResponsesApiProxyHandle, CodexError> {
+        let ResponsesApiProxyRequest {
+            api_key,
+            port,
+            server_info_path,
+            http_shutdown,
+            upstream_url,
+        } = request;
+
+        let api_key = api_key.trim().to_string();
+        if api_key.is_empty() {
+            return Err(CodexError::EmptyApiKey);
+        }
+
+        let working_dir = self.sandbox_working_dir(None)?;
+
+        let mut command = Command::new(self.command_env.binary_path());
+        command
+            .arg("responses-api-proxy")
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .current_dir(&working_dir);
+
+        if let Some(port) = port {
+            command.arg("--port").arg(port.to_string());
+        }
+
+        if let Some(path) = server_info_path.as_ref() {
+            command.arg("--server-info").arg(path);
+        }
+
+        if http_shutdown {
+            command.arg("--http-shutdown");
+        }
+
+        if let Some(url) = upstream_url.as_ref() {
+            if !url.trim().is_empty() {
+                command.arg("--upstream-url").arg(url);
+            }
+        }
+
+        self.command_env.apply(&mut command)?;
+
+        let mut child = command.spawn().map_err(|source| CodexError::Spawn {
+            binary: self.command_env.binary_path().to_path_buf(),
+            source,
+        })?;
+
+        let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
+        stdin
+            .write_all(api_key.as_bytes())
+            .await
+            .map_err(CodexError::StdinWrite)?;
+        stdin
+            .write_all(b"\n")
+            .await
+            .map_err(CodexError::StdinWrite)?;
+        stdin.shutdown().await.map_err(CodexError::StdinWrite)?;
+
+        Ok(ResponsesApiProxyHandle {
+            child,
+            server_info_path,
+        })
+    }
+
+    /// Spawns `codex stdio-to-uds <SOCKET_PATH>` with piped stdio for manual relays.
+    ///
+    /// Returns the child process so callers can write to stdin/read from stdout (e.g., to bridge a
+    /// JSON-RPC transport over a Unix domain socket). Fails fast on empty socket paths and inherits
+    /// the builder working directory when none is provided on the request.
+    pub fn stdio_to_uds(
+        &self,
+        request: StdioToUdsRequest,
+    ) -> Result<tokio::process::Child, CodexError> {
+        let StdioToUdsRequest {
+            socket_path,
+            working_dir,
+        } = request;
+
+        if socket_path.as_os_str().is_empty() {
+            return Err(CodexError::EmptySocketPath);
+        }
+
+        let mut command = Command::new(self.command_env.binary_path());
+        command
+            .arg("stdio-to-uds")
+            .arg(&socket_path)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .current_dir(self.sandbox_working_dir(working_dir)?);
+
+        self.command_env.apply(&mut command)?;
+
+        command.spawn().map_err(|source| CodexError::Spawn {
+            binary: self.command_env.binary_path().to_path_buf(),
+            source,
+        })
+    }
+
     /// Runs `codex sandbox <platform> [--full-auto|--log-denials] [--config/--enable/--disable] -- <COMMAND...>`.
     ///
     /// Captures stdout/stderr and mirrors them according to the builder (`mirror_stdout` / `quiet`). Unlike
@@ -3680,6 +3793,18 @@ pub enum CodexError {
     },
     #[error("failed to parse features list output: {reason}")]
     FeatureListParse { reason: String, stdout: String },
+    #[error("failed to read responses-api-proxy server info from `{path}`: {source}")]
+    ResponsesApiProxyInfoRead {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to parse responses-api-proxy server info from `{path}`: {source}")]
+    ResponsesApiProxyInfoParse {
+        path: PathBuf,
+        #[source]
+        source: serde_json::Error,
+    },
     #[error("prompt must not be empty")]
     EmptyPrompt,
     #[error("sandbox command must not be empty")]
@@ -3688,6 +3813,8 @@ pub enum CodexError {
     EmptyExecPolicyCommand,
     #[error("API key must not be empty")]
     EmptyApiKey,
+    #[error("socket path must not be empty")]
+    EmptySocketPath,
     #[error("failed to create temporary working directory: {0}")]
     TempDir(#[source] std::io::Error),
     #[error("failed to resolve working directory: {source}")]
@@ -4359,6 +4486,126 @@ pub struct SandboxRun {
     pub stdout: String,
     /// Captured stderr (mirrored unless `quiet` is set).
     pub stderr: String,
+}
+
+/// Request for `codex responses-api-proxy`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResponsesApiProxyRequest {
+    /// API key to write to stdin on startup.
+    pub api_key: String,
+    /// Optional port to bind; falls back to an OS-assigned ephemeral port when omitted.
+    pub port: Option<u16>,
+    /// Optional path passed to `--server-info` for `{port,pid}` JSON output.
+    pub server_info_path: Option<PathBuf>,
+    /// Enables the HTTP shutdown endpoint (`GET /shutdown`).
+    pub http_shutdown: bool,
+    /// Optional upstream URL passed to `--upstream-url` (defaults to `https://api.openai.com/v1/responses`).
+    pub upstream_url: Option<String>,
+}
+
+impl ResponsesApiProxyRequest {
+    /// Creates a request with the API key provided via stdin.
+    pub fn new(api_key: impl Into<String>) -> Self {
+        Self {
+            api_key: api_key.into(),
+            port: None,
+            server_info_path: None,
+            http_shutdown: false,
+            upstream_url: None,
+        }
+    }
+
+    /// Sets the listening port (`--port`).
+    pub fn port(mut self, port: u16) -> Self {
+        self.port = Some(port);
+        self
+    }
+
+    /// Writes `{port,pid}` JSON to the provided path via `--server-info`.
+    pub fn server_info(mut self, path: impl Into<PathBuf>) -> Self {
+        self.server_info_path = Some(path.into());
+        self
+    }
+
+    /// Enables the `--http-shutdown` flag (GET /shutdown).
+    pub fn http_shutdown(mut self, enable: bool) -> Self {
+        self.http_shutdown = enable;
+        self
+    }
+
+    /// Overrides the upstream responses endpoint URL.
+    pub fn upstream_url(mut self, url: impl Into<String>) -> Self {
+        let url = url.into();
+        self.upstream_url = (!url.trim().is_empty()).then_some(url);
+        self
+    }
+}
+
+/// Running responses proxy process and metadata.
+#[derive(Debug)]
+pub struct ResponsesApiProxyHandle {
+    /// Spawned `codex responses-api-proxy` child (inherits kill-on-drop).
+    pub child: tokio::process::Child,
+    /// Optional `--server-info` path that may contain `{port,pid}` JSON.
+    pub server_info_path: Option<PathBuf>,
+}
+
+impl ResponsesApiProxyHandle {
+    /// Reads and parses the `{port,pid}` JSON written by `--server-info`.
+    ///
+    /// Returns `Ok(None)` when no server info path was configured.
+    pub async fn read_server_info(&self) -> Result<Option<ResponsesApiProxyInfo>, CodexError> {
+        let Some(path) = &self.server_info_path else {
+            return Ok(None);
+        };
+
+        let contents = fs::read_to_string(path).await.map_err(|source| {
+            CodexError::ResponsesApiProxyInfoRead {
+                path: path.clone(),
+                source,
+            }
+        })?;
+        let info: ResponsesApiProxyInfo = serde_json::from_str(&contents).map_err(|source| {
+            CodexError::ResponsesApiProxyInfoParse {
+                path: path.clone(),
+                source,
+            }
+        })?;
+        Ok(Some(info))
+    }
+}
+
+/// Parsed `{port,pid}` emitted by `codex responses-api-proxy --server-info`.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ResponsesApiProxyInfo {
+    pub port: u16,
+    pub pid: u32,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Request for `codex stdio-to-uds <SOCKET_PATH>`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StdioToUdsRequest {
+    /// Path to the Unix domain socket to connect to.
+    pub socket_path: PathBuf,
+    /// Optional working directory override for the spawned process.
+    pub working_dir: Option<PathBuf>,
+}
+
+impl StdioToUdsRequest {
+    pub fn new(socket_path: impl Into<PathBuf>) -> Self {
+        Self {
+            socket_path: socket_path.into(),
+            working_dir: None,
+        }
+    }
+
+    /// Sets the working directory used to resolve the socket path.
+    pub fn working_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+        self.working_dir = Some(dir.into());
+        self
+    }
 }
 
 /// Stage labels reported by `codex features list`.
@@ -6392,6 +6639,173 @@ exit 5
             other => panic!("expected NonZeroExit, got {other:?}"),
         }
         assert!(out_dir.is_dir());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn responses_api_proxy_maps_flags_and_parses_server_info() {
+        let dir = tempfile::tempdir().unwrap();
+        let server_info = dir.path().join("server-info.json");
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+echo "$PWD"
+printf "%s\n" "$@"
+info_path=""
+while [[ $# -gt 0 ]]; do
+  if [[ $1 == "--server-info" ]]; then
+    info_path=$2
+  fi
+  shift
+done
+read -r key || exit 1
+echo "key:${key}"
+if [[ -n "$info_path" ]]; then
+  printf '{"port":4567,"pid":1234}\n' > "$info_path"
+fi
+"#,
+        );
+
+        let workdir = dir.path().join("responses-workdir");
+        std_fs::create_dir_all(&workdir).unwrap();
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .working_dir(&workdir)
+            .build();
+
+        let mut proxy = client
+            .start_responses_api_proxy(
+                ResponsesApiProxyRequest::new("sk-test-123")
+                    .port(8080)
+                    .server_info(&server_info)
+                    .http_shutdown(true)
+                    .upstream_url("https://example.com/v1/responses"),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(
+            proxy.server_info_path.as_deref(),
+            Some(server_info.as_path())
+        );
+
+        let stdout = proxy.child.stdout.take().unwrap();
+        let mut lines = BufReader::new(stdout).lines();
+
+        let pwd = lines.next_line().await.unwrap().unwrap();
+        assert_eq!(Path::new(&pwd), workdir.as_path());
+
+        let mut args = Vec::new();
+        for _ in 0..8 {
+            args.push(lines.next_line().await.unwrap().unwrap());
+        }
+        assert_eq!(
+            args,
+            vec![
+                "responses-api-proxy",
+                "--port",
+                "8080",
+                "--server-info",
+                server_info.to_string_lossy().as_ref(),
+                "--http-shutdown",
+                "--upstream-url",
+                "https://example.com/v1/responses",
+            ]
+        );
+
+        let api_key_line = lines.next_line().await.unwrap().unwrap();
+        assert_eq!(api_key_line, "key:sk-test-123");
+
+        let info = proxy.read_server_info().await.unwrap().unwrap();
+        assert_eq!(info.port, 4567);
+        assert_eq!(info.pid, 1234);
+
+        let status = proxy.child.wait().await.unwrap();
+        assert!(status.success());
+    }
+
+    #[tokio::test]
+    async fn responses_api_proxy_rejects_empty_api_key() {
+        let client = CodexClient::builder().build();
+        let err = client
+            .start_responses_api_proxy(ResponsesApiProxyRequest::new("  "))
+            .await
+            .unwrap_err();
+        assert!(matches!(err, CodexError::EmptyApiKey));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn stdio_to_uds_maps_args_and_pipes_stdio() {
+        let dir = tempfile::tempdir().unwrap();
+        let socket_path = dir.path().join("bridge.sock");
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+echo "$PWD"
+printf "%s\n" "$@"
+while read -r line; do
+  echo "relay:${line}"
+done
+"#,
+        );
+
+        let workdir = dir.path().join("uds-workdir");
+        std_fs::create_dir_all(&workdir).unwrap();
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .working_dir(&workdir)
+            .build();
+
+        let request = StdioToUdsRequest::new(&socket_path).working_dir(&workdir);
+        let mut child = match client.stdio_to_uds(request.clone()) {
+            Ok(child) => child,
+            Err(CodexError::Spawn { source, .. }) if source.raw_os_error() == Some(26) => {
+                time::sleep(Duration::from_millis(25)).await;
+                client.stdio_to_uds(request).unwrap()
+            }
+            Err(other) => panic!("unexpected spawn error: {other:?}"),
+        };
+
+        let stdout = child.stdout.take().unwrap();
+        let mut lines = BufReader::new(stdout).lines();
+
+        let pwd = lines.next_line().await.unwrap().unwrap();
+        assert_eq!(Path::new(&pwd), workdir.as_path());
+
+        let arg_one = lines.next_line().await.unwrap().unwrap();
+        let arg_two = lines.next_line().await.unwrap().unwrap();
+        assert_eq!(arg_one, "stdio-to-uds");
+        assert_eq!(arg_two, socket_path.to_string_lossy().as_ref());
+
+        let mut stdin = child.stdin.take().unwrap();
+        stdin.write_all(b"ping\n").await.unwrap();
+        stdin.shutdown().await.unwrap();
+        drop(stdin);
+
+        let echoed = lines.next_line().await.unwrap().unwrap();
+        assert_eq!(echoed, "relay:ping");
+
+        let status = time::timeout(Duration::from_secs(5), child.wait())
+            .await
+            .expect("stdio-to-uds wait timed out")
+            .unwrap();
+        assert!(status.success());
+    }
+
+    #[tokio::test]
+    async fn stdio_to_uds_rejects_empty_socket_path() {
+        let client = CodexClient::builder().build();
+        let err = client
+            .stdio_to_uds(StdioToUdsRequest::new(PathBuf::new()))
+            .unwrap_err();
+        assert!(matches!(err, CodexError::EmptySocketPath));
     }
 
     #[tokio::test]

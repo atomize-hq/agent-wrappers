@@ -55,6 +55,13 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 | `cargo run -p codex --example app_server_thread_turn -- "Draft a release note"` | `codex app-server` then send `thread/start` and `turn/start` | App-server thread/turn notifications; supports `--sample` and optional `CODEX_HOME` for state isolation. |
 | `cargo run -p codex --example app_server_codegen -- ts ./gen/app --prettier ./node_modules/.bin/prettier` | `codex app-server generate-ts --out ./gen/app --prettier ./node_modules/.bin/prettier` | Refresh TypeScript bindings (or `json ./gen/app` for schemas) with shared config/profile flags; ensures the output directory exists first and surfaces non-zero exits as `CodexError::NonZeroExit`. |
 
+## Proxies & Bridges
+
+| Wrapper example | Native command | Notes |
+| --- | --- | --- |
+| `cargo run -p codex --example responses_api_proxy` | `echo "$OPENAI_API_KEY" \| codex responses-api-proxy [--port <PORT>] [--server-info <FILE>] [--http-shutdown] [--upstream-url <URL>]` | Starts the API-key-injecting responses proxy with piped stdin, optional port/upstream/shutdown flags, and a helper to parse `{port,pid}` from the server-info JSON. |
+| `cargo run -p codex --example stdio_to_uds` | `codex stdio-to-uds /tmp/echo.sock` | Bridges stdin/stdout to a Unix domain socket (example spins up a local echo server); keep stdout/stderr drained for long-lived relays. |
+
 ## Capabilities
 
 | Wrapper example | Native command | Notes |

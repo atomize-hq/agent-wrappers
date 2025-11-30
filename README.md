@@ -150,6 +150,67 @@ println!("{reply}");
   # Ok(()) }
   ```
 
+## Responses API Proxy
+- `start_responses_api_proxy` wraps `codex responses-api-proxy`, writes the API key to stdin, and forwards `--port`/`--server-info`/`--http-shutdown`/`--upstream-url` as requested.
+- The returned handle exposes the child process (kill-on-drop) plus any `--server-info` path, and `read_server_info` parses `{port,pid}` when the file is present. Stdout/stderr remain piped; drain them if you want to tail logs.
+- Example:
+  ```rust,no_run
+  use codex::{CodexClient, ResponsesApiProxyRequest};
+
+  # async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+  let api_key = std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "sk-placeholder".to_string());
+  let server_info = "/tmp/responses-proxy.json";
+  let mut proxy = CodexClient::builder()
+      .mirror_stdout(false)
+      .quiet(true)
+      .build()
+      .start_responses_api_proxy(
+          ResponsesApiProxyRequest::new(api_key)
+              .port(8081)
+              .http_shutdown(true)
+              .server_info(server_info),
+      )
+      .await?;
+
+  if let Some(info) = proxy.read_server_info().await? {
+      println!("proxy listening on http://127.0.0.1:{}", info.port);
+  }
+  let _ = proxy.child.start_kill();
+  let _ = proxy.child.wait().await?;
+  # Ok(()) }
+  ```
+  See `crates/codex/examples/responses_api_proxy.rs` for a runnable smoke check.
+
+## Stdio-to-UDS Bridge
+- `stdio_to_uds` wraps `codex stdio-to-uds <SOCKET_PATH>` with piped stdin/stdout/stderr so you can bridge JSON-RPC streams over a Unix domain socket. The working dir comes from the request override, then the builder, then the current process dir.
+- Keep stdout/stderr drained to avoid backpressure if the relay emits logs.
+- Example (assumes a listening UDS at `socket_path`):
+  ```rust,no_run
+  use codex::{CodexClient, StdioToUdsRequest};
+  use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+  # async fn demo(socket_path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+  let mut bridge = CodexClient::builder()
+      .mirror_stdout(false)
+      .quiet(true)
+      .build()
+      .stdio_to_uds(StdioToUdsRequest::new(socket_path))?;
+
+  let mut stdin = bridge.stdin.take().unwrap();
+  let mut stdout = BufReader::new(bridge.stdout.take().unwrap());
+
+  stdin.write_all(b"ping\n").await?;
+  stdin.shutdown().await?;
+
+  let mut line = String::new();
+  stdout.read_line(&mut line).await?;
+  println!("echoed: {line}");
+
+  let _ = bridge.wait().await?;
+  # Ok(()) }
+  ```
+  See `crates/codex/examples/stdio_to_uds.rs` for a Unix smoke relay against a local echo server.
+
 ## App-Server Codegen
 - `generate_app_server_bindings` wraps `codex app-server generate-ts` (optional `--prettier`) and `generate-json-schema`, creates the output directory when missing, and returns captured stdout/stderr plus the exit status; non-zero exits surface as `CodexError::NonZeroExit` with stderr attached. Shared config/profile/search/approval flags flow through via builder/request overrides.
 - Example:
