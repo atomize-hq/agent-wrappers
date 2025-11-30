@@ -141,6 +141,22 @@
       "crates/codex/src/lib.rs"
     ],
     "tests": ["cargo test -p codex"],
+    "status": "done"
+  },
+  {
+    "id": "I12-cli-parity-followups",
+    "title": "CLI parity follow-ups",
+    "description": "Decide how to address remaining parity gaps: surface CLI `--oss` and top-level `--enable/--disable` toggles beyond sandbox, and wrap or document `codex cloud exec`/shell completion.",
+    "dependencies": ["I11-cli-parity-closeout"],
+    "files": [
+      "workstreams/I_cli_parity/BRIEF.md",
+      "workstreams/I_cli_parity/tasks.json",
+      "CLI_MATRIX.md",
+      "README.md",
+      "crates/codex/EXAMPLES.md",
+      "crates/codex/src/lib.rs"
+    ],
+    "tests": ["cargo test -p codex"],
     "status": "todo"
   }
 ]
