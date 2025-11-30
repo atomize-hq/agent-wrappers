@@ -32,6 +32,7 @@
 //! - [`CodexClient::generate_app_server_bindings`] to refresh app-server protocol bindings via `codex app-server generate-ts` (optional `--prettier`) or `generate-json-schema`, returning captured stdout/stderr plus the exit status.
 //! - [`CodexClient::run_sandbox`] to wrap `codex sandbox <platform>` (macOS/Linux/Windows), pass `--full-auto`/`--log-denials`/`--config`/`--enable`/`--disable`, and return the inner command status + output. macOS is the only platform that emits denial logs; Linux depends on the bundled `codex-linux-sandbox`; Windows sandboxing is experimental and relies on the upstream helper (no capability gating—non-zero exits bubble through).
 //! - [`CodexClient::check_execpolicy`] to evaluate shell commands against Starlark execpolicy files with repeatable `--policy` flags, optional pretty JSON, and parsed decision output (allow/prompt/forbidden or noMatch).
+//! - [`CodexClient::list_features`] to wrap `codex features list` with optional `--json` parsing, shared config/profile overrides, and parsed feature entries (name/stage/enabled).
 //!
 //! ## Streaming, events, and artifacts
 //! - `.json(true)` requests JSONL streaming. Expect `thread.started`/`thread.resumed`, `turn.started`/`turn.completed`/`turn.failed`, and `item.created`/`item.updated` with `item.type` such as `agent_message`, `reasoning`, `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, or `todo_list` plus optional `status`/`content`/`input`. Errors surface as `{"type":"error","message":...}`.
@@ -1887,6 +1888,109 @@ impl CodexClient {
         })
     }
 
+    /// Lists CLI features via `codex features list`.
+    ///
+    /// Requests JSON output when `json(true)` is set and falls back to parsing the text table when
+    /// JSON is unavailable. Shared config/profile/search/approval overrides flow through via the
+    /// request/builder, stdout/stderr are mirrored according to the builder, and non-zero exits
+    /// surface as [`CodexError::NonZeroExit`].
+    pub async fn list_features(
+        &self,
+        request: FeaturesListRequest,
+    ) -> Result<FeaturesListOutput, CodexError> {
+        let FeaturesListRequest { json, overrides } = request;
+
+        let dir_ctx = self.directory_context()?;
+        let resolved_overrides =
+            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+
+        let mut command = Command::new(self.command_env.binary_path());
+        command
+            .arg("features")
+            .arg("list")
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .current_dir(dir_ctx.path());
+
+        apply_cli_overrides(&mut command, &resolved_overrides, true);
+
+        if json {
+            command.arg("--json");
+        }
+
+        self.command_env.apply(&mut command)?;
+
+        let mut child = command.spawn().map_err(|source| CodexError::Spawn {
+            binary: self.command_env.binary_path().to_path_buf(),
+            source,
+        })?;
+
+        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+
+        let stdout_task = tokio::spawn(tee_stream(
+            stdout,
+            ConsoleTarget::Stdout,
+            self.mirror_stdout,
+        ));
+        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+
+        let wait_task = async move {
+            let status = child
+                .wait()
+                .await
+                .map_err(|source| CodexError::Wait { source })?;
+            let stdout_bytes = stdout_task
+                .await
+                .map_err(CodexError::Join)?
+                .map_err(CodexError::CaptureIo)?;
+            let stderr_bytes = stderr_task
+                .await
+                .map_err(CodexError::Join)?
+                .map_err(CodexError::CaptureIo)?;
+            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+        };
+
+        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+            wait_task.await?
+        } else {
+            match time::timeout(self.timeout, wait_task).await {
+                Ok(result) => result?,
+                Err(_) => {
+                    return Err(CodexError::Timeout {
+                        timeout: self.timeout,
+                    });
+                }
+            }
+        };
+
+        if !status.success() {
+            return Err(CodexError::NonZeroExit {
+                status,
+                stderr: String::from_utf8(stderr_bytes)?,
+            });
+        }
+
+        let stdout_string = String::from_utf8(stdout_bytes)?;
+        let stderr_string = String::from_utf8(stderr_bytes)?;
+        let (features, format) =
+            parse_feature_list_output(&stdout_string, json).map_err(|reason| {
+                CodexError::FeatureListParse {
+                    reason,
+                    stdout: stdout_string.clone(),
+                }
+            })?;
+
+        Ok(FeaturesListOutput {
+            status,
+            stdout: stdout_string,
+            stderr: stderr_string,
+            features,
+            format,
+        })
+    }
+
     /// Runs `codex sandbox <platform> [--full-auto|--log-denials] [--config/--enable/--disable] -- <COMMAND...>`.
     ///
     /// Captures stdout/stderr and mirrors them according to the builder (`mirror_stdout` / `quiet`). Unlike
@@ -3574,6 +3678,8 @@ pub enum CodexError {
         #[source]
         source: serde_json::Error,
     },
+    #[error("failed to parse features list output: {reason}")]
+    FeatureListParse { reason: String, stdout: String },
     #[error("prompt must not be empty")]
     EmptyPrompt,
     #[error("sandbox command must not be empty")]
@@ -4253,6 +4359,170 @@ pub struct SandboxRun {
     pub stdout: String,
     /// Captured stderr (mirrored unless `quiet` is set).
     pub stderr: String,
+}
+
+/// Stage labels reported by `codex features list`.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(from = "String", into = "String")]
+pub enum CodexFeatureStage {
+    Experimental,
+    Beta,
+    Stable,
+    Deprecated,
+    Removed,
+    Unknown(String),
+}
+
+impl CodexFeatureStage {
+    fn parse(raw: &str) -> Self {
+        let normalized = raw.trim();
+        match normalized.to_ascii_lowercase().as_str() {
+            "experimental" => CodexFeatureStage::Experimental,
+            "beta" => CodexFeatureStage::Beta,
+            "stable" => CodexFeatureStage::Stable,
+            "deprecated" => CodexFeatureStage::Deprecated,
+            "removed" => CodexFeatureStage::Removed,
+            _ => CodexFeatureStage::Unknown(normalized.to_string()),
+        }
+    }
+
+    /// Returns the normalized label for this stage.
+    pub fn as_str(&self) -> &str {
+        match self {
+            CodexFeatureStage::Experimental => "experimental",
+            CodexFeatureStage::Beta => "beta",
+            CodexFeatureStage::Stable => "stable",
+            CodexFeatureStage::Deprecated => "deprecated",
+            CodexFeatureStage::Removed => "removed",
+            CodexFeatureStage::Unknown(label) => label.as_str(),
+        }
+    }
+}
+
+impl From<String> for CodexFeatureStage {
+    fn from(value: String) -> Self {
+        CodexFeatureStage::parse(&value)
+    }
+}
+
+impl From<CodexFeatureStage> for String {
+    fn from(stage: CodexFeatureStage) -> Self {
+        String::from(&stage)
+    }
+}
+
+impl From<&CodexFeatureStage> for String {
+    fn from(stage: &CodexFeatureStage) -> Self {
+        stage.as_str().to_string()
+    }
+}
+
+/// Single feature entry reported by `codex features list`.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct CodexFeature {
+    /// Feature name as reported by the CLI.
+    pub name: String,
+    /// Feature stage (experimental/beta/stable/deprecated/removed) when provided.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stage: Option<CodexFeatureStage>,
+    /// Whether the feature is enabled for the current config/profile.
+    pub enabled: bool,
+    /// Unrecognized fields from JSON output are preserved here.
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+impl CodexFeature {
+    /// Convenience helper mirroring the `enabled` flag.
+    pub const fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+}
+
+/// Format used to parse `codex features list` output.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FeaturesListFormat {
+    Json,
+    Text,
+}
+
+/// Parsed output from `codex features list`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FeaturesListOutput {
+    /// Exit status returned by the subcommand.
+    pub status: ExitStatus,
+    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
+    pub stdout: String,
+    /// Captured stderr (mirrored unless `quiet` is set).
+    pub stderr: String,
+    /// Parsed feature entries.
+    pub features: Vec<CodexFeature>,
+    /// Indicates whether JSON or text parsing was used.
+    pub format: FeaturesListFormat,
+}
+
+/// Request for `codex features list`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FeaturesListRequest {
+    /// Request JSON output via `--json` (falls back to text parsing when JSON is absent).
+    pub json: bool,
+    /// Per-call CLI overrides layered on top of the builder.
+    pub overrides: CliOverridesPatch,
+}
+
+impl FeaturesListRequest {
+    /// Creates a request with JSON disabled by default for compatibility with older binaries.
+    pub fn new() -> Self {
+        Self {
+            json: false,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    /// Controls whether `--json` is passed to `codex features list`.
+    pub fn json(mut self, enable: bool) -> Self {
+        self.json = enable;
+        self
+    }
+
+    /// Replaces the default CLI overrides for this request.
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+
+    /// Adds a `--config key=value` override for this request.
+    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.overrides
+            .config_overrides
+            .push(ConfigOverride::new(key, value));
+        self
+    }
+
+    /// Adds a raw `--config key=value` override without validation.
+    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+        self.overrides
+            .config_overrides
+            .push(ConfigOverride::from_raw(raw));
+        self
+    }
+
+    /// Sets the config profile (`--profile`) for this request.
+    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+        let profile = profile.into();
+        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+        self
+    }
+
+    /// Controls whether `--search` is passed through to Codex.
+    pub fn search(mut self, enable: bool) -> Self {
+        self.overrides.search = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
 }
 
 /// Decision returned by execpolicy evaluation.
@@ -5072,6 +5342,213 @@ fn apply_feature_token(flags: &mut CodexFeatureFlags, token: &str) {
     }
 }
 
+fn parse_feature_list_output(
+    stdout: &str,
+    prefer_json: bool,
+) -> Result<(Vec<CodexFeature>, FeaturesListFormat), String> {
+    let trimmed = stdout.trim();
+    if trimmed.is_empty() {
+        return Err("features list output was empty".to_string());
+    }
+
+    if prefer_json {
+        if let Some(features) = parse_feature_list_json(trimmed) {
+            if !features.is_empty() {
+                return Ok((features, FeaturesListFormat::Json));
+            }
+        }
+        if let Some(features) = parse_feature_list_text(trimmed) {
+            if !features.is_empty() {
+                return Ok((features, FeaturesListFormat::Text));
+            }
+        }
+    } else {
+        if let Some(features) = parse_feature_list_text(trimmed) {
+            if !features.is_empty() {
+                return Ok((features, FeaturesListFormat::Text));
+            }
+        }
+        if let Some(features) = parse_feature_list_json(trimmed) {
+            if !features.is_empty() {
+                return Ok((features, FeaturesListFormat::Json));
+            }
+        }
+    }
+
+    Err("could not parse JSON or text feature rows".to_string())
+}
+
+fn parse_feature_list_json(output: &str) -> Option<Vec<CodexFeature>> {
+    let parsed: Value = serde_json::from_str(output).ok()?;
+    parse_feature_list_json_value(&parsed)
+}
+
+fn parse_feature_list_json_value(value: &Value) -> Option<Vec<CodexFeature>> {
+    match value {
+        Value::Array(items) => Some(
+            items
+                .iter()
+                .filter_map(|item| match item {
+                    Value::Object(map) => feature_from_json_fields(None, map),
+                    Value::String(name) => Some(CodexFeature {
+                        name: name.clone(),
+                        stage: None,
+                        enabled: true,
+                        extra: BTreeMap::new(),
+                    }),
+                    _ => None,
+                })
+                .collect(),
+        ),
+        Value::Object(map) => {
+            if let Some(features) = map.get("features") {
+                return parse_feature_list_json_value(features);
+            }
+            if map.contains_key("name") || map.contains_key("enabled") || map.contains_key("stage")
+            {
+                return feature_from_json_fields(None, &map).map(|feature| vec![feature]);
+            }
+            Some(
+                map.iter()
+                    .filter_map(|(name, value)| match value {
+                        Value::Object(inner) => {
+                            feature_from_json_fields(Some(name.as_str()), inner)
+                        }
+                        Value::Bool(flag) => Some(CodexFeature {
+                            name: name.clone(),
+                            stage: None,
+                            enabled: *flag,
+                            extra: BTreeMap::new(),
+                        }),
+                        Value::String(flag) => parse_feature_enabled_str(flag)
+                            .map(|enabled| CodexFeature {
+                                name: name.clone(),
+                                stage: None,
+                                enabled,
+                                extra: BTreeMap::new(),
+                            })
+                            .or_else(|| {
+                                Some(CodexFeature {
+                                    name: name.clone(),
+                                    stage: Some(CodexFeatureStage::parse(flag)),
+                                    enabled: true,
+                                    extra: BTreeMap::new(),
+                                })
+                            }),
+                        _ => None,
+                    })
+                    .collect(),
+            )
+        }
+        _ => None,
+    }
+}
+
+fn parse_feature_list_text(output: &str) -> Option<Vec<CodexFeature>> {
+    let mut features = Vec::new();
+    for line in output.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed
+            .chars()
+            .all(|c| matches!(c, '-' | '=' | '+' | '*' | '|'))
+        {
+            continue;
+        }
+
+        let tokens: Vec<&str> = trimmed.split_whitespace().collect();
+        if tokens.len() < 3 {
+            continue;
+        }
+        if tokens[0].eq_ignore_ascii_case("feature")
+            && tokens[1].eq_ignore_ascii_case("stage")
+            && tokens[2].eq_ignore_ascii_case("enabled")
+        {
+            continue;
+        }
+
+        let enabled_token = tokens.last().copied().unwrap_or_default();
+        let enabled = match parse_feature_enabled_str(enabled_token) {
+            Some(value) => value,
+            None => continue,
+        };
+        let stage_token = tokens.get(tokens.len() - 2).copied().unwrap_or_default();
+        let name = tokens[..tokens.len() - 2].join(" ");
+        if name.is_empty() {
+            continue;
+        }
+        let stage = (!stage_token.is_empty()).then(|| CodexFeatureStage::parse(stage_token));
+        features.push(CodexFeature {
+            name,
+            stage,
+            enabled,
+            extra: BTreeMap::new(),
+        });
+    }
+
+    if features.is_empty() {
+        None
+    } else {
+        Some(features)
+    }
+}
+
+fn parse_feature_enabled_value(value: &Value) -> Option<bool> {
+    match value {
+        Value::Bool(flag) => Some(*flag),
+        Value::String(raw) => parse_feature_enabled_str(raw),
+        _ => None,
+    }
+}
+
+fn parse_feature_enabled_str(raw: &str) -> Option<bool> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "true" | "yes" | "y" | "on" | "1" | "enabled" => Some(true),
+        "false" | "no" | "n" | "off" | "0" | "disabled" => Some(false),
+        _ => None,
+    }
+}
+
+fn feature_from_json_fields(
+    name_hint: Option<&str>,
+    map: &serde_json::Map<String, Value>,
+) -> Option<CodexFeature> {
+    let name = map
+        .get("name")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .or_else(|| name_hint.map(str::to_string))?;
+    let enabled = map
+        .get("enabled")
+        .and_then(parse_feature_enabled_value)
+        .or_else(|| map.get("value").and_then(parse_feature_enabled_value))?;
+    let stage = map
+        .get("stage")
+        .or_else(|| map.get("status"))
+        .and_then(Value::as_str)
+        .map(CodexFeatureStage::parse);
+
+    let mut extra = BTreeMap::new();
+    for (key, value) in map {
+        if matches!(
+            key.as_str(),
+            "name" | "stage" | "status" | "enabled" | "value"
+        ) {
+            continue;
+        }
+        extra.insert(key.clone(), value.clone());
+    }
+
+    Some(CodexFeature {
+        name,
+        stage,
+        enabled,
+        extra,
+    })
+}
+
 /// Computes an update advisory for a previously probed binary.
 ///
 /// Callers that already have a [`CodexCapabilities`] snapshot can use this
@@ -5751,6 +6228,71 @@ echo "not-json"
             CodexError::ExecPolicyParse { stdout, .. } => assert!(stdout.contains("not-json")),
             other => panic!("expected ExecPolicyParse, got {other:?}"),
         }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn features_list_maps_overrides_and_json_flag() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+echo "$PWD" 1>&2
+printf "%s\n" "$@" 1>&2
+cat <<'JSON'
+[{"name":"json-stream","stage":"stable","enabled":true},{"name":"cloud-exec","stage":"experimental","enabled":false}]
+JSON
+"#,
+        );
+
+        let workdir = dir.path().join("features-workdir");
+        std_fs::create_dir_all(&workdir).unwrap();
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .working_dir(&workdir)
+            .approval_policy(ApprovalPolicy::OnRequest)
+            .search(true)
+            .build();
+
+        let output = client
+            .list_features(
+                FeaturesListRequest::new()
+                    .json(true)
+                    .profile("dev")
+                    .config_override("features.extras", "true"),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(output.format, FeaturesListFormat::Json);
+        assert_eq!(output.features.len(), 2);
+        assert_eq!(output.features[0].stage, Some(CodexFeatureStage::Stable));
+        assert!(output.features[0].enabled);
+        assert!(!output.features[1].enabled);
+
+        let mut lines = output.stderr.lines();
+        let pwd = lines.next().unwrap();
+        assert_eq!(Path::new(pwd), workdir.as_path());
+
+        let args: Vec<_> = lines.map(str::to_string).collect();
+        assert_eq!(
+            args,
+            vec![
+                "features",
+                "list",
+                "--config",
+                "features.extras=true",
+                "--profile",
+                "dev",
+                "--ask-for-approval",
+                "on-request",
+                "--search",
+                "--json"
+            ]
+        );
     }
 
     #[cfg(unix)]
@@ -6544,6 +7086,7 @@ exit 0
 
     #[test]
     fn capability_cache_entries_exposes_cache_state() {
+        let _guard = env_guard();
         clear_capability_cache();
 
         let temp = tempfile::tempdir().unwrap();
@@ -6766,6 +7309,41 @@ fi
         assert!(parsed_text.supports_output_schema);
         assert!(parsed_text.supports_add_dir);
         assert!(parsed_text.supports_mcp_login);
+    }
+
+    #[test]
+    fn parses_feature_list_json_and_text_tables() {
+        let json = r#"{"features":[{"name":"json-stream","stage":"stable","enabled":true,"notes":"keep"},{"name":"cloud-exec","stage":"experimental","enabled":false}]}"#;
+        let (json_features, json_format) = parse_feature_list_output(json, true).unwrap();
+        assert_eq!(json_format, FeaturesListFormat::Json);
+        assert_eq!(json_features.len(), 2);
+        assert_eq!(json_features[0].name, "json-stream");
+        assert_eq!(json_features[0].stage, Some(CodexFeatureStage::Stable));
+        assert!(json_features[0].enabled);
+        assert!(json_features[0].extra.contains_key("notes"));
+        assert_eq!(
+            json_features[1].stage,
+            Some(CodexFeatureStage::Experimental)
+        );
+        assert!(!json_features[1].enabled);
+
+        let text = r#"
+Feature   Stage         Enabled
+json-stream stable      true
+cloud-exec experimental false
+"#;
+        let (text_features, text_format) = parse_feature_list_output(text, false).unwrap();
+        assert_eq!(text_format, FeaturesListFormat::Text);
+        assert_eq!(text_features.len(), 2);
+        assert_eq!(
+            text_features[1].stage,
+            Some(CodexFeatureStage::Experimental)
+        );
+        assert!(!text_features[1].enabled);
+
+        let (fallback_features, fallback_format) = parse_feature_list_output(text, true).unwrap();
+        assert_eq!(fallback_format, FeaturesListFormat::Text);
+        assert_eq!(fallback_features.len(), 2);
     }
 
     #[test]

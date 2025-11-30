@@ -174,6 +174,33 @@ println!("{reply}");
   # Ok(()) }
   ```
 
+## Features List
+- `list_features` wraps `codex features list` with optional `--json` (opt-in via the request), falling back to parsing the text table when JSON is unavailable. Returns parsed entries (name, stage, enabled) alongside captured stdout/stderr/status and indicates which format was parsed.
+- Shared config/profile/search/approval overrides flow through; the enabled column reflects the effective config/profile. Non-zero exits surface as `CodexError::NonZeroExit`, and unparsable output surfaces as `CodexError::FeatureListParse`.
+- Example:
+  ```rust,no_run
+  use codex::{CodexClient, FeaturesListRequest};
+
+  # async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+  let client = CodexClient::builder()
+      .mirror_stdout(false)
+      .quiet(true)
+      .build();
+  let features = client
+      .list_features(
+          FeaturesListRequest::new()
+              .json(true)
+              .profile("beta")
+              .config_override("features.experimental_sandbox", "true"),
+      )
+      .await?;
+  println!("features parsed from {:?}", features.format);
+  for feature in features.features {
+      println!("{} ({:?}) enabled={}", feature.name, feature.stage, feature.enabled);
+  }
+  # Ok(()) }
+  ```
+
 ## MCP + App-Server Flows
 - The CLI ships stdio servers for Model Context Protocol and the app-server APIs. Examples cover the JSON-RPC wiring, approvals, and shutdown:
 - `crates/codex/examples/mcp_codex_flow.rs`: start `codex mcp-server --stdio`, call `tools/codex`, and follow up with `codex/codex-reply` when a conversation ID is returned (supports `--sample`).
