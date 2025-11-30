@@ -25,3 +25,7 @@ Deliverables
 - Code changes wired to spawn commands with the new options.
 - Tests covering new flags/config paths.
 - Docs/EXAMPLES refreshed to show the new APIs.
+
+## I11 Audit Notes
+- Verified CLI parity docs/examples after the app-server codegen additions; clarified codegen error handling (non-zero exits raise `CodexError::NonZeroExit`).
+- Remaining gaps to consider: CLI `--oss` is not mapped; direct `--enable/--disable` toggles only exist on sandbox (use config overrides elsewhere); `codex cloud exec`/shell completion remain unwrapped; no end-to-end tests against a real CLI binary yet.

@@ -64,6 +64,9 @@ This is a static inventory from `codex --help` and subcommand help, plus known `
 - CODEX_HOME is now supported in the wrapper via builder (`codex_home`, `create_home_dirs`); env is applied per spawn with `CODEX_BINARY` and default `RUST_LOG`.
 - Auth/session remains basic (login/status/logout only).
 - Tests primarily live in inline unit tests (lib.rs, mcp.rs) and examples/doc-tests; no end-to-end coverage with a real CLI binary yet.
-- `generate_app_server_bindings` wraps `codex app-server generate-ts`/`generate-json-schema`, forwards shared overrides (config/profile/search/approval/sandbox/local-provider/cd), creates the `--out` directory, and supports TypeScript `--prettier` formatting; non-zero exits raise `NonZeroExit`.
+- `generate_app_server_bindings` wraps `codex app-server generate-ts`/`generate-json-schema`, forwards shared overrides (config/profile/search/approval/sandbox/local-provider/cd), creates the `--out` directory, supports TypeScript `--prettier`, and surfaces non-zero exits as `NonZeroExit`.
 - `run_sandbox` wraps `codex sandbox <macos|linux|windows>` with `--full-auto`, macOS `--log-denials`, and request `--config/--enable/--disable` flags; other CLI overrides (approval/profile/search/sandbox) are intentionally not forwarded on this subcommand.
 - Sandbox caveats: macOS is the only platform that emits denial logs; Linux relies on the bundled `codex-linux-sandbox` helper; Windows sandboxing is experimental and depends on the upstream helper. The wrapper does not gate availability—unsupported/misconfigured installs will return non-zero statuses via `SandboxRun`.
+- CLI `--oss` is not surfaced; rely on `local_provider`/model selection or add a follow-up if mapping is needed.
+- Direct `--enable`/`--disable` toggles are only exposed on sandbox runs; use `config_override("features.<name>", "true/false")` for other commands if the flags are required.
+- The wrapper does not cover `codex cloud exec` or the shell-completion helper; call the CLI directly when needed.

@@ -123,7 +123,7 @@ println!("{reply}");
   See `crates/codex/examples/run_sandbox.rs` for a runnable wrapper that selects the platform, forwards `--full-auto`/`--log-denials`, and prints captured stdout/stderr/exit.
 
 ## App-Server Codegen
-- `generate_app_server_bindings` wraps `codex app-server generate-ts` (optional `--prettier`) and `generate-json-schema`, creates the output directory when missing, and returns captured stdout/stderr plus the exit status. Shared config/profile/search/approval flags flow through via builder/request overrides.
+- `generate_app_server_bindings` wraps `codex app-server generate-ts` (optional `--prettier`) and `generate-json-schema`, creates the output directory when missing, and returns captured stdout/stderr plus the exit status; non-zero exits surface as `CodexError::NonZeroExit` with stderr attached. Shared config/profile/search/approval flags flow through via builder/request overrides.
 - Example:
   ```rust,no_run
   use codex::{AppServerCodegenRequest, CodexClient};
@@ -168,6 +168,8 @@ println!("{reply}");
 - The crate still buffers stdout/stderr from streaming/apply flows instead of exposing a typed stream API; use the examples to consume JSONL incrementally until a typed interface lands.
 - Apply/diff flows depend on Codex emitting JSON-friendly stdout/stderr; handle non-JSON output defensively in host apps.
 - Capability detection caches are keyed to a binary path/version pairing; refresh them whenever the Codex binary path, mtime, or `--version` output changes instead of reusing stale results across upgrades. Treat `codex features list` output as best-effort hints that may drift across releases and fall back to the fixtures above when probing fails.
+- CLI `--oss` and top-level `--enable`/`--disable` feature toggles are not surfaced on exec/resume/apply/diff/codegen (sandbox supports feature toggles); use `local_provider`/model selection or config overrides for now.
+- The wrapper does not wrap `codex cloud exec` or the shell-completion helper; call the CLI directly when needed.
 
 ## Examples Index
 - The full wrapper vs. native CLI matrix lives in `crates/codex/EXAMPLES.md`.
