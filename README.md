@@ -122,6 +122,30 @@ println!("{reply}");
   ```
   See `crates/codex/examples/run_sandbox.rs` for a runnable wrapper that selects the platform, forwards `--full-auto`/`--log-denials`, and prints captured stdout/stderr/exit.
 
+## App-Server Codegen
+- `generate_app_server_bindings` wraps `codex app-server generate-ts` (optional `--prettier`) and `generate-json-schema`, creates the output directory when missing, and returns captured stdout/stderr plus the exit status. Shared config/profile/search/approval flags flow through via builder/request overrides.
+- Example:
+  ```rust,no_run
+  use codex::{AppServerCodegenRequest, CodexClient};
+
+  # async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+  let client = CodexClient::builder()
+      .mirror_stdout(false)
+      .quiet(true)
+      .profile("dev")
+      .build();
+  let codegen = client
+      .generate_app_server_bindings(
+          AppServerCodegenRequest::typescript("./gen/app")
+              .prettier("./node_modules/.bin/prettier")
+              .config_override("features.codegen", "true"),
+      )
+      .await?;
+  println!("app-server exit: {:?}", codegen.status.code());
+  println!("bindings dir: {}", codegen.out_dir.display());
+  # Ok(()) }
+  ```
+
 ## MCP + App-Server Flows
 - The CLI ships stdio servers for Model Context Protocol and the app-server APIs. Examples cover the JSON-RPC wiring, approvals, and shutdown:
 - `crates/codex/examples/mcp_codex_flow.rs`: start `codex mcp-server --stdio`, call `tools/codex`, and follow up with `codex/codex-reply` when a conversation ID is returned (supports `--sample`).

@@ -29,6 +29,7 @@
 //! - [`CodexClient::send_prompt`] for a single prompt/response with optional `--json` output.
 //! - [`CodexClient::stream_exec`] for typed, real-time JSONL events from `codex exec --json`, returning an [`ExecStream`] with an event stream plus a completion future.
 //! - [`CodexClient::apply`] / [`CodexClient::diff`] to run `codex apply/diff`, echo stdout/stderr according to the builder (`mirror_stdout` / `quiet`), and return captured output + exit status.
+//! - [`CodexClient::generate_app_server_bindings`] to refresh app-server protocol bindings via `codex app-server generate-ts` (optional `--prettier`) or `generate-json-schema`, returning captured stdout/stderr plus the exit status.
 //! - [`CodexClient::run_sandbox`] to wrap `codex sandbox <platform>` (macOS/Linux/Windows), pass `--full-auto`/`--log-denials`/`--config`/`--enable`/`--disable`, and return the inner command status + output. macOS is the only platform that emits denial logs; Linux depends on the bundled `codex-linux-sandbox`; Windows sandboxing is experimental and relies on the upstream helper (no capability gating—non-zero exits bubble through).
 //!
 //! ## Streaming, events, and artifacts
@@ -1781,6 +1782,110 @@ impl CodexClient {
         })
     }
 
+    /// Generates app-server bindings via `codex app-server generate-ts` or `generate-json-schema`.
+    ///
+    /// Ensures the output directory exists, mirrors stdout/stderr according to the builder
+    /// (`mirror_stdout` / `quiet`), and returns captured output plus the exit status. Non-zero
+    /// exits bubble up as [`CodexError::NonZeroExit`] with stderr attached. Use
+    /// [`AppServerCodegenRequest::prettier`] to format TypeScript output with a specific
+    /// Prettier binary and request-level overrides for config/profile toggles.
+    pub async fn generate_app_server_bindings(
+        &self,
+        request: AppServerCodegenRequest,
+    ) -> Result<AppServerCodegenOutput, CodexError> {
+        let AppServerCodegenRequest {
+            target,
+            out_dir,
+            overrides,
+        } = request;
+
+        std_fs::create_dir_all(&out_dir).map_err(|source| CodexError::PrepareOutputDirectory {
+            path: out_dir.clone(),
+            source,
+        })?;
+
+        let dir_ctx = self.directory_context()?;
+        let resolved_overrides =
+            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+
+        let mut command = Command::new(self.command_env.binary_path());
+        command
+            .arg("app-server")
+            .arg(target.subcommand())
+            .arg("--out")
+            .arg(&out_dir)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .current_dir(dir_ctx.path());
+
+        apply_cli_overrides(&mut command, &resolved_overrides, true);
+
+        if let Some(prettier) = target.prettier() {
+            command.arg("--prettier").arg(prettier);
+        }
+
+        self.command_env.apply(&mut command)?;
+
+        let mut child = command.spawn().map_err(|source| CodexError::Spawn {
+            binary: self.command_env.binary_path().to_path_buf(),
+            source,
+        })?;
+
+        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+
+        let stdout_task = tokio::spawn(tee_stream(
+            stdout,
+            ConsoleTarget::Stdout,
+            self.mirror_stdout,
+        ));
+        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+
+        let wait_task = async move {
+            let status = child
+                .wait()
+                .await
+                .map_err(|source| CodexError::Wait { source })?;
+            let stdout_bytes = stdout_task
+                .await
+                .map_err(CodexError::Join)?
+                .map_err(CodexError::CaptureIo)?;
+            let stderr_bytes = stderr_task
+                .await
+                .map_err(CodexError::Join)?
+                .map_err(CodexError::CaptureIo)?;
+            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+        };
+
+        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+            wait_task.await?
+        } else {
+            match time::timeout(self.timeout, wait_task).await {
+                Ok(result) => result?,
+                Err(_) => {
+                    return Err(CodexError::Timeout {
+                        timeout: self.timeout,
+                    });
+                }
+            }
+        };
+
+        if !status.success() {
+            return Err(CodexError::NonZeroExit {
+                status,
+                stderr: String::from_utf8(stderr_bytes)?,
+            });
+        }
+
+        Ok(AppServerCodegenOutput {
+            status,
+            stdout: String::from_utf8(stdout_bytes)?,
+            stderr: String::from_utf8(stderr_bytes)?,
+            out_dir,
+        })
+    }
+
     /// Runs `codex sandbox <platform> [--full-auto|--log-denials] [--config/--enable/--disable] -- <COMMAND...>`.
     ///
     /// Captures stdout/stderr and mirrors them according to the builder (`mirror_stdout` / `quiet`). Unlike
@@ -3358,6 +3463,12 @@ pub enum CodexError {
         #[source]
         source: std::io::Error,
     },
+    #[error("failed to prepare app-server output directory `{path}`: {source}")]
+    PrepareOutputDirectory {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
     #[error("failed to prepare CODEX_HOME at `{path}`: {source}")]
     PrepareCodexHome {
         path: PathBuf,
@@ -4016,6 +4127,122 @@ pub struct SandboxRun {
     pub stdout: String,
     /// Captured stderr (mirrored unless `quiet` is set).
     pub stderr: String,
+}
+
+/// Target for app-server code generation.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum AppServerCodegenTarget {
+    /// Emits TypeScript bindings for the app-server protocol. Optionally formats the output with Prettier.
+    TypeScript { prettier: Option<PathBuf> },
+    /// Emits a JSON schema bundle for the app-server protocol.
+    JsonSchema,
+}
+
+impl AppServerCodegenTarget {
+    fn subcommand(&self) -> &'static str {
+        match self {
+            AppServerCodegenTarget::TypeScript { .. } => "generate-ts",
+            AppServerCodegenTarget::JsonSchema => "generate-json-schema",
+        }
+    }
+
+    fn prettier(&self) -> Option<&PathBuf> {
+        match self {
+            AppServerCodegenTarget::TypeScript { prettier } => prettier.as_ref(),
+            AppServerCodegenTarget::JsonSchema => None,
+        }
+    }
+}
+
+/// Request for `codex app-server generate-ts` or `generate-json-schema`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AppServerCodegenRequest {
+    /// Codegen target and optional Prettier path (TypeScript only).
+    pub target: AppServerCodegenTarget,
+    /// Output directory passed to `--out`; created if missing.
+    pub out_dir: PathBuf,
+    /// Per-call CLI overrides layered on top of the builder.
+    pub overrides: CliOverridesPatch,
+}
+
+impl AppServerCodegenRequest {
+    /// Generates TypeScript bindings into `out_dir`.
+    pub fn typescript(out_dir: impl Into<PathBuf>) -> Self {
+        Self {
+            target: AppServerCodegenTarget::TypeScript { prettier: None },
+            out_dir: out_dir.into(),
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    /// Generates a JSON schema bundle into `out_dir`.
+    pub fn json_schema(out_dir: impl Into<PathBuf>) -> Self {
+        Self {
+            target: AppServerCodegenTarget::JsonSchema,
+            out_dir: out_dir.into(),
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    /// Formats TypeScript output with the provided Prettier executable (no-op for JSON schema).
+    pub fn prettier(mut self, prettier: impl Into<PathBuf>) -> Self {
+        if let AppServerCodegenTarget::TypeScript { prettier: slot } = &mut self.target {
+            *slot = Some(prettier.into());
+        }
+        self
+    }
+
+    /// Replaces the default CLI overrides for this request.
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+
+    /// Adds a `--config key=value` override for this request.
+    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.overrides
+            .config_overrides
+            .push(ConfigOverride::new(key, value));
+        self
+    }
+
+    /// Adds a raw `--config key=value` override without validation.
+    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+        self.overrides
+            .config_overrides
+            .push(ConfigOverride::from_raw(raw));
+        self
+    }
+
+    /// Sets the config profile (`--profile`) for this request.
+    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+        let profile = profile.into();
+        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+        self
+    }
+
+    /// Controls whether `--search` is passed through to Codex.
+    pub fn search(mut self, enable: bool) -> Self {
+        self.overrides.search = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+}
+
+/// Captured output from app-server codegen commands.
+#[derive(Clone, Debug)]
+pub struct AppServerCodegenOutput {
+    /// Exit status returned by the subcommand.
+    pub status: ExitStatus,
+    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
+    pub stdout: String,
+    /// Captured stderr (mirrored unless `quiet` is set).
+    pub stderr: String,
+    /// Output directory passed to `--out`.
+    pub out_dir: PathBuf,
 }
 
 /// Ergonomic container for the streaming surface; produced by `stream_exec` (implemented in D2).
@@ -5095,6 +5322,105 @@ exit 7
         assert!(!run.status.success());
         assert_eq!(run.status.code(), Some(7));
         assert_eq!(run.stdout.trim(), "failing");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn app_server_codegen_maps_overrides_and_prettier() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+echo "$PWD"
+printf "%s\n" "$@"
+"#,
+        );
+
+        let workdir = dir.path().join("workdir");
+        std_fs::create_dir_all(&workdir).unwrap();
+        let out_dir = dir.path().join("out/ts");
+        let prettier = dir.path().join("bin/prettier.js");
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .working_dir(&workdir)
+            .approval_policy(ApprovalPolicy::OnRequest)
+            .search(true)
+            .build();
+
+        let result = client
+            .generate_app_server_bindings(
+                AppServerCodegenRequest::typescript(&out_dir)
+                    .prettier(&prettier)
+                    .profile("dev")
+                    .config_override("features.codegen", "true"),
+            )
+            .await
+            .unwrap();
+
+        let mut lines = result.stdout.lines();
+        let pwd = lines.next().unwrap();
+        assert_eq!(Path::new(pwd), workdir.as_path());
+
+        let args: Vec<_> = lines.map(str::to_string).collect();
+        assert_eq!(
+            args,
+            vec![
+                "app-server",
+                "generate-ts",
+                "--out",
+                out_dir.to_string_lossy().as_ref(),
+                "--config",
+                "features.codegen=true",
+                "--profile",
+                "dev",
+                "--ask-for-approval",
+                "on-request",
+                "--search",
+                "--prettier",
+                prettier.to_string_lossy().as_ref(),
+            ]
+        );
+        assert!(out_dir.is_dir());
+        assert_eq!(result.out_dir, out_dir);
+        assert!(result.status.success());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn app_server_codegen_surfaces_non_zero_exit() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+echo "ts error"
+echo "bad format" 1>&2
+exit 5
+"#,
+        );
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+
+        let out_dir = dir.path().join("schema");
+        let err = client
+            .generate_app_server_bindings(AppServerCodegenRequest::json_schema(&out_dir))
+            .await
+            .unwrap_err();
+
+        match err {
+            CodexError::NonZeroExit { status, stderr } => {
+                assert_eq!(status.code(), Some(5));
+                assert!(stderr.contains("bad format"));
+            }
+            other => panic!("expected NonZeroExit, got {other:?}"),
+        }
+        assert!(out_dir.is_dir());
     }
 
     #[tokio::test]
