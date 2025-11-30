@@ -3069,6 +3069,28 @@ impl CodexClientBuilder {
         self
     }
 
+    /// Requests the CLI `--oss` flag to favor OSS/local backends when available.
+    pub fn oss(mut self, enable: bool) -> Self {
+        self.cli_overrides.oss = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+
+    /// Adds a `--enable <feature>` toggle to Codex invocations.
+    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+        self.cli_overrides.feature_toggles.enable.push(name.into());
+        self
+    }
+
+    /// Adds a `--disable <feature>` toggle to Codex invocations.
+    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+        self.cli_overrides.feature_toggles.disable.push(name.into());
+        self
+    }
+
     /// Controls whether `--search` is passed through to Codex.
     pub fn search(mut self, enable: bool) -> Self {
         self.cli_overrides.search = if enable {
@@ -3283,6 +3305,13 @@ impl Default for FlagState {
     }
 }
 
+/// Feature toggles forwarded to `--enable/--disable`.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct FeatureToggles {
+    pub enable: Vec<String>,
+    pub disable: Vec<String>,
+}
+
 /// Config values for `model_reasoning_effort`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ReasoningEffort {
@@ -3440,6 +3469,7 @@ impl ReasoningOverrides {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CliOverrides {
     pub config_overrides: Vec<ConfigOverride>,
+    pub feature_toggles: FeatureToggles,
     pub reasoning: ReasoningOverrides,
     pub approval_policy: Option<ApprovalPolicy>,
     pub sandbox_mode: Option<SandboxMode>,
@@ -3447,6 +3477,7 @@ pub struct CliOverrides {
     pub profile: Option<String>,
     pub cd: Option<PathBuf>,
     pub local_provider: Option<LocalProvider>,
+    pub oss: FlagState,
     pub search: FlagState,
     pub auto_reasoning_defaults: bool,
 }
@@ -3455,6 +3486,7 @@ impl Default for CliOverrides {
     fn default() -> Self {
         Self {
             config_overrides: Vec::new(),
+            feature_toggles: FeatureToggles::default(),
             reasoning: ReasoningOverrides::default(),
             approval_policy: None,
             sandbox_mode: None,
@@ -3462,6 +3494,7 @@ impl Default for CliOverrides {
             profile: None,
             cd: None,
             local_provider: None,
+            oss: FlagState::Inherit,
             search: FlagState::Inherit,
             auto_reasoning_defaults: true,
         }
@@ -3472,6 +3505,7 @@ impl Default for CliOverrides {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CliOverridesPatch {
     pub config_overrides: Vec<ConfigOverride>,
+    pub feature_toggles: FeatureToggles,
     pub reasoning: ReasoningOverrides,
     pub approval_policy: Option<ApprovalPolicy>,
     pub sandbox_mode: Option<SandboxMode>,
@@ -3479,6 +3513,7 @@ pub struct CliOverridesPatch {
     pub profile: Option<String>,
     pub cd: Option<PathBuf>,
     pub local_provider: Option<LocalProvider>,
+    pub oss: FlagState,
     pub search: FlagState,
     pub auto_reasoning_defaults: Option<bool>,
 }
@@ -3486,12 +3521,14 @@ pub struct CliOverridesPatch {
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct ResolvedCliOverrides {
     config_overrides: Vec<ConfigOverride>,
+    feature_toggles: FeatureToggles,
     approval_policy: Option<ApprovalPolicy>,
     sandbox_mode: Option<SandboxMode>,
     safety_override: SafetyOverride,
     profile: Option<String>,
     cd: Option<PathBuf>,
     local_provider: Option<LocalProvider>,
+    oss: bool,
     search: FlagState,
 }
 
@@ -3564,15 +3601,28 @@ fn resolve_cli_overrides(
         FlagState::Inherit => builder.search,
         other => other,
     };
+    let oss = match patch.oss {
+        FlagState::Inherit => builder.oss,
+        other => other,
+    };
+    let mut feature_toggles = builder.feature_toggles.clone();
+    feature_toggles
+        .enable
+        .extend(patch.feature_toggles.enable.iter().cloned());
+    feature_toggles
+        .disable
+        .extend(patch.feature_toggles.disable.iter().cloned());
 
     ResolvedCliOverrides {
         config_overrides,
+        feature_toggles,
         approval_policy,
         sandbox_mode,
         safety_override,
         profile,
         cd,
         local_provider,
+        oss: matches!(oss, FlagState::Enable),
         search,
     }
 }
@@ -3582,6 +3632,16 @@ fn cli_override_args(resolved: &ResolvedCliOverrides, include_search: bool) -> V
     for config in &resolved.config_overrides {
         args.push(OsString::from("--config"));
         args.push(OsString::from(format!("{}={}", config.key, config.value)));
+    }
+
+    for feature in &resolved.feature_toggles.enable {
+        args.push(OsString::from("--enable"));
+        args.push(OsString::from(feature));
+    }
+
+    for feature in &resolved.feature_toggles.disable {
+        args.push(OsString::from("--disable"));
+        args.push(OsString::from(feature));
     }
 
     if let Some(profile) = &resolved.profile {
@@ -3618,6 +3678,10 @@ fn cli_override_args(resolved: &ResolvedCliOverrides, include_search: bool) -> V
     if let Some(provider) = resolved.local_provider {
         args.push(OsString::from("--local-provider"));
         args.push(OsString::from(provider.as_str()));
+    }
+
+    if resolved.oss {
+        args.push(OsString::from("--oss"));
     }
 
     if include_search && resolved.search_enabled() {
@@ -4265,6 +4329,25 @@ impl ExecRequest {
         self
     }
 
+    pub fn oss(mut self, enable: bool) -> Self {
+        self.overrides.oss = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+
+    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.enable.push(name.into());
+        self
+    }
+
+    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.disable.push(name.into());
+        self
+    }
+
     pub fn search(mut self, enable: bool) -> Self {
         self.overrides.search = if enable {
             FlagState::Enable
@@ -4370,6 +4453,25 @@ impl ResumeRequest {
         self
     }
 
+    pub fn oss(mut self, enable: bool) -> Self {
+        self.overrides.oss = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+
+    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.enable.push(name.into());
+        self
+    }
+
+    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.disable.push(name.into());
+        self
+    }
+
     pub fn search(mut self, enable: bool) -> Self {
         self.overrides.search = if enable {
             FlagState::Enable
@@ -4396,13 +4498,6 @@ impl SandboxPlatform {
             SandboxPlatform::Windows => "windows",
         }
     }
-}
-
-/// Feature toggles forwarded to `--enable/--disable`.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct FeatureToggles {
-    pub enable: Vec<String>,
-    pub disable: Vec<String>,
 }
 
 /// Request to run an arbitrary command inside a Codex-provided sandbox.
@@ -4761,6 +4856,28 @@ impl FeaturesListRequest {
         self
     }
 
+    /// Requests the CLI `--oss` flag for this call.
+    pub fn oss(mut self, enable: bool) -> Self {
+        self.overrides.oss = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+
+    /// Adds a `--enable <feature>` toggle for this call.
+    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.enable.push(name.into());
+        self
+    }
+
+    /// Adds a `--disable <feature>` toggle for this call.
+    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.disable.push(name.into());
+        self
+    }
+
     /// Controls whether `--search` is passed through to Codex.
     pub fn search(mut self, enable: bool) -> Self {
         self.overrides.search = if enable {
@@ -4933,6 +5050,28 @@ impl ExecPolicyCheckRequest {
         self
     }
 
+    /// Requests the CLI `--oss` flag for this call.
+    pub fn oss(mut self, enable: bool) -> Self {
+        self.overrides.oss = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+
+    /// Adds a `--enable <feature>` toggle for this call.
+    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.enable.push(name.into());
+        self
+    }
+
+    /// Adds a `--disable <feature>` toggle for this call.
+    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.disable.push(name.into());
+        self
+    }
+
     /// Controls whether `--search` is passed through to Codex.
     pub fn search(mut self, enable: bool) -> Self {
         self.overrides.search = if enable {
@@ -5033,6 +5172,28 @@ impl AppServerCodegenRequest {
     pub fn profile(mut self, profile: impl Into<String>) -> Self {
         let profile = profile.into();
         self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+        self
+    }
+
+    /// Requests the CLI `--oss` flag for this codegen call.
+    pub fn oss(mut self, enable: bool) -> Self {
+        self.overrides.oss = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+
+    /// Adds a `--enable <feature>` toggle for this codegen call.
+    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.enable.push(name.into());
+        self
+    }
+
+    /// Adds a `--disable <feature>` toggle for this codegen call.
+    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.disable.push(name.into());
         self
     }
 
@@ -8346,15 +8507,86 @@ fi
     }
 
     #[test]
+    fn request_oss_override_can_disable_builder_flag() {
+        let mut builder_overrides = CliOverrides::default();
+        builder_overrides.oss = FlagState::Enable;
+
+        let resolved =
+            resolve_cli_overrides(&builder_overrides, &CliOverridesPatch::default(), None);
+        let args: Vec<_> = cli_override_args(&resolved, true)
+            .iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+        assert!(args.contains(&"--oss".to_string()));
+
+        let mut patch = CliOverridesPatch::default();
+        patch.oss = FlagState::Disable;
+        let resolved = resolve_cli_overrides(&builder_overrides, &patch, None);
+        let args: Vec<_> = cli_override_args(&resolved, true)
+            .iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+        assert!(!args.contains(&"--oss".to_string()));
+    }
+
+    #[test]
+    fn feature_toggles_merge_builder_and_request() {
+        let mut builder_overrides = CliOverrides::default();
+        builder_overrides
+            .feature_toggles
+            .enable
+            .push("builder-enable".to_string());
+        builder_overrides
+            .feature_toggles
+            .disable
+            .push("builder-disable".to_string());
+
+        let mut patch = CliOverridesPatch::default();
+        patch
+            .feature_toggles
+            .enable
+            .push("request-enable".to_string());
+        patch
+            .feature_toggles
+            .disable
+            .push("request-disable".to_string());
+
+        let resolved = resolve_cli_overrides(&builder_overrides, &patch, None);
+        let args: Vec<_> = cli_override_args(&resolved, true)
+            .iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+
+        assert!(args.windows(2).any(|window| {
+            window.get(0).map(String::as_str) == Some("--enable")
+                && window.get(1).map(String::as_str) == Some("builder-enable")
+        }));
+        assert!(args.windows(2).any(|window| {
+            window.get(0).map(String::as_str) == Some("--enable")
+                && window.get(1).map(String::as_str) == Some("request-enable")
+        }));
+        assert!(args.windows(2).any(|window| {
+            window.get(0).map(String::as_str) == Some("--disable")
+                && window.get(1).map(String::as_str) == Some("builder-disable")
+        }));
+        assert!(args.windows(2).any(|window| {
+            window.get(0).map(String::as_str) == Some("--disable")
+                && window.get(1).map(String::as_str) == Some("request-disable")
+        }));
+    }
+
+    #[test]
     fn cli_override_args_apply_safety_precedence() {
         let mut resolved = ResolvedCliOverrides {
             config_overrides: Vec::new(),
+            feature_toggles: FeatureToggles::default(),
             approval_policy: None,
             sandbox_mode: None,
             safety_override: SafetyOverride::FullAuto,
             profile: None,
             cd: None,
             local_provider: None,
+            oss: false,
             search: FlagState::Enable,
         };
         let args = cli_override_args(&resolved, true);
@@ -8377,12 +8609,14 @@ fi
 
         let resolved = ResolvedCliOverrides {
             config_overrides: vec![ConfigOverride::new("foo", "bar")],
+            feature_toggles: FeatureToggles::default(),
             approval_policy: Some(ApprovalPolicy::OnRequest),
             sandbox_mode: Some(SandboxMode::WorkspaceWrite),
             safety_override: SafetyOverride::DangerouslyBypass,
             profile: Some("team".to_string()),
             cd: Some(PathBuf::from("/tmp/worktree")),
             local_provider: Some(LocalProvider::Ollama),
+            oss: false,
             search: FlagState::Enable,
         };
         let args = cli_override_args(&resolved, true);
@@ -8442,11 +8676,17 @@ fi
             .sandbox_mode(SandboxMode::WorkspaceWrite)
             .cd(&builder_cd)
             .local_provider(LocalProvider::Custom)
+            .oss(true)
+            .enable_feature("builder-on")
+            .disable_feature("builder-off")
             .search(true)
             .build();
 
         let mut request = ExecRequest::new("list flags")
             .config_override("extra", "value")
+            .oss(false)
+            .enable_feature("request-on")
+            .disable_feature("request-off")
             .search(false);
         request.overrides.cd = Some(request_cd.clone());
         request.overrides.safety_override = Some(SafetyOverride::DangerouslyBypass);
@@ -8464,6 +8704,13 @@ fi
         assert!(!logged.contains(&builder_cd.display().to_string()));
         assert!(logged.contains("--local-provider"));
         assert!(logged.contains("custom"));
+        assert!(logged.contains("--enable"));
+        assert!(logged.contains("builder-on"));
+        assert!(logged.contains("request-on"));
+        assert!(logged.contains("--disable"));
+        assert!(logged.contains("builder-off"));
+        assert!(logged.contains("request-off"));
+        assert!(!logged.contains("--oss"));
         assert!(!logged.contains("--ask-for-approval"));
         assert!(!logged.contains("--sandbox"));
         assert!(!logged.contains("--search"));

@@ -52,8 +52,8 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 - Example `crates/codex/examples/send_prompt.rs` covers the baseline; `working_dir(_json).rs`, `timeout*.rs`, `image_json.rs`, `color_always.rs`, `quiet.rs`, and `no_stdout_mirror.rs` expand on inputs and output handling.
 
 ## CLI Parity Overrides
-- Builder methods mirror CLI flags and config overrides: `.config_override(_raw|s)`, `.reasoning_*`, `.approval_policy(...)`, `.sandbox_mode(...)`, `.full_auto(true)`, `.dangerously_bypass_approvals_and_sandbox(true)`, `.profile(...)`, `.cd(...)`, `.local_provider(...)`, `.search(...)`, `.auto_reasoning_defaults(false)`. Config overrides carry across exec/resume/apply/diff; per-request patches win on conflict.
-- Per-call overlays use `ExecRequest`/`ResumeRequest`: add config overrides, toggle search, swap `cd`/`profile`, or change safety policy for a single run. Resume supports `.last()`/`.all()` selectors matching `--last`/`--all`.
+- Builder methods mirror CLI flags and config overrides: `.config_override(_raw|s)`, `.reasoning_*`, `.approval_policy(...)`, `.sandbox_mode(...)`, `.full_auto(true)`, `.dangerously_bypass_approvals_and_sandbox(true)`, `.profile(...)`, `.cd(...)`, `.local_provider(...)`, `.oss(true)`, `.enable_feature(...)`, `.disable_feature(...)`, `.search(...)`, `.auto_reasoning_defaults(false)`. Config overrides and feature toggles carry across exec/resume/apply/diff; per-request patches win on conflict (including `--oss`).
+- Per-call overlays use `ExecRequest`/`ResumeRequest`: add config overrides, toggle search/oss/feature flags, swap `cd`/`profile`, or change safety policy for a single run. Resume supports `.last()`/`.all()` selectors matching `--last`/`--all`.
 - GPT-5* reasoning defaults stay enabled unless you set reasoning/config overrides or flip `auto_reasoning_defaults(false)` on the builder or request.
 
 ```rust,no_run
@@ -284,8 +284,8 @@ println!("{reply}");
 - The crate still buffers stdout/stderr from streaming/apply flows instead of exposing a typed stream API; use the examples to consume JSONL incrementally until a typed interface lands.
 - Apply/diff flows depend on Codex emitting JSON-friendly stdout/stderr; handle non-JSON output defensively in host apps.
 - Capability detection caches are keyed to a binary path/version pairing; refresh them whenever the Codex binary path, mtime, or `--version` output changes instead of reusing stale results across upgrades. Treat `codex features list` output as best-effort hints that may drift across releases and fall back to the fixtures above when probing fails.
-- CLI `--oss` and top-level `--enable`/`--disable` feature toggles are not surfaced on exec/resume/apply/diff/codegen (sandbox supports feature toggles); use `local_provider`/model selection or config overrides for now.
-- The wrapper does not wrap `codex cloud exec` or the shell-completion helper; call the CLI directly when needed.
+- Top-level `--oss` and `--enable/--disable` toggles now flow through builder/request helpers; feature toggles are additive across builder/request, and request overrides can disable a builder-supplied `--oss`.
+- The wrapper still leaves `codex cloud exec` and the shell-completion helper to the CLI because they are experimental/setup-time utilities. Invoke them directly when needed (e.g., `codex cloud exec -- <cmd>` or `codex completion bash/zsh/fish` in your shell profile).
 
 ## Examples Index
 - The full wrapper vs. native CLI matrix lives in `crates/codex/EXAMPLES.md`.
