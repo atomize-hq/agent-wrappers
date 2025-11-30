@@ -122,6 +122,34 @@ println!("{reply}");
   ```
   See `crates/codex/examples/run_sandbox.rs` for a runnable wrapper that selects the platform, forwards `--full-auto`/`--log-denials`, and prints captured stdout/stderr/exit.
 
+## Execpolicy Checks
+- `check_execpolicy` wraps `codex execpolicy check --policy <PATH>... [--pretty] -- <COMMAND...>` and returns captured stdout/stderr/status plus parsed JSON (`match` with `decision`/`rules` or `noMatch`).
+- Decisions map to `allow`/`prompt`/`forbidden` (forbidden > prompt > allow); rule-level decisions default to `allow` when omitted.
+- Request helpers: `.policy(...)`/`.policies(...)` push repeatable `--policy` flags, `.pretty(true)` forwards `--pretty`, and `.config_override/_raw` + `.profile` + `.search` layer request overrides on top of builder config/profile/approval/sandbox/local-provider/cd settings.
+- Empty command argv returns `EmptyExecPolicyCommand`; non-zero CLI exits surface as `CodexError::NonZeroExit` with stderr attached.
+- Example:
+  ```rust,no_run
+  use codex::{CodexClient, ExecPolicyCheckRequest, ExecPolicyDecision};
+
+  # async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+  let client = CodexClient::builder().mirror_stdout(false).quiet(true).build();
+  let check = client
+      .check_execpolicy(
+          ExecPolicyCheckRequest::new(["bash", "-lc", "rm -rf /tmp/scratch"])
+              .policies(["./policies/default.codexpolicy"])
+              .pretty(true),
+      )
+      .await?;
+
+  match check.decision() {
+      Some(ExecPolicyDecision::Forbidden) => eprintln!("blocked by policy"),
+      Some(ExecPolicyDecision::Prompt) => eprintln!("requires approval"),
+      Some(ExecPolicyDecision::Allow) => println!("allowed"),
+      None => println!("no policy matched"),
+  }
+  # Ok(()) }
+  ```
+
 ## App-Server Codegen
 - `generate_app_server_bindings` wraps `codex app-server generate-ts` (optional `--prettier`) and `generate-json-schema`, creates the output directory when missing, and returns captured stdout/stderr plus the exit status; non-zero exits surface as `CodexError::NonZeroExit` with stderr attached. Shared config/profile/search/approval flags flow through via builder/request overrides.
 - Example:

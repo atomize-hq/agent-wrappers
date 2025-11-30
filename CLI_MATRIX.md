@@ -9,6 +9,7 @@ This is a static inventory from `codex --help` and subcommand help, plus known `
 - `app-server` subcommands: `generate-ts`, `generate-json-schema`.
 - `cloud` subcommands: `exec`.
 - `features` subcommands: `list`.
+- `execpolicy` subcommands: `check`.
 - `sandbox` subcommands (platform): `macos`, `linux`, `windows` (not shown in `--help` but present in code/docs).
 
 ## Positional Args
@@ -39,12 +40,13 @@ This is a static inventory from `codex --help` and subcommand help, plus known `
 ## Resume Flags
 - `--last`, `--all`, plus shared flags.
 
-## MCP / App-Server / Cloud / Features / Sandbox
+## MCP / App-Server / Cloud / Features / Execpolicy / Sandbox
 - `mcp`: subcommands list/get/add/remove/login/logout (experimental). Only shared config flags.
 - `mcp-server`: stdio MCP server; only shared config flags.
 - `app-server`: subcommands generate-ts / generate-json-schema; only shared config flags.
 - `cloud`: subcommand exec; only shared config flags.
 - `features`: subcommand list; only shared config flags.
+- `execpolicy`: subcommand check; flags `--policy <PATH>` (repeatable, merged), optional `--pretty`, trailing `-- <COMMAND...>`; outputs JSON `{match:{decision:allow|prompt|forbidden,rules:[...]}}` or `{"noMatch":{}}` on miss.
 - `sandbox`: platform subcommands macos/linux/windows (in code, not shown in `--help`).
 
 ## Config Keys (in $CODEX_HOME/config.toml)
@@ -64,6 +66,7 @@ This is a static inventory from `codex --help` and subcommand help, plus known `
 - CODEX_HOME is now supported in the wrapper via builder (`codex_home`, `create_home_dirs`); env is applied per spawn with `CODEX_BINARY` and default `RUST_LOG`.
 - Auth/session remains basic (login/status/logout only).
 - Tests primarily live in inline unit tests (lib.rs, mcp.rs) and examples/doc-tests; no end-to-end coverage with a real CLI binary yet.
+- `check_execpolicy` wraps `codex execpolicy check` with policy paths/pretty flag/command argv and forwards shared overrides (config/profile/approval/sandbox/local-provider/cd/search); returns parsed JSON and captured stdout/stderr/status.
 - `generate_app_server_bindings` wraps `codex app-server generate-ts`/`generate-json-schema`, forwards shared overrides (config/profile/search/approval/sandbox/local-provider/cd), creates the `--out` directory, supports TypeScript `--prettier`, and surfaces non-zero exits as `NonZeroExit`.
 - `run_sandbox` wraps `codex sandbox <macos|linux|windows>` with `--full-auto`, macOS `--log-denials`, and request `--config/--enable/--disable` flags; other CLI overrides (approval/profile/search/sandbox) are intentionally not forwarded on this subcommand.
 - Sandbox caveats: macOS is the only platform that emits denial logs; Linux relies on the bundled `codex-linux-sandbox` helper; Windows sandboxing is experimental and depends on the upstream helper. The wrapper does not gate availability—unsupported/misconfigured installs will return non-zero statuses via `SandboxRun`.
