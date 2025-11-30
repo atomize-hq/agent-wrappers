@@ -112,5 +112,59 @@
     ],
     "tests": ["cargo test -p codex"],
     "status": "done"
+  },
+  {
+    "id": "I10-app-server-codegen",
+    "title": "Wrap app-server codegen utilities",
+    "description": "Expose `codex app-server generate-ts` and `generate-json-schema` in the Rust wrapper (API surface + docs/examples) so hosts can refresh app-server protocol bindings programmatically.",
+    "dependencies": ["I9-sandbox-followups"],
+    "files": [
+      "crates/codex/src/lib.rs",
+      "README.md",
+      "CLI_MATRIX.md",
+      "crates/codex/examples"
+    ],
+    "tests": ["cargo test -p codex"],
+    "status": "todo"
+  },
+  {
+    "id": "I11-execpolicy-wrapper",
+    "title": "Wrap execpolicy checker",
+    "description": "Add a wrapper for `codex execpolicy check` (policy paths, pretty output, command argv) to let hosts validate shell commands against Starlark policies.",
+    "dependencies": ["I10-app-server-codegen"],
+    "files": [
+      "crates/codex/src/lib.rs",
+      "README.md",
+      "CLI_MATRIX.md"
+    ],
+    "tests": ["cargo test -p codex"],
+    "status": "todo"
+  },
+  {
+    "id": "I12-features-subcommand",
+    "title": "Wrap features list",
+    "description": "Expose the `codex features list` subcommand as a first-class wrapper (JSON/text) alongside existing capability probes; document usage and add tests.",
+    "dependencies": ["I11-execpolicy-wrapper"],
+    "files": [
+      "crates/codex/src/lib.rs",
+      "README.md",
+      "CLI_MATRIX.md"
+    ],
+    "tests": ["cargo test -p codex"],
+    "status": "todo"
+  },
+  {
+    "id": "I13-proxy-uds-wrappers",
+    "title": "Wrap responses-api-proxy and stdio-to-uds",
+    "description": "Add wrappers for `codex responses-api-proxy` (API key–injecting proxy) and `codex stdio-to-uds` (stdio relay to UDS), with minimal API surface, docs, and smoke examples.",
+    "dependencies": ["I12-features-subcommand"],
+    "files": [
+      "crates/codex/src/lib.rs",
+      "README.md",
+      "CLI_MATRIX.md",
+      "crates/codex/examples"
+    ],
+    "tests": ["cargo test -p codex"],
+    "status": "todo"
   }
 ]
