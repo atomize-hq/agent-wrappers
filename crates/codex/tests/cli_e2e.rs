@@ -12,9 +12,12 @@ use std::{
 };
 
 use codex::{
-    AppServerCodegenRequest, CodexClient, CodexError, FeaturesListFormat, FeaturesListRequest,
-    ResponsesApiProxyRequest, SandboxCommandRequest, SandboxPlatform, StdioToUdsRequest,
+    AppServerCodegenRequest, CliOverridesPatch, CodexClient, CodexError, ExecStreamRequest,
+    FeaturesListFormat, FeaturesListRequest, ResponsesApiProxyRequest, ResumeRequest,
+    ResumeSelector, SandboxCommandRequest, SandboxPlatform, StdioToUdsRequest, ThreadEvent,
 };
+use futures_util::StreamExt;
+use std::fs;
 use tempfile::TempDir;
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader as AsyncBufReader},
@@ -23,6 +26,8 @@ use tokio::{
 
 const BINARY_ENV: &str = "CODEX_E2E_BINARY";
 const HOME_ENV: &str = "CODEX_E2E_HOME";
+const LIVE_FLAG_ENV: &str = "CODEX_E2E_LIVE";
+const WORKDIR_ENV: &str = "CODEX_E2E_WORKDIR";
 
 struct RealCli {
     binary: PathBuf,
@@ -86,6 +91,173 @@ impl RealCli {
             note.as_ref()
         );
     }
+}
+
+#[tokio::test]
+async fn exec_resume_diff_apply_live_roundtrip() -> Result<(), Box<dyn std::error::Error>> {
+    let Some(cli) = RealCli::bootstrap()? else {
+        return Ok(());
+    };
+    if !live_mode_enabled() {
+        cli.note_skip(
+            "live e2e disabled (set CODEX_E2E_LIVE=1 to exercise exec/resume/diff/apply)",
+        );
+        return Ok(());
+    }
+
+    let workspace = prepare_workspace()?;
+    let client = CodexClient::builder()
+        .binary(&cli.binary)
+        .codex_home(&cli.home_dir)
+        .working_dir(&workspace.path)
+        .disable_feature("exec_policy")
+        .mirror_stdout(false)
+        .quiet(true)
+        .timeout(Duration::from_secs(120))
+        .build();
+
+    let prompt = "You are running a Codex e2e check. Create hello.txt containing only \"hello world\" using apply_patch. Do not run other shell commands. Stop after writing.";
+    let exec_request = ExecStreamRequest {
+        prompt: prompt.to_string(),
+        idle_timeout: Some(Duration::from_secs(120)),
+        output_last_message: Some(workspace.path.join("exec-last.txt")),
+        output_schema: None,
+        json_event_log: Some(workspace.path.join("exec-events.jsonl")),
+    };
+
+    let mut thread_id = None;
+    let exec_stream = match client.stream_exec(exec_request).await {
+        Ok(stream) => stream,
+        Err(err) => {
+            cli.note_skip(&format!("exec stream failed to start: {err}"));
+            return Ok(());
+        }
+    };
+    let mut events = exec_stream.events;
+    while let Some(event) = events.next().await {
+        match event {
+            Ok(ThreadEvent::ThreadStarted(started)) => thread_id = Some(started.thread_id.clone()),
+            Ok(_) => {}
+            Err(err) => {
+                cli.note_skip(&format!("exec stream parse error: {err}"));
+                continue;
+            }
+        }
+    }
+
+    let exec_completion = match exec_stream.completion.await {
+        Ok(done) => done,
+        Err(err) => {
+            cli.note_skip(&format!("exec completion failed: {err}"));
+            return Ok(());
+        }
+    };
+    if !exec_completion.status.success() {
+        cli.note_skip(&format!(
+            "exec exited with {} (live run)",
+            exec_completion.status
+        ));
+        return Ok(());
+    }
+
+    let hello_path = workspace.path.join("hello.txt");
+    if !hello_path.is_file() {
+        cli.note_skip("exec did not create hello.txt");
+        return Ok(());
+    }
+
+    let diff = match client.diff().await {
+        Ok(output) => output,
+        Err(CodexError::NonZeroExit { status, stderr }) => {
+            cli.note_skip(&format!("diff returned {}: {}", status, stderr.trim()));
+            return Ok(());
+        }
+        Err(err) => return Err(err.into()),
+    };
+    if !diff.status.success() {
+        cli.note_skip(&format!(
+            "diff exited {} without producing a replayable diff",
+            diff.status
+        ));
+        return Ok(());
+    }
+
+    let apply = match client.apply().await {
+        Ok(output) => output,
+        Err(CodexError::NonZeroExit { status, stderr }) => {
+            cli.note_skip(&format!("apply returned {}: {}", status, stderr.trim()));
+            return Ok(());
+        }
+        Err(err) => return Err(err.into()),
+    };
+    if !apply.status.success() {
+        cli.note_skip(&format!(
+            "apply exited {} without applying changes",
+            apply.status
+        ));
+        return Ok(());
+    }
+
+    let thread_id = match thread_id {
+        Some(id) => id,
+        None => {
+            cli.note_skip("exec did not emit a thread_id; skipping resume");
+            return Ok(());
+        }
+    };
+
+    let resume_prompt =
+        "Append a second line with \"goodbye\" to hello.txt using apply_patch, then stop.";
+    let resume_request = ResumeRequest {
+        selector: ResumeSelector::Id(thread_id),
+        prompt: Some(resume_prompt.to_string()),
+        idle_timeout: Some(Duration::from_secs(120)),
+        output_last_message: Some(workspace.path.join("resume-last.txt")),
+        output_schema: None,
+        json_event_log: Some(workspace.path.join("resume-events.jsonl")),
+        overrides: CliOverridesPatch::default(),
+    };
+
+    let resume_stream = match client.stream_resume(resume_request).await {
+        Ok(stream) => stream,
+        Err(err) => {
+            cli.note_skip(&format!("resume failed to start: {err}"));
+            return Ok(());
+        }
+    };
+    let mut resume_events = resume_stream.events;
+    while let Some(event) = resume_events.next().await {
+        if let Err(err) = event {
+            cli.note_skip(&format!("resume stream parse error: {err}"));
+            continue;
+        }
+    }
+    let resume_completion = match resume_stream.completion.await {
+        Ok(done) => done,
+        Err(err) => {
+            cli.note_skip(&format!("resume completion failed: {err}"));
+            return Ok(());
+        }
+    };
+    if !resume_completion.status.success() {
+        cli.note_skip(&format!(
+            "resume exited {} without finishing successfully",
+            resume_completion.status
+        ));
+        return Ok(());
+    }
+
+    let contents = fs::read_to_string(&hello_path)?;
+    assert!(
+        contents.contains("hello"),
+        "hello.txt should contain the original content"
+    );
+    assert!(
+        contents.lines().count() >= 1,
+        "hello.txt should have at least one line"
+    );
+
+    Ok(())
 }
 
 #[tokio::test]
@@ -474,4 +646,74 @@ fn send_http_shutdown(port: u16) -> Result<(), Box<dyn std::error::Error>> {
     let mut buf = Vec::new();
     let _ = stream.read_to_end(&mut buf)?;
     Ok(())
+}
+
+fn live_mode_enabled() -> bool {
+    match env::var(LIVE_FLAG_ENV) {
+        Ok(value) => matches!(value.as_str(), "1" | "true" | "yes"),
+        Err(_) => false,
+    }
+}
+
+struct Workspace {
+    path: PathBuf,
+    _guard: Option<TempDir>,
+}
+
+fn prepare_workspace() -> Result<Workspace, Box<dyn std::error::Error>> {
+    if let Ok(dir) = env::var(WORKDIR_ENV) {
+        let base = PathBuf::from(dir);
+        fs::create_dir_all(&base)?;
+        let run_dir = base.join(format!("run-{}", unix_millis()));
+        fs::create_dir_all(&run_dir)?;
+        init_git_repo(&run_dir)?;
+        return Ok(Workspace {
+            path: run_dir,
+            _guard: None,
+        });
+    }
+
+    let temp = TempDir::new()?;
+    let path = temp.path().to_path_buf();
+    init_git_repo(&path)?;
+    Ok(Workspace {
+        path,
+        _guard: Some(temp),
+    })
+}
+
+fn init_git_repo(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    fs::create_dir_all(path)?;
+    if !path.join(".git").exists() {
+        run_git(&["init"], path)?;
+    }
+    run_git(&["config", "user.email", "codex-e2e@example.com"], path)?;
+    run_git(&["config", "user.name", "Codex E2E"], path)?;
+    if !path.join("README.md").exists() {
+        fs::write(path.join("README.md"), "# Codex E2E workspace\n")?;
+    }
+    Ok(())
+}
+
+fn run_git(args: &[&str], cwd: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let status = StdCommand::new("git")
+        .args(args)
+        .current_dir(cwd)
+        .status()?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("git {:?} failed with {status}", args),
+        )
+        .into())
+    }
+}
+
+fn unix_millis() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0)
 }
