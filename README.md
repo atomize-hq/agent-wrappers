@@ -18,26 +18,38 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
   println!("{reply}");
   # Ok(()) }
   ```
-- Default binary resolution: `CODEX_BINARY` if set, otherwise `codex` on `PATH`. Use `.binary(...)` to point at a bundled binary (see `crates/codex/examples/bundled_binary.rs`).
+- Default binary resolution: `CODEX_BINARY` if set, otherwise `codex` on `PATH`. Embedded apps should resolve `<bundle_root>/<platform>/<version>/codex` via `resolve_bundled_binary(...)` and pass the returned path to `.binary(...)` (see `crates/codex/examples/bundled_binary.rs`).
 
 ## Bundled Binary & `CODEX_HOME`
-- Ship Codex with your app by setting `CODEX_BINARY` or calling `.binary("/opt/myapp/bin/codex")`. The `bundled_binary` example shows falling back to `CODEX_BUNDLED_PATH` and a local `bin/codex` hint.
-- Isolate state with `CODEX_HOME` (config/auth/history/logs live under that directory: `config.toml`, `auth.json`, `.credentials.json`, `history.jsonl`, `conversations/*.jsonl`, `logs/codex-*.log`). The crate uses the current process env for every spawn. `CodexClientBuilder::create_home_dirs` can pre-create the layout, and `CodexHomeLayout` inspects paths under an isolated home.
-- `AuthSessionHelper` checks `codex login status` and can start ChatGPT or API key logins with an app-scoped `CODEX_HOME` without mutating the parent env:
-  ```rust
-  let auth = codex::AuthSessionHelper::new("/tmp/my-app-codex");
-  if let Some(mut login) = auth.ensure_chatgpt_login().await? {
-      // Surface login URL/output; dropping the child cancels the helper.
-      let _ = login.wait().await?;
-  }
-  let status = auth.ensure_api_key_login("sk-my-key").await?;
+- Defaults stay unchanged: `CODEX_BINARY` override, otherwise `codex` on `PATH`. For embedded apps, call `resolve_bundled_binary(BundledBinarySpec { bundle_root, version, platform: None })` to locate a pinned `<bundle_root>/<platform>/<version>/codex` without falling back to the user install, then pass it to `.binary(...)`. Hosts own bundle downloads/version pins.
+- Derive a per-project `CODEX_HOME` (e.g. `~/.myapp/codex-homes/<project-slug>`) and set it via `.codex_home(...)` with `.create_home_dirs(true)`. `CodexHomeLayout` surfaces config/auth/history/conversation/log paths so each workspace stays isolated.
+- To reuse credentials safely, copy only `auth.json` and `.credentials.json` from a trusted seed home into the project `CODEX_HOME` before spawning Codex; avoid copying history/logs. `AuthSessionHelper` runs login/status helpers under the isolated home without mutating the parent env.
+- Quick bundled flow (values shown inline for clarity; wire them to your app config/env):
+  ```rust,no_run
+  use codex::{resolve_bundled_binary, AuthSessionHelper, BundledBinarySpec, CodexClient, CodexHomeLayout};
+
+  # async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+  let bundled = resolve_bundled_binary(BundledBinarySpec {
+      bundle_root: "/apps/myapp/codex-bin".as_ref(),
+      version: "1.2.3",
+      platform: None, // defaults to the current target
+  })?;
+
+  let home = CodexHomeLayout::new("/apps/myapp/codex-homes/demo");
+  home.materialize(true)?;
+
+  let client = CodexClient::builder()
+      .binary(&bundled.binary_path)
+      .codex_home(home.root())
+      .create_home_dirs(true)
+      .build();
+
+  let _ = AuthSessionHelper::with_client(client.clone()).status().await?;
+  let reply = client.send_prompt("Health check").await?;
+  println!("{reply}");
+  # Ok(()) }
   ```
-- Quick isolated run (see `crates/codex/examples/codex_home.rs`):
-  ```rust
-  std::env::set_var("CODEX_HOME", "/tmp/my-app-codex");
-  let client = CodexClient::builder().build();
-  let _ = client.send_prompt("Health check").await?;
-  ```
+  See `crates/codex/examples/bundled_binary_home.rs` for a runnable flow with optional auth seeding and `AuthSessionHelper` login.
 
 ## Exec API & Safety Defaults
 - `send_prompt` shells out to `codex exec --skip-git-repo-check` with:

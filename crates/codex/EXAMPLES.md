@@ -1,6 +1,6 @@
 # Codex Wrapper Examples vs. Native CLI
 
-Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. Wrapper calls (`cargo run -p codex --example ...`) run with safe defaults: `--skip-git-repo-check`, temp working dirs unless overridden, 120s timeout, ANSI color disabled, and `RUST_LOG=error` unless set. Select the binary with `CODEX_BINARY` or `.binary(...)`; set `CODEX_HOME` to keep config/auth/history/logs under an app-scoped directory. Examples labeled `--sample` print mocked data (covering `thread/turn/item` events and MCP/app-server notifications) when you do not have a binary handy; streaming/resume/apply fixtures live in `crates/codex/examples/fixtures/*` so docs and samples stay aligned.
+Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. Wrapper calls (`cargo run -p codex --example ...`) run with safe defaults: `--skip-git-repo-check`, temp working dirs unless overridden, 120s timeout, ANSI color disabled, and `RUST_LOG=error` unless set. Select the binary with `CODEX_BINARY` or `.binary(...)`; use `resolve_bundled_binary(...)` when you ship a pinned bundle, and set `CODEX_HOME` to keep config/auth/history/logs under an app-scoped directory. Examples labeled `--sample` print mocked data (covering `thread/turn/item` events and MCP/app-server notifications) when you do not have a binary handy; streaming/resume/apply fixtures live in `crates/codex/examples/fixtures/*` so docs and samples stay aligned.
 
 ## Basics
 
@@ -24,10 +24,10 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 
 | Wrapper example | Native command | Notes |
 | --- | --- | --- |
-| `$env:CODEX_BINARY="C:\\bin\\codex-nightly.exe"; cargo run -p codex --example env_binary -- "Nightly sanity check"` | `C:\\bin\\codex-nightly.exe exec "Nightly sanity check" --skip-git-repo-check` | Honors `CODEX_BINARY` override. |
-| `CODEX_BUNDLED_PATH=/opt/myapp/codex cargo run -p codex --example bundled_binary -- "Quick health check"` | `CODEX_BINARY=/opt/myapp/codex codex exec "Quick health check" --skip-git-repo-check` | Binary order: `CODEX_BINARY` > `CODEX_BUNDLED_PATH` > `<crate>/bin/codex`. |
-| `cargo run -p codex --example bundled_binary_home -- "Health check prompt"` | `CODEX_HOME="C:\\data\\codex" C:\\apps\\codex\\bin\\codex.exe exec "Health check prompt" --skip-git-repo-check` | Bundled binary with app-scoped `CODEX_HOME`; prints `CodexHomeLayout` paths and can create the isolated tree before spawning. |
-| `CODEX_HOME=/tmp/codex-demo cargo run -p codex --example codex_home -- "Show CODEX_HOME contents"` | `CODEX_HOME=/tmp/codex-demo codex exec "Show CODEX_HOME contents" --skip-git-repo-check` | App-scoped `CODEX_HOME` showing config/auth/history/log paths. |
+| `$env:CODEX_BINARY="C:\\bin\\codex-nightly.exe"; cargo run -p codex --example env_binary -- "Nightly sanity check"` | `C:\\bin\\codex-nightly.exe exec "Nightly sanity check" --skip-git-repo-check` | Honors `CODEX_BINARY` override; default fallback remains `codex` on `PATH`. |
+| `CODEX_BUNDLE_ROOT="$HOME/.myapp/codex-bin" CODEX_BUNDLE_VERSION="1.2.3" cargo run -p codex --example bundled_binary -- "Quick health check"` | `<bundle_root>/<platform>/1.2.3/codex exec "Quick health check" --skip-git-repo-check` | Uses `resolve_bundled_binary` to pin a versioned app bundle (default platform label); no fallback to `CODEX_BINARY`/`PATH`. |
+| `CODEX_BUNDLE_ROOT="$HOME/.myapp/codex-bin" CODEX_BUNDLE_VERSION="1.2.3" CODEX_PROJECT_HOME="$HOME/.myapp/codex-homes/demo" [CODEX_AUTH_SEED_HOME="$HOME/.myapp/codex-auth-seed"] cargo run -p codex --example bundled_binary_home -- "Health check prompt"` | `CODEX_HOME="$HOME/.myapp/codex-homes/demo" <bundle_root>/<platform>/1.2.3/codex exec "Health check prompt" --skip-git-repo-check` | Recommended bundled+isolated flow: resolve the pinned binary, pick a per-project `CODEX_HOME`, optionally copy only `auth.json`/`.credentials.json` from a seed home, and use `AuthSessionHelper` for login under the isolated home. |
+| `CODEX_HOME=/tmp/codex-demo cargo run -p codex --example codex_home -- "Show CODEX_HOME contents"` | `CODEX_HOME=/tmp/codex-demo codex exec "Show CODEX_HOME contents" --skip-git-repo-check` | App-scoped `CODEX_HOME` showing config/auth/history/log paths (pair with a bundled binary or `CODEX_BINARY`). |
 
 ## Streaming & Logging
 

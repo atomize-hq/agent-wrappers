@@ -1,71 +1,132 @@
-//! Run Codex using a bundled binary and an app-scoped `CODEX_HOME` while
-//! exposing the layout so the host app can inspect Codex state paths. This
-//! keeps user installations untouched while shipping Codex alongside your
-//! application assets.
+//! Resolve a pinned bundled Codex binary, pick a per-project `CODEX_HOME`, and
+//! (optionally) seed credentials from an app-owned home. The helper never
+//! consults `CODEX_BINARY` or `PATH`, keeping the flow isolated from user
+//! installs.
 //!
-//! Example layout (relative to the compiled binary):
-//! ```text
-//! target/release/your-app.exe
-//! target/release/bin/codex(.exe)
-//! target/release/data/codex/
-//! ```
+//! Bundle layout: `<bundle_root>/<platform>/<version>/<codex|codex.exe>`.
+//! `CODEX_BUNDLE_PLATFORM` is optional and defaults to the current target
+//! (`darwin-arm64`, `linux-x64`, `windows-x64`).
 //!
-//! Usage:
-//! ```powershell
+//! Example run (env vars are only used by this example):
+//! ```bash
+//! CODEX_BUNDLE_ROOT="$HOME/.myapp/codex-bin" \
+//! CODEX_BUNDLE_VERSION="1.2.3" \
+//! CODEX_PROJECT_HOME="$HOME/.myapp/codex-homes/demo-workspace" \
+//! CODEX_AUTH_SEED_HOME="$HOME/.myapp/codex-auth-seed" \
 //! cargo run -p codex --example bundled_binary_home -- "Health check prompt"
 //! ```
+//! `CODEX_AUTH_SEED_HOME` is optional; when set, only `auth.json` and
+//! `.credentials.json` are copied. Avoid copying history/logs between project
+//! homes.
 
-use codex::{CodexClient, CodexHomeLayout};
-use std::{env, error::Error, path::PathBuf};
+use codex::{
+    resolve_bundled_binary, AuthSessionHelper, BundledBinarySpec, CodexClient, CodexHomeLayout,
+};
+use std::{
+    env,
+    error::Error,
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let prompt = collect_prompt()?;
-    let codex_binary = bundled_codex_path();
-    let codex_home = bundled_codex_home();
-    let layout = CodexHomeLayout::new(&codex_home);
-    println!("Using binary: {}", codex_binary.display());
-    println!("Using CODEX_HOME: {}", codex_home.display());
-    println!(
-        "Conversations will land in: {}",
-        layout.conversations_dir().display()
-    );
-    println!("Logs will land in: {}", layout.logs_dir().display());
+    let prompt = collect_prompt();
+    let bundle_root = require_env_path("CODEX_BUNDLE_ROOT")?;
+    let version = require_env_string("CODEX_BUNDLE_VERSION")?;
+    let platform = env::var("CODEX_BUNDLE_PLATFORM").ok();
+    let codex_home = require_env_path("CODEX_PROJECT_HOME")?;
+    let auth_seed = env::var_os("CODEX_AUTH_SEED_HOME").map(PathBuf::from);
 
-    // Optional: create the CODEX_HOME root/conversations/logs ahead of time.
+    let bundled = resolve_bundled_binary(BundledBinarySpec {
+        bundle_root: bundle_root.as_path(),
+        version: &version,
+        platform: platform.as_deref(),
+    })?;
+    let layout = CodexHomeLayout::new(&codex_home);
     layout.materialize(true)?;
+    if let Some(seed_home) = auth_seed.as_deref() {
+        seed_auth_files(seed_home, &layout)?;
+    }
+
+    println!("Bundled binary: {}", bundled.binary_path.display());
+    println!("CODEX_HOME: {}", layout.root().display());
+    println!("Conversations: {}", layout.conversations_dir().display());
+    println!("Logs: {}", layout.logs_dir().display());
+    println!("Auth file: {}", layout.auth_path().display());
+    println!(
+        "Credentials file: {}",
+        layout.credentials_path().display()
+    );
 
     let client = CodexClient::builder()
-        .binary(&codex_binary)
-        .codex_home(&codex_home)
+        .binary(&bundled.binary_path)
+        .codex_home(layout.root())
+        .create_home_dirs(true)
         .build();
+    let auth = AuthSessionHelper::with_client(client.clone());
+    let status = auth.status().await?;
+    println!("Auth status under CODEX_HOME: {status:?}");
+
+    if let Some(api_key) = env::var("CODEX_API_KEY").ok() {
+        let updated = auth.ensure_api_key_login(api_key).await?;
+        println!("Auth status after ensure_api_key_login: {updated:?}");
+    } else {
+        println!(
+            "Set CODEX_API_KEY to refresh login under {} or run a ChatGPT login helper.",
+            layout.root().display()
+        );
+    }
 
     let response = client.send_prompt(&prompt).await?;
     println!("{response}");
     Ok(())
 }
 
-fn bundled_codex_path() -> PathBuf {
-    let root = app_root();
-    let binary_name = if cfg!(windows) { "codex.exe" } else { "codex" };
-    root.join("bin").join(binary_name)
-}
-
-fn bundled_codex_home() -> PathBuf {
-    app_root().join("data").join("codex")
-}
-
-fn app_root() -> PathBuf {
-    env::current_exe()
-        .ok()
-        .and_then(|path| path.parent().map(PathBuf::from))
-        .unwrap_or_else(|| env::current_dir().expect("failed to read current working dir"))
-}
-
-fn collect_prompt() -> Result<String, Box<dyn Error>> {
+fn collect_prompt() -> String {
     let args: Vec<String> = env::args().skip(1).collect();
     if args.is_empty() {
-        return Err("Provide a prompt".into());
+        "Health check prompt".to_string()
+    } else {
+        args.join(" ")
     }
-    Ok(args.join(" "))
+}
+
+fn require_env_path(key: &str) -> Result<PathBuf, Box<dyn Error>> {
+    Ok(PathBuf::from(require_env_string(key)?))
+}
+
+fn require_env_string(key: &str) -> Result<String, Box<dyn Error>> {
+    match env::var(key) {
+        Ok(value) if !value.trim().is_empty() => Ok(value),
+        _ => Err(format!("Set {key} to configure the bundled binary/home paths").into()),
+    }
+}
+
+fn seed_auth_files(seed_home: &Path, target: &CodexHomeLayout) -> Result<(), Box<dyn Error>> {
+    for (name, destination) in [
+        ("auth.json", target.auth_path()),
+        (".credentials.json", target.credentials_path()),
+    ] {
+        let source = seed_home.join(name);
+        match fs::metadata(&source) {
+            Ok(metadata) if metadata.is_file() => {
+                if let Some(parent) = destination.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::copy(&source, &destination)?;
+                println!(
+                    "Copied {name} from {} to {}",
+                    source.display(),
+                    destination.display()
+                );
+            }
+            Ok(_) => println!("Skipped {name}; `{}` is not a file", source.display()),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                println!("Seed {name} not found at {}; skipping", source.display());
+            }
+            Err(err) => return Err(err.into()),
+        }
+    }
+    Ok(())
 }

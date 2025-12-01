@@ -3,7 +3,7 @@
 //! Shells out to `codex exec`, applies sane defaults (non-interactive color handling, timeouts, model hints), and surfaces single-response, streaming, apply/diff, and MCP/app-server helpers.
 //!
 //! ## Setup: binary + `CODEX_HOME`
-//! - Defaults pull `CODEX_BINARY` or `codex` on `PATH`; call [`CodexClientBuilder::binary`] to pin a bundled binary (examples fall back to `CODEX_BUNDLED_PATH` or `bin/codex` hints).
+//! - Defaults pull `CODEX_BINARY` or `codex` on `PATH`; call [`CodexClientBuilder::binary`] (optionally fed by [`resolve_bundled_binary`]) to pin an app-bundled binary without touching user installs.
 //! - Isolate state with [`CodexClientBuilder::codex_home`] (config/auth/history/logs live under that directory) and optionally create the layout with [`CodexClientBuilder::create_home_dirs`]. [`CodexHomeLayout`] inspects `config.toml`, `auth.json`, `.credentials.json`, `history.jsonl`, `conversations/`, and `logs/`.
 //! - [`AuthSessionHelper`] checks `codex login status` and can launch ChatGPT or API key login flows with an app-scoped `CODEX_HOME` without mutating the parent process env.
 //! - Wrapper defaults: temp working dir per call unless `working_dir` is set, `--skip-git-repo-check`, 120s timeout (use `Duration::ZERO` to disable), ANSI colors off, `RUST_LOG=error` if unset.
@@ -3059,8 +3059,8 @@ impl CodexClientBuilder {
     /// Sets the path to the Codex binary.
     ///
     /// Defaults to `CODEX_BINARY` when present or `codex` on `PATH`. Use this to pin a packaged
-    /// binary; `crates/codex/examples/bundled_binary.rs` demonstrates a `CODEX_BUNDLED_PATH`
-    /// fallback.
+    /// binary, e.g. the path returned from [`resolve_bundled_binary`] when your app ships Codex
+    /// inside an isolated bundle.
     pub fn binary(mut self, binary: impl Into<PathBuf>) -> Self {
         self.binary = binary.into();
         self
