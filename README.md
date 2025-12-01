@@ -23,10 +23,10 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 ## Bundled Binary & `CODEX_HOME`
 - Defaults stay unchanged: `CODEX_BINARY` override, otherwise `codex` on `PATH`. For embedded apps, call `resolve_bundled_binary(BundledBinarySpec { bundle_root, version, platform: None })` to locate a pinned `<bundle_root>/<platform>/<version>/codex` without falling back to the user install, then pass it to `.binary(...)`. Hosts own bundle downloads/version pins.
 - Derive a per-project `CODEX_HOME` (e.g. `~/.myapp/codex-homes/<project-slug>`) and set it via `.codex_home(...)` with `.create_home_dirs(true)`. `CodexHomeLayout` surfaces config/auth/history/conversation/log paths so each workspace stays isolated.
-- To reuse credentials safely, copy only `auth.json` and `.credentials.json` from a trusted seed home into the project `CODEX_HOME` before spawning Codex; avoid copying history/logs. `AuthSessionHelper` runs login/status helpers under the isolated home without mutating the parent env.
+- Use `CodexHomeLayout::seed_auth_from` to copy only `auth.json` and `.credentials.json` from a trusted seed home into the project `CODEX_HOME` (no history/logs). Toggle `AuthSeedOptions.require_auth/require_credentials` to fail fast on missing files; `create_target_dirs` defaults to true. `AuthSessionHelper` runs login/status helpers under the isolated home without mutating the parent env.
 - Quick bundled flow (values shown inline for clarity; wire them to your app config/env):
   ```rust,no_run
-  use codex::{resolve_bundled_binary, AuthSessionHelper, BundledBinarySpec, CodexClient, CodexHomeLayout};
+  use codex::{resolve_bundled_binary, AuthSeedOptions, AuthSessionHelper, BundledBinarySpec, CodexClient, CodexHomeLayout};
 
   # async fn demo() -> Result<(), Box<dyn std::error::Error>> {
   let bundled = resolve_bundled_binary(BundledBinarySpec {
@@ -37,6 +37,13 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
 
   let home = CodexHomeLayout::new("/apps/myapp/codex-homes/demo");
   home.materialize(true)?;
+  let _seeded = home.seed_auth_from(
+      "/apps/myapp/codex-auth-seed",
+      AuthSeedOptions {
+          require_auth: true,
+          ..Default::default()
+      },
+  )?;
 
   let client = CodexClient::builder()
       .binary(&bundled.binary_path)
@@ -49,7 +56,7 @@ Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, 
   println!("{reply}");
   # Ok(()) }
   ```
-  See `crates/codex/examples/bundled_binary_home.rs` for a runnable flow with optional auth seeding and `AuthSessionHelper` login.
+  See `crates/codex/examples/bundled_binary_home.rs` for a runnable flow with optional seed home env + `AuthSessionHelper` login.
 
 ## Exec API & Safety Defaults
 - `send_prompt` shells out to `codex exec --skip-git-repo-check` with:

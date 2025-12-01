@@ -20,13 +20,13 @@
 //! homes.
 
 use codex::{
-    resolve_bundled_binary, AuthSessionHelper, BundledBinarySpec, CodexClient, CodexHomeLayout,
+    resolve_bundled_binary, AuthSeedOptions, AuthSessionHelper, BundledBinarySpec, CodexClient,
+    CodexHomeLayout,
 };
 use std::{
     env,
     error::Error,
-    fs,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 #[tokio::main]
@@ -46,7 +46,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let layout = CodexHomeLayout::new(&codex_home);
     layout.materialize(true)?;
     if let Some(seed_home) = auth_seed.as_deref() {
-        seed_auth_files(seed_home, &layout)?;
+        let seeded = layout.seed_auth_from(
+            seed_home,
+            AuthSeedOptions {
+                require_auth: true,
+                ..Default::default()
+            },
+        )?;
+        println!(
+            "Seeded auth.json? {} | .credentials.json? {}",
+            seeded.copied_auth, seeded.copied_credentials
+        );
     }
 
     println!("Bundled binary: {}", bundled.binary_path.display());
@@ -72,10 +82,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let updated = auth.ensure_api_key_login(api_key).await?;
         println!("Auth status after ensure_api_key_login: {updated:?}");
     } else {
-        println!(
-            "Set CODEX_API_KEY to refresh login under {} or run a ChatGPT login helper.",
-            layout.root().display()
-        );
+        println!("Set CODEX_API_KEY to refresh login under {}", layout.root().display());
     }
 
     let response = client.send_prompt(&prompt).await?;
@@ -101,32 +108,4 @@ fn require_env_string(key: &str) -> Result<String, Box<dyn Error>> {
         Ok(value) if !value.trim().is_empty() => Ok(value),
         _ => Err(format!("Set {key} to configure the bundled binary/home paths").into()),
     }
-}
-
-fn seed_auth_files(seed_home: &Path, target: &CodexHomeLayout) -> Result<(), Box<dyn Error>> {
-    for (name, destination) in [
-        ("auth.json", target.auth_path()),
-        (".credentials.json", target.credentials_path()),
-    ] {
-        let source = seed_home.join(name);
-        match fs::metadata(&source) {
-            Ok(metadata) if metadata.is_file() => {
-                if let Some(parent) = destination.parent() {
-                    fs::create_dir_all(parent)?;
-                }
-                fs::copy(&source, &destination)?;
-                println!(
-                    "Copied {name} from {} to {}",
-                    source.display(),
-                    destination.display()
-                );
-            }
-            Ok(_) => println!("Skipped {name}; `{}` is not a file", source.display()),
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                println!("Seed {name} not found at {}; skipping", source.display());
-            }
-            Err(err) => return Err(err.into()),
-        }
-    }
-    Ok(())
 }

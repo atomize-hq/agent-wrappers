@@ -5,6 +5,7 @@
 //! ## Setup: binary + `CODEX_HOME`
 //! - Defaults pull `CODEX_BINARY` or `codex` on `PATH`; call [`CodexClientBuilder::binary`] (optionally fed by [`resolve_bundled_binary`]) to pin an app-bundled binary without touching user installs.
 //! - Isolate state with [`CodexClientBuilder::codex_home`] (config/auth/history/logs live under that directory) and optionally create the layout with [`CodexClientBuilder::create_home_dirs`]. [`CodexHomeLayout`] inspects `config.toml`, `auth.json`, `.credentials.json`, `history.jsonl`, `conversations/`, and `logs/`.
+//! - [`CodexHomeLayout::seed_auth_from`] copies `auth.json`/`.credentials.json` from a trusted seed home into an isolated `CODEX_HOME` without touching history/logs; use [`AuthSeedOptions`] to require files or skip missing ones.
 //! - [`AuthSessionHelper`] checks `codex login status` and can launch ChatGPT or API key login flows with an app-scoped `CODEX_HOME` without mutating the parent process env.
 //! - Wrapper defaults: temp working dir per call unless `working_dir` is set, `--skip-git-repo-check`, 120s timeout (use `Duration::ZERO` to disable), ANSI colors off, `RUST_LOG=error` if unset.
 //! - Model defaults: `gpt-5*`/`gpt-5.1*` (including codex variants) get `model_reasoning_effort="medium"`/`model_reasoning_summary="auto"`/`model_verbosity="low"` to avoid unsupported “minimal” combos.
@@ -4055,6 +4056,151 @@ impl CodexHomeLayout {
         }
         Ok(())
     }
+
+    /// Copies login artifacts (`auth.json` and `.credentials.json`) from a trusted seed home into
+    /// this layout. History and logs are intentionally excluded.
+    ///
+    /// This is opt-in and leaves defaults untouched. Missing files raise errors only when marked
+    /// as required in `options`; otherwise they are skipped. Target directories are created when
+    /// `create_target_dirs` is `true`.
+    pub fn seed_auth_from(
+        &self,
+        seed_home: impl AsRef<Path>,
+        options: AuthSeedOptions,
+    ) -> Result<AuthSeedOutcome, AuthSeedError> {
+        let seed_home = seed_home.as_ref();
+        let seed_meta = std_fs::metadata(seed_home).map_err(|source| AuthSeedError::SeedHomeUnreadable {
+            seed_home: seed_home.to_path_buf(),
+            source,
+        })?;
+        if !seed_meta.is_dir() {
+            return Err(AuthSeedError::SeedHomeNotDirectory {
+                seed_home: seed_home.to_path_buf(),
+            });
+        }
+
+        let mut outcome = AuthSeedOutcome::default();
+        let targets = [
+            (
+                "auth.json",
+                options.require_auth,
+                &mut outcome.copied_auth,
+                self.auth_path(),
+            ),
+            (
+                ".credentials.json",
+                options.require_credentials,
+                &mut outcome.copied_credentials,
+                self.credentials_path(),
+            ),
+        ];
+
+        for (name, required, copied, destination) in targets {
+            let source = seed_home.join(name);
+            match std_fs::metadata(&source) {
+                Ok(metadata) => {
+                    if !metadata.is_file() {
+                        return Err(AuthSeedError::SeedFileNotFile { path: source });
+                    }
+
+                    if options.create_target_dirs {
+                        if let Some(parent) = destination.parent() {
+                            std_fs::create_dir_all(parent).map_err(|source_err| AuthSeedError::CreateTargetDir {
+                                path: parent.to_path_buf(),
+                                source: source_err,
+                            })?;
+                        }
+                    }
+
+                    std_fs::copy(&source, &destination).map_err(|error| AuthSeedError::Copy {
+                        source: source.clone(),
+                        destination: destination.to_path_buf(),
+                        error,
+                    })?;
+                    *copied = true;
+                }
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                    if required {
+                        return Err(AuthSeedError::SeedFileMissing { path: source });
+                    }
+                }
+                Err(err) => {
+                    return Err(AuthSeedError::SeedFileUnreadable {
+                        path: source,
+                        source: err,
+                    })
+                }
+            }
+        }
+
+        Ok(outcome)
+    }
+}
+
+/// Options controlling how auth files are seeded from a trusted home.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AuthSeedOptions {
+    /// Whether missing `auth.json` is an error (default: false, skip when missing).
+    pub require_auth: bool,
+    /// Whether missing `.credentials.json` is an error (default: false, skip when missing).
+    pub require_credentials: bool,
+    /// Create destination directories when needed (default: true).
+    pub create_target_dirs: bool,
+}
+
+impl Default for AuthSeedOptions {
+    fn default() -> Self {
+        Self {
+            require_auth: false,
+            require_credentials: false,
+            create_target_dirs: true,
+        }
+    }
+}
+
+/// Result of seeding Codex auth files into a target home.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct AuthSeedOutcome {
+    /// `true` when `auth.json` was copied.
+    pub copied_auth: bool,
+    /// `true` when `.credentials.json` was copied.
+    pub copied_credentials: bool,
+}
+
+/// Errors that may occur while seeding Codex auth files into a target home.
+#[derive(Debug, Error)]
+pub enum AuthSeedError {
+    #[error("seed CODEX_HOME `{seed_home}` does not exist or is unreadable")]
+    SeedHomeUnreadable {
+        seed_home: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("seed CODEX_HOME `{seed_home}` is not a directory")]
+    SeedHomeNotDirectory { seed_home: PathBuf },
+    #[error("seed file `{path}` is missing")]
+    SeedFileMissing { path: PathBuf },
+    #[error("seed file `{path}` is not a file")]
+    SeedFileNotFile { path: PathBuf },
+    #[error("seed file `{path}` is unreadable")]
+    SeedFileUnreadable {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to create target directory `{path}`")]
+    CreateTargetDir {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to copy `{source}` to `{destination}`")]
+    Copy {
+        source: PathBuf,
+        destination: PathBuf,
+        #[source]
+        error: std::io::Error,
+    },
 }
 
 /// Errors that may occur while invoking the Codex CLI.
@@ -7797,6 +7943,81 @@ exit 0
         assert!(root.is_dir());
         assert!(layout.conversations_dir().is_dir());
         assert!(layout.logs_dir().is_dir());
+    }
+
+    #[test]
+    fn seed_auth_copies_files_and_creates_targets() {
+        let temp = tempfile::tempdir().unwrap();
+        let seed = temp.path().join("seed_home");
+        std::fs::create_dir_all(&seed).unwrap();
+        std::fs::write(seed.join("auth.json"), "auth").unwrap();
+        std::fs::write(seed.join(".credentials.json"), "creds").unwrap();
+
+        let target_root = temp.path().join("target_home");
+        let layout = CodexHomeLayout::new(&target_root);
+        let outcome = layout
+            .seed_auth_from(&seed, AuthSeedOptions::default())
+            .unwrap();
+
+        assert!(outcome.copied_auth);
+        assert!(outcome.copied_credentials);
+        assert_eq!(
+            std::fs::read_to_string(layout.auth_path()).unwrap(),
+            "auth"
+        );
+        assert_eq!(
+            std::fs::read_to_string(layout.credentials_path()).unwrap(),
+            "creds"
+        );
+    }
+
+    #[test]
+    fn seed_auth_skips_optional_files() {
+        let temp = tempfile::tempdir().unwrap();
+        let seed = temp.path().join("seed_home");
+        std::fs::create_dir_all(&seed).unwrap();
+        std::fs::write(seed.join("auth.json"), "auth").unwrap();
+
+        let target_root = temp.path().join("target_home");
+        let layout = CodexHomeLayout::new(&target_root);
+        let outcome = layout
+            .seed_auth_from(&seed, AuthSeedOptions::default())
+            .unwrap();
+
+        assert!(outcome.copied_auth);
+        assert!(!outcome.copied_credentials);
+        assert_eq!(
+            std::fs::read_to_string(layout.auth_path()).unwrap(),
+            "auth"
+        );
+        assert!(!layout.credentials_path().exists());
+    }
+
+    #[test]
+    fn seed_auth_errors_when_required_missing() {
+        let temp = tempfile::tempdir().unwrap();
+        let seed = temp.path().join("seed_home");
+        std::fs::create_dir_all(&seed).unwrap();
+
+        let target_root = temp.path().join("target_home");
+        let layout = CodexHomeLayout::new(&target_root);
+        let err = layout
+            .seed_auth_from(
+                &seed,
+                AuthSeedOptions {
+                    require_auth: true,
+                    require_credentials: true,
+                    ..Default::default()
+                },
+            )
+            .unwrap_err();
+
+        match err {
+            AuthSeedError::SeedFileMissing { path } => {
+                assert!(path.ends_with("auth.json"), "{path:?}")
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
     }
 
     #[test]
