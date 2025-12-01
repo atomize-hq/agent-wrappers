@@ -2,7 +2,7 @@
   {
     "id": "J1-bundled-binary-design",
     "title": "Design bundled binary + home isolation plan",
-    "status": "todo",
+    "status": "done",
     "description": "Define the opt-in app-bundled binary contract (no PATH/CODEX_BINARY reliance): bundle layout, version pin/update expectations, and how host apps should select per-project CODEX_HOME roots and place auth files. Capture how the wrapper should expose a helper without changing current defaults.",
     "dependencies": [],
     "files": ["workstreams/J_app_bundle/BRIEF.md"],
