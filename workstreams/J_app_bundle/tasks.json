@@ -20,7 +20,7 @@
   {
     "id": "J3-bundled-binary-docs-examples",
     "title": "Docs/examples for bundled binary + home/auth flow",
-    "status": "todo",
+    "status": "done",
     "description": "Document the recommended bundled flow (app-scoped binary path, per-project CODEX_HOME, auth file placement/copy guidance) and add/update examples to show the new helper and isolation pattern. Make it clear this is additive to existing env-based selection.",
     "dependencies": ["J2-bundled-binary-helper"],
     "files": ["README.md", "crates/codex/EXAMPLES.md", "crates/codex/examples", "workstreams/J_app_bundle/BRIEF.md"],
