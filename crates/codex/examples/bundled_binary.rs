@@ -1,33 +1,41 @@
-//! Prefer a bundled Codex binary while still honoring `CODEX_BINARY`.
+//! Resolve a pinned Codex binary from an app-owned bundle without ever
+//! consulting `CODEX_BINARY` or `PATH`. Hosts own the bundle root and version,
+//! and this example bails fast when the pinned binary is missing.
 //!
-//! Env hints:
-//! - `CODEX_BINARY` — highest precedence; point at a specific binary on disk.
-//! - `CODEX_BUNDLED_PATH` — packaged binary shipped with your app (fallback).
-//! - Default fallback: `<crate>/bin/codex` (or `codex.exe` on Windows).
+//! Example layout: `<bundle_root>/<platform>/<version>/<codex|codex.exe>`.
+//! Platform defaults to the current target (e.g. `darwin-arm64`, `linux-x64`,
+//! `windows-x64`) but can be overridden.
 //!
-//! Example:
+//! Example run (env vars are only used by this example):
 //! ```bash
-//! CODEX_BUNDLED_PATH=/opt/myapp/codex \
-//!   cargo run -p codex --example bundled_binary -- "Quick health check"
+//! CODEX_BUNDLE_ROOT="$HOME/.myapp/codex-bin" \
+//! CODEX_BUNDLE_VERSION="1.2.3" \
+//! cargo run -p codex --example bundled_binary -- "Quick health check"
 //! ```
 
 use std::{env, error::Error, path::PathBuf, time::Duration};
 
-use codex::CodexClient;
+use codex::{resolve_bundled_binary, BundledBinarySpec, CodexClient};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let prompt = collect_prompt();
-    let binary = select_binary();
+    let bundle_root = require_env_path("CODEX_BUNDLE_ROOT")?;
+    let version = require_env_string("CODEX_BUNDLE_VERSION")?;
+    let platform = env::var("CODEX_BUNDLE_PLATFORM").ok();
+    let bundled = resolve_bundled_binary(BundledBinarySpec {
+        bundle_root: bundle_root.as_path(),
+        version: &version,
+        platform: platform.as_deref(),
+    })?;
 
-    println!("Selected Codex binary: {}", binary.display());
-    println!(
-        "Order: CODEX_BINARY > CODEX_BUNDLED_PATH > {}",
-        default_bundled_hint().display()
-    );
+    println!("Resolved bundled Codex:");
+    println!("  binary:   {}", bundled.binary_path.display());
+    println!("  platform: {}", bundled.platform);
+    println!("  version:  {}", bundled.version);
 
     let client = CodexClient::builder()
-        .binary(&binary)
+        .binary(&bundled.binary_path)
         .timeout(Duration::from_secs(45))
         .build();
 
@@ -35,9 +43,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Ok(response) => println!("Codex replied:\n{response}"),
         Err(error) => {
             eprintln!("Codex invocation failed: {error}");
-            eprintln!(
-                "Set CODEX_BINARY or CODEX_BUNDLED_PATH to the actual packaged binary before rerunning."
-            );
+            eprintln!("Double-check the bundle root/version and ensure the binary is executable.");
         }
     }
 
@@ -53,19 +59,13 @@ fn collect_prompt() -> String {
     }
 }
 
-fn select_binary() -> PathBuf {
-    if let Some(explicit) = env::var_os("CODEX_BINARY") {
-        return PathBuf::from(explicit);
-    }
-    if let Some(bundled) = env::var_os("CODEX_BUNDLED_PATH") {
-        return PathBuf::from(bundled);
-    }
-    default_bundled_hint()
+fn require_env_path(key: &str) -> Result<PathBuf, Box<dyn Error>> {
+    Ok(PathBuf::from(require_env_string(key)?))
 }
 
-fn default_bundled_hint() -> PathBuf {
-    let binary_name = if cfg!(windows) { "codex.exe" } else { "codex" };
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("bin")
-        .join(binary_name)
+fn require_env_string(key: &str) -> Result<String, Box<dyn Error>> {
+    match env::var(key) {
+        Ok(value) if !value.trim().is_empty() => Ok(value),
+        _ => Err(format!("Set {key} to point at your app-owned Codex bundle").into()),
+    }
 }
