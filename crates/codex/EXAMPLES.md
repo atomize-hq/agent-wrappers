@@ -35,22 +35,22 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 | --- | --- | --- |
 | `cargo run -p codex --example json_stream -- "Summarize repo status"` | `echo "Summarize repo status" \| codex exec --skip-git-repo-check --json` | Enable JSONL streaming; prompt is piped via stdin. |
 | `cargo run -p codex --example stream_events -- "Summarize repo status"` | `echo "Summarize repo status" \| codex exec --skip-git-repo-check --json --timeout 0` | Typed consumer for `thread/turn/item` events (thread/turn IDs included, item created/updated for agent_message, reasoning, command_execution, file_change, mcp_tool_call, web_search, todo_list) plus `turn.failed`; `--sample` replays bundled events. |
-| `cargo run -p codex --example stream_last_message -- "Summarize repo status"` | `codex exec --skip-git-repo-check --json --output-last-message <path> --output-schema <path> <<<"Summarize repo status"` | Reads `--output-last-message` + `--output-schema` files (thread/turn metadata included); ships sample payloads if no binary. |
+| `cargo run -p codex --example stream_last_message -- "Summarize repo status"` | `codex exec --skip-git-repo-check --json --output-last-message <path> --output-schema <path> <<<"Summarize repo status"` | Reads `--output-last-message` + `--output-schema` files; falls back to samples when the binary does not support those flags (e.g., 0.61.x). |
 | `CODEX_LOG_PATH=/tmp/codex.log cargo run -p codex --example stream_with_log -- "Stream with logging"` | `echo "Stream with logging" \| codex exec --skip-git-repo-check --json` | Mirrors stdout and tees JSONL events to `CODEX_LOG_PATH` (or uses sample events with IDs/status). |
 
 ## Resume & Apply/Diff
 
 | Wrapper example | Native command | Notes |
 | --- | --- | --- |
-| `CODEX_CONVERSATION_ID=abc cargo run -p codex --example resume_apply` | `codex resume --json --skip-git-repo-check --last` then `codex diff/apply --json --skip-git-repo-check` | Streams resume events (`thread.resumed` + turn/item) for the last turn (or `--resume-id <id>`), previews the staged diff, and prints the `apply.result` payload (exit/stdout/stderr); `--sample` and `--no-apply` supported. |
+| `CODEX_CONVERSATION_ID=abc cargo run -p codex --example resume_apply` | `codex exec resume --last` then (optionally) `codex apply <task-id>` | Resumes the most recent session (or `--resume-id <id>`) over stdio; if you pass `--task-id`/`CODEX_TASK_ID`, it runs `codex apply` afterward. `--sample` replays bundled resume/apply fixtures; `--no-apply` skips the apply step. |
 
 ## MCP + App Server
 
 | Wrapper example | Native command | Notes |
 | --- | --- | --- |
-| `cargo run -p codex --example mcp_codex_flow -- "Draft a plan" ["Tighten scope"]` | `codex mcp-server --stdio` then call `codex/codex` + `codex/codex-reply` | Typed `codex::mcp` helper that streams `codex/event`, supports `$ /cancelRequest`, and chains a follow-up when the first call returns a conversation ID; gate with `feature_detection` if the binary lacks MCP endpoints. |
+| `cargo run -p codex --example mcp_codex_flow -- "Draft a plan" ["Tighten scope"]` | `codex mcp-server --stdio` then `tools/call` with `name=codex` (or `codex-reply`) | Typed `codex::mcp` helper that streams `codex/event`, supports `$ /cancelRequest`, and chains a follow-up when the first call returns a conversation ID; sends `clientInfo` + `protocolVersion` and uses `tools/call` for 0.61.x MCP compatibility; gate with `feature_detection` if the binary lacks MCP endpoints. |
 | `cargo run -p codex --example mcp_codex_tool -- "Summarize repo status"` | `codex mcp-server` then send `tools/codex` JSON-RPC call | Streams codex tool notifications (approval/task_complete); `--sample` and optional `CODEX_HOME` for isolation. |
-| `CODEX_CONVERSATION_ID=abc123 cargo run -p codex --example mcp_codex_reply -- "Continue the prior run"` | `codex mcp-server` then call `tools/codex-reply` with `conversationId=abc123` | Resume a session via `codex-reply`; needs `CODEX_CONVERSATION_ID` or first arg; `--sample` available. |
+| `CODEX_CONVERSATION_ID=abc123 cargo run -p codex --example mcp_codex_reply -- "Continue the prior run"` | `codex mcp-server` then call `tools/codex-reply` with `conversationId=abc123` | Continue a session via `codex-reply`; needs `CODEX_CONVERSATION_ID`/first arg (use the `session_id` from `session_configured`), and the session must still be active in the same `mcp-server` process (0.61.0 does not rehydrate from disk). Use `codex exec resume` or app-server `thread/resume` for cross-process resumes. `--sample` available. |
 | `cargo run -p codex --example app_server_turns -- "Draft a release note" [thread-id]` | `codex app-server` then `thread/start` or `thread/resume` plus `turn/start` (optional `turn/interrupt`) | Uses the `codex::mcp` app-server client to stream items and task_complete notices, optionally resuming a thread and sending `turn/interrupt` after a delay; pair with `feature_detection` if the binary omits app-server support. |
 | `cargo run -p codex --example app_server_thread_turn -- "Draft a release note"` | `codex app-server` then send `thread/start` and `turn/start` | App-server thread/turn notifications; supports `--sample` and optional `CODEX_HOME` for state isolation. |
 | `cargo run -p codex --example app_server_codegen -- ts ./gen/app --prettier ./node_modules/.bin/prettier` | `codex app-server generate-ts --out ./gen/app --prettier ./node_modules/.bin/prettier` | Refresh TypeScript bindings (or `json ./gen/app` for schemas) with shared config/profile flags; ensures the output directory exists first and surfaces non-zero exits as `CodexError::NonZeroExit`. |
@@ -59,8 +59,8 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 
 | Wrapper example | Native command | Notes |
 | --- | --- | --- |
-| `cargo run -p codex --example responses_api_proxy` | `echo "$OPENAI_API_KEY" \| codex responses-api-proxy [--port <PORT>] [--server-info <FILE>] [--http-shutdown] [--upstream-url <URL>]` | Starts the API-key-injecting responses proxy with piped stdin, optional port/upstream/shutdown flags, and a helper to parse `{port,pid}` from the server-info JSON. |
-| `cargo run -p codex --example stdio_to_uds` | `codex stdio-to-uds /tmp/echo.sock` | Bridges stdin/stdout to a Unix domain socket (example spins up a local echo server); keep stdout/stderr drained for long-lived relays. |
+| `cargo run -p codex --example responses_api_proxy` | `echo "$OPENAI_API_KEY" \| codex responses-api-proxy [--port <PORT>] [--server-info <FILE>] [--http-shutdown] [--upstream-url <URL>]` | Starts the API-key-injecting responses proxy with piped stdin; requires `OPENAI_API_KEY`/`CODEX_API_KEY` for live runs, otherwise the example falls back to a stub `--sample` server-info output. Polls `--server-info` for `{port,pid}` when requested. |
+| `cargo run -p codex --example stdio_to_uds_live` | `codex stdio-to-uds <temp.sock>` | Unix-only live demo: spawns a temp UDS listener, bridges via `codex stdio-to-uds`, sends `ping`, and prints the echoed `pong`; set `CODEX_BINARY` to pick a specific CLI. |
 
 ## Capabilities
 

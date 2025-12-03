@@ -29,8 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let client = builder.build();
 
-    let mut request = ExecRequest::new(prompt)
-        .config_override("model_reasoning_effort", "low");
+    let mut request = ExecRequest::new(prompt).config_override("model_reasoning_effort", "low");
     if cd.is_none() {
         request.overrides.cd = Some(env::current_dir()?);
     }

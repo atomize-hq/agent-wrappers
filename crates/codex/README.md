@@ -189,7 +189,8 @@ If `RUST_LOG` is unset, the wrapper injects `RUST_LOG=error` for spawned command
 
 - `codex::mcp` offers typed clients for `codex mcp-server --stdio` and `codex app-server --stdio`, along with config managers for `[mcp_servers]` and `[app_runtimes]` plus launcher helpers when you want to spawn from saved config.
 - Use `CodexClient::spawn_mcp_login_process` (capability-guarded) when you need an interactive bearer token for HTTP transports before persisting it via `McpConfigManager::login`.
-- Examples: `mcp_codex_flow` (typed `codex/codex` + `codex/codex-reply` with optional cancellation), `mcp_codex_tool`/`mcp_codex_reply` (raw tool calls with `--sample` payloads), and `app_server_turns`/`app_server_thread_turn` (thread start/resume + optional interrupt). Pair these with `feature_detection` if the binary may be missing server endpoints.
+- Examples: `mcp_codex_flow` (typed `tools/call` for `codex` + `codex-reply` with optional cancellation), `mcp_codex_tool`/`mcp_codex_reply` (raw tool calls with `--sample` payloads; use the `session_id` from `session_configured` as the `conversationId`, and note that `codex-reply` requires the session to remain active inside the same `mcp-server` process on 0.61.0), and `app_server_turns`/`app_server_thread_turn` (thread start/resume + optional interrupt). Pair these with `feature_detection` if the binary may be missing server endpoints.
+- MCP `codex-reply` does **not** rehydrate conversations from disk on 0.61.0; follow-up calls only work while the original `mcp-server` process is still running. For cross-process resumes, use `codex exec resume` (CLI) or the app-server `thread/resume` path instead.
 
 ## Runtime definitions and env prep
 - `[mcp_servers]` and `[app_runtimes]` live in `config.toml`; `McpConfigManager` reads/writes them.
@@ -214,7 +215,9 @@ If `RUST_LOG` is unset, the wrapper injects `RUST_LOG=error` for spawned command
 - Pool handles still expose stdio configs via `launcher`/`prepare` so callers can inspect launch parameters without starting a process.
 
 ## Examples and tests
-- `examples/mcp_codex_flow.rs`: starts `codex mcp-server`, streams `codex/event`, supports `$ /cancelRequest` and follow-up `codex/codex-reply`; respects `CODEX_BINARY`/`CODEX_HOME` and does not touch stored `[mcp_servers]`.
+- `examples/mcp_codex_flow.rs`: starts `codex mcp-server`, streams `codex/event`, supports `$ /cancelRequest` and follow-up `codex/codex-reply` via `tools/call`; respects `CODEX_BINARY`/`CODEX_HOME` and does not touch stored `[mcp_servers]`.
 - `examples/app_server_turns.rs`: starts/resumes `codex app-server` threads, streams items/task_complete, and can issue `turn/interrupt` after the first item; metadata/thread IDs come from server responses and are not persisted by the wrapper.
+- `examples/responses_api_proxy.rs`: launches `codex responses-api-proxy` with an API key piped on stdin; falls back to a stub `--sample` path when no `OPENAI_API_KEY`/`CODEX_API_KEY` is available and polls `--server-info` for `{port,pid}`.
+- `examples/stdio_to_uds_live.rs`: Unix-only live bridge that spins up a temp Unix socket listener, runs `codex stdio-to-uds <socket>`, sends `ping`, and prints the echoed `pong`.
 - `cargo test -p codex` exercises env merging and non-destructive behavior (`runtime_api_*`, `app_runtime_*`, `app_runtime_pool_*` cover listing/prepare/start/stop without writing config or altering metadata).
 - See `crates/codex/EXAMPLES.md` for one-to-one CLI parity examples, including `bundled_binary_home` to run Codex from an embedded binary with isolated state.

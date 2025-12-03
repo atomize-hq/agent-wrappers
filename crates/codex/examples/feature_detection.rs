@@ -20,12 +20,34 @@ use std::{
     sync::{Mutex, OnceLock},
 };
 
+use serde_json::json;
 use tokio::process::Command;
+use toml::Value as TomlValue;
+
+const MANIFEST_FALLBACK: &[(&str, &[&str])] = &[
+    // Observed to work on 0.61.0 even though `features list` omits them.
+    (
+        "0.61.0",
+        &[
+            "json-stream",
+            "output-last-message",
+            "output-schema",
+            "diff",
+            "apply",
+            "resume",
+            "app-server",
+            "mcp-server",
+        ],
+    ),
+];
 
 #[derive(Debug, Clone)]
 struct Capability {
     version: Option<Version>,
     features: Vec<String>,
+    manifest_source: Option<String>,
+    forced: Vec<String>,
+    advertised_allow: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -68,6 +90,9 @@ impl Version {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    let mut args = env::args().skip(1).collect::<Vec<_>>();
+    let json_output = take_flag(&mut args, "--json");
+
     let binary = resolve_binary();
     let (capability, cached) = if binary_exists(&binary) {
         cached_probe(&binary).await
@@ -79,70 +104,42 @@ async fn main() -> Result<(), Box<dyn Error>> {
         (sample_capability(), false)
     };
 
-    if let Some(version) = capability.version.as_ref() {
-        println!("Detected Codex version: {}", version.as_string());
+    if json_output {
+        let report = json!({
+            "binary": binary.display().to_string(),
+            "cached": cached,
+            "version": capability.version.as_ref().map(|v| v.as_string()),
+            "features": capability.features,
+            "manifest_source": capability.manifest_source,
+            "forced": capability.forced,
+            "advertised_allow": capability.advertised_allow,
+        });
+        println!("{}", serde_json::to_string_pretty(&report)?);
     } else {
-        println!("Version unknown (could not parse output)");
-    }
-    if cached {
-        println!("Capabilities served from cache for {}", binary.display());
-    }
-    println!("Features: {}", capability.features.join(", "));
-    println!(
-        "Cache scope: per binary path for this process; refresh probes after upgrading the binary."
-    );
-
-    if capability.supports("json-stream") {
-        println!("-> Enable streaming examples (stream_events, stream_with_log).");
-    } else {
-        println!("-> Streaming disabled: feature not reported by the binary.");
-    }
-
-    if capability.supports("log-tee") {
-        println!("-> Log tee supported; safe to write to log files.");
-    } else {
-        println!("-> Log tee unavailable; fall back to console-only streaming.");
-    }
-
-    if capability.supports("resume") {
+        if let Some(version) = capability.version.as_ref() {
+            println!("Detected Codex version: {}", version.as_string());
+        } else {
+            println!("Version unknown (could not parse output)");
+        }
+        if cached {
+            println!("Capabilities served from cache for {}", binary.display());
+        }
+        println!("Features: {}", capability.features.join(", "));
+        if let Some(source) = capability.manifest_source.as_ref() {
+            println!("Manifest source: {source}");
+        }
+        if !capability.forced.is_empty() {
+            println!("Forced: {}", capability.forced.join(", "));
+        }
+        if let Some(allow) = capability.advertised_allow.as_ref() {
+            println!("Advertised allowlist: {}", allow.join(", "));
+        }
         println!(
-            "-> Resume supported; enable resume_apply example and prompt for conversation IDs."
+            "Cache scope: per binary path for this process; refresh probes after upgrading the binary."
         );
-    } else {
-        println!("-> Resume unsupported; hide resume_apply in your UI.");
-    }
-
-    if capability.supports("diff") && capability.supports("apply") {
-        println!("-> Diff/apply supported; capture stdout/stderr/exit when applying patches.");
-    } else {
-        println!("-> Skip codex diff/apply helpers when the binary does not advertise them.");
-    }
-
-    if capability.supports("output-last-message") && capability.supports("output-schema") {
-        println!("-> Artifact flags supported; enable --output-last-message/--output-schema.");
-    } else {
-        println!("-> Skip artifact flags when streaming; binary does not advertise them.");
-    }
-
-    if capability.supports("mcp-server") && capability.supports("app-server") {
-        println!("-> MCP + app-server endpoints available; enable the related examples.");
-    } else {
-        println!("-> Server endpoints missing; keep MCP/app-server flows disabled.");
-    }
-
-    if let Some(update_hook) = update_advisory_hook(&capability) {
-        println!("{update_hook}");
     }
 
     Ok(())
-}
-
-impl Capability {
-    fn supports(&self, name: &str) -> bool {
-        self.features
-            .iter()
-            .any(|feature| normalize(feature) == name.to_ascii_lowercase())
-    }
 }
 
 async fn cached_probe(binary: &Path) -> (Capability, bool) {
@@ -163,10 +160,63 @@ async fn probe_capabilities(binary: &Path) -> Capability {
     let version = run_version(binary)
         .await
         .and_then(|raw| Version::parse(&raw));
-    let features = run_features(binary)
+    let mut manifest_source = None;
+    let mut forced = Vec::new();
+    let mut advertised_allow: Option<Vec<String>> = None;
+    let mut features = run_features(binary)
         .await
         .unwrap_or_else(|| vec!["json-stream".into(), "output-last-message".into()]);
-    Capability { version, features }
+
+    // Apply manifest hints when the binary reports a known version.
+    if let Some(version) = version.as_ref().map(|v| v.as_string()) {
+        if let Some((manifest_features, source)) = manifest_for(&version) {
+            manifest_source = Some(source);
+            // Manifest acts as the authoritative advertised set for this version.
+            features = manifest_features;
+        }
+    }
+
+    // Environment override: CODEX_FEATURE_FORCE=feature1,feature2
+    if let Some(force) = env::var("CODEX_FEATURE_FORCE").ok() {
+        forced = force
+            .split(',')
+            .map(|s| s.trim().to_ascii_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if !forced.is_empty() {
+            println!("Applying forced feature list from CODEX_FEATURE_FORCE");
+            features.extend(forced.clone());
+        }
+    }
+
+    // Optional allowlist: CODEX_FEATURE_ADVERTISE=feature1,feature2 restricts the advertised set.
+    if let Some(allow) = env::var("CODEX_FEATURE_ADVERTISE").ok() {
+        let allow_list: Vec<String> = allow
+            .split(',')
+            .map(|s| s.trim().to_ascii_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if !allow_list.is_empty() {
+            println!("Restricting advertised features to CODEX_FEATURE_ADVERTISE");
+            advertised_allow = Some(allow_list.clone());
+            features.retain(|f| {
+                let norm = normalize(f);
+                allow_list.iter().any(|a| *a == norm)
+            });
+        }
+    }
+
+    // Deduplicate by normalized name.
+    let mut seen = std::collections::HashSet::new();
+    features.retain(|f| seen.insert(normalize(f)));
+
+    Capability {
+        version,
+        features,
+        manifest_source,
+        forced,
+        advertised_allow,
+    }
 }
 
 fn sample_capability() -> Capability {
@@ -180,14 +230,15 @@ fn sample_capability() -> Capability {
             "json-stream".into(),
             "output-last-message".into(),
             "output-schema".into(),
-            "log-tee".into(),
             "diff".into(),
             "apply".into(),
             "resume".into(),
             "app-server".into(),
             "mcp-server".into(),
-            "notify".into(),
         ],
+        manifest_source: Some("sample".into()),
+        forced: Vec::new(),
+        advertised_allow: None,
     }
 }
 
@@ -216,29 +267,9 @@ async fn run_features(binary: &Path) -> Option<Vec<String>> {
         if trimmed.is_empty() {
             continue;
         }
-        features.push(trimmed.to_string());
+        features.push(normalize(trimmed));
     }
     Some(features)
-}
-
-fn update_advisory_hook(capability: &Capability) -> Option<String> {
-    let missing: Vec<&str> = ["json-stream", "log-tee", "diff", "apply"]
-        .iter()
-        .copied()
-        .filter(|name| !capability.supports(name))
-        .collect();
-    if missing.is_empty() {
-        return None;
-    }
-    let binary_desc = capability
-        .version
-        .as_ref()
-        .map(|v| v.as_string())
-        .unwrap_or_else(|| "<unknown>".into());
-    Some(format!(
-        "Update advisory: binary {binary_desc} is missing {missing}; prompt the user to download the latest release.",
-        missing = missing.join(", ")
-    ))
 }
 
 fn normalize(feature: &str) -> String {
@@ -267,4 +298,61 @@ fn binary_exists(path: &Path) -> bool {
             })
             .is_some()
     }
+}
+
+fn manifest_for(version: &str) -> Option<(Vec<String>, String)> {
+    // Env override for a manifest path; default to ./feature_manifest.toml if present.
+    if let Some((from_file, path)) = load_manifest_file(version) {
+        return Some((from_file, path));
+    }
+
+    MANIFEST_FALLBACK
+        .iter()
+        .find(|(v, _)| *v == version)
+        .map(|(_, feats)| {
+            (
+                feats.iter().map(|f| f.to_string()).collect(),
+                "builtin".to_string(),
+            )
+        })
+}
+
+fn load_manifest_file(version: &str) -> Option<(Vec<String>, String)> {
+    let path = env::var_os("CODEX_FEATURE_MANIFEST")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("feature_manifest.toml"));
+
+    if !path.exists() {
+        return None;
+    }
+
+    let contents = std::fs::read_to_string(&path).ok()?;
+    let toml = contents.parse::<TomlValue>().ok()?;
+    let versions = toml.get("versions")?;
+    let Some(table) = versions.as_table() else {
+        eprintln!("feature_manifest.toml: expected [versions] table mapping version -> [features]");
+        return None;
+    };
+
+    let features = table.get(version)?.as_array()?;
+    let collected = features
+        .iter()
+        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+        .collect::<Vec<_>>();
+    if collected.is_empty() {
+        eprintln!(
+            "feature manifest at {} lists {} but has no features",
+            path.display(),
+            version
+        );
+        return None;
+    } else {
+        Some((collected, path.display().to_string()))
+    }
+}
+
+fn take_flag(args: &mut Vec<String>, flag: &str) -> bool {
+    let before = args.len();
+    args.retain(|value| value != flag);
+    before != args.len()
 }

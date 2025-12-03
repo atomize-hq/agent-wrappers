@@ -9,7 +9,11 @@ use std::{env, error::Error};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let mut args = env::args().skip(1);
+    let mut args = env::args().skip(1).peekable();
+    if matches!(args.peek().map(|s| s.as_str()), Some("--")) {
+        args.next();
+    }
+
     let model = args
         .next()
         .ok_or("Provide a model name followed by a prompt")?;

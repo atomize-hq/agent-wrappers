@@ -1,15 +1,16 @@
-//! Resume a Codex session and apply the latest diff.
+//! Resume a Codex session and optionally apply a task.
 //!
-//! This example streams events from `codex resume --json` (using `--last` or a provided
-//! conversation ID) and then calls `codex diff`/`codex apply` to preview and apply the staged
-//! changes. Pass `--sample` to replay bundled payloads from
-//! `crates/codex/examples/fixtures/` when you do not have a Codex binary.
+//! This example resumes via `codex exec resume` (using `--last` or a provided conversation ID).
+//! When you also supply a `--task-id` (or `CODEX_TASK_ID`), it calls `codex apply <task-id>`
+//! afterward. Pass `--sample` to replay bundled payloads from `crates/codex/examples/fixtures/`
+//! when you do not have a Codex binary.
 //!
 //! Examples:
 //! ```bash
 //! cargo run -p codex --example resume_apply -- --sample
 //! CODEX_CONVERSATION_ID=abc123 cargo run -p codex --example resume_apply
-//! cargo run -p codex --example resume_apply -- --resume-id abc123 --no-apply
+//! CODEX_TASK_ID=t-123 cargo run -p codex --example resume_apply -- --resume-id abc123
+//! cargo run -p codex --example resume_apply -- --resume-id abc123 --task-id t-123 --no-apply
 //! ```
 
 use std::{
@@ -34,6 +35,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let skip_apply = take_flag(&mut args, "--no-apply");
     let resume_id =
         take_value(&mut args, "--resume-id").or_else(|| env::var("CODEX_CONVERSATION_ID").ok());
+    let resume_prompt =
+        take_value(&mut args, "--resume-prompt").or_else(|| env::var("CODEX_RESUME_PROMPT").ok());
+    let task_id = take_value(&mut args, "--task-id").or_else(|| env::var("CODEX_TASK_ID").ok());
 
     let binary = resolve_binary();
     if use_sample || !binary_exists(&binary) {
@@ -46,26 +50,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    stream_resume(&binary, resume_id.as_deref()).await?;
+    stream_resume(&binary, resume_id.as_deref(), resume_prompt.as_deref()).await?;
     if !skip_apply {
-        run_diff_and_apply(&binary).await?;
+        if let Some(task_id) = task_id.as_deref() {
+            run_apply(&binary, task_id).await?;
+        } else {
+            println!("--- apply skipped (no --task-id or CODEX_TASK_ID provided) ---");
+        }
     }
 
     Ok(())
 }
 
-async fn stream_resume(binary: &Path, resume_id: Option<&str>) -> Result<(), Box<dyn Error>> {
+async fn stream_resume(
+    binary: &Path,
+    resume_id: Option<&str>,
+    resume_prompt: Option<&str>,
+) -> Result<(), Box<dyn Error>> {
     println!("--- resume stream ---");
 
     let mut command = Command::new(binary);
-    command
-        .arg("resume")
-        .args(["--json", "--skip-git-repo-check", "--timeout", "0"]);
+    command.arg("exec").arg("resume");
     if let Some(id) = resume_id {
-        command.args(["--id", id]);
+        command.arg(id);
     } else {
         command.arg("--last");
     }
+    command.arg(resume_prompt.unwrap_or_default());
     command
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
@@ -85,32 +96,21 @@ async fn stream_resume(binary: &Path, resume_id: Option<&str>) -> Result<(), Box
     Ok(())
 }
 
-async fn run_diff_and_apply(binary: &Path) -> Result<(), Box<dyn Error>> {
-    println!("--- diff preview ---");
-    let diff_output = Command::new(binary)
-        .args(["diff", "--json", "--skip-git-repo-check"])
-        .output()
-        .await?;
-    if !diff_output.stdout.is_empty() {
-        println!("{}", String::from_utf8_lossy(&diff_output.stdout));
-    }
-
-    if !diff_output.status.success() {
-        return Err(format!("codex diff exited with {}", diff_output.status).into());
-    }
-
-    println!("--- apply ---");
+async fn run_apply(binary: &Path, task_id: &str) -> Result<(), Box<dyn Error>> {
+    println!("--- apply task {task_id} ---");
     let output = Command::new(binary)
-        .args(["apply", "--json", "--skip-git-repo-check"])
+        .args(["apply", task_id])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
         .output()
         .await?;
 
-    println!("exit status: {}", output.status);
     if !output.stdout.is_empty() {
-        println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
+        println!("{}", String::from_utf8_lossy(&output.stdout));
     }
-    if !output.stderr.is_empty() {
-        println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+
+    if !output.status.success() {
+        return Err(format!("codex apply exited with {}", output.status).into());
     }
 
     Ok(())
@@ -121,9 +121,6 @@ fn replay_samples(include_apply: bool) {
     for line in fixtures::resume_events() {
         println!("{line}");
     }
-
-    println!("--- diff preview (sample) ---");
-    print!("{}", fixtures::sample_diff());
 
     if include_apply {
         println!("--- apply (sample) ---");

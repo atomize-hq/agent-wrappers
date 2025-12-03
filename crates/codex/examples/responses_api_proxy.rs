@@ -11,16 +11,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let api_key = std::env::var("OPENAI_API_KEY")
         .or_else(|_| std::env::var("CODEX_API_KEY"))
-        .unwrap_or_else(|_| "sk-placeholder".to_string());
+        .unwrap_or_default();
+    let missing_key = api_key.trim().is_empty();
 
     let server_info_dir = tempfile::tempdir()?;
     let server_info_path = server_info_dir.path().join("responses-api-proxy.json");
 
-    if use_sample {
+    if use_sample || missing_key {
         write_sample_server_info(&server_info_path)?;
         println!(
-            "responses-api-proxy (sample) listening on 127.0.0.1:38483 (pid 1234); info at {}",
-            server_info_path.display()
+            "responses-api-proxy ({}) listening on 127.0.0.1:38483 (pid 1234); info at {}",
+            if missing_key {
+                "sample: missing API key"
+            } else {
+                "sample"
+            },
+            server_info_path.display(),
         );
         return Ok(());
     }
@@ -38,13 +44,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .await?;
 
-    if let Some(info) = proxy.read_server_info().await? {
-        println!(
+    let mut info = None;
+    for _ in 0..10 {
+        match proxy.read_server_info().await {
+            Ok(Some(found)) => {
+                info = Some(found);
+                break;
+            }
+            Ok(None) => break,
+            Err(codex::CodexError::ResponsesApiProxyInfoRead { .. }) => {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+            Err(other) => return Err(other.into()),
+        }
+    }
+
+    match info {
+        Some(info) => println!(
             "responses-api-proxy listening on 127.0.0.1:{} (pid {})",
             info.port, info.pid
-        );
-    } else {
-        println!("responses-api-proxy started (no server-info file was written)");
+        ),
+        None => println!("responses-api-proxy started (no server-info file was written)"),
     }
 
     if let Some(pid) = proxy.child.id() {

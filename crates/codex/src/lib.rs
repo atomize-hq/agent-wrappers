@@ -83,12 +83,12 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 use futures_core::Stream;
 use semver::{Prerelease, Version};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use tempfile::TempDir;
 use thiserror::Error;
 use tokio::{
@@ -173,8 +173,13 @@ pub enum BundledBinaryError {
         source: std::io::Error,
     },
     #[error("bundle platform directory `{platform_dir}` for `{platform}` is not a directory")]
-    PlatformNotDirectory { platform: String, platform_dir: PathBuf },
-    #[error("bundle version directory `{version_dir}` for `{version}` does not exist or is unreadable")]
+    PlatformNotDirectory {
+        platform: String,
+        platform_dir: PathBuf,
+    },
+    #[error(
+        "bundle version directory `{version_dir}` for `{version}` does not exist or is unreadable"
+    )]
     VersionUnreadable {
         version: String,
         version_dir: PathBuf,
@@ -182,7 +187,10 @@ pub enum BundledBinaryError {
         source: std::io::Error,
     },
     #[error("bundle version directory `{version_dir}` for `{version}` is not a directory")]
-    VersionNotDirectory { version: String, version_dir: PathBuf },
+    VersionNotDirectory {
+        version: String,
+        version_dir: PathBuf,
+    },
     #[error("bundled Codex binary `{binary}` is missing or unreadable")]
     BinaryUnreadable {
         binary: PathBuf,
@@ -207,7 +215,9 @@ pub enum BundledBinaryError {
 /// errors. The resolved path is canonicalized and should be passed to
 /// [`CodexClientBuilder::binary`] to keep behavior isolated from any global
 /// Codex install.
-pub fn resolve_bundled_binary(spec: BundledBinarySpec<'_>) -> Result<BundledBinary, BundledBinaryError> {
+pub fn resolve_bundled_binary(
+    spec: BundledBinarySpec<'_>,
+) -> Result<BundledBinary, BundledBinaryError> {
     let platform = match spec.platform {
         Some(label) => normalize_non_empty(label).ok_or(BundledBinaryError::EmptyPlatform)?,
         None => default_bundled_platform_label(),
@@ -254,10 +264,11 @@ pub fn resolve_bundled_binary(spec: BundledBinarySpec<'_>) -> Result<BundledBina
     )?;
 
     let binary_path = version_dir.join(bundled_binary_filename(&platform));
-    let metadata = std_fs::metadata(&binary_path).map_err(|source| BundledBinaryError::BinaryUnreadable {
-        binary: binary_path.clone(),
-        source,
-    })?;
+    let metadata =
+        std_fs::metadata(&binary_path).map_err(|source| BundledBinaryError::BinaryUnreadable {
+            binary: binary_path.clone(),
+            source,
+        })?;
     if !metadata.is_file() {
         return Err(BundledBinaryError::BinaryNotFile {
             binary: binary_path.clone(),
@@ -265,10 +276,11 @@ pub fn resolve_bundled_binary(spec: BundledBinarySpec<'_>) -> Result<BundledBina
     }
     ensure_executable(&metadata, &binary_path)?;
 
-    let canonical = std_fs::canonicalize(&binary_path).map_err(|source| BundledBinaryError::Canonicalize {
-        path: binary_path.clone(),
-        source,
-    })?;
+    let canonical =
+        std_fs::canonicalize(&binary_path).map_err(|source| BundledBinaryError::Canonicalize {
+            path: binary_path.clone(),
+            source,
+        })?;
 
     Ok(BundledBinary {
         binary_path: canonical,
@@ -4069,10 +4081,11 @@ impl CodexHomeLayout {
         options: AuthSeedOptions,
     ) -> Result<AuthSeedOutcome, AuthSeedError> {
         let seed_home = seed_home.as_ref();
-        let seed_meta = std_fs::metadata(seed_home).map_err(|source| AuthSeedError::SeedHomeUnreadable {
-            seed_home: seed_home.to_path_buf(),
-            source,
-        })?;
+        let seed_meta =
+            std_fs::metadata(seed_home).map_err(|source| AuthSeedError::SeedHomeUnreadable {
+                seed_home: seed_home.to_path_buf(),
+                source,
+            })?;
         if !seed_meta.is_dir() {
             return Err(AuthSeedError::SeedHomeNotDirectory {
                 seed_home: seed_home.to_path_buf(),
@@ -4105,9 +4118,11 @@ impl CodexHomeLayout {
 
                     if options.create_target_dirs {
                         if let Some(parent) = destination.parent() {
-                            std_fs::create_dir_all(parent).map_err(|source_err| AuthSeedError::CreateTargetDir {
-                                path: parent.to_path_buf(),
-                                source: source_err,
+                            std_fs::create_dir_all(parent).map_err(|source_err| {
+                                AuthSeedError::CreateTargetDir {
+                                    path: parent.to_path_buf(),
+                                    source: source_err,
+                                }
                             })?;
                         }
                     }
@@ -6883,7 +6898,8 @@ mod tests {
         let version = "1.2.3";
         let version_dir = temp.path().join(&platform).join(version);
         std_fs::create_dir_all(&version_dir).unwrap();
-        let binary = write_fake_bundled_codex(&version_dir, &platform, "#!/usr/bin/env bash\necho ok");
+        let binary =
+            write_fake_bundled_codex(&version_dir, &platform, "#!/usr/bin/env bash\necho ok");
 
         let resolved = resolve_bundled_binary(BundledBinarySpec {
             bundle_root: temp.path(),
@@ -6904,7 +6920,8 @@ mod tests {
         let version = "5.6.7";
         let version_dir = temp.path().join(platform).join(version);
         std_fs::create_dir_all(&version_dir).unwrap();
-        let binary = write_fake_bundled_codex(&version_dir, platform, "#!/usr/bin/env bash\necho win");
+        let binary =
+            write_fake_bundled_codex(&version_dir, platform, "#!/usr/bin/env bash\necho win");
 
         let resolved = resolve_bundled_binary(BundledBinarySpec {
             bundle_root: temp.path(),
@@ -6917,7 +6934,10 @@ mod tests {
         assert_eq!(resolved.version, version);
         assert_eq!(resolved.binary_path, std_fs::canonicalize(&binary).unwrap());
         assert_eq!(
-            resolved.binary_path.file_name().and_then(|name| name.to_str()),
+            resolved
+                .binary_path
+                .file_name()
+                .and_then(|name| name.to_str()),
             Some("codex.exe")
         );
     }
@@ -6941,10 +6961,7 @@ mod tests {
             BundledBinaryError::BinaryUnreadable { binary, .. }
             | BundledBinaryError::BinaryNotFile { binary }
             | BundledBinaryError::BinaryNotExecutable { binary } => {
-                assert_eq!(
-                    binary,
-                    version_dir.join(bundled_binary_filename(&platform))
-                );
+                assert_eq!(binary, version_dir.join(bundled_binary_filename(&platform)));
             }
             other => panic!("unexpected error: {other:?}"),
         }
@@ -8121,10 +8138,7 @@ exit 0
 
         assert!(outcome.copied_auth);
         assert!(outcome.copied_credentials);
-        assert_eq!(
-            std::fs::read_to_string(layout.auth_path()).unwrap(),
-            "auth"
-        );
+        assert_eq!(std::fs::read_to_string(layout.auth_path()).unwrap(), "auth");
         assert_eq!(
             std::fs::read_to_string(layout.credentials_path()).unwrap(),
             "creds"
@@ -8146,10 +8160,7 @@ exit 0
 
         assert!(outcome.copied_auth);
         assert!(!outcome.copied_credentials);
-        assert_eq!(
-            std::fs::read_to_string(layout.auth_path()).unwrap(),
-            "auth"
-        );
+        assert_eq!(std::fs::read_to_string(layout.auth_path()).unwrap(), "auth");
         assert!(!layout.credentials_path().exists());
     }
 
@@ -8246,7 +8257,8 @@ exit 0
             other => panic!("unexpected event: {other:?}"),
         }
         // item.completed without ids should inherit both
-        let item_line = r#"{"type":"item.completed","item":{"id":"msg-1","type":"agent_message","text":"hi"}}"#;
+        let item_line =
+            r#"{"type":"item.completed","item":{"id":"msg-1","type":"agent_message","text":"hi"}}"#;
         let item_event = normalize_thread_event(item_line, &mut context).unwrap();
         match item_event {
             ThreadEvent::ItemCompleted(item) => {

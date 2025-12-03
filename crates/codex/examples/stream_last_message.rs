@@ -33,6 +33,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let last_message_path = base_dir.join("last_message.json");
     let schema_path = base_dir.join("output_schema.json");
+    ensure_schema_file(&schema_path)?;
 
     let binary = resolve_binary();
     let ran_real_codex = if binary_exists(&binary) {
@@ -120,6 +121,12 @@ async fn run_codex(
     if !status.success() {
         return Err(format!("codex exited with {status}").into());
     }
+
+    // Older binaries may not write these files; treat missing outputs as a soft failure so we can
+    // fall back to samples.
+    if !last_message_path.exists() || !schema_path.exists() {
+        return Err("codex did not write output-last-message/schema files".into());
+    }
     Ok(())
 }
 
@@ -169,5 +176,25 @@ fn print_json_preview(label: &str, path: &PathBuf) -> Result<(), Box<dyn Error>>
         }
     }
     println!("{contents}");
+    Ok(())
+}
+
+fn ensure_schema_file(path: &PathBuf) -> Result<(), Box<dyn Error>> {
+    if path.exists() {
+        return Ok(());
+    }
+    // Minimal schema that satisfies the CLI schema validator (requires additionalProperties=false).
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "message": { "type": "string" }
+        },
+        "required": ["message"],
+        "additionalProperties": false
+    });
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(path, serde_json::to_string_pretty(&schema)?)?;
     Ok(())
 }

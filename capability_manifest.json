@@ -1,0 +1,170 @@
+{
+  "version": "0.61.0",
+  "commands": [
+    {
+      "name": "exec",
+      "aliases": ["e"],
+      "args": ["prompt (optional)", "command (optional when using exec subcommands)"],
+      "supports": {
+        "json": true,
+        "output_last_message": true,
+        "output_schema": true,
+        "skip_git_repo_check": true,
+        "image": true,
+        "model": true,
+        "oss": true,
+        "local_provider": true,
+        "sandbox": true,
+        "approval_flag": true,
+        "profile": true,
+        "add_dir": true,
+        "cd": true,
+        "search": false,
+        "config_override": true,
+        "feature_enable_disable": true,
+        "full_auto": true,
+        "dangerous_bypass": true,
+        "color": true
+      },
+      "outputs": ["thread/turn/item stream when --json", "stdout/stderr mirrored unless disabled by caller"]
+    },
+    {
+      "name": "exec resume",
+      "args": ["session_id (or --last)", "prompt (required, see notes)"],
+      "supports": {
+        "json": true,
+        "output_last_message": true,
+        "output_schema": true,
+        "skip_git_repo_check": true,
+        "model": true,
+        "image": true,
+        "oss": true,
+        "local_provider": true,
+        "sandbox": true,
+        "approval_flag": true,
+        "profile": true,
+        "add_dir": true,
+        "cd": true,
+        "config_override": true,
+        "feature_enable_disable": true,
+        "full_auto": true,
+        "dangerous_bypass": true,
+        "color": true
+      },
+      "outputs": ["thread/turn/item stream when --json (includes thread.resumed)"],
+      "notes": [
+        "Requires either --last or an explicit session_id; plain interactive picker is only via codex resume (not exec resume).",
+        "Prompt is required; resolution order: prompt arg after resume > session_id (with --last) > root exec prompt > stdin (errors if none).",
+        "Examples: codex exec resume --last \"Fix bugs\"; echo \"Continue\" | codex exec resume --last"
+      ]
+    },
+    {
+      "name": "apply",
+      "args": ["task_id (required)"],
+      "supports": {
+        "json": false,
+        "skip_git_repo_check": false,
+        "model": false,
+        "sandbox": false,
+        "approval_flag": false,
+        "profile": false,
+        "add_dir": false,
+        "cd": false,
+        "config_override": true,
+        "feature_enable_disable": true
+      },
+      "outputs": ["apply.result: stdout/stderr/exit (plain text)"]
+    },
+    {
+      "name": "diff",
+      "args": [],
+      "supports": {
+        "json": false,
+        "config_override": true,
+        "feature_enable_disable": true
+      },
+      "outputs": ["patch text (plain stdout)"]
+    },
+    {
+      "name": "features list",
+      "args": [],
+      "supports": {
+        "json": false,
+        "config_override": true,
+        "feature_enable_disable": false
+      },
+      "outputs": ["text table of features"]
+    },
+    {
+      "name": "cloud exec",
+      "args": ["--env <ENV_ID> (required)", "query (optional)"],
+      "supports": {
+        "json": false,
+        "attempts": true
+      },
+      "outputs": ["task URL (text)"]
+    },
+    {
+      "name": "mcp-server",
+      "args": [],
+      "supports": {
+        "stdio_transport": true
+      },
+      "outputs": ["JSON-RPC stdio (codex and codex-reply tools)"]
+    },
+    {
+      "name": "app-server",
+      "args": [],
+      "supports": {
+        "thread_start": true,
+        "thread_resume": true,
+        "turn_start": true,
+        "turn_interrupt": true
+      },
+      "outputs": ["JSON-RPC stdio (thread/turn notifications)"]
+    },
+    {
+      "name": "sandbox",
+      "args": ["platform (linux|macos|windows)", "-- <command...>"],
+      "supports": {
+        "full_auto": true,
+        "log_denials": "macos-only"
+      },
+      "outputs": ["inner command stdout/stderr/exit"]
+    },
+    {
+      "name": "responses-api-proxy",
+      "args": ["api key via stdin"],
+      "supports": {
+        "port": true,
+        "server_info": true,
+        "http_shutdown": true,
+        "upstream_url": true
+      },
+      "outputs": ["server info JSON (port/pid) when requested"],
+      "notes": [
+        "Starts `codex responses-api-proxy`, writes API key to stdin, and optionally emits `{port,pid}` via --server-info.",
+        "Strict HTTP proxy for POST /v1/responses; rejects other paths.",
+        "Client must configure a model provider pointing at the proxy base URL (via config.toml or -c overrides); models/tools are set by the client, not by the proxy.",
+        "Upstream defaults to https://api.openai.com/v1/responses; override with --upstream-url for compatible endpoints (e.g., Azure)."
+      ]
+    },
+    {
+      "name": "stdio-to-uds",
+      "args": ["socket_path"],
+      "supports": {
+        "stdio_bridge": true
+      },
+      "outputs": ["stdio bridged to Unix domain socket (echoable)"]
+    },
+    {
+      "name": "app-server codegen",
+      "args": ["ts|json", "out_dir"],
+      "supports": {
+        "prettier": "ts only",
+        "profile": true
+      },
+      "outputs": ["generated bindings in out_dir"]
+    }
+  ]
+}

@@ -93,7 +93,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn stream_from_codex(binary: &Path, prompt: &str) -> Result<(), Box<dyn Error>> {
     let mut command = Command::new(binary);
     command
-        .args(["exec", "--json", "--skip-git-repo-check", "--timeout", "0"])
+        .args(["exec", "--json", "--skip-git-repo-check"])
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())

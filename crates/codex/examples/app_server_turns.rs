@@ -13,7 +13,7 @@ use std::{collections::BTreeMap, env, path::PathBuf, time::Duration};
 
 use codex::mcp::{
     AppNotification, ClientInfo, CodexAppServer, McpError, StdioServerConfig, ThreadResumeParams,
-    ThreadStartParams, TurnInterruptParams, TurnStartParams,
+    ThreadStartParams, TurnInput, TurnInterruptParams, TurnStartParams,
 };
 use serde_json::Value;
 use tokio::time;
@@ -46,12 +46,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(resp) => resp,
             Err(err) => return Err(boxed_err(err)),
         }?;
+        let resolved_id = response
+            .get("thread_id")
+            .or_else(|| response.get("threadId"))
+            .or_else(|| response.get("thread").and_then(|t| t.get("id")))
+            .and_then(Value::as_str)
+            .unwrap_or("unknown");
         println!(
             "resumed thread {} (resumed={})",
-            response
-                .get("thread_id")
-                .and_then(Value::as_str)
-                .unwrap_or("unknown"),
+            resolved_id,
             response
                 .get("resumed")
                 .and_then(Value::as_bool)
@@ -72,6 +75,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }?;
         let id = response
             .get("thread_id")
+            .or_else(|| response.get("threadId"))
+            .or_else(|| response.get("thread").and_then(|t| t.get("id")))
             .and_then(Value::as_str)
             .unwrap_or_default()
             .to_string();
@@ -82,7 +87,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut turn = server
         .turn_start(TurnStartParams {
             thread_id: thread_id.clone(),
-            prompt,
+            input: vec![TurnInput {
+                kind: "text".into(),
+                text: Some(prompt),
+            }],
             model: None,
             config: BTreeMap::new(),
         })

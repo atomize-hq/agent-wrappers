@@ -30,7 +30,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 use thiserror::Error;
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -51,10 +51,10 @@ pub const METHOD_EXIT: &str = "exit";
 /// JSON-RPC cancellation method per the spec.
 pub const METHOD_CANCEL: &str = "$/cancelRequest";
 
-/// Method names exposed by `codex mcp-server`.
-pub const METHOD_CODEX: &str = "codex/codex";
-/// Method names exposed by `codex mcp-server` for follow-up prompts.
-pub const METHOD_CODEX_REPLY: &str = "codex/codex-reply";
+/// Tool-call method exposed by the MCP server.
+pub const METHOD_CODEX: &str = "tools/call";
+/// Tool-call method for follow-up prompts (codex-reply).
+pub const METHOD_CODEX_REPLY: &str = "tools/call";
 /// Notification channel emitted by `codex mcp-server`.
 pub const METHOD_CODEX_EVENT: &str = "codex/event";
 /// Expected approval response hook (server-specific; confirmed during E2).
@@ -1853,34 +1853,39 @@ pub struct ClientInfo {
 /// Parameters for the initial `initialize` handshake.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct InitializeParams {
+    #[serde(rename = "clientInfo")]
     pub client: ClientInfo,
+    #[serde(rename = "protocolVersion")]
+    pub protocol_version: String,
     #[serde(default)]
     pub capabilities: Value,
 }
 
 /// Parameters for `codex/codex` (new session).
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct CodexCallParams {
     pub prompt: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cwd: Option<PathBuf>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sandbox: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub approval_policy: Option<String>,
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub profile: Option<String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub config: BTreeMap<String, Value>,
 }
 
 /// Parameters for `codex/codex-reply` (continue an existing conversation).
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CodexReplyParams {
+    #[serde(rename = "conversationId")]
     pub conversation_id: String,
     pub prompt: String,
-    pub model: Option<String>,
-    pub cwd: Option<PathBuf>,
-    pub sandbox: Option<String>,
-    pub approval_policy: Option<String>,
-    #[serde(default)]
-    pub config: BTreeMap<String, Value>,
 }
 
 /// Classification for approval prompts surfaced by the MCP server.
@@ -1938,7 +1943,9 @@ pub enum CodexEvent {
 /// Final response payload for `codex/codex` or `codex/codex-reply`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CodexCallResult {
-    pub conversation_id: String,
+    #[serde(default, rename = "conversationId", alias = "conversation_id")]
+    pub conversation_id: Option<String>,
+    #[serde(default, rename = "content", alias = "output")]
     pub output: Value,
 }
 
@@ -1959,22 +1966,34 @@ pub struct ThreadStartParams {
 
 /// Parameters for `thread/resume`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ThreadResumeParams {
     pub thread_id: String,
 }
 
 /// Parameters for `turn/start`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TurnStartParams {
     pub thread_id: String,
-    pub prompt: String,
+    #[serde(rename = "input", alias = "prompt")]
+    pub input: Vec<TurnInput>,
     pub model: Option<String>,
     #[serde(default)]
     pub config: BTreeMap<String, Value>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TurnInput {
+    #[serde(rename = "type")]
+    pub kind: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+}
+
 /// Parameters for `turn/interrupt`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TurnInterruptParams {
     pub thread_id: Option<String>,
     pub turn_id: String,
@@ -2060,7 +2079,7 @@ pub struct CodexMcpServer {
 impl CodexMcpServer {
     /// Launch `codex mcp-server`, issue `initialize`, and return a connected handle.
     pub async fn start(config: StdioServerConfig, client: ClientInfo) -> Result<Self, McpError> {
-        Self::with_capabilities(config, client, Value::Null).await
+        Self::with_capabilities(config, client, Value::Object(Default::default())).await
     }
 
     /// Launch with explicit capabilities to send during `initialize`.
@@ -2069,9 +2088,14 @@ impl CodexMcpServer {
         client: ClientInfo,
         capabilities: Value,
     ) -> Result<Self, McpError> {
+        let capabilities = match capabilities {
+            Value::Null => Value::Object(Default::default()),
+            other => other,
+        };
         let transport = JsonRpcTransport::spawn_mcp(config).await?;
         let params = InitializeParams {
             client,
+            protocol_version: "2024-11-05".to_string(),
             capabilities,
         };
 
@@ -2087,13 +2111,13 @@ impl CodexMcpServer {
 
     /// Send a new Codex prompt via `codex/codex`.
     pub async fn codex(&self, params: CodexCallParams) -> Result<CodexCallHandle, McpError> {
-        self.invoke_codex_call(METHOD_CODEX, serde_json::to_value(params)?)
+        self.invoke_tool_call("codex", serde_json::to_value(params)?)
             .await
     }
 
     /// Continue an existing conversation via `codex/codex-reply`.
     pub async fn codex_reply(&self, params: CodexReplyParams) -> Result<CodexCallHandle, McpError> {
-        self.invoke_codex_call(METHOD_CODEX_REPLY, serde_json::to_value(params)?)
+        self.invoke_tool_call("codex-reply", serde_json::to_value(params)?)
             .await
     }
 
@@ -2121,13 +2145,17 @@ impl CodexMcpServer {
         self.transport.shutdown().await
     }
 
-    async fn invoke_codex_call(
+    async fn invoke_tool_call(
         &self,
-        method: &str,
-        params: Value,
+        tool_name: &str,
+        arguments: Value,
     ) -> Result<CodexCallHandle, McpError> {
         let events = self.transport.register_codex_listener().await;
-        let (request_id, raw_response) = self.transport.request(method, params).await?;
+        let request = json!({
+            "name": tool_name,
+            "arguments": arguments,
+        });
+        let (request_id, raw_response) = self.transport.request(METHOD_CODEX, request).await?;
         let response = map_response::<CodexCallResult>(raw_response);
 
         Ok(CodexCallHandle {
@@ -2146,7 +2174,7 @@ pub struct CodexAppServer {
 impl CodexAppServer {
     /// Launch `codex app-server`, issue `initialize`, and return a connected handle.
     pub async fn start(config: StdioServerConfig, client: ClientInfo) -> Result<Self, McpError> {
-        Self::with_capabilities(config, client, Value::Null).await
+        Self::with_capabilities(config, client, Value::Object(Default::default())).await
     }
 
     /// Launch with explicit capabilities to send during `initialize`.
@@ -2155,9 +2183,14 @@ impl CodexAppServer {
         client: ClientInfo,
         capabilities: Value,
     ) -> Result<Self, McpError> {
+        let capabilities = match capabilities {
+            Value::Null => Value::Object(Default::default()),
+            other => other,
+        };
         let transport = JsonRpcTransport::spawn_app(config).await?;
         let params = InitializeParams {
             client,
+            protocol_version: "2024-11-05".to_string(),
             capabilities,
         };
 
@@ -2637,26 +2670,36 @@ fn parse_request_id(value: &Value) -> Option<RequestId> {
 }
 
 fn parse_codex_event(value: &Value) -> Option<CodexEvent> {
-    let event_type = value.get("type")?.as_str()?;
+    let payload = value.get("msg").unwrap_or(value);
+    let event_type = payload.get("type")?.as_str()?;
+    let conversation_id = payload
+        .get("thread_id")
+        .or_else(|| payload.get("threadId"))
+        .or_else(|| payload.get("session_id"))
+        .or_else(|| payload.get("conversation_id"))
+        .or_else(|| payload.get("conversationId"))
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+
     match event_type {
         "task_complete" => Some(CodexEvent::TaskComplete {
-            conversation_id: value
-                .get("conversation_id")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_string(),
-            result: value.get("result").cloned().unwrap_or(Value::Null),
+            conversation_id,
+            result: payload
+                .get("result")
+                .cloned()
+                .unwrap_or_else(|| payload.clone()),
         }),
         "approval_required" | "approval" => {
-            let approval_id = value
+            let approval_id = payload
                 .get("approval_id")
-                .or_else(|| value.get("id"))
+                .or_else(|| payload.get("id"))
                 .and_then(Value::as_str)
                 .unwrap_or_default()
                 .to_string();
-            let raw_kind = value
+            let raw_kind = payload
                 .get("kind")
-                .or_else(|| value.get("approval_kind"))
+                .or_else(|| payload.get("approval_kind"))
                 .and_then(Value::as_str)
                 .unwrap_or("unknown")
                 .to_string();
@@ -2670,27 +2713,27 @@ fn parse_codex_event(value: &Value) -> Option<CodexEvent> {
             Some(CodexEvent::ApprovalRequired(ApprovalRequest {
                 approval_id,
                 kind,
-                payload: value.clone(),
+                payload: payload.clone(),
             }))
         }
         "cancelled" | "canceled" => Some(CodexEvent::Cancelled {
-            conversation_id: value
+            conversation_id: payload
                 .get("conversation_id")
                 .and_then(Value::as_str)
                 .map(|s| s.to_string()),
-            reason: value
+            reason: payload
                 .get("reason")
                 .and_then(Value::as_str)
                 .map(|s| s.to_string()),
         }),
         "error" => Some(CodexEvent::Error {
-            message: value
+            message: payload
                 .get("message")
-                .or_else(|| value.get("error"))
+                .or_else(|| payload.get("error"))
                 .and_then(Value::as_str)
                 .unwrap_or_default()
                 .to_string(),
-            data: value.get("data").cloned(),
+            data: payload.get("data").cloned(),
         }),
         _ => None,
     }
@@ -2831,7 +2874,7 @@ def mark_cancelled(target, reason="cancelled"):
     send({"jsonrpc": "2.0", "id": target, "error": {"code": -32800, "message": reason}})
 
 def handle_codex(req_id, params):
-    conversation_id = params.get("conversation_id") or f"conv-{req_id}"
+    conversation_id = params.get("conversation_id") or params.get("conversationId") or f"conv-{req_id}"
     pending[str(req_id)] = {"status": "pending", "conversation_id": conversation_id}
     def worker():
         time.sleep(0.05)
@@ -2855,8 +2898,12 @@ for line in sys.stdin:
     method = msg.get("method")
     if method == "initialize":
         send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"ready": True}})
-    elif method == "codex/codex" or method == "codex/codex-reply":
-        handle_codex(msg.get("id"), msg.get("params", {}))
+    elif method == "tools/call":
+        params = msg.get("params", {})
+        tool = params.get("name")
+        args = params.get("arguments", {})
+        if tool in ["codex", "codex-reply"]:
+            handle_codex(msg.get("id"), args)
     elif method == "$/cancelRequest":
         target = msg.get("params", {}).get("id")
         mark_cancelled(target, reason="client_cancel")
@@ -3456,6 +3503,7 @@ time.sleep(30)
             cwd: None,
             sandbox: None,
             approval_policy: None,
+            profile: None,
             config: BTreeMap::new(),
         };
 
@@ -3492,7 +3540,10 @@ time.sleep(30)
             .expect("response timeout")
             .expect("response recv");
         let response = response.expect("response ok");
-        assert_eq!(response.conversation_id, event_conversation);
+        assert_eq!(
+            response.conversation_id.as_deref(),
+            Some(event_conversation.as_str())
+        );
         assert_eq!(response.output, serde_json::json!({ "ok": true }));
 
         let _ = server.shutdown().await;
@@ -3508,6 +3559,7 @@ time.sleep(30)
             cwd: None,
             sandbox: None,
             approval_policy: None,
+            profile: None,
             config: BTreeMap::new(),
         };
 
@@ -3552,6 +3604,7 @@ time.sleep(30)
             cwd: None,
             sandbox: None,
             approval_policy: None,
+            profile: None,
             config: BTreeMap::new(),
         };
         let first = server.codex(params).await.expect("start codex");
@@ -3560,17 +3613,12 @@ time.sleep(30)
             .expect("response timeout")
             .expect("recv")
             .expect("ok");
-        let conversation_id = first_response.conversation_id;
+        let conversation_id = first_response.conversation_id.expect("conversation id set");
         assert!(!conversation_id.is_empty());
 
         let reply_params = CodexReplyParams {
             conversation_id: conversation_id.clone(),
             prompt: "follow up".into(),
-            model: None,
-            cwd: None,
-            sandbox: None,
-            approval_policy: None,
-            config: BTreeMap::new(),
         };
         let mut reply = server.codex_reply(reply_params).await.expect("codex reply");
 
@@ -3604,7 +3652,10 @@ time.sleep(30)
             .expect("response timeout")
             .expect("recv")
             .expect("ok");
-        assert_eq!(reply_response.conversation_id, conversation_id);
+        assert_eq!(
+            reply_response.conversation_id.as_deref(),
+            Some(conversation_id.as_str())
+        );
         assert_eq!(reply_response.output, serde_json::json!({ "ok": true }));
 
         let _ = server.shutdown().await;

@@ -71,6 +71,24 @@ async fn demo_app_server(binary: &Path, prompt: &str) -> Result<(), Box<dyn Erro
     let mut stdin = child.stdin.take().ok_or("stdin unavailable")?;
     let mut stdout = BufReader::new(child.stdout.take().ok_or("stdout unavailable")?).lines();
 
+    let initialize = json!({
+        "jsonrpc": "2.0",
+        "id": 0,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "client": {
+                "name": "codex-app-thread-turn-example",
+                "version": env!("CARGO_PKG_VERSION")
+            },
+            "clientInfo": {
+                "name": "codex-app-thread-turn-example",
+                "version": env!("CARGO_PKG_VERSION")
+            }
+        }
+    });
+
     let thread_request = json!({
         "jsonrpc": "2.0",
         "id": 1,
@@ -79,24 +97,32 @@ async fn demo_app_server(binary: &Path, prompt: &str) -> Result<(), Box<dyn Erro
             "metadata": {"source": "example"},
         }
     });
+    stdin.write_all(initialize.to_string().as_bytes()).await?;
+    stdin.write_all(b"\n").await?;
     stdin
         .write_all(thread_request.to_string().as_bytes())
         .await?;
     stdin.write_all(b"\n").await?;
 
-    let mut thread_id = "demo-thread".to_string();
-    if let Some(line) = stdout.next_line().await? {
+    let mut thread_id: Option<String> = None;
+    while let Some(line) = stdout.next_line().await? {
         if let Ok(value) = serde_json::from_str::<Value>(&line) {
-            if let Some(found) = value
-                .get("result")
-                .and_then(|r| r.get("threadId"))
-                .and_then(|v| v.as_str())
-            {
-                thread_id = found.to_string();
+            match parse_request_id(&value) {
+                Some(0) => println!("[initialize] {line}"),
+                Some(1) => {
+                    println!("[thread/start] {line}");
+                    thread_id = extract_thread_id(&value);
+                    break;
+                }
+                _ => println!("[app-server] {line}"),
             }
-            println!("[thread/start] {line}");
+        } else {
+            println!("[app-server] {line}");
         }
     }
+
+    let thread_id =
+        thread_id.ok_or("thread/start did not return a thread id; cannot start a turn")?;
 
     let turn_request = json!({
         "jsonrpc": "2.0",
@@ -104,7 +130,10 @@ async fn demo_app_server(binary: &Path, prompt: &str) -> Result<(), Box<dyn Erro
         "method": "turn/start",
         "params": {
             "threadId": thread_id,
-            "input": prompt,
+            "input": [{
+                "type": "text",
+                "text": prompt
+            }],
             "model": "gpt-5-codex",
             "sandbox": true
         }
@@ -145,6 +174,34 @@ fn print_sample_flow() {
             Err(_) => println!("{line}"),
         }
     }
+}
+
+fn normalize_uuid(raw: &str) -> String {
+    if raw.starts_with("urn:uuid:") {
+        raw.to_string()
+    } else {
+        format!("urn:uuid:{raw}")
+    }
+}
+
+fn parse_request_id(value: &Value) -> Option<u64> {
+    value.get("id").and_then(|id| {
+        id.as_u64()
+            .or_else(|| id.as_str().and_then(|s| s.parse().ok()))
+    })
+}
+
+fn extract_thread_id(value: &Value) -> Option<String> {
+    value
+        .get("result")
+        .and_then(|result| {
+            result
+                .get("threadId")
+                .or_else(|| result.get("thread_id"))
+                .or_else(|| result.get("thread").and_then(|thread| thread.get("id")))
+                .and_then(Value::as_str)
+        })
+        .map(normalize_uuid)
 }
 
 fn resolve_binary() -> PathBuf {

@@ -16,6 +16,13 @@ use codex::mcp::{
 };
 use tokio::time;
 
+#[derive(Default, Clone, Debug)]
+struct EventSummary {
+    conversation_id: Option<String>,
+    last_task_complete: Option<serde_json::Value>,
+    last_raw_event: Option<serde_json::Value>,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1).collect::<Vec<_>>();
@@ -51,6 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             cwd: None,
             sandbox: None,
             approval_policy: None,
+            profile: None,
             config: BTreeMap::new(),
         })
         .await
@@ -61,30 +69,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _ = server.cancel(handle.request_id);
     }
 
-    let conversation_id = stream_codex_events("codex/codex", &mut handle.events).await;
+    let summary = stream_codex_events("codex/codex", &mut handle.events).await;
     let first_response = match handle.response.await {
         Ok(resp) => resp,
         Err(err) => return Err(boxed_err(err)),
     };
+    let mut response_conversation = None;
     match first_response {
         Ok(resp) => {
-            println!("codex response: {}", resp.output);
-            println!("conversation: {}", resp.conversation_id);
+            response_conversation = resp.conversation_id.clone();
+            println!(
+                "codex response (full): {}",
+                serde_json::to_string_pretty(&resp).unwrap_or_else(|_| resp.output.to_string())
+            );
+            if let Some(task) = summary.last_task_complete.as_ref() {
+                println!(
+                    "last task_complete payload: {}",
+                    serde_json::to_string_pretty(task).unwrap_or_else(|_| task.to_string())
+                );
+            }
+            if let Some(raw) = summary.last_raw_event.as_ref() {
+                println!(
+                    "last raw codex/event: {}",
+                    serde_json::to_string_pretty(raw).unwrap_or_else(|_| raw.to_string())
+                );
+            }
+
+            let conv = resp
+                .conversation_id
+                .or_else(|| summary.conversation_id.clone());
+            match conv {
+                Some(conv) => {
+                    println!("conversation: {conv}");
+                    println!("(use this conversationId with mcp_codex_reply)");
+                }
+                None => println!("conversation: <missing>"),
+            }
         }
         Err(McpError::Cancelled) => eprintln!("codex call cancelled"),
         Err(other) => return Err(boxed_err(other)),
     }
 
+    let conversation_id = summary.conversation_id.or(response_conversation);
     if let (Some(follow_up_prompt), Some(conversation_id)) = (follow_up, conversation_id) {
         let mut follow_up = server
             .codex_reply(CodexReplyParams {
                 conversation_id: conversation_id.clone(),
                 prompt: follow_up_prompt,
-                model: None,
-                cwd: None,
-                sandbox: None,
-                approval_policy: None,
-                config: BTreeMap::new(),
             })
             .await
             .map_err(boxed_err)?;
@@ -95,7 +126,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Err(err) => return Err(boxed_err(err)),
         };
         match follow_up_response {
-            Ok(resp) => println!("codex-reply {} => {}", resp.conversation_id, resp.output),
+            Ok(resp) => {
+                println!(
+                    "codex-reply response (full): {}",
+                    serde_json::to_string_pretty(&resp).unwrap_or_else(|_| resp.output.to_string())
+                );
+                let conv = resp
+                    .conversation_id
+                    .unwrap_or_else(|| conversation_id.clone());
+                println!("codex-reply {} => {}", conv, resp.output);
+            }
             Err(err) => eprintln!("codex-reply failed: {err}"),
         }
     }
@@ -124,16 +164,22 @@ fn config_from_env() -> StdioServerConfig {
     }
 }
 
-async fn stream_codex_events(label: &str, events: &mut EventStream<CodexEvent>) -> Option<String> {
-    let mut conversation_id = None;
+async fn stream_codex_events(label: &str, events: &mut EventStream<CodexEvent>) -> EventSummary {
+    let mut summary = EventSummary::default();
     while let Some(event) = events.recv().await {
         match &event {
             CodexEvent::TaskComplete {
                 conversation_id: conv,
                 result,
             } => {
-                println!("[{label}] task_complete {conv}: {result}");
-                conversation_id = Some(conv.clone());
+                println!(
+                    "[{label}] task_complete {conv}: {}",
+                    serde_json::to_string_pretty(result).unwrap_or_else(|_| result.to_string())
+                );
+                if !conv.is_empty() {
+                    summary.conversation_id = Some(conv.clone());
+                }
+                summary.last_task_complete = Some(result.clone());
                 break;
             }
             CodexEvent::ApprovalRequired(req) => {
@@ -144,7 +190,9 @@ async fn stream_codex_events(label: &str, events: &mut EventStream<CodexEvent>) 
                 reason,
             } => {
                 println!("[{label}] cancelled {:?}: {:?}", conv, reason);
-                conversation_id = conv.clone();
+                if let Some(conv) = conv {
+                    summary.conversation_id = Some(conv.clone());
+                }
                 break;
             }
             CodexEvent::Error { message, data } => {
@@ -152,11 +200,24 @@ async fn stream_codex_events(label: &str, events: &mut EventStream<CodexEvent>) 
             }
             CodexEvent::Raw { method, params } => {
                 println!("[{label}] raw {method}: {params}");
+                summary.last_raw_event = Some(params.clone());
+                if summary.conversation_id.is_none() {
+                    if let Some(msg) = params.get("msg") {
+                        let candidate = msg
+                            .get("session_id")
+                            .or_else(|| msg.get("thread_id"))
+                            .or_else(|| msg.get("conversation_id"))
+                            .or_else(|| msg.get("conversationId"))
+                            .and_then(|value| value.as_str())
+                            .map(|conv| conv.to_string());
+                        summary.conversation_id = candidate.or(summary.conversation_id.clone());
+                    }
+                }
             }
         }
     }
 
-    conversation_id
+    summary
 }
 
 fn replay_sample(prompt: &str, follow_up: Option<&str>) {

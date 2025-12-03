@@ -73,14 +73,17 @@ async fn demo_mcp_server(binary: &Path, prompt: &str) -> Result<(), Box<dyn Erro
     let request = json!({
         "jsonrpc": "2.0",
         "id": 1,
-        "method": "tools/codex",
+        "method": "tools/call",
         "params": {
-            "prompt": prompt,
-            "cwd": env::current_dir().unwrap_or_default(),
-            "model": "gpt-5-codex",
-            "sandbox": true,
-            "approval": "auto"
-        }
+            "name": "codex",
+            "arguments": {
+                "prompt": prompt,
+                "cwd": env::current_dir().unwrap_or_default(),
+                "model": "gpt-5.1-codex",
+                "sandbox": "read-only",
+                "approval-policy": "never"
+            }
+        },
     });
 
     stdin.write_all(request.to_string().as_bytes()).await?;

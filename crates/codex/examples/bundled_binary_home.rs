@@ -23,11 +23,7 @@ use codex::{
     resolve_bundled_binary, AuthSeedOptions, AuthSessionHelper, BundledBinarySpec, CodexClient,
     CodexHomeLayout,
 };
-use std::{
-    env,
-    error::Error,
-    path::PathBuf,
-};
+use std::{env, error::Error, path::PathBuf};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -64,10 +60,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("Conversations: {}", layout.conversations_dir().display());
     println!("Logs: {}", layout.logs_dir().display());
     println!("Auth file: {}", layout.auth_path().display());
-    println!(
-        "Credentials file: {}",
-        layout.credentials_path().display()
-    );
+    println!("Credentials file: {}", layout.credentials_path().display());
 
     let client = CodexClient::builder()
         .binary(&bundled.binary_path)
@@ -82,7 +75,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let updated = auth.ensure_api_key_login(api_key).await?;
         println!("Auth status after ensure_api_key_login: {updated:?}");
     } else {
-        println!("Set CODEX_API_KEY to refresh login under {}", layout.root().display());
+        println!(
+            "Set CODEX_API_KEY to refresh login under {}",
+            layout.root().display()
+        );
     }
 
     let response = client.send_prompt(&prompt).await?;
