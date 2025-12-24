@@ -57,7 +57,7 @@
 //! - Integrate the stdio servers via `codex mcp-server` / `codex app-server` (`crates/codex/examples/mcp_codex_flow.rs`, `mcp_codex_tool.rs`, `mcp_codex_reply.rs`, `app_server_turns.rs`, `app_server_thread_turn.rs`) to drive JSON-RPC flows, approvals, and shutdown.
 //! - Gate optional flags with `crates/codex/examples/feature_detection.rs`, which parses `codex --version` + `codex features list` to decide whether to enable streaming, log tee, resume/apply/diff helpers, or app-server endpoints. Cache feature probes per binary path and refresh them when the Codex binary path, mtime, or reported version changes; emit upgrade advisories when required capabilities are missing.
 //!
-//! More end-to-end flows and CLI mappings live in `README.md` and `crates/codex/EXAMPLES.md`.
+//! More end-to-end flows and CLI mappings live in `crates/codex/README.md` and `crates/codex/EXAMPLES.md`.
 //!
 //! ## Capability/versioning surfaces (Workstream F)
 //! - `probe_capabilities` captures `--version`, `features list`, and `--help` hints into a `CodexCapabilities` snapshot with `collected_at` timestamps and `BinaryFingerprint` metadata keyed by canonical binary path.
