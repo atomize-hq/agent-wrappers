@@ -136,3 +136,10 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree `wt/ccp-c2-jsonl-code` on branch `ccp-c2-jsonl-code` (commit ee58a0f) implemented drift-tolerant JSONL parsing/normalization and added `crates/codex/JSONL_COMPAT.md`
 - Commands: `cargo fmt` (pass; no output); `cargo clippy --workspace --all-targets -- -D warnings` (pass; `Finished \`dev\` profile [unoptimized + debuginfo] target(s) in 8.24s`)
 - Blockers: none
+
+## [2026-01-26 16:44 UTC] Integration Agent – C2-integ – START
+- Checked out `feat/codex-cli-parity`, `git pull --ff-only` (already up to date)
+- Read ADR/plan/tasks/session log/C2-spec/kickoff prompt; updated `tasks.json` (C2-integ → `in_progress`)
+- Worktree pending (`ccp-c2-jsonl-integ` / `wt/ccp-c2-jsonl-integ` to be added after docs commit)
+- Plan: create integration worktree, merge `ccp-c2-jsonl-code` + `ccp-c2-jsonl-test`, reconcile to C2 spec, run fmt/clippy/`cargo test -p codex`/`make preflight`, commit integration, fast-forward into `feat/codex-cli-parity`, then update docs/log at end
+- Blockers: none
