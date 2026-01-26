@@ -1,0 +1,127 @@
+name: Codex CLI update snapshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Bare semver (example: 0.77.0)"
+        required: true
+        type: string
+      update_min_supported:
+        description: "Also update min_supported.txt to this version"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Fetch + validate upstream release
+        id: upstream
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          TAG="rust-v${VERSION}"
+          ASSET="codex-x86_64-unknown-linux-musl.tar.gz"
+
+          curl -fsSL "https://api.github.com/repos/openai/codex/releases/tags/${TAG}" > release.json
+          test "$(jq -r '.draft' release.json)" = "false"
+          test "$(jq -r '.prerelease' release.json)" = "false"
+
+          URL="$(jq -r --arg a "$ASSET" '.assets[] | select(.name==$a) | .browser_download_url' release.json)"
+          test -n "$URL" && test "$URL" != "null"
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "asset=${ASSET}" >> "$GITHUB_OUTPUT"
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Download artifact + update lockfile
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          ASSET: ${{ steps.upstream.outputs.asset }}
+          URL: ${{ steps.upstream.outputs.url }}
+        run: |
+          set -euo pipefail
+          curl -fsSL -o codex.tgz "$URL"
+          SIZE_BYTES="$(wc -c < codex.tgz | tr -d ' ')"
+          SHA256="$(sha256sum codex.tgz | awk '{print $1}')"
+
+          jq -n \
+            --arg v "$VERSION" \
+            --arg os "linux" \
+            --arg arch "x86_64" \
+            --arg variant "musl" \
+            --arg asset "$ASSET" \
+            --arg url "$URL" \
+            --arg sha "$SHA256" \
+            --argjson size "$SIZE_BYTES" \
+            '{codex_version:$v, os:$os, arch:$arch, variant:$variant, asset_name:$asset, download_url:$url, sha256:$sha, size_bytes:$size}' \
+            > artifact.json
+
+          jq \
+            --slurpfile new artifact.json \
+            '
+              .version = 1
+              | .upstream_repo = "openai/codex"
+              | .artifacts = (
+                  ( .artifacts // [] )
+                  | map(select(.codex_version != $new[0].codex_version or .os != $new[0].os or .arch != $new[0].arch or .variant != $new[0].variant))
+                  + $new
+                  | sort_by([(.codex_version|split(".")|map(tonumber)), .os, .arch, .variant])
+                )
+            ' \
+            cli_manifests/codex/artifacts.lock.json > artifacts.lock.json.tmp
+          mv artifacts.lock.json.tmp cli_manifests/codex/artifacts.lock.json
+
+          tar -xzf codex.tgz codex
+          install -m 0755 codex ./codex-x86_64-unknown-linux-musl
+          ./codex-x86_64-unknown-linux-musl --version
+
+      - name: Update version pointers
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          UPDATE_MIN_SUPPORTED: ${{ inputs.update_min_supported }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$VERSION" > cli_manifests/codex/latest_validated.txt
+          if [ "$UPDATE_MIN_SUPPORTED" = "true" ]; then
+            printf '%s\n' "$VERSION" > cli_manifests/codex/min_supported.txt
+          fi
+
+      - name: Regenerate snapshot (C0)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run -p xtask -- \
+            codex-snapshot \
+            --codex-binary ./codex-x86_64-unknown-linux-musl \
+            --out-dir cli_manifests/codex \
+            --capture-raw-help \
+            --supplement cli_manifests/codex/supplement/commands.json
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore: update codex cli snapshot to ${{ inputs.version }}"
+          title: "chore: update codex cli snapshot to ${{ inputs.version }}"
+          body: |
+            Updates Codex CLI snapshot artifacts and version pointers.
+
+            - Downloads `rust-v${{ inputs.version }}` linux musl binary and records `sha256` + `size_bytes` in `cli_manifests/codex/artifacts.lock.json`
+            - Regenerates `cli_manifests/codex/current.json` (and `raw_help/<version>/...`) via `xtask codex-snapshot`
+            - Updates `cli_manifests/codex/latest_validated.txt` (and optionally `min_supported.txt`)
+          branch: "automation/codex-cli-${{ inputs.version }}"
+          delete-branch: true
+

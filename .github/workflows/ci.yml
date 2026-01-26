@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - feat/codex-cli-parity
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  versions:
+    name: Read Codex version pointers
+    runs-on: ubuntu-latest
+    outputs:
+      latest_validated: ${{ steps.versions.outputs.latest_validated }}
+      min_supported: ${{ steps.versions.outputs.min_supported }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "latest_validated=$(tr -d '\n' < cli_manifests/codex/latest_validated.txt)" >> "$GITHUB_OUTPUT"
+          echo "min_supported=$(tr -d '\n' < cli_manifests/codex/min_supported.txt)" >> "$GITHUB_OUTPUT"
+
+  linux-latest-validated:
+    name: Linux (latest validated)
+    runs-on: ubuntu-latest
+    needs: versions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Acquire Codex CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.versions.outputs.latest_validated }}"
+          ASSET="codex-x86_64-unknown-linux-musl.tar.gz"
+
+          URL="$(jq -r --arg v "$VERSION" --arg a "$ASSET" '.artifacts[] | select(.codex_version==$v and .os=="linux" and .arch=="x86_64" and .variant=="musl" and .asset_name==$a) | .download_url' cli_manifests/codex/artifacts.lock.json)"
+          SHA="$(jq -r --arg v "$VERSION" --arg a "$ASSET" '.artifacts[] | select(.codex_version==$v and .os=="linux" and .arch=="x86_64" and .variant=="musl" and .asset_name==$a) | .sha256' cli_manifests/codex/artifacts.lock.json)"
+          SIZE="$(jq -r --arg v "$VERSION" --arg a "$ASSET" '.artifacts[] | select(.codex_version==$v and .os=="linux" and .arch=="x86_64" and .variant=="musl" and .asset_name==$a) | .size_bytes' cli_manifests/codex/artifacts.lock.json)"
+
+          test -n "$URL" && test "$URL" != "null"
+          test -n "$SHA" && test "$SHA" != "null"
+          test -n "$SIZE" && test "$SIZE" != "null"
+
+          curl -fsSL -o codex.tgz "$URL"
+          test "$(wc -c < codex.tgz)" = "$SIZE"
+          echo "$SHA  codex.tgz" | sha256sum -c -
+          tar -xzf codex.tgz codex
+          install -m 0755 codex ./codex-x86_64-unknown-linux-musl
+          ./codex-x86_64-unknown-linux-musl --version
+
+      - name: Validated checks (real binary)
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CODEX_E2E_HOME="$(mktemp -d)"
+          export CODEX_HOME="$CODEX_E2E_HOME"
+          cargo test -p codex
+          cargo test -p codex --examples
+          CODEX_E2E_BINARY=./codex-x86_64-unknown-linux-musl cargo test -p codex --test cli_e2e -- --nocapture
+
+  linux-min-supported:
+    name: Linux (min supported)
+    runs-on: ubuntu-latest
+    needs: versions
+    if: ${{ needs.versions.outputs.min_supported != needs.versions.outputs.latest_validated }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Acquire Codex CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.versions.outputs.min_supported }}"
+          ASSET="codex-x86_64-unknown-linux-musl.tar.gz"
+
+          URL="$(jq -r --arg v "$VERSION" --arg a "$ASSET" '.artifacts[] | select(.codex_version==$v and .os=="linux" and .arch=="x86_64" and .variant=="musl" and .asset_name==$a) | .download_url' cli_manifests/codex/artifacts.lock.json)"
+          SHA="$(jq -r --arg v "$VERSION" --arg a "$ASSET" '.artifacts[] | select(.codex_version==$v and .os=="linux" and .arch=="x86_64" and .variant=="musl" and .asset_name==$a) | .sha256' cli_manifests/codex/artifacts.lock.json)"
+          SIZE="$(jq -r --arg v "$VERSION" --arg a "$ASSET" '.artifacts[] | select(.codex_version==$v and .os=="linux" and .arch=="x86_64" and .variant=="musl" and .asset_name==$a) | .size_bytes' cli_manifests/codex/artifacts.lock.json)"
+
+          test -n "$URL" && test "$URL" != "null"
+          test -n "$SHA" && test "$SHA" != "null"
+          test -n "$SIZE" && test "$SIZE" != "null"
+
+          curl -fsSL -o codex.tgz "$URL"
+          test "$(wc -c < codex.tgz)" = "$SIZE"
+          echo "$SHA  codex.tgz" | sha256sum -c -
+          tar -xzf codex.tgz codex
+          install -m 0755 codex ./codex-x86_64-unknown-linux-musl
+          ./codex-x86_64-unknown-linux-musl --version
+
+      - name: Validated checks (real binary)
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CODEX_E2E_HOME="$(mktemp -d)"
+          export CODEX_HOME="$CODEX_E2E_HOME"
+          cargo test -p codex
+          cargo test -p codex --examples
+          CODEX_E2E_BINARY=./codex-x86_64-unknown-linux-musl cargo test -p codex --test cli_e2e -- --nocapture
