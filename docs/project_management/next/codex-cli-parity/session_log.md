@@ -89,3 +89,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Commands: `cargo fmt` (skipped; no-op); `cargo test -p codex` (skipped; no-op)
 - Results: no meaningful tests-only work for C1 because the spec is workflows/CI + lockfile updates with no new Rust logic to validate in `cargo test`; validation belongs to workflow execution (C1-code/C1-integ)
 - Blockers: none
+
+## [2026-01-26 16:01 UTC] Code Agent – C1-code – END
+- Worktree `wt/ccp-c1-validation-code` on branch `ccp-c1-validation-code` (commit efc4e5d) added C1 workflows + initial `artifacts.lock.json` entry for `0.61.0`
+- Commands: `cargo fmt` (pass; no output); `cargo clippy --workspace --all-targets -- -D warnings` (pass; `Finished \`dev\` profile [unoptimized + debuginfo] target(s) in 0.03s`)
+- Result: CI downloads `latest_validated.txt` Codex CLI from `cli_manifests/codex/artifacts.lock.json` and runs ADR “validated” checks; Release Watch + Update Snapshot workflows automate candidate detection and PR-based snapshot updates
+- Blockers: none

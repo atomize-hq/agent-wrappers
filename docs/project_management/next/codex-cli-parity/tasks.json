@@ -124,7 +124,7 @@
     "name": "Version policy + CI workflows (code)",
     "type": "code",
     "phase": "C1",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Implement the C1 spec (workflows, pointers, CI wiring; non-test changes only).",
     "references": [
       "docs/adr/0001-codex-cli-parity-maintenance.md",
