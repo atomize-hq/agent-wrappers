@@ -504,19 +504,60 @@ fn parse_flag_line(line: &str) -> Option<FlagSnapshot> {
     }
 
     let (tokens_part, _) = split_tokens_and_desc(trimmed);
-    let re_long = Regex::new(r"(?P<long>--[A-Za-z0-9][A-Za-z0-9-]*)").unwrap();
-    let re_short = Regex::new(r"(?P<short>-[A-Za-z0-9])").unwrap();
-    let long = re_long
-        .captures(tokens_part)
-        .and_then(|c| c.name("long").map(|m| m.as_str().to_string()));
-    let short = re_short
-        .captures(tokens_part)
-        .and_then(|c| c.name("short").map(|m| m.as_str().to_string()));
+    let mut long: Option<String> = None;
+    let mut short: Option<String> = None;
+    let mut value_name: Option<String> = None;
 
-    let value_name = Regex::new(r"<(?P<name>[^>]+)>")
-        .unwrap()
-        .captures(tokens_part)
-        .and_then(|c| c.name("name").map(|m| m.as_str().to_string()));
+    for tok in tokens_part.split_whitespace() {
+        let tok = tok.trim_end_matches(',').trim();
+        if tok.is_empty() {
+            continue;
+        }
+
+        if tok.starts_with("--") {
+            if long.is_none()
+                && tok.len() >= 3
+                && tok[2..]
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-')
+            {
+                long = Some(tok.to_string());
+            }
+            continue;
+        }
+
+        if tok.starts_with('-') && !tok.starts_with("--") {
+            if short.is_none()
+                && tok.len() == 2
+                && tok
+                    .chars()
+                    .nth(1)
+                    .is_some_and(|c| c.is_ascii_alphanumeric())
+            {
+                short = Some(tok.to_string());
+            }
+            continue;
+        }
+
+        if value_name.is_none() {
+            if tok.starts_with('<') && tok.ends_with('>') && tok.len() > 2 {
+                value_name = Some(
+                    tok.trim_start_matches('<')
+                        .trim_end_matches('>')
+                        .to_string(),
+                );
+                continue;
+            }
+
+            if tok
+                .chars()
+                .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_' || c == '-')
+            {
+                value_name = Some(tok.to_string());
+                continue;
+            }
+        }
+    }
 
     let takes_value = value_name.is_some();
 

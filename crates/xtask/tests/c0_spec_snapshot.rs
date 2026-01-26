@@ -340,11 +340,17 @@ mod unix {
             .and_then(Value::as_array)
             .expect("exec.flags is array");
 
+        let beta = exec_flags
+            .iter()
+            .find(|f| f.get("long").and_then(Value::as_str) == Some("--beta"));
         assert!(
-            exec_flags
-                .iter()
-                .any(|f| f.get("long").and_then(Value::as_str) == Some("--beta")),
+            beta.is_some(),
             "exec.flags includes --beta (after blank line)"
+        );
+        assert_eq!(
+            beta.and_then(|f| f.get("short")).and_then(Value::as_str),
+            None,
+            "--beta is long-only and must not be mis-parsed as a short flag"
         );
         assert!(
             exec_flags
