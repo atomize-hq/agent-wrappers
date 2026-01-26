@@ -405,7 +405,7 @@
     "name": "Ops playbook + promotion rules (test)",
     "type": "test",
     "phase": "C3",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Add any tests/fixtures needed by C3 spec changes (tests only). This is expected to be a no-op unless C3 introduces testable logic.",
     "references": [
       "docs/adr/0001-codex-cli-parity-maintenance.md",

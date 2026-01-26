@@ -160,6 +160,13 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Plan: add `cli_manifests/codex/OPS_PLAYBOOK.md` + link from `cli_manifests/codex/README.md`, run fmt+clippy, commit via worktree, then update docs/log at end
 - Blockers: none
 
+## [2026-01-26 17:14 UTC] Test Agent – C3-test – START
+- Checked out `feat/codex-cli-parity`, `git pull --ff-only` (already up to date)
+- Read ADR/plan/tasks/session log/C3-spec/kickoff prompt; updated `tasks.json` (C3-test → `in_progress`)
+- Worktree pending (`ccp-c3-ops-test` / `wt/ccp-c3-ops-test` to be added after docs commit)
+- Plan: evaluate whether C3 introduces testable Rust logic; if yes, add tests/fixtures only and run `cargo fmt` + `cargo test -p codex`; otherwise record a no-op END entry with rationale
+- Blockers: none
+
 ## [2026-01-26 17:13 UTC] Code Agent – C3-code – END
 - Worktree `wt/ccp-c3-ops-code` on branch `ccp-c3-ops-code` (commit ff10a2b) added maintainer ops runbook at `cli_manifests/codex/OPS_PLAYBOOK.md` and linked it from `cli_manifests/codex/README.md`
 - Commands: `cargo fmt` (pass; no output); `cargo clippy --workspace --all-targets -- -D warnings` (pass; `Finished \`dev\` profile [unoptimized + debuginfo] target(s) in 8.52s`)
