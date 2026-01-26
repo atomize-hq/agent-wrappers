@@ -244,7 +244,7 @@
     "name": "JSONL + notifications compatibility (code)",
     "type": "code",
     "phase": "C2",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Implement the C2 spec (compatibility/normalization; non-test changes only).",
     "references": [
       "docs/adr/0001-codex-cli-parity-maintenance.md",
@@ -284,7 +284,7 @@
     "name": "JSONL + notifications compatibility (test)",
     "type": "test",
     "phase": "C2",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Add fixtures + tests validating the C2 spec (tests only).",
     "references": [
       "docs/adr/0001-codex-cli-parity-maintenance.md",

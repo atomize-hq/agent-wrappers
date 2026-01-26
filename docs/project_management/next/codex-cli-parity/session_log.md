@@ -110,3 +110,17 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Commands (validated): `CODEX_E2E_HOME=$(mktemp -d) CODEX_HOME=$CODEX_E2E_HOME CODEX_E2E_BINARY=./codex-x86_64-unknown-linux-musl cargo test -p codex --test cli_e2e -- --nocapture` (pass; live e2e remains opt-in via `CODEX_E2E_LIVE=1`)
 - Commands: `make preflight` (pass)
 - Blockers: none
+
+## [2026-01-26 16:24 UTC] Test Agent – C2-test – START
+- Checked out `feat/codex-cli-parity`, `git pull --ff-only` (up to date)
+- Read ADR/plan/tasks/session log/C2-spec/kickoff prompt; updated `tasks.json` (C2-test → `in_progress`)
+- Worktree pending (`ccp-c2-jsonl-test` / `wt/ccp-c2-jsonl-test` to be added after docs commit)
+- Plan: add versioned JSONL fixtures (`0.61.0`, `0.77.0`) + `crates/codex/tests/jsonl_compat.rs` coverage for drift-tolerant parsing, unknown-field retention, and malformed-line non-fatal behavior; run `cargo fmt` + `cargo test -p codex`; commit via worktree; update docs/log at end
+- Blockers: none
+
+## [2026-01-26 16:23 UTC] Code Agent – C2-code – START
+- Checked out `feat/codex-cli-parity`, `git pull --ff-only` (already up to date)
+- Read plan/tasks/session log/C2-spec/kickoff prompt; updated `tasks.json` (C2-code → `in_progress`)
+- Worktree pending (`ccp-c2-jsonl-code` / `wt/ccp-c2-jsonl-code` to be added after docs commit)
+- Plan: implement drift-tolerant JSONL + notification parsing/normalization + unknown-field capture, write `crates/codex/JSONL_COMPAT.md`, run fmt+clippy, commit via worktree, then update docs/log at end
+- Blockers: none
