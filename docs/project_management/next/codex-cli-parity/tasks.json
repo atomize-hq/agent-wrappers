@@ -204,7 +204,7 @@
     "name": "Version policy + CI workflows (integration)",
     "type": "integration",
     "phase": "C1",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Merge C1 code+test branches, reconcile to spec, and gate with validated real-binary checks + make preflight.",
     "references": [
       "docs/adr/0001-codex-cli-parity-maintenance.md",

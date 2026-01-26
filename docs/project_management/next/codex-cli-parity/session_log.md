@@ -102,3 +102,11 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree pending (`ccp-c1-validation-integ` / `wt/ccp-c1-validation-integ` to be added after docs commit)
 - Plan: create integration worktree, merge `ccp-c1-validation-code` + `ccp-c1-validation-test`, reconcile to C1 spec, run fmt/clippy/`cargo test -p codex`/`cargo test -p codex --examples`/real-binary `cli_e2e` (isolated `CODEX_HOME`) + `make preflight`, commit integration, fast-forward into `feat/codex-cli-parity`, then update docs/log at end
 - Blockers: none
+
+## [2026-01-26 16:19 UTC] Integration Agent – C1-integ – END
+- Worktree `wt/ccp-c1-validation-integ` on branch `ccp-c1-validation-integ` (commit 144d594) merged `ccp-c1-validation-code` (+ no-op `ccp-c1-validation-test`), reconciled to C1-spec.md, and fast-forwarded `feat/codex-cli-parity`
+- Changes: added C1 workflows + `cli_manifests/codex/artifacts.lock.json`; hardened tar extraction to handle archives whose member is not named `codex`; made `cli_e2e` resolve `CODEX_E2E_BINARY=./codex-x86_64-unknown-linux-musl` from workspace root; retried transient `ETXTBSY` spawns to avoid flaky tests
+- Commands: `cargo fmt` (pass); `cargo clippy --workspace --all-targets -- -D warnings` (pass); `cargo test -p codex` (pass); `cargo test -p codex --examples` (pass)
+- Commands (validated): `CODEX_E2E_HOME=$(mktemp -d) CODEX_HOME=$CODEX_E2E_HOME CODEX_E2E_BINARY=./codex-x86_64-unknown-linux-musl cargo test -p codex --test cli_e2e -- --nocapture` (pass; live e2e remains opt-in via `CODEX_E2E_LIVE=1`)
+- Commands: `make preflight` (pass)
+- Blockers: none
