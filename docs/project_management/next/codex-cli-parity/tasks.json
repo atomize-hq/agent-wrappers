@@ -4,7 +4,7 @@
     "name": "Snapshot schema + generator (code)",
     "type": "code",
     "phase": "C0",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Implement the C0 spec (snapshot schema + generator; non-test changes only).",
     "references": [
       "docs/adr/0001-codex-cli-parity-maintenance.md",

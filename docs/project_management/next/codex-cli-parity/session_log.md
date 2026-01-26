@@ -39,6 +39,12 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Plan: implement `xtask codex-snapshot`, add v1 schema docs + supplement scaffold, run fmt+clippy, commit via worktree, then update docs/log at end
 - Blockers: none
 
+## [2026-01-26 15:22 UTC] Code Agent – C0-code – END
+- Worktree `wt/ccp-c0-snapshot-code` on branch `ccp-c0-snapshot-code` (commit dd8933c) added `crates/xtask` and v1 snapshot schema tooling/docs under `cli_manifests/codex/`
+- Commands: `cargo fmt` (pass); `cargo clippy --workspace --all-targets -- -D warnings` (fail: pre-existing failures in `crates/codex/src/mcp.rs` and `crates/codex/src/lib.rs`); optional `cargo clippy -p xtask --all-targets -- -D warnings` (pass)
+- Result: canonical generator command documented; supplement scaffold added at `cli_manifests/codex/supplement/commands.json`; generator writes `cli_manifests/codex/current.json` (+ optional `raw_help/<version>/**`)
+- Blockers: workspace clippy is currently red due to `codex` crate issues unrelated to C0 generator output
+
 ## [2026-01-26 15:02 UTC] Test Agent – C0-test – START
 - Checked out `feat/codex-cli-parity`, `git pull --ff-only` (up to date)
 - Read plan/tasks/session log/C0-spec/kickoff prompt; updated `tasks.json` (C0-test → `in_progress`)
