@@ -69,3 +69,10 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree `wt/ccp-c0-snapshot-integ` on branch `ccp-c0-snapshot-integ` (commit 03a8c28) merged `ccp-c0-snapshot-code` + `ccp-c0-snapshot-test`, reconciled to C0 spec, and fast-forwarded `feat/codex-cli-parity`
 - Commands: `cargo fmt` (pass); `cargo clippy --workspace --all-targets -- -D warnings` (pass); `cargo test -p xtask` (pass); `make preflight` (pass)
 - Blockers: none
+
+## [2026-01-26 15:53 UTC] Code Agent – C1-code – START
+- Checked out `feat/codex-cli-parity`, `git pull --ff-only` (up to date)
+- Read plan/tasks/session log/C1-spec/kickoff prompt; updated `tasks.json` (C1-code → `in_progress`)
+- Worktree pending (`ccp-c1-validation-code` / `wt/ccp-c1-validation-code` to be added after docs commit)
+- Plan: implement C1 workflows + artifact lockfile, wire CI real-binary validation, run fmt+clippy, commit via worktree, then update docs/log at end
+- Blockers: none
