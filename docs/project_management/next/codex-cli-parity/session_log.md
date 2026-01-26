@@ -174,7 +174,7 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Blockers: none
 
 ## [2026-01-26 17:13 UTC] Code Agent – C3-code – END
-- Worktree `wt/ccp-c3-ops-code` on branch `ccp-c3-ops-code` (commit ff10a2b) added maintainer ops runbook at `cli_manifests/codex/OPS_PLAYBOOK.md` and linked it from `cli_manifests/codex/README.md`
-- Commands: `cargo fmt` (pass; no output); `cargo clippy --workspace --all-targets -- -D warnings` (pass; `Finished \`dev\` profile [unoptimized + debuginfo] target(s) in 8.52s`)
+- Worktree `wt/ccp-c3-ops-code` on branch `ccp-c3-ops-code` (commit dd3f32f) added maintainer ops runbook at `cli_manifests/codex/OPS_PLAYBOOK.md` and linked it from `cli_manifests/codex/README.md`
+- Commands: `cargo fmt` (pass; no output); `cargo clippy --workspace --all-targets -- -D warnings` (pass; `Finished \`dev\` profile [unoptimized + debuginfo] target(s) in 8.47s`)
 - Result: explicit policy docs for intentionally-unwrapped surfaces + promotion criteria; documented Release Watch triage, Update Snapshot workflow usage, snapshot diff review checklist, and Linux trial run `0.61.0 → 0.77.0`
 - Blockers: none
