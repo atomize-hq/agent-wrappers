@@ -16,8 +16,8 @@ Source: `docs/adr/0001-codex-cli-parity-maintenance.md`
   - Add `cli_manifests/codex/supplement/commands.json` with `version: 1` and at least one documented example entry (it may be a no-op supplement initially).
 - `C0-test` (tests only):
   - Add tests under `crates/xtask/tests/` plus any test-only fixtures under `crates/xtask/tests/fixtures/` to validate:
-    - `commands` are stable-sorted lexicographically by `path`
-    - `flags` are stable-sorted by `long` then `short`
+    - `commands` ordering follows “Deterministic ordering rules (v1)” below
+    - `flags` ordering follows “Deterministic ordering rules (v1)” below
     - supplement entries from `cli_manifests/codex/supplement/commands.json` are applied and recorded in `known_omissions`
     - snapshot JSON is deterministic when `collected_at` is fixed in test
 - `C0-integ`:
@@ -60,6 +60,28 @@ Source: `docs/adr/0001-codex-cli-parity-maintenance.md`
       - `path` (array of strings): command/subcommand tokens (same shape as snapshot `commands[].path`)
       - `platforms` (array of strings, optional): `linux|macos|windows|wsl`
       - `note` (string): why this supplement exists / what help omission it covers
+
+### Deterministic ordering rules (v1)
+To keep diffs meaningful, snapshot generation must apply the following stable ordering rules before serialization:
+- `commands` are sorted lexicographically by `path` tokens:
+  - Compare token-by-token using Rust’s default string ordering (byte/Unicode scalar ordering; case-sensitive).
+  - If one path is a strict prefix of the other, the shorter path sorts first (e.g., `["exec"]` before `["exec","resume"]`).
+- `flags` are sorted by `(long, short)` with explicit handling for missing keys:
+  - Primary key: `long` (missing sorts after present).
+  - Secondary key: `short` (missing sorts after present).
+  - Ties are broken by stable sort (preserve original discovery order).
+
+### Supplement application semantics (v1)
+The supplement mechanism exists to make help gaps explicit and reviewable without relying on heuristic parsing.
+- Each entry in `cli_manifests/codex/supplement/commands.json` represents a command path that should exist in the snapshot even if it is missing from `--help` output.
+- Application rules:
+  - If the supplemented `path` is missing from the discovered command set, insert a `commands[]` entry with that `path`.
+  - If `platforms` is present, set/override `commands[].platforms` to those values.
+  - Preserve help-derived fields (`about`, `usage`, `flags`, `args`) when available; supplements should not fabricate help text.
+- `known_omissions` recording:
+  - For every applied supplement entry, append an identifier string of the form:
+    - `supplement/commands.json:v1:<path-joined-by-space>`
+    - Example: `supplement/commands.json:v1:exec resume`
 
 ### Snapshot schema (v1)
 `cli_manifests/codex/current.json` fields (required unless marked optional):

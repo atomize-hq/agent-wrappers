@@ -13,7 +13,7 @@ Expected deliverables (exact paths):
 3. Set `C3-integ` status to `in_progress` in `docs/project_management/next/codex-cli-parity/tasks.json` (orchestration branch only).
 4. Add START entry to `docs/project_management/next/codex-cli-parity/session_log.md`; commit docs (`docs: start C3-integ`).
 5. Create the integration branch and worktree: `git worktree add -b ccp-c3-ops-integ wt/ccp-c3-ops-integ feat/codex-cli-parity`.
-6. Do **not** edit docs/tasks/session_log from the worktree.
+6. Do **not** edit `docs/project_management/next/codex-cli-parity/tasks.json` or `docs/project_management/next/codex-cli-parity/session_log.md` from the worktree.
 
 ## Requirements
 - Merge branches `ccp-c3-ops-code` + `ccp-c3-ops-test` and reconcile behavior to `docs/project_management/next/codex-cli-parity/C3-spec.md`.

@@ -284,7 +284,7 @@ This ADR commits us to building on existing pieces already present in the repo:
 
 Local binaries available at the time of writing:
 
-- Repo-pinned binary: `./codex-x86_64-unknown-linux-musl` → `codex-cli 0.61.0`
+- Repo-local (gitignored) binary: `./codex-x86_64-unknown-linux-musl` → `codex-cli 0.61.0`
 - System binary on `PATH`: `codex` → `codex-cli 0.77.0`
 
 Help diff signal (0.61.0 → 0.77.0) includes at least:

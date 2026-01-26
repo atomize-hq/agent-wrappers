@@ -11,7 +11,9 @@ Implement the ADR 0001 “CLI Snapshot → Diff → Update” release-trailing w
 - Code: production (non-test) changes only. Required commands: `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.
 - Test: tests/fixtures/harnesses only. Required commands: `cargo fmt`; targeted `cargo test ...` for suites added/touched.
 - Integration: merges code+tests, reconciles to spec, and must run `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, relevant tests, and `make preflight`.
-- Docs/tasks/session_log edits happen only on the orchestration branch (`feat/codex-cli-parity`), never from worktrees.
+- Planning-pack docs edits happen only on the orchestration branch (`feat/codex-cli-parity`), never from worktrees:
+  - `docs/project_management/next/codex-cli-parity/tasks.json`
+  - `docs/project_management/next/codex-cli-parity/session_log.md`
 - Safety: this feature must not introduce crate-runtime binary auto-download/auto-update behavior; any downloads happen only in CI/workflows per ADR.
 
 ## Branch & Worktree Conventions
@@ -26,7 +28,7 @@ Implement the ADR 0001 “CLI Snapshot → Diff → Update” release-trailing w
 
 ## Triad Overview
 - **C0 – Snapshot schema + generator:** Add `crates/xtask` with `xtask codex-snapshot ...` and define the canonical on-disk snapshot layout under `cli_manifests/codex/` including `current.json`, `raw_help/<version>/...`, and `supplement/commands.json`.
-- **C1 – Version policy + CI workflows:** Create `.github/workflows/ci.yml`, `.github/workflows/codex-cli-release-watch.yml`, `.github/workflows/codex-cli-update-snapshot.yml`, and `cli_manifests/codex/artifacts.lock.json` to validate real binaries on Linux and automate snapshot updates (downloads only in CI/workflows).
+- **C1 – Version policy + CI workflows:** Create `.github/workflows/ci.yml`, `.github/workflows/codex-cli-release-watch.yml`, `.github/workflows/codex-cli-update-snapshot.yml`, and `cli_manifests/codex/artifacts.lock.json` to validate real binaries on Linux and automate snapshot updates (downloads only in CI/workflows; upstream tags look like `rust-v<version>` and the Linux musl asset is `codex-x86_64-unknown-linux-musl.tar.gz`).
 - **C2 – JSONL + notifications compatibility:** Add drift-tolerant parsing/normalization plus fixtures at `crates/codex/examples/fixtures/versioned/` and tests in `crates/codex/tests/jsonl_compat.rs`.
 - **C3 – Ops playbook + promotion rules:** Write the maintainer runbook at `cli_manifests/codex/OPS_PLAYBOOK.md` (linked from `cli_manifests/codex/README.md`) including the trial-run checklist and promotion criteria for intentionally unwrapped surfaces.
 
@@ -36,11 +38,11 @@ Implement the ADR 0001 “CLI Snapshot → Diff → Update” release-trailing w
 3. Set the task status to `in_progress` in `docs/project_management/next/codex-cli-parity/tasks.json` (orchestration branch only).
 4. Add a START entry to `docs/project_management/next/codex-cli-parity/session_log.md`; commit docs (`docs: start <task-id>`).
 5. Create the task branch and worktree from `feat/codex-cli-parity`: `git worktree add -b <branch> wt/<branch> feat/codex-cli-parity`.
-6. Do **not** edit docs/tasks/session_log from the worktree.
+6. Do **not** edit `docs/project_management/next/codex-cli-parity/tasks.json` or `docs/project_management/next/codex-cli-parity/session_log.md` from the worktree.
 
 ## End Checklist (code/test)
 1. Run required commands (code: fmt + clippy; test: fmt + targeted tests) and capture outputs.
-2. From inside the worktree, commit task branch changes (no docs/tasks/session_log edits).
+2. From inside the worktree, commit task branch changes (no planning-pack docs edits).
 3. From outside the worktree, ensure the task branch contains the worktree commit (fast-forward if needed). Do **not** merge into `feat/codex-cli-parity`.
 4. Checkout `feat/codex-cli-parity`; update `docs/project_management/next/codex-cli-parity/tasks.json` status; add an END entry to `docs/project_management/next/codex-cli-parity/session_log.md` with commands/results/blockers; commit docs (`docs: finish <task-id>`).
 5. Remove the worktree: `git worktree remove wt/<branch>`.
