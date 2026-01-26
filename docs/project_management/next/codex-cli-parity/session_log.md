@@ -76,3 +76,10 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree pending (`ccp-c1-validation-code` / `wt/ccp-c1-validation-code` to be added after docs commit)
 - Plan: implement C1 workflows + artifact lockfile, wire CI real-binary validation, run fmt+clippy, commit via worktree, then update docs/log at end
 - Blockers: none
+
+## [2026-01-26 15:55 UTC] Test Agent – C1-test – START
+- Checked out `feat/codex-cli-parity`, `git pull --ff-only` (up to date)
+- Read plan/tasks/session log/C1-spec/kickoff prompt; updated `tasks.json` (C1-test → `in_progress`)
+- Worktree pending (`ccp-c1-validation-test` / `wt/ccp-c1-validation-test` to be added after docs commit)
+- Plan: evaluate whether C1 introduces any new testable Rust logic; if yes, add tests/fixtures only and run `cargo fmt` + `cargo test -p codex`; otherwise record a no-op END entry with rationale
+- Blockers: none

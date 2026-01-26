@@ -164,7 +164,7 @@
     "name": "Version policy + CI workflows (test)",
     "type": "test",
     "phase": "C1",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Add tests validating the C1 spec (tests only). This is expected to be a no-op unless C1 introduces testable logic.",
     "references": [
       "docs/adr/0001-codex-cli-parity-maintenance.md",
