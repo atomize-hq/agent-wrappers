@@ -124,3 +124,10 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree pending (`ccp-c2-jsonl-test` / `wt/ccp-c2-jsonl-test` to be added after docs commit)
 - Plan: add versioned JSONL fixtures (`0.61.0`, `0.77.0`) + `crates/codex/tests/jsonl_compat.rs` coverage for drift-tolerant parsing, unknown-field retention, and malformed-line non-fatal behavior; run `cargo fmt` + `cargo test -p codex`; commit via worktree; update docs/log at end
 - Blockers: none
+
+## [2026-01-26 16:38 UTC] Test Agent – C2-test – END
+- Worktree `wt/ccp-c2-jsonl-test` on branch `ccp-c2-jsonl-test` (commit 0711482) added versioned JSONL fixtures under `crates/codex/examples/fixtures/versioned/` and new tests at `crates/codex/tests/jsonl_compat.rs`
+- Commands: `cargo fmt` (pass; no output)
+- Commands: `cargo test -p codex` (fail; new tests currently fail awaiting C2-code drift-tolerant parsing: `thread.resumed` + `item.created/item.updated` normalization and non-fatal malformed-line handling)
+- Test results: `retains_unknown_fields_in_extra_maps` passes; failing tests are `parses_versioned_exec_fixtures`, `parses_versioned_resume_fixtures`, `known_good_fixtures_include_text_payloads`, `malformed_lines_are_non_fatal`
+- Blockers: none (expected until `C2-code`/`C2-integ`)
