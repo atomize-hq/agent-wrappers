@@ -2314,10 +2314,34 @@ impl JsonRpcTransport {
             command.env(key, value);
         }
 
-        let mut child = command.spawn().map_err(|source| McpError::Spawn {
-            command: format!("{command:?}"),
-            source,
-        })?;
+        let command_debug = format!("{command:?}");
+        let mut backoff = Duration::from_millis(2);
+        let mut child = {
+            let mut child = None;
+            for attempt in 0..5 {
+                match command.spawn() {
+                    Ok(spawned) => {
+                        child = Some(spawned);
+                        break;
+                    }
+                    Err(source) => {
+                        let is_busy =
+                            matches!(source.kind(), std::io::ErrorKind::ExecutableFileBusy)
+                                || source.raw_os_error() == Some(26);
+                        if is_busy && attempt < 4 {
+                            tokio::time::sleep(backoff).await;
+                            backoff = std::cmp::min(backoff * 2, Duration::from_millis(50));
+                            continue;
+                        }
+                        return Err(McpError::Spawn {
+                            command: command_debug,
+                            source,
+                        });
+                    }
+                }
+            }
+            child.expect("spawn loop should return or set child")
+        };
 
         let stdout = child
             .stdout

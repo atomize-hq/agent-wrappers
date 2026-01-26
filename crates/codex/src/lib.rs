@@ -5947,12 +5947,26 @@ fn normalize_item_delta_payload(value: &mut serde_json::Value) {
         return;
     };
 
-    if map.contains_key("delta") {
+    if !map.contains_key("delta") {
+        if let Some(content) = map.remove("content") {
+            map.insert("delta".to_string(), content);
+        }
+    }
+
+    let Some(item_type) = map.get("item_type").and_then(|value| value.as_str()) else {
+        return;
+    };
+
+    if !matches!(item_type, "agent_message" | "reasoning") {
         return;
     }
 
-    if let Some(content) = map.remove("content") {
-        map.insert("delta".to_string(), content);
+    let Some(delta) = map.get_mut("delta") else {
+        return;
+    };
+
+    if let Some(text_delta) = delta.as_str() {
+        *delta = serde_json::json!({ "text_delta": text_delta });
     }
 }
 
@@ -5997,6 +6011,20 @@ fn normalize_item_payload(value: &mut serde_json::Value) {
 
         if let Some(content_value) = content {
             item_object.insert("content".to_string(), content_value);
+        }
+    }
+
+    let item_type = item_object
+        .get("item_type")
+        .and_then(|value| value.as_str())
+        .or_else(|| item_object.get("type").and_then(|value| value.as_str()))
+        .map(|value| value.to_string());
+
+    if matches!(item_type.as_deref(), Some("agent_message" | "reasoning")) {
+        if let Some(content) = item_object.get_mut("content") {
+            if let Some(text) = content.as_str() {
+                *content = serde_json::json!({ "text": text });
+            }
         }
     }
 

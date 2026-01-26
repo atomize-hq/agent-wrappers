@@ -36,11 +36,15 @@ For `item.*` events, older Codex CLI versions may nest item fields under `{"item
 parser normalizes by:
 - Moving fields from `item` to the top level.
 - Renaming `item.type` → `item_type`.
+- For text-shaped items (`agent_message`, `reasoning`), wrapping legacy `content: "<string>"`
+  payloads into the typed `{"text": "<string>"}` form expected by `TextContent`.
 - If `item_type` is command-shaped and `content` is missing, synthesizing `content` from legacy
   fields like `text`, `command`, `aggregated_output`, `exit_code`, and `stderr`.
 
 For delta-shaped item events (`item.delta` / `item.updated`), if `delta` is absent but `content` is
 present, `content` is treated as the delta payload (`content` → `delta`).
+For text-shaped deltas, legacy `delta: "<string>"` payloads are wrapped into
+`{"text_delta": "<string>"}` for `TextDelta`.
 
 ### Field aliases
 Common legacy field names are accepted during deserialization:
