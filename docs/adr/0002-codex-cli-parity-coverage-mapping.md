@@ -1,0 +1,138 @@
+# ADR 0002: Codex CLI Parity Coverage Mapping (Snapshot → Coverage → Work Queue)
+
+Date: 2026-01-26  
+Status: Proposed
+
+## Context
+
+This repository wraps the upstream Codex CLI (`codex`) as a Rust library (`crates/codex`). The upstream CLI changes frequently across:
+- commands/subcommands,
+- flags/options (global + per-command),
+- positional arguments/usage shapes,
+- feature-gated surfaces (via `codex features list` and `--enable <FEATURE>`),
+- platform-gated surfaces (e.g., `sandbox` variants),
+- JSONL event schema and server notifications.
+
+ADR 0001 established the operational workflow to manage drift:
+- generate a deterministic CLI snapshot from a specific `codex` binary,
+- review diffs as a checklist,
+- validate a version via a real-binary test matrix before promoting `latest_validated.txt`.
+
+What is still missing is an automated, *granular* mapping from:
+- “what upstream exposes” (commands + flags + positional args) to
+- “what the wrapper explicitly supports (and how)”
+
+…so maintainers can produce a clean, structured work queue when a new stable upstream release lands.
+
+## Decision
+
+We will implement a **coverage mapping system** that compares:
+
+1. **Upstream CLI snapshots** (generated from real `codex` binaries, with all features enabled)  
+2. A **wrapper coverage manifest** describing what `crates/codex` supports at the command/flag/arg level
+
+…and produces a deterministic **coverage report** that can be converted into triad tasks.
+
+This system is “diff-first” and will avoid network access at crate runtime. Any upstream release discovery/download remains CI/workflow-driven (per ADR 0001).
+
+## Definitions
+
+### Coverage Levels
+
+Each upstream surface is classified as one of:
+- `explicit`: first-class API exists in the wrapper (typed request/response or dedicated method).
+- `passthrough`: wrapper can drive the surface only via generic argument/override forwarding (weak support).
+- `unsupported`: wrapper cannot safely drive the surface today (or we intentionally avoid it).
+- `unknown`: not yet assessed (allowed during rollout; treated as work-queue input).
+
+### Surface Units (granular)
+
+The coverage system operates at:
+- **Command path**: `["exec","resume"]`, `["sandbox","linux"]`, etc. Root command is `[]`.
+- **Flags**: identity key is `long` when present, else `short` (from the upstream snapshot).
+- **Positional args**: identity key is `name` (from upstream `Arguments:` and/or `Usage:` inference).
+
+Notes:
+- Some upstream help text omits args present in `Usage:`; snapshots infer these and mark them as inferred.
+- Some upstream surfaces appear only when enabling feature flags; snapshots record which features were enabled and which commands only appeared when enabled.
+
+## Artifacts
+
+### Upstream Snapshots
+
+We will store versioned upstream snapshots and treat them as generated artifacts:
+- `cli_manifests/codex/snapshots/<version>.json` (schema v1; same structure as `current.json`)
+- Optional raw help captures for debugging:
+  - `cli_manifests/codex/raw_help/<version>/**`
+
+`cli_manifests/codex/current.json` remains the “latest validated snapshot” convenience pointer (or may be replaced by a small pointer file), but the versioned snapshots are the canonical historical inputs for coverage comparisons.
+
+### Wrapper Coverage Manifest
+
+We will maintain a deterministic wrapper coverage manifest, version-controlled:
+- `cli_manifests/codex/wrapper_coverage.json`
+
+Schema (v1, conceptual):
+- `schema_version` (int)
+- `generated_at` (RFC3339, optional)
+- `wrapper_version` (string, optional)
+- `coverage` (array):
+  - `path` (array of strings)
+  - `level` (`explicit|passthrough|unsupported|unknown`)
+  - `flags` (array, optional):
+    - `key` (`--long` or `-s`)
+    - `level`
+    - `note` (optional)
+  - `args` (array, optional):
+    - `name`
+    - `level`
+    - `note` (optional)
+  - `note` (optional)
+
+The source of truth for this manifest should live near `crates/codex` so it stays aligned with the actual APIs; the emitted JSON is the stable comparison input.
+
+### Coverage Report
+
+The comparer will produce:
+- a machine-readable report (`.json`) for automation and task generation, and
+- a human-readable report (`.md`) for maintainers.
+
+The report is generated for a pair: `(upstream snapshot version, wrapper coverage manifest)`.
+
+Report sections (conceptual):
+- New commands/flags/args in upstream vs wrapper coverage
+- Items present but only `passthrough` (candidates for `explicit` promotion)
+- Items explicitly marked `unsupported` (intentionally unwrapped) and the policy rationale
+- Feature-gated additions (commands that appear only when all features are enabled)
+
+## Operating Workflow
+
+When a new upstream stable release is identified (Release Watch / manual):
+
+1. Generate or download the target binary in CI/workflow (no runtime downloads).
+2. Generate an upstream snapshot with all features enabled.
+3. Run the coverage comparer against:
+   - `min_supported` snapshot,
+   - `latest_validated` snapshot,
+   - candidate stable snapshot.
+4. Use the report to create a triad work queue (code/test/integ) for missing surfaces.
+5. Only after integration validations pass on Linux (per ADR 0001) promote:
+   - `cli_manifests/codex/latest_validated.txt`
+   - `cli_manifests/codex/current.json` (or pointer) to the validated snapshot
+
+## Consequences
+
+### Benefits
+- Produces a deterministic, granular “what changed and what we need to support” list.
+- Separates “discovery” (upstream snapshot) from “support/coverage” (wrapper manifest) and “validation” (real-binary test matrix).
+- Makes feature-gated surfaces explicit and reviewable.
+
+### Tradeoffs / Risks
+- The wrapper coverage manifest requires ongoing maintenance.
+- Upstream help output is not a perfect source of truth; snapshots are “best available” and should be reconciled with real-binary behavior and fixtures.
+- Some surfaces may be intentionally unsupported for safety/policy reasons and must be tracked as such to avoid perpetual churn.
+
+## Follow-ups (out of scope for this ADR)
+- JSONL/event-schema parity reporting (separate report stream; likely separate ADR).
+- Automatic task creation from reports (allowed later, but human review remains required).
+
