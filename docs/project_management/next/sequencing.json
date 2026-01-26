@@ -61,6 +61,33 @@
           ]
         }
       ]
+    },
+    {
+      "id": "codex_cli_parity",
+      "name": "CODEX_CLI_PARITY",
+      "source": "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "phases": [
+        {
+          "id": "C0",
+          "name": "Snapshot schema + generator",
+          "spec": "docs/project_management/next/codex-cli-parity/C0-spec.md"
+        },
+        {
+          "id": "C1",
+          "name": "Version policy + CI workflows",
+          "spec": "docs/project_management/next/codex-cli-parity/C1-spec.md"
+        },
+        {
+          "id": "C2",
+          "name": "JSONL + notifications compatibility",
+          "spec": "docs/project_management/next/codex-cli-parity/C2-spec.md"
+        },
+        {
+          "id": "C3",
+          "name": "Ops playbook + promotion rules",
+          "spec": "docs/project_management/next/codex-cli-parity/C3-spec.md"
+        }
+      ]
     }
   ],
   "sequence": [
@@ -91,7 +118,34 @@
       "title": "Ops playbook and trial run",
       "depends_on": ["codex_cli_release_trailing:C2"],
       "blocks": []
+    },
+    {
+      "order": 100,
+      "id": "codex_cli_parity:C0",
+      "title": "Snapshot schema + generator",
+      "depends_on": [],
+      "blocks": ["codex_cli_parity:C1", "codex_cli_parity:C2", "codex_cli_parity:C3"]
+    },
+    {
+      "order": 110,
+      "id": "codex_cli_parity:C1",
+      "title": "Version policy + CI workflows",
+      "depends_on": ["codex_cli_parity:C0"],
+      "blocks": ["codex_cli_parity:C2", "codex_cli_parity:C3"]
+    },
+    {
+      "order": 120,
+      "id": "codex_cli_parity:C2",
+      "title": "JSONL + notifications compatibility",
+      "depends_on": ["codex_cli_parity:C1"],
+      "blocks": ["codex_cli_parity:C3"]
+    },
+    {
+      "order": 130,
+      "id": "codex_cli_parity:C3",
+      "title": "Ops playbook + promotion rules",
+      "depends_on": ["codex_cli_parity:C2"],
+      "blocks": []
     }
   ]
 }
-

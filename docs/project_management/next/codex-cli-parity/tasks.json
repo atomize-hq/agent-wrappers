@@ -1,0 +1,482 @@
+[
+  {
+    "id": "C0-code",
+    "name": "Snapshot schema + generator (code)",
+    "type": "code",
+    "phase": "C0",
+    "status": "pending",
+    "description": "Implement the C0 spec (snapshot schema + generator; non-test changes only).",
+    "references": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/project_management/next/codex-cli-parity/plan.md",
+      "docs/project_management/next/codex-cli-parity/C0-spec.md",
+      "docs/project_management/next/codex-cli-parity/kickoff_prompts/C0-code.md"
+    ],
+    "acceptance_criteria": [
+      "`crates/xtask/` exists with package `xtask` and binary `xtask` implementing `codex-snapshot`",
+      "`cli_manifests/codex/supplement/commands.json` exists (schema v1) with at least one documented example entry",
+      "`cli_manifests/codex/README.md` documents schema v1, canonical generator command, and on-disk layout",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity/session_log.md; commit docs with message 'docs: start C0-code'",
+      "Create the task branch and worktree: `git worktree add -b ccp-c0-snapshot-code wt/ccp-c0-snapshot-code feat/codex-cli-parity`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.",
+      "Inside `wt/ccp-c0-snapshot-code`, commit C0-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity`.",
+      "Checkout `feat/codex-cli-parity`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-code'.",
+      "Remove worktree `wt/ccp-c0-snapshot-code`."
+    ],
+    "worktree": "wt/ccp-c0-snapshot-code",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity/kickoff_prompts/C0-code.md",
+    "depends_on": [],
+    "concurrent_with": ["C0-test"]
+  },
+  {
+    "id": "C0-test",
+    "name": "Snapshot schema + generator (test)",
+    "type": "test",
+    "phase": "C0",
+    "status": "pending",
+    "description": "Add tests/fixtures validating the C0 spec (tests only; xtask-focused).",
+    "references": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/project_management/next/codex-cli-parity/plan.md",
+      "docs/project_management/next/codex-cli-parity/C0-spec.md",
+      "docs/project_management/next/codex-cli-parity/kickoff_prompts/C0-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests exist under `crates/xtask/tests/` covering determinism + stable sorting + supplement application",
+      "Any fixtures added are under `crates/xtask/tests/fixtures/`",
+      "No non-test code changes",
+      "Commands executed (fmt + cargo test) and recorded in session_log.md"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity/session_log.md; commit docs with message 'docs: start C0-test'",
+      "Create the task branch and worktree: `git worktree add -b ccp-c0-snapshot-test wt/ccp-c0-snapshot-test feat/codex-cli-parity`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo test -p xtask`.",
+      "Inside `wt/ccp-c0-snapshot-test`, commit C0-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity`.",
+      "Checkout `feat/codex-cli-parity`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-test'.",
+      "Remove worktree `wt/ccp-c0-snapshot-test`."
+    ],
+    "worktree": "wt/ccp-c0-snapshot-test",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity/kickoff_prompts/C0-test.md",
+    "depends_on": [],
+    "concurrent_with": ["C0-code"]
+  },
+  {
+    "id": "C0-integ",
+    "name": "Snapshot schema + generator (integration)",
+    "type": "integration",
+    "phase": "C0",
+    "status": "pending",
+    "description": "Merge C0 code+test branches, reconcile to spec, and gate with fmt/clippy/tests + make preflight.",
+    "references": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/project_management/next/codex-cli-parity/plan.md",
+      "docs/project_management/next/codex-cli-parity/C0-spec.md",
+      "docs/project_management/next/codex-cli-parity/kickoff_prompts/C0-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C0 code/test merged and match C0-spec.md",
+      "Commands executed and logged: cargo fmt, clippy, cargo test -p xtask, make preflight",
+      "Integration merged fast-forward into feat/codex-cli-parity; docs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity/session_log.md; commit docs with message 'docs: start C0-integ'",
+      "Create the integration branch and worktree: `git worktree add -b ccp-c0-snapshot-integ wt/ccp-c0-snapshot-integ feat/codex-cli-parity`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream branches `ccp-c0-snapshot-code` and `ccp-c0-snapshot-test` into the integration worktree and reconcile behavior to C0-spec.md.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test -p xtask`; `make preflight`.",
+      "Commit integration changes on branch `ccp-c0-snapshot-integ`.",
+      "Fast-forward merge `ccp-c0-snapshot-integ` into `feat/codex-cli-parity`; update tasks.json to completed; add an END entry to session_log.md; commit docs with 'docs: finish C0-integ'.",
+      "Remove worktree `wt/ccp-c0-snapshot-integ`."
+    ],
+    "worktree": "wt/ccp-c0-snapshot-integ",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity/kickoff_prompts/C0-integ.md",
+    "depends_on": ["C0-code", "C0-test"],
+    "concurrent_with": []
+  },
+
+  {
+    "id": "C1-code",
+    "name": "Version policy + CI workflows (code)",
+    "type": "code",
+    "phase": "C1",
+    "status": "pending",
+    "description": "Implement the C1 spec (workflows, pointers, CI wiring; non-test changes only).",
+    "references": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/project_management/next/codex-cli-parity/plan.md",
+      "docs/project_management/next/codex-cli-parity/C1-spec.md",
+      "docs/project_management/next/codex-cli-parity/kickoff_prompts/C1-code.md"
+    ],
+    "acceptance_criteria": [
+      "Workflow files exist: `.github/workflows/ci.yml`, `.github/workflows/codex-cli-release-watch.yml`, `.github/workflows/codex-cli-update-snapshot.yml`",
+      "`cli_manifests/codex/artifacts.lock.json` exists (schema v1) and is used by Update Snapshot",
+      "Workflows/CI match C1-spec.md behavior (no crate-runtime downloads)",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity/session_log.md; commit docs with message 'docs: start C1-code'",
+      "Create the task branch and worktree: `git worktree add -b ccp-c1-validation-code wt/ccp-c1-validation-code feat/codex-cli-parity`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.",
+      "Inside `wt/ccp-c1-validation-code`, commit C1-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity`.",
+      "Checkout `feat/codex-cli-parity`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-code'.",
+      "Remove worktree `wt/ccp-c1-validation-code`."
+    ],
+    "worktree": "wt/ccp-c1-validation-code",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity/kickoff_prompts/C1-code.md",
+    "depends_on": ["C0-integ"],
+    "concurrent_with": ["C1-test"]
+  },
+  {
+    "id": "C1-test",
+    "name": "Version policy + CI workflows (test)",
+    "type": "test",
+    "phase": "C1",
+    "status": "pending",
+    "description": "Add tests validating the C1 spec (tests only). This is expected to be a no-op unless C1 introduces testable logic.",
+    "references": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/project_management/next/codex-cli-parity/plan.md",
+      "docs/project_management/next/codex-cli-parity/C1-spec.md",
+      "docs/project_management/next/codex-cli-parity/kickoff_prompts/C1-test.md"
+    ],
+    "acceptance_criteria": [
+      "If C1 adds testable logic, tests cover it; otherwise task is a documented no-op",
+      "No non-test code changes",
+      "Commands executed (fmt + cargo test) and recorded in session_log.md (or recorded as no-op)"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity/session_log.md; commit docs with message 'docs: start C1-test'",
+      "Create the task branch and worktree: `git worktree add -b ccp-c1-validation-test wt/ccp-c1-validation-test feat/codex-cli-parity`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "If you made changes: run required commands (capture outputs): `cargo fmt`; `cargo test -p codex`.",
+      "If you made changes: inside `wt/ccp-c1-validation-test`, commit C1-test changes (no docs/tasks/session_log edits).",
+      "If you made changes: outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity`.",
+      "If no changes were needed: do not create commits; record a no-op END entry with reasoning.",
+      "Checkout `feat/codex-cli-parity`; update tasks.json to completed; add an END entry to session_log.md; commit docs with 'docs: finish C1-test'.",
+      "Remove worktree `wt/ccp-c1-validation-test`."
+    ],
+    "worktree": "wt/ccp-c1-validation-test",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity/kickoff_prompts/C1-test.md",
+    "depends_on": ["C0-integ"],
+    "concurrent_with": ["C1-code"]
+  },
+  {
+    "id": "C1-integ",
+    "name": "Version policy + CI workflows (integration)",
+    "type": "integration",
+    "phase": "C1",
+    "status": "pending",
+    "description": "Merge C1 code+test branches, reconcile to spec, and gate with validated real-binary checks + make preflight.",
+    "references": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/project_management/next/codex-cli-parity/plan.md",
+      "docs/project_management/next/codex-cli-parity/C1-spec.md",
+      "docs/project_management/next/codex-cli-parity/kickoff_prompts/C1-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C1 code/test merged and match C1-spec.md",
+      "ADR validated commands executed on Linux (including real-binary cli_e2e) and logged",
+      "Integration merged fast-forward into feat/codex-cli-parity; docs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity/session_log.md; commit docs with message 'docs: start C1-integ'",
+      "Create the integration branch and worktree: `git worktree add -b ccp-c1-validation-integ wt/ccp-c1-validation-integ feat/codex-cli-parity`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream branches `ccp-c1-validation-code` and `ccp-c1-validation-test` into the integration worktree and reconcile behavior to C1-spec.md.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test -p codex`; `cargo test -p codex --examples`; `export CODEX_E2E_HOME=$(mktemp -d) && export CODEX_HOME=$CODEX_E2E_HOME && CODEX_E2E_BINARY=<path-to-codex> cargo test -p codex --test cli_e2e -- --nocapture`; `make preflight`.",
+      "Commit integration changes on branch `ccp-c1-validation-integ`.",
+      "Fast-forward merge `ccp-c1-validation-integ` into `feat/codex-cli-parity`; update tasks.json to completed; add an END entry to session_log.md; commit docs with 'docs: finish C1-integ'.",
+      "Remove worktree `wt/ccp-c1-validation-integ`."
+    ],
+    "worktree": "wt/ccp-c1-validation-integ",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity/kickoff_prompts/C1-integ.md",
+    "depends_on": ["C1-code", "C1-test"],
+    "concurrent_with": []
+  },
+
+  {
+    "id": "C2-code",
+    "name": "JSONL + notifications compatibility (code)",
+    "type": "code",
+    "phase": "C2",
+    "status": "pending",
+    "description": "Implement the C2 spec (compatibility/normalization; non-test changes only).",
+    "references": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/project_management/next/codex-cli-parity/plan.md",
+      "docs/project_management/next/codex-cli-parity/C2-spec.md",
+      "docs/project_management/next/codex-cli-parity/kickoff_prompts/C2-code.md"
+    ],
+    "acceptance_criteria": [
+      "JSONL parsing behavior matches C2-spec.md (drift-tolerant, non-fatal errors)",
+      "Unknown fields are preserved/captured as specified",
+      "`crates/codex/JSONL_COMPAT.md` exists and matches C2-spec.md requirements (if authored in this task)",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity/session_log.md; commit docs with message 'docs: start C2-code'",
+      "Create the task branch and worktree: `git worktree add -b ccp-c2-jsonl-code wt/ccp-c2-jsonl-code feat/codex-cli-parity`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.",
+      "Inside `wt/ccp-c2-jsonl-code`, commit C2-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity`.",
+      "Checkout `feat/codex-cli-parity`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-code'.",
+      "Remove worktree `wt/ccp-c2-jsonl-code`."
+    ],
+    "worktree": "wt/ccp-c2-jsonl-code",
+    "integration_task": "C2-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity/kickoff_prompts/C2-code.md",
+    "depends_on": ["C1-integ"],
+    "concurrent_with": ["C2-test"]
+  },
+  {
+    "id": "C2-test",
+    "name": "JSONL + notifications compatibility (test)",
+    "type": "test",
+    "phase": "C2",
+    "status": "pending",
+    "description": "Add fixtures + tests validating the C2 spec (tests only).",
+    "references": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/project_management/next/codex-cli-parity/plan.md",
+      "docs/project_management/next/codex-cli-parity/C2-spec.md",
+      "docs/project_management/next/codex-cli-parity/kickoff_prompts/C2-test.md"
+    ],
+    "acceptance_criteria": [
+      "Fixtures exist at `crates/codex/examples/fixtures/versioned/0.61.0/` and `crates/codex/examples/fixtures/versioned/0.77.0/` with the required files from C2-spec.md",
+      "Tests exist at `crates/codex/tests/jsonl_compat.rs` and validate drift-tolerant parsing per C2-spec.md",
+      "No production code changes",
+      "Commands executed (fmt + cargo test) and recorded in session_log.md"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity/session_log.md; commit docs with message 'docs: start C2-test'",
+      "Create the task branch and worktree: `git worktree add -b ccp-c2-jsonl-test wt/ccp-c2-jsonl-test feat/codex-cli-parity`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo test -p codex`.",
+      "Inside `wt/ccp-c2-jsonl-test`, commit C2-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity`.",
+      "Checkout `feat/codex-cli-parity`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-test'.",
+      "Remove worktree `wt/ccp-c2-jsonl-test`."
+    ],
+    "worktree": "wt/ccp-c2-jsonl-test",
+    "integration_task": "C2-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity/kickoff_prompts/C2-test.md",
+    "depends_on": ["C1-integ"],
+    "concurrent_with": ["C2-code"]
+  },
+  {
+    "id": "C2-integ",
+    "name": "JSONL + notifications compatibility (integration)",
+    "type": "integration",
+    "phase": "C2",
+    "status": "pending",
+    "description": "Merge C2 code+test branches, reconcile to spec, and gate with fmt/clippy/tests + make preflight.",
+    "references": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/project_management/next/codex-cli-parity/plan.md",
+      "docs/project_management/next/codex-cli-parity/C2-spec.md",
+      "docs/project_management/next/codex-cli-parity/kickoff_prompts/C2-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C2 code/test merged and match C2-spec.md",
+      "Fixtures + tests exist at the exact paths specified in C2-spec.md",
+      "Commands executed and logged: cargo fmt, clippy, cargo test -p codex, make preflight",
+      "Integration merged fast-forward into feat/codex-cli-parity; docs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity/session_log.md; commit docs with message 'docs: start C2-integ'",
+      "Create the integration branch and worktree: `git worktree add -b ccp-c2-jsonl-integ wt/ccp-c2-jsonl-integ feat/codex-cli-parity`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream branches `ccp-c2-jsonl-code` and `ccp-c2-jsonl-test` into the integration worktree and reconcile behavior to C2-spec.md.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test -p codex`; `make preflight`.",
+      "Commit integration changes on branch `ccp-c2-jsonl-integ`.",
+      "Fast-forward merge `ccp-c2-jsonl-integ` into `feat/codex-cli-parity`; update tasks.json to completed; add an END entry to session_log.md; commit docs with 'docs: finish C2-integ'.",
+      "Remove worktree `wt/ccp-c2-jsonl-integ`."
+    ],
+    "worktree": "wt/ccp-c2-jsonl-integ",
+    "integration_task": "C2-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity/kickoff_prompts/C2-integ.md",
+    "depends_on": ["C2-code", "C2-test"],
+    "concurrent_with": []
+  },
+
+  {
+    "id": "C3-code",
+    "name": "Ops playbook + promotion rules (code)",
+    "type": "code",
+    "phase": "C3",
+    "status": "pending",
+    "description": "Implement the C3 spec (maintainer runbook + policy docs; non-test changes only).",
+    "references": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/project_management/next/codex-cli-parity/plan.md",
+      "docs/project_management/next/codex-cli-parity/C3-spec.md",
+      "docs/project_management/next/codex-cli-parity/kickoff_prompts/C3-code.md"
+    ],
+    "acceptance_criteria": [
+      "`cli_manifests/codex/OPS_PLAYBOOK.md` exists and matches C3-spec.md",
+      "`cli_manifests/codex/README.md` links to OPS playbook under `## Ops Playbook`",
+      "Unwrapped surfaces and promotion criteria are explicitly documented",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C3-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity/session_log.md; commit docs with message 'docs: start C3-code'",
+      "Create the task branch and worktree: `git worktree add -b ccp-c3-ops-code wt/ccp-c3-ops-code feat/codex-cli-parity`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.",
+      "Inside `wt/ccp-c3-ops-code`, commit C3-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity`.",
+      "Checkout `feat/codex-cli-parity`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C3-code'.",
+      "Remove worktree `wt/ccp-c3-ops-code`."
+    ],
+    "worktree": "wt/ccp-c3-ops-code",
+    "integration_task": "C3-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity/kickoff_prompts/C3-code.md",
+    "depends_on": ["C2-integ"],
+    "concurrent_with": ["C3-test"]
+  },
+  {
+    "id": "C3-test",
+    "name": "Ops playbook + promotion rules (test)",
+    "type": "test",
+    "phase": "C3",
+    "status": "pending",
+    "description": "Add any tests/fixtures needed by C3 spec changes (tests only). This is expected to be a no-op unless C3 introduces testable logic.",
+    "references": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/project_management/next/codex-cli-parity/plan.md",
+      "docs/project_management/next/codex-cli-parity/C3-spec.md",
+      "docs/project_management/next/codex-cli-parity/kickoff_prompts/C3-test.md"
+    ],
+    "acceptance_criteria": [
+      "If C3 introduces testable logic, tests cover it; otherwise task is a documented no-op",
+      "No production code changes",
+      "Commands executed (fmt + cargo test) and recorded in session_log.md (or recorded as no-op)"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C3-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity/session_log.md; commit docs with message 'docs: start C3-test'",
+      "Create the task branch and worktree: `git worktree add -b ccp-c3-ops-test wt/ccp-c3-ops-test feat/codex-cli-parity`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "If you made changes: run required commands (capture outputs): `cargo fmt`; `cargo test -p codex`.",
+      "If you made changes: inside `wt/ccp-c3-ops-test`, commit C3-test changes (no docs/tasks/session_log edits).",
+      "If you made changes: outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity`.",
+      "If no changes were needed: do not create commits; record a no-op END entry with reasoning.",
+      "Checkout `feat/codex-cli-parity`; update tasks.json to completed; add an END entry to session_log.md; commit docs with 'docs: finish C3-test'.",
+      "Remove worktree `wt/ccp-c3-ops-test`."
+    ],
+    "worktree": "wt/ccp-c3-ops-test",
+    "integration_task": "C3-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity/kickoff_prompts/C3-test.md",
+    "depends_on": ["C2-integ"],
+    "concurrent_with": ["C3-code"]
+  },
+  {
+    "id": "C3-integ",
+    "name": "Ops playbook + promotion rules (integration)",
+    "type": "integration",
+    "phase": "C3",
+    "status": "pending",
+    "description": "Merge C3 code+test branches, reconcile to spec, and gate with fmt/clippy/tests + make preflight.",
+    "references": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/project_management/next/codex-cli-parity/plan.md",
+      "docs/project_management/next/codex-cli-parity/C3-spec.md",
+      "docs/project_management/next/codex-cli-parity/kickoff_prompts/C3-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C3 code/test merged and match C3-spec.md",
+      "Commands executed and logged: cargo fmt, clippy, cargo test -p codex, make preflight",
+      "Integration merged fast-forward into feat/codex-cli-parity; docs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C3-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity/session_log.md; commit docs with message 'docs: start C3-integ'",
+      "Create the integration branch and worktree: `git worktree add -b ccp-c3-ops-integ wt/ccp-c3-ops-integ feat/codex-cli-parity`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream branches `ccp-c3-ops-code` and `ccp-c3-ops-test` into the integration worktree and reconcile behavior to C3-spec.md.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test -p codex`; `make preflight`.",
+      "Commit integration changes on branch `ccp-c3-ops-integ`.",
+      "Fast-forward merge `ccp-c3-ops-integ` into `feat/codex-cli-parity`; update tasks.json to completed; add an END entry to session_log.md; commit docs with 'docs: finish C3-integ'.",
+      "Remove worktree `wt/ccp-c3-ops-integ`."
+    ],
+    "worktree": "wt/ccp-c3-ops-integ",
+    "integration_task": "C3-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity/kickoff_prompts/C3-integ.md",
+    "depends_on": ["C3-code", "C3-test"],
+    "concurrent_with": []
+  }
+]
