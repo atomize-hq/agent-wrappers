@@ -4278,7 +4278,7 @@ pub enum CodexError {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum ThreadEvent {
-    #[serde(rename = "thread.started")]
+    #[serde(rename = "thread.started", alias = "thread.resumed")]
     ThreadStarted(ThreadStarted),
     #[serde(rename = "turn.started")]
     TurnStarted(TurnStarted),
@@ -4286,9 +4286,9 @@ pub enum ThreadEvent {
     TurnCompleted(TurnCompleted),
     #[serde(rename = "turn.failed")]
     TurnFailed(TurnFailed),
-    #[serde(rename = "item.started")]
+    #[serde(rename = "item.started", alias = "item.created")]
     ItemStarted(ItemEnvelope<ItemSnapshot>),
-    #[serde(rename = "item.delta")]
+    #[serde(rename = "item.delta", alias = "item.updated")]
     ItemDelta(ItemDelta),
     #[serde(rename = "item.completed")]
     ItemCompleted(ItemEnvelope<ItemSnapshot>),
@@ -4369,7 +4369,7 @@ pub struct ItemSnapshot {
 pub struct ItemDelta {
     pub thread_id: String,
     pub turn_id: String,
-    #[serde(rename = "item_id")]
+    #[serde(rename = "item_id", alias = "id")]
     pub item_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub index: Option<u32>,
@@ -4435,12 +4435,17 @@ pub enum ItemStatus {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TextContent {
     pub text: String,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
 }
 
 /// Incremental content fragment for streaming items.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TextDelta {
+    #[serde(rename = "text_delta", alias = "text")]
     pub text_delta: String,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
 }
 
 /// Snapshot of a command execution, including accumulated stdout/stderr.
@@ -4449,9 +4454,19 @@ pub struct CommandExecutionState {
     pub command: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exit_code: Option<i32>,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "aggregated_output",
+        alias = "output"
+    )]
     pub stdout: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "error_output",
+        alias = "err"
+    )]
     pub stderr: String,
     #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
     pub extra: BTreeMap<String, Value>,
@@ -4460,9 +4475,19 @@ pub struct CommandExecutionState {
 /// Streaming delta for command execution.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CommandExecutionDelta {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "aggregated_output",
+        alias = "output"
+    )]
     pub stdout: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "error_output",
+        alias = "err"
+    )]
     pub stderr: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exit_code: Option<i32>,
@@ -4473,16 +4498,27 @@ pub struct CommandExecutionDelta {
 /// File change or diff applied by the agent.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct FileChangeState {
+    #[serde(alias = "file_path")]
     pub path: PathBuf,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub change: Option<FileChangeKind>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "patch")]
     pub diff: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exit_code: Option<i32>,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "aggregated_output",
+        alias = "output"
+    )]
     pub stdout: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "error_output",
+        alias = "err"
+    )]
     pub stderr: String,
     #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
     pub extra: BTreeMap<String, Value>,
@@ -4491,11 +4527,21 @@ pub struct FileChangeState {
 /// Streaming delta describing a file change.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct FileChangeDelta {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "patch")]
     pub diff: Option<String>,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "aggregated_output",
+        alias = "output"
+    )]
     pub stdout: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "error_output",
+        alias = "err"
+    )]
     pub stderr: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exit_code: Option<i32>,
@@ -4516,7 +4562,9 @@ pub enum FileChangeKind {
 /// State of an MCP tool call.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct McpToolCallState {
+    #[serde(alias = "server")]
     pub server_name: String,
+    #[serde(alias = "tool")]
     pub tool_name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub arguments: Option<Value>,
@@ -5773,14 +5821,8 @@ where
             }
         }
 
-        let send_result = match normalize_thread_event(&line, &mut context) {
-            Ok(event) => sender.send(Ok(event)).await,
-            Err(err) => {
-                let _ = sender.send(Err(err)).await;
-                break;
-            }
-        };
-        if send_result.is_err() {
+        let event = normalize_thread_event(&line, &mut context);
+        if sender.send(event).await.is_err() {
             break;
         }
     }
@@ -5815,21 +5857,21 @@ fn normalize_thread_event(
         })?;
 
     match event_type.as_str() {
-        "thread.started" => {
-            let thread_id = extract_str(&value, "thread_id")
-                .ok_or_else(|| missing("thread.started", "thread_id", line))?;
+        "thread.started" | "thread.resumed" => {
+            let thread_id = extract_str_from_keys(&value, &["thread_id", "conversation_id", "id"])
+                .ok_or_else(|| missing(&event_type, "thread_id", line))?;
             context.current_thread_id = Some(thread_id.to_string());
             context.current_turn_id = None;
         }
         "turn.started" => {
-            let turn_id = extract_str(&value, "turn_id")
+            let turn_id = extract_str_from_keys(&value, &["turn_id", "id"])
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| {
                     let id = format!("synthetic-turn-{}", context.next_synthetic_turn.max(1));
                     context.next_synthetic_turn = context.next_synthetic_turn.saturating_add(1);
                     id
                 });
-            let thread_id = extract_str(&value, "thread_id")
+            let thread_id = extract_str_from_keys(&value, &["thread_id", "conversation_id"])
                 .map(|s| s.to_string())
                 .or_else(|| context.current_thread_id.clone())
                 .ok_or_else(|| missing("turn.started", "thread_id", line))?;
@@ -5839,11 +5881,11 @@ fn normalize_thread_event(
             context.current_turn_id = Some(turn_id);
         }
         "turn.completed" | "turn.failed" => {
-            let turn_id = extract_str(&value, "turn_id")
+            let turn_id = extract_str_from_keys(&value, &["turn_id", "id"])
                 .map(|s| s.to_string())
                 .or_else(|| context.current_turn_id.clone())
                 .ok_or_else(|| missing(&event_type, "turn_id", line))?;
-            let thread_id = extract_str(&value, "thread_id")
+            let thread_id = extract_str_from_keys(&value, &["thread_id", "conversation_id"])
                 .map(|s| s.to_string())
                 .or_else(|| context.current_thread_id.clone())
                 .ok_or_else(|| missing(&event_type, "thread_id", line))?;
@@ -5854,11 +5896,14 @@ fn normalize_thread_event(
         }
         t if t.starts_with("item.") => {
             normalize_item_payload(&mut value);
+            if event_type == "item.delta" || event_type == "item.updated" {
+                normalize_item_delta_payload(&mut value);
+            }
             let turn_id = extract_str(&value, "turn_id")
                 .map(|s| s.to_string())
                 .or_else(|| context.current_turn_id.clone())
                 .ok_or_else(|| missing(&event_type, "turn_id", line))?;
-            let thread_id = extract_str(&value, "thread_id")
+            let thread_id = extract_str_from_keys(&value, &["thread_id", "conversation_id"])
                 .map(|s| s.to_string())
                 .or_else(|| context.current_thread_id.clone())
                 .ok_or_else(|| missing(&event_type, "thread_id", line))?;
@@ -5882,9 +5927,32 @@ fn extract_str<'a>(value: &'a serde_json::Value, key: &str) -> Option<&'a str> {
         .filter(|s| !s.is_empty())
 }
 
+fn extract_str_from_keys<'a>(value: &'a serde_json::Value, keys: &[&str]) -> Option<&'a str> {
+    for key in keys {
+        if let Some(found) = extract_str(value, key) {
+            return Some(found);
+        }
+    }
+    None
+}
+
 fn set_str(value: &mut serde_json::Value, key: &str, new_value: String) {
     if let Some(map) = value.as_object_mut() {
         map.insert(key.to_string(), serde_json::Value::String(new_value));
+    }
+}
+
+fn normalize_item_delta_payload(value: &mut serde_json::Value) {
+    let Some(map) = value.as_object_mut() else {
+        return;
+    };
+
+    if map.contains_key("delta") {
+        return;
+    }
+
+    if let Some(content) = map.remove("content") {
+        map.insert("delta".to_string(), content);
     }
 }
 
