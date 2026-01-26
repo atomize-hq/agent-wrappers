@@ -198,8 +198,18 @@ fn collect_command_recursive(
 
 fn run_codex_help(codex_binary: &Path, path: &[String]) -> Result<String, Error> {
     let mut cmd = Command::new(codex_binary);
-    cmd.args(path);
-    cmd.arg("--help");
+    // Prefer `codex help <path...>` for non-root commands. Some Codex CLI versions define
+    // subcommands with free positional args (e.g., `codex exec [PROMPT] [COMMAND]`), which can
+    // accidentally consume the token `help` and cause `--help` to be parsed as a subcommand.
+    //
+    // `codex help <path...>` avoids that ambiguity and is how Codex CLI itself recommends
+    // requesting help for a subcommand.
+    if path.is_empty() {
+        cmd.arg("--help");
+    } else {
+        cmd.arg("help");
+        cmd.args(path);
+    }
     cmd.env("NO_COLOR", "1");
     cmd.env("CLICOLOR", "0");
     cmd.env("TERM", "dumb");
@@ -415,6 +425,20 @@ fn parse_help(help: &str) -> ParsedHelp {
             Some(Section::Args) => {
                 if let Some(arg) = parse_arg_line(line) {
                     args.push(arg);
+                } else if let Some(last) = args.last_mut() {
+                    // Clap frequently wraps argument descriptions onto continuation lines with
+                    // deeper indentation. Preserve these as part of the argument note so snapshots
+                    // capture positional semantics with useful context.
+                    let cont = line.trim();
+                    if !cont.is_empty() {
+                        match last.note.as_mut() {
+                            Some(note) => {
+                                note.push('\n');
+                                note.push_str(cont);
+                            }
+                            None => last.note = Some(cont.to_string()),
+                        }
+                    }
                 }
             }
             None => {}
@@ -452,7 +476,14 @@ fn parse_command_token(line: &str) -> Option<String> {
     if trimmed.starts_with('-') {
         return None;
     }
-    let token = trimmed.split_whitespace().next()?;
+    // Only treat "command list" entries as subcommands when the help output includes an
+    // on-the-same-line description. Wrapped descriptions (continuation lines) should not be
+    // interpreted as additional command tokens.
+    let (head, desc) = split_tokens_and_desc(trimmed);
+    if desc.is_empty() {
+        return None;
+    }
+    let token = head.split_whitespace().next()?;
     if token
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
@@ -523,6 +554,11 @@ fn parse_arg_line(line: &str) -> Option<ArgSnapshot> {
     let (head, desc) = split_tokens_and_desc(trimmed);
     let token = head.split_whitespace().next()?;
 
+    let (token, token_is_variadic) = token
+        .strip_suffix("...")
+        .map(|t| (t, true))
+        .unwrap_or((token, false));
+
     let (required, mut name) = if token.starts_with('<') && token.ends_with('>') {
         (
             true,
@@ -539,11 +575,18 @@ fn parse_arg_line(line: &str) -> Option<ArgSnapshot> {
                 .trim_end_matches(']')
                 .to_string(),
         )
-    } else {
+    } else if token
+        .chars()
+        .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_' || c == '-')
+    {
+        // Be conservative: treat bare ALLCAPS tokens as positional args (common in some help
+        // formats) but avoid mis-parsing wrapped description lines as arguments.
         (false, token.to_string())
+    } else {
+        return None;
     };
 
-    let mut variadic = false;
+    let mut variadic = token_is_variadic;
     if let Some(stripped) = name.strip_suffix("...") {
         variadic = true;
         name = stripped.to_string();
