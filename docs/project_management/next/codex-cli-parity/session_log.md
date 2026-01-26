@@ -185,3 +185,12 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree pending (`ccp-c3-ops-integ` / `wt/ccp-c3-ops-integ` to be added after docs commit)
 - Plan: create integration worktree, merge `ccp-c3-ops-code` + `ccp-c3-ops-test`, reconcile to C3-spec.md, run fmt/clippy/`cargo test -p codex`/`make preflight`, commit integration, fast-forward into `feat/codex-cli-parity`, then update docs/log at end
 - Blockers: none
+
+## [2026-01-26 17:48 UTC] Integration Agent – C3-integ – END
+- Worktree `wt/ccp-c3-ops-integ` on branch `ccp-c3-ops-integ` (commit 042dcd8) merged `ccp-c3-ops-code` + `ccp-c3-ops-test` and fast-forwarded `feat/codex-cli-parity`
+- Result: `cli_manifests/codex/OPS_PLAYBOOK.md` exists and `cli_manifests/codex/README.md` links it under `## Ops Playbook` per C3-spec.md
+- Commands: `cargo fmt` (pass; no output)
+- Commands: `cargo clippy --workspace --all-targets -- -D warnings` (pass; `Finished \`dev\` profile [unoptimized + debuginfo] target(s) in 8.25s`)
+- Commands: `cargo test -p codex` (pass; `test result: ok. 125 passed; 0 failed; ...`; `cli_e2e: 8 passed`)
+- Commands: `make preflight` (pass; ran `cargo fmt && cargo clippy --workspace --all-targets -- -D warnings && cargo clean && cargo check --workspace --all-targets && cargo test --workspace --all-targets`)
+- Blockers: none
