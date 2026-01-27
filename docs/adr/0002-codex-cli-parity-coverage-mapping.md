@@ -78,14 +78,23 @@ Notes:
 
 ## Artifacts
 
+### Normative Spec Files (schema + rules)
+
+To eliminate ambiguity, the canonical (machine-checkable) spec for this system lives in:
+- `cli_manifests/codex/SCHEMA.json` (JSON Schema; source of truth for artifact shapes)
+- `cli_manifests/codex/RULES.json` (merge + comparison rules; source of truth for identity keys, union semantics, and report expectations)
+
+This ADR provides narrative context and rationale; `SCHEMA.json` + `RULES.json` define the exact contract.
+
 ### Upstream Snapshots
 
 We will store versioned upstream snapshots and treat them as generated artifacts:
-- `cli_manifests/codex/snapshots/<version>/<target-triple>.json` (schema v1; same structure as `current.json`)
+- Per-target inputs: `cli_manifests/codex/snapshots/<version>/<target-triple>.json` (schema v1)
+- Union snapshot: `cli_manifests/codex/snapshots/<version>/union.json` (schema v2; multi-platform merged view)
 - Optional raw help captures for debugging:
   - `cli_manifests/codex/raw_help/<version>/<target-triple>/**`
 
-`cli_manifests/codex/current.json` remains the “latest validated snapshot” convenience pointer (or may be replaced by a small pointer file), but the versioned snapshots are the canonical historical inputs for coverage comparisons.
+`cli_manifests/codex/current.json` is the convenience pointer for the latest validated union snapshot (schema v2). Per-target snapshots are used as the merge inputs and for debugging platform-specific drift.
 
 Snapshots must include:
 - a root command entry represented as `path: []` so global flags/args are comparable,

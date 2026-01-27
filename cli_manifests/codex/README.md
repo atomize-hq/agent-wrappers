@@ -18,6 +18,12 @@ Notes:
 - The generator must be pointed at a local `codex` binary; it does not download binaries and should not use the network.
 - Recommended local convention (gitignored): `./.codex-bins/<version>/codex-x86_64-unknown-linux-musl`
 
+## Normative Spec (Schema + Rules)
+
+The source of truth for artifact shapes and merge/compare semantics is:
+- `SCHEMA.json` (JSON Schema)
+- `RULES.json` (merge + comparison rules)
+
 ## On-disk Layout (v1)
 
 - `min_supported.txt` — minimum supported Codex CLI version (single semver line).
@@ -72,6 +78,8 @@ Optional/generated:
   - `enabled_for_snapshot` (array of strings, optional): features enabled via `--enable <FEATURE>` during discovery
   - `commands_added_when_all_enabled` (array of `path` arrays, optional): command paths that only appeared when all features were enabled
 - `known_omissions` (array of strings, optional): records applied supplements for review visibility.
+
+Note: multi-platform union snapshots (option A) are specified in `SCHEMA.json` as schema v2 (`mode: "union"`). Until implemented, the generator emits schema v1.
 
 ## Deterministic Ordering Rules (v1)
 

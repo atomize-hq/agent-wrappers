@@ -1,0 +1,643 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cli_manifests/codex/SCHEMA.json",
+  "title": "Codex CLI Parity Schemas",
+  "description": "Normative JSON Schemas for Codex CLI parity artifacts (upstream snapshots, wrapper coverage, and reports).",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/UpstreamSnapshotV1"
+    },
+    {
+      "$ref": "#/$defs/UpstreamSnapshotUnionV2"
+    },
+    {
+      "$ref": "#/$defs/WrapperCoverageV1"
+    },
+    {
+      "$ref": "#/$defs/CoverageReportV1"
+    }
+  ],
+  "$defs": {
+    "Rfc3339String": {
+      "type": "string",
+      "description": "RFC3339 timestamp string."
+    },
+    "SemverString": {
+      "type": "string",
+      "description": "Semantic version string (SemVer)."
+    },
+    "TargetTriple": {
+      "type": "string",
+      "description": "Rust target triple, e.g. x86_64-unknown-linux-musl."
+    },
+    "CommandPath": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Command/subcommand tokens. Root codex command is represented as an empty array."
+    },
+    "CoverageLevel": {
+      "type": "string",
+      "enum": [
+        "explicit",
+        "passthrough",
+        "unsupported",
+        "intentionally_unsupported",
+        "unknown"
+      ]
+    },
+    "BinaryPlatform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "os",
+        "arch"
+      ],
+      "properties": {
+        "os": {
+          "type": "string"
+        },
+        "arch": {
+          "type": "string"
+        }
+      }
+    },
+    "BinarySnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sha256",
+        "size_bytes",
+        "platform",
+        "version_output"
+      ],
+      "properties": {
+        "sha256": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "platform": {
+          "$ref": "#/$defs/BinaryPlatform"
+        },
+        "target_triple": {
+          "$ref": "#/$defs/TargetTriple",
+          "description": "Recommended for CI and multi-platform merges."
+        },
+        "version_output": {
+          "type": "string"
+        },
+        "semantic_version": {
+          "$ref": "#/$defs/SemverString"
+        },
+        "channel": {
+          "type": "string",
+          "enum": [
+            "stable",
+            "beta",
+            "nightly",
+            "unknown"
+          ]
+        },
+        "commit": {
+          "type": "string"
+        }
+      }
+    },
+    "FlagSnapshotV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "long": {
+          "type": "string"
+        },
+        "short": {
+          "type": "string"
+        },
+        "takes_value": {
+          "type": "boolean"
+        },
+        "value_name": {
+          "type": "string"
+        },
+        "repeatable": {
+          "type": "boolean"
+        },
+        "stability": {
+          "type": "string"
+        },
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "long"
+          ]
+        },
+        {
+          "required": [
+            "short"
+          ]
+        }
+      ]
+    },
+    "ArgSnapshotV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "variadic": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "CommandSnapshotV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/CommandPath"
+        },
+        "about": {
+          "type": "string"
+        },
+        "usage": {
+          "type": "string"
+        },
+        "stability": {
+          "type": "string"
+        },
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ArgSnapshotV1"
+          }
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FlagSnapshotV1"
+          }
+        }
+      }
+    },
+    "FeaturesMetadataV1": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "listed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "stage",
+              "effective"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "stage": {
+                "type": "string",
+                "enum": [
+                  "stable",
+                  "beta",
+                  "experimental"
+                ]
+              },
+              "effective": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "enabled_for_snapshot": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "commands_added_when_all_enabled": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CommandPath"
+          }
+        },
+        "probe_error": {
+          "type": "string"
+        }
+      }
+    },
+    "UpstreamSnapshotV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_schema_version",
+        "tool",
+        "collected_at",
+        "binary",
+        "commands"
+      ],
+      "properties": {
+        "snapshot_schema_version": {
+          "const": 1
+        },
+        "tool": {
+          "const": "codex-cli"
+        },
+        "collected_at": {
+          "$ref": "#/$defs/Rfc3339String"
+        },
+        "binary": {
+          "$ref": "#/$defs/BinarySnapshot"
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CommandSnapshotV1"
+          }
+        },
+        "features": {
+          "$ref": "#/$defs/FeaturesMetadataV1"
+        },
+        "known_omissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "UnionAvailability": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TargetTriple"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "UnionFlagSnapshotV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "takes_value",
+        "available_on"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Canonical identity key for merging/comparison. Prefer long (e.g. --json) else short (e.g. -j)."
+        },
+        "long": {
+          "type": "string"
+        },
+        "short": {
+          "type": "string"
+        },
+        "takes_value": {
+          "type": "boolean"
+        },
+        "value_name": {
+          "type": "string"
+        },
+        "repeatable": {
+          "type": "boolean"
+        },
+        "available_on": {
+          "$ref": "#/$defs/UnionAvailability"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "long"
+          ]
+        },
+        {
+          "required": [
+            "short"
+          ]
+        }
+      ]
+    },
+    "UnionArgSnapshotV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "available_on"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "variadic": {
+          "type": "boolean"
+        },
+        "inferred_from_usage": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        },
+        "available_on": {
+          "$ref": "#/$defs/UnionAvailability"
+        }
+      }
+    },
+    "UnionCommandConflictsV2": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional conflict payload used to preserve per-platform differences when fields diverge."
+    },
+    "UnionCommandSnapshotV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "available_on"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/CommandPath"
+        },
+        "available_on": {
+          "$ref": "#/$defs/UnionAvailability"
+        },
+        "about": {
+          "type": "string"
+        },
+        "usage": {
+          "type": "string"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UnionArgSnapshotV2"
+          }
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UnionFlagSnapshotV2"
+          }
+        },
+        "conflicts": {
+          "$ref": "#/$defs/UnionCommandConflictsV2"
+        }
+      }
+    },
+    "UnionInputV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_triple",
+        "binary"
+      ],
+      "properties": {
+        "target_triple": {
+          "$ref": "#/$defs/TargetTriple"
+        },
+        "collected_at": {
+          "$ref": "#/$defs/Rfc3339String"
+        },
+        "binary": {
+          "$ref": "#/$defs/BinarySnapshot"
+        },
+        "features": {
+          "$ref": "#/$defs/FeaturesMetadataV1"
+        },
+        "known_omissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "UpstreamSnapshotUnionV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_schema_version",
+        "tool",
+        "mode",
+        "collected_at",
+        "inputs",
+        "commands"
+      ],
+      "properties": {
+        "snapshot_schema_version": {
+          "const": 2
+        },
+        "tool": {
+          "const": "codex-cli"
+        },
+        "mode": {
+          "const": "union"
+        },
+        "collected_at": {
+          "$ref": "#/$defs/Rfc3339String"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UnionInputV2"
+          },
+          "minItems": 1
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UnionCommandSnapshotV2"
+          }
+        }
+      }
+    },
+    "WrapperSurfaceScopedTargets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "linux",
+              "macos",
+              "windows"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "target_triples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TargetTriple"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "WrapperFlagCoverageV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "level"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Canonical identity key. Must match upstream union flag key semantics."
+        },
+        "level": {
+          "$ref": "#/$defs/CoverageLevel"
+        },
+        "note": {
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/WrapperSurfaceScopedTargets"
+        }
+      }
+    },
+    "WrapperArgCoverageV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "level"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Positional argument identity key."
+        },
+        "level": {
+          "$ref": "#/$defs/CoverageLevel"
+        },
+        "note": {
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/WrapperSurfaceScopedTargets"
+        }
+      }
+    },
+    "WrapperCommandCoverageV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "level"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/CommandPath"
+        },
+        "level": {
+          "$ref": "#/$defs/CoverageLevel"
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WrapperFlagCoverageV1"
+          }
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WrapperArgCoverageV1"
+          }
+        },
+        "note": {
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/WrapperSurfaceScopedTargets"
+        }
+      }
+    },
+    "WrapperCoverageV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "coverage"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "generated_at": {
+          "$ref": "#/$defs/Rfc3339String"
+        },
+        "wrapper_version": {
+          "type": "string"
+        },
+        "coverage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WrapperCommandCoverageV1"
+          }
+        }
+      }
+    },
+    "CoverageReportV1": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema_version",
+        "inputs"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}
+
