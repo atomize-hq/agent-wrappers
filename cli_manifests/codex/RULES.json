@@ -191,6 +191,13 @@
   },
   "report": {
     "schema_version": 1,
+    "file_naming": {
+      "dir": "cli_manifests/codex/reports/<version>/",
+      "any": "coverage.any.json",
+      "all": "coverage.all.json",
+      "per_target": "coverage.<target_triple>.json",
+      "markdown_optional_suffix": ".md"
+    },
     "required_deltas": [
       "missing_commands",
       "missing_flags",
@@ -210,6 +217,16 @@
         "all",
         "exact_target"
       ]
+    },
+    "filter_semantics": {
+      "any": "Surface is considered present if it appears on at least one available input target.",
+      "all": "Surface is considered present only if it appears on all expected_targets.",
+      "exact_target": "Surface is considered present only if it appears on the specified target_triple.",
+      "when_union_incomplete": {
+        "all": "error",
+        "any": "allowed",
+        "exact_target": "allowed"
+      }
     },
     "wrapper_only_policy": {
       "mode": "report",

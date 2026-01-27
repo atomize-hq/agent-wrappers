@@ -192,6 +192,13 @@ The comparer will produce:
 
 The report is generated for a pair: `(upstream snapshot version, wrapper coverage manifest)`.
 
+Platform filter modes (normative; see `RULES.json` for exact contract):
+- `any`: surface is present if it appears on at least one available input target.
+- `all`: surface is present only if it appears on all expected targets.
+- `exact_target`: surface is present only if it appears on the specified target triple.
+
+If the union snapshot is incomplete (`complete=false`), generating an `all` report is an error (use `any` and per-target reports instead).
+
 Report sections (conceptual):
 - New commands/flags/args in upstream vs wrapper coverage
 - Items present but only `passthrough` (candidates for `explicit` promotion)
