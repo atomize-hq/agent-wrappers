@@ -41,6 +41,22 @@
       ]
     }
   },
+  "supplements": {
+    "commands": {
+      "path": "cli_manifests/codex/supplement/commands.json",
+      "apply_stage": "per_target_before_union",
+      "platform_filter_field": "platforms",
+      "platform_filter_semantics": {
+        "when_missing": "apply_to_all_targets",
+        "when_present": "apply_to_targets_whose_os_matches"
+      },
+      "union_effect": "Supplemented commands appear in the union only on the targets where the supplement applied; availability is expressed via available_on.",
+      "known_omissions_tracking": {
+        "per_target_field": "known_omissions",
+        "union_propagation": "preserve_per_target_in_inputs"
+      }
+    }
+  },
   "union": {
     "mode": "union",
     "platform_granularity": "target_triple",

@@ -110,6 +110,9 @@ Snapshots must include:
 - a parseable `binary.semantic_version` (fail snapshot/union generation if missing/unknown),
 - feature probe metadata (what features were enabled during discovery, the `stable|beta|experimental` stage for each feature, and what commands only appeared when enabled).
 
+Supplements:
+- Apply `supplement/commands.json` per-target (before union merge). Supplements may be platform-scoped; the union must reflect availability only on the targets the supplement applied to.
+
 ### Multi-Platform Discovery and Merge
 
 Some upstream surfaces are platform-gated (or behave differently) across Linux/macOS/Windows (and sometimes by architecture). To make drift detection robust:
