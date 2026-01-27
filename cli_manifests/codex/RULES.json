@@ -287,6 +287,26 @@
       ]
     }
   },
+  "ci_validation": {
+    "mode": "hard_fail",
+    "schemas": {
+      "schema_file": "cli_manifests/codex/SCHEMA.json",
+      "rules_file": "cli_manifests/codex/RULES.json"
+    },
+    "validate_committed_artifacts": [
+      "cli_manifests/codex/current.json",
+      "cli_manifests/codex/snapshots/<version>/union.json",
+      "cli_manifests/codex/snapshots/<version>/<target_triple>.json",
+      "cli_manifests/codex/wrapper_coverage.json",
+      "cli_manifests/codex/reports/<version>/coverage.any.json",
+      "cli_manifests/codex/reports/<version>/coverage.all.json",
+      "cli_manifests/codex/reports/<version>/coverage.<target_triple>.json"
+    ],
+    "notes": [
+      "CI must fail if any committed artifact does not validate against SCHEMA.json.",
+      "Raw help artifacts are not committed and are not schema-validated."
+    ]
+  },
   "sorting": {
     "commands": "lexicographic_path",
     "flags": "by_key_then_long_then_short",

@@ -98,6 +98,9 @@ To eliminate ambiguity, the canonical (machine-checkable) spec for this system l
 
 This ADR provides narrative context and rationale; `SCHEMA.json` + `RULES.json` define the exact contract.
 
+CI validation:
+- CI must hard-fail if any committed parity artifact (snapshots, wrapper coverage, reports) does not validate against `SCHEMA.json`.
+
 ### Upstream Snapshots
 
 We will store versioned upstream snapshots and treat them as generated artifacts:

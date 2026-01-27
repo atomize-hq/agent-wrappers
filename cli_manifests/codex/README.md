@@ -24,6 +24,8 @@ The source of truth for artifact shapes and merge/compare semantics is:
 - `SCHEMA.json` (JSON Schema)
 - `RULES.json` (merge + comparison rules)
 
+CI should hard-fail if any committed artifact does not validate against `SCHEMA.json`.
+
 ## On-disk Layout (v1)
 
 - `min_supported.txt` — minimum supported Codex CLI version (single semver line).
