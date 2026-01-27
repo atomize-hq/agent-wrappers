@@ -383,9 +383,91 @@
       }
     },
     "UnionCommandConflictsV2": {
+      "type": "array",
+      "description": "Optional conflict entries used to preserve per-platform differences when fields diverge.",
+      "items": {
+        "$ref": "#/$defs/UnionConflictEntryV2"
+      }
+    },
+    "UnionConflictEntryV2": {
       "type": "object",
-      "additionalProperties": true,
-      "description": "Optional conflict payload used to preserve per-platform differences when fields diverge."
+      "additionalProperties": false,
+      "required": [
+        "unit",
+        "path",
+        "field",
+        "values_by_target"
+      ],
+      "properties": {
+        "unit": {
+          "type": "string",
+          "enum": [
+            "command",
+            "flag",
+            "arg"
+          ]
+        },
+        "path": {
+          "$ref": "#/$defs/CommandPath"
+        },
+        "key": {
+          "type": "string",
+          "description": "Required when unit=flag. Canonical flag identity key (e.g. --json or -j)."
+        },
+        "name": {
+          "type": "string",
+          "description": "Required when unit=arg. Argument identity name (as emitted by snapshots)."
+        },
+        "field": {
+          "type": "string",
+          "description": "Field name that differed across targets (e.g., takes_value, usage)."
+        },
+        "values_by_target": {
+          "type": "object",
+          "description": "Map of target_triple -> scalar JSON value (string/bool/null/number) as observed per target.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "boolean",
+              "number",
+              "null"
+            ]
+          }
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "unit": {
+                "const": "flag"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "key"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "unit": {
+                "const": "arg"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "name"
+            ]
+          }
+        }
+      ]
     },
     "UnionCommandSnapshotV2": {
       "type": "object",
@@ -623,21 +705,252 @@
     },
     "CoverageReportV1": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "schema_version",
-        "inputs"
+        "generated_at",
+        "inputs",
+        "platform_filter",
+        "deltas"
       ],
       "properties": {
         "schema_version": {
           "const": 1
         },
+        "generated_at": {
+          "$ref": "#/$defs/Rfc3339String"
+        },
         "inputs": {
           "type": "object",
-          "additionalProperties": true
+          "additionalProperties": false,
+          "required": [
+            "upstream",
+            "wrapper",
+            "rules"
+          ],
+          "properties": {
+            "upstream": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "semantic_version",
+                "mode",
+                "targets"
+              ],
+              "properties": {
+                "semantic_version": {
+                  "$ref": "#/$defs/SemverString"
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "single",
+                    "union"
+                  ]
+                },
+                "targets": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/TargetTriple"
+                  },
+                  "minItems": 1
+                }
+              }
+            },
+            "wrapper": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "schema_version"
+              ],
+              "properties": {
+                "schema_version": {
+                  "type": "integer"
+                },
+                "wrapper_version": {
+                  "type": "string"
+                }
+              }
+            },
+            "rules": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "rules_schema_version"
+              ],
+              "properties": {
+                "rules_schema_version": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "platform_filter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "any",
+                "all",
+                "exact_target"
+              ]
+            },
+            "target_triple": {
+              "$ref": "#/$defs/TargetTriple"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "mode": {
+                    "const": "exact_target"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "target_triple"
+                ]
+              }
+            }
+          ]
+        },
+        "deltas": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "missing_commands",
+            "missing_flags",
+            "missing_args"
+          ],
+          "properties": {
+            "missing_commands": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReportCommandDeltaV1"
+              }
+            },
+            "missing_flags": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReportFlagDeltaV1"
+              }
+            },
+            "missing_args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReportArgDeltaV1"
+              }
+            },
+            "passthrough_candidates": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReportSurfaceDeltaV1"
+              }
+            },
+            "unsupported": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReportSurfaceDeltaV1"
+              }
+            },
+            "intentionally_unsupported": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReportSurfaceDeltaV1"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ReportSurfaceDeltaV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "upstream_available_on"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/CommandPath"
+        },
+        "upstream_available_on": {
+          "$ref": "#/$defs/UnionAvailability"
+        },
+        "wrapper_level": {
+          "$ref": "#/$defs/CoverageLevel"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "ReportCommandDeltaV1": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/ReportSurfaceDeltaV1"
+        }
+      ]
+    },
+    "ReportFlagDeltaV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "key",
+        "upstream_available_on"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/CommandPath"
+        },
+        "key": {
+          "type": "string"
+        },
+        "upstream_available_on": {
+          "$ref": "#/$defs/UnionAvailability"
+        },
+        "wrapper_level": {
+          "$ref": "#/$defs/CoverageLevel"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "ReportArgDeltaV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "name",
+        "upstream_available_on"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/CommandPath"
+        },
+        "name": {
+          "type": "string"
+        },
+        "upstream_available_on": {
+          "$ref": "#/$defs/UnionAvailability"
+        },
+        "wrapper_level": {
+          "$ref": "#/$defs/CoverageLevel"
+        },
+        "note": {
+          "type": "string"
         }
       }
     }
   }
 }
-

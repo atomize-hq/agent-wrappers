@@ -13,7 +13,15 @@
     "require_same_semantic_version": true,
     "conflict_handling": {
       "strategy": "record_conflicts_and_preserve_availability",
-      "conflict_payload_location": "commands[].conflicts"
+      "conflict_payload_location": "commands[].conflicts",
+      "conflict_entry_shape": {
+        "unit": "command|flag|arg",
+        "path": "command path tokens",
+        "field": "field name that differs",
+        "values_by_target": "map target_triple -> scalar JSON value",
+        "key": "required when unit=flag",
+        "name": "required when unit=arg"
+      }
     },
     "canonical_keys": {
       "flag_key": "long_or_short",
@@ -61,6 +69,26 @@
       ]
     }
   },
+  "report": {
+    "schema_version": 1,
+    "required_deltas": [
+      "missing_commands",
+      "missing_flags",
+      "missing_args"
+    ],
+    "optional_deltas": [
+      "passthrough_candidates",
+      "unsupported",
+      "intentionally_unsupported"
+    ],
+    "platform_filter": {
+      "modes": [
+        "any",
+        "all",
+        "exact_target"
+      ]
+    }
+  },
   "sorting": {
     "commands": "lexicographic_path",
     "flags": "by_key_then_long_then_short",
@@ -73,4 +101,3 @@
     "require_unique_arg_names_per_command": true
   }
 }
-
