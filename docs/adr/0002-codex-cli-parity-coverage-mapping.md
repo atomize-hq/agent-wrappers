@@ -15,6 +15,10 @@ This repository wraps the upstream Codex CLI (`codex`) as a Rust library (`crate
 
 Note: feature stages in `codex features list` may include `deprecated` and `removed` in addition to `stable|beta|experimental`. We record the stage string to support proactive planning before surfaces disappear.
 
+Feature enable policy (for exhaustive discovery):
+- Use best-effort enabling of all features listed by `codex features list` except those with stage `removed`.
+- If enabling a feature fails, record the failure and continue discovery with the subset of features that successfully enabled.
+
 ADR 0001 established the operational workflow to manage drift:
 - generate a deterministic CLI snapshot from a specific `codex` binary,
 - review diffs as a checklist,

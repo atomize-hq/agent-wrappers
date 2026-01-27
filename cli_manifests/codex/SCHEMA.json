@@ -217,6 +217,33 @@
         "mode": {
           "type": "string"
         },
+        "enable_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "excluded_stages"
+          ],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "best_effort_enable_all_except_excluded_stages"
+              ]
+            },
+            "excluded_stages": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "removed"
+                ]
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
+        },
         "listed": {
           "type": "array",
           "items": {
@@ -251,6 +278,46 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "requested_enable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The feature set we attempted to enable based on enable_policy (before accounting for enable failures)."
+        },
+        "enable_failures": {
+          "type": "array",
+          "description": "Best-effort enable failures captured for review/debugging.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "feature",
+              "stage"
+            ],
+            "properties": {
+              "feature": {
+                "type": "string"
+              },
+              "stage": {
+                "type": "string",
+                "enum": [
+                  "stable",
+                  "beta",
+                  "experimental",
+                  "deprecated",
+                  "removed"
+                ]
+              },
+              "exit_code": {
+                "type": "integer"
+              },
+              "stderr": {
+                "type": "string"
+              }
+            }
           }
         },
         "commands_added_when_all_enabled": {

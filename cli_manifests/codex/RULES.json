@@ -15,6 +15,27 @@
       "reporting": "Coverage deltas for global flags are reported only under the root path ([]) to avoid repeated noise across commands."
     }
   },
+  "features": {
+    "stage_strings": [
+      "stable",
+      "beta",
+      "experimental",
+      "deprecated",
+      "removed"
+    ],
+    "enable_policy": {
+      "mode": "best_effort_enable_all_except_excluded_stages",
+      "excluded_stages": [
+        "removed"
+      ],
+      "on_enable_failure": "record_and_continue",
+      "snapshot_metadata_fields": [
+        "requested_enable",
+        "enabled_for_snapshot",
+        "enable_failures"
+      ]
+    }
+  },
   "union": {
     "mode": "union",
     "platform_granularity": "target_triple",
