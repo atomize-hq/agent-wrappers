@@ -156,6 +156,11 @@ Status gates:
 - `validated` requires validation passing on the required target and coverage being supported on that target.
 - `supported` remains the stricter “supported on all expected targets” designation.
 
+Pointer file format + invariants (normative; see `RULES.json` for exact contract):
+- Each pointer file is a single UTF-8 line plus trailing newline: either `<semver>` or `none`.
+- `latest_validated.txt` must match `pointers/latest_validated/x86_64-unknown-linux-musl.txt` and must not be `none`.
+- `current.json.binary.semantic_version` must match `latest_validated.txt` (Linux-first v1).
+
 Snapshots must include:
 - a root command entry represented as `path: []` so global flags/args are comparable,
 - platform metadata for where the snapshot was generated (at minimum `binary.target_triple`; `os` and `arch` are still recorded as well),

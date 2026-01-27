@@ -148,3 +148,6 @@ Compatibility:
 Promotion (v1):
 - Linux-first promotion is allowed even when the union snapshot is incomplete (`complete=false`), as long as Linux passed validation and is supported by coverage.
 - macOS/Windows pointers advance independently when their signals are available.
+
+Pointer file format:
+- Each pointer file contains a single line (`<semver>` or `none`) and must end with a newline.

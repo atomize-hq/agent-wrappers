@@ -298,6 +298,38 @@
       "compat": {
         "latest_validated": "cli_manifests/codex/latest_validated.txt",
         "meaning": "Canonical pointer for the required target (Linux). Must match pointers/latest_validated/x86_64-unknown-linux-musl.txt."
+      },
+      "file_format": {
+        "encoding": "utf-8",
+        "lines": "single_line_plus_trailing_newline",
+        "value_grammar": "semver_or_none",
+        "allowed_values": [
+          "none",
+          "<semver>"
+        ],
+        "notes": [
+          "Pointer files contain exactly one line and must end with a newline.",
+          "When present, <semver> must be a strict semver string (no leading 'v', no whitespace).",
+          "Use 'none' when no version is yet known for that pointer on that target."
+        ]
+      },
+      "invariants": [
+        "latest_validated.txt must equal pointers/latest_validated/x86_64-unknown-linux-musl.txt and must not be 'none'.",
+        "current.json.binary.semantic_version must equal latest_validated.txt (Linux-first v1)."
+      ],
+      "consistency_checks": {
+        "when_pointer_is_semver": [
+          "versions/<version>.json must exist",
+          "snapshots/<version>/union.json must exist",
+          "snapshots/<version>/<target_triple>.json must exist for the referenced target"
+        ],
+        "latest_supported_requires": [
+          "versions/<version>.json.coverage.supported_targets includes target_triple"
+        ],
+        "latest_validated_requires": [
+          "versions/<version>.json.coverage.supported_targets includes target_triple",
+          "versions/<version>.json.validation.passed_targets includes target_triple"
+        ]
       }
     },
     "ci_artifacts": {
