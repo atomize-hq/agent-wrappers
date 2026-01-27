@@ -46,7 +46,11 @@ We will implement a **coverage mapping system** that compares:
 
 …and produces a deterministic **coverage report** that can be converted into triad tasks.
 
-This system is “diff-first” and will avoid network access at crate runtime. Any upstream release discovery/download remains CI/workflow-driven (per ADR 0001).
+This system is “diff-first” in the sense that its primary output is a **structured coverage delta**, not a prose checklist and not a raw `git diff`:
+- Input: two machine-readable inventories (`upstream snapshot` + `wrapper_coverage.json`), keyed by command `path` + flag/arg identity.
+- Output: deterministic reports that list added/removed/changed commands, flags, and positional args, plus their wrapper coverage level (`explicit|passthrough|unsupported|unknown`).
+
+It will avoid network access at crate runtime. Any upstream release discovery/download remains CI/workflow-driven (per ADR 0001).
 
 Critically, the wrapper coverage manifest is not meant to be hand-edited JSON. It must be produced by a deterministic generator (from code and/or wrapper probes) so it can be refreshed by CI/cron with human-in-the-loop gating only.
 
