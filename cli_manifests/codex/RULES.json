@@ -338,6 +338,32 @@
       "latest_validated_requires": "validated"
     }
   },
+  "automation": {
+    "pr_loop": {
+      "enabled": true,
+      "allowed_actions": [
+        "open_pr_with_snapshots_and_reports",
+        "push_commits_back_to_pr_branch",
+        "re_run_ci_until_supported_and_validated"
+      ],
+      "coverage_gap_resolution": [
+        "implement_wrapper_support",
+        "mark_intentionally_unsupported_with_rationale"
+      ],
+      "branch_policy": {
+        "require_dedicated_branch_per_version": true,
+        "disallow_direct_push_to": [
+          "main",
+          "master",
+          "feat/*"
+        ],
+        "notes": [
+          "Automation must only push commits to the dedicated PR branch for the target upstream version.",
+          "Human approval gates can be applied at merge time or via a separate staging branch."
+        ]
+      }
+    }
+  },
   "ci_validation": {
     "mode": "hard_fail",
     "schemas": {

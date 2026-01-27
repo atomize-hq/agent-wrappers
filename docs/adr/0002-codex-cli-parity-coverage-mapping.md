@@ -129,6 +129,20 @@ Supported (normative summary; see `RULES.json` for exact contract):
 - `unsupported`, `unknown`, and missing coverage entries are disallowed for `supported`.
 - Any `intentionally_unsupported` entry must include a rationale note.
 
+## Automation Loop (CI → PR → Agent → Re-run)
+
+Target end state: the system can run on a schedule (or on demand), open a PR with new upstream snapshots/reports, and use an agent to close the coverage gap by either:
+- adding wrapper support (moving surfaces to `explicit` or `passthrough`), or
+- explicitly waiving them as `intentionally_unsupported` with rationale (policy-driven).
+
+Workflow sketch:
+1. CI generates per-target snapshots + union snapshot + coverage reports and opens/updates a dedicated PR branch for that upstream version.
+2. An agent updates wrapper code and wrapper coverage until `is_supported(version)=true` per `RULES.json` (either by implementing support or waiving via `intentionally_unsupported`).
+3. CI reruns snapshot/coverage/validation; when requirements are met, the agent/bot may push commits back to the same PR branch (never to mainline branches) and advance `versions/<version>.json.status` accordingly.
+
+Branch hygiene:
+- Automation commits must land only on dedicated automation branches/PRs for that version (not directly on `feat/*` or mainline).
+
 Snapshots must include:
 - a root command entry represented as `path: []` so global flags/args are comparable,
 - platform metadata for where the snapshot was generated (at minimum `binary.target_triple`; `os` and `arch` are still recorded as well),
