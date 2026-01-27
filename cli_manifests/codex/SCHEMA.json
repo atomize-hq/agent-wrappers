@@ -236,7 +236,9 @@
                 "enum": [
                   "stable",
                   "beta",
-                  "experimental"
+                  "experimental",
+                  "deprecated",
+                  "removed"
                 ]
               },
               "effective": {
@@ -930,6 +932,24 @@
               "type": "array",
               "items": {
                 "$ref": "#/$defs/ReportSurfaceDeltaV1"
+              }
+            },
+            "wrapper_only_commands": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReportCommandDeltaV1"
+              }
+            },
+            "wrapper_only_flags": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReportFlagDeltaV1"
+              }
+            },
+            "wrapper_only_args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReportArgDeltaV1"
               }
             }
           }

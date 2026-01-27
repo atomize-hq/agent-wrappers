@@ -13,6 +13,8 @@ This repository wraps the upstream Codex CLI (`codex`) as a Rust library (`crate
 - platform-gated surfaces (e.g., `sandbox` variants),
 - JSONL event schema and server notifications.
 
+Note: feature stages in `codex features list` may include `deprecated` and `removed` in addition to `stable|beta|experimental`. We record the stage string to support proactive planning before surfaces disappear.
+
 ADR 0001 established the operational workflow to manage drift:
 - generate a deterministic CLI snapshot from a specific `codex` binary,
 - review diffs as a checklist,

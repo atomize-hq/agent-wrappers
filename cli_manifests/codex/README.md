@@ -74,7 +74,7 @@ Optional/generated:
     - `platforms` (array, optional): `linux|macos|windows|wsl`
 - `features` (object, optional): feature-probe metadata captured from `codex features list` and used to drive exhaustive help discovery:
   - `mode` (string): currently `default_plus_all_enabled`
-  - `listed` (array, optional): parsed rows from `codex features list` (`name`, `stage`, `effective`)
+  - `listed` (array, optional): parsed rows from `codex features list` (`name`, `stage`, `effective`). `stage` is the CLI display string and may include: `stable|beta|experimental|deprecated|removed`.
   - `enabled_for_snapshot` (array of strings, optional): features enabled via `--enable <FEATURE>` during discovery
   - `commands_added_when_all_enabled` (array of `path` arrays, optional): command paths that only appeared when all features were enabled
 - `known_omissions` (array of strings, optional): records applied supplements for review visibility.

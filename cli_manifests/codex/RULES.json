@@ -154,7 +154,10 @@
     "optional_deltas": [
       "passthrough_candidates",
       "unsupported",
-      "intentionally_unsupported"
+      "intentionally_unsupported",
+      "wrapper_only_commands",
+      "wrapper_only_flags",
+      "wrapper_only_args"
     ],
     "platform_filter": {
       "modes": [
@@ -162,6 +165,10 @@
         "all",
         "exact_target"
       ]
+    },
+    "wrapper_only_policy": {
+      "mode": "report",
+      "meaning": "Wrapper coverage entries with no corresponding upstream surface (after platform filtering). Treat as stale or wrapper-only and surface for cleanup/review."
     }
   },
   "sorting": {
