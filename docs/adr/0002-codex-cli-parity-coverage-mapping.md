@@ -61,7 +61,8 @@ Critically, the wrapper coverage manifest is not meant to be hand-edited JSON. I
 Each upstream surface is classified as one of:
 - `explicit`: first-class API exists in the wrapper (typed request/response or dedicated method).
 - `passthrough`: wrapper can drive the surface only via generic argument/override forwarding (weak support).
-- `unsupported`: wrapper cannot safely drive the surface today (or we intentionally avoid it).
+- `unsupported`: wrapper cannot safely drive the surface today (missing implementation or incomplete semantics); treated as work-queue input.
+- `intentionally_unsupported`: we deliberately choose not to support the surface (policy/safety/maintenance reasons); must include a rationale note and should not create perpetual churn in reports.
 - `unknown`: not yet assessed (allowed during rollout; treated as work-queue input).
 
 ### Surface Units (granular)
@@ -112,7 +113,7 @@ Schema (v1, conceptual):
 - `wrapper_version` (string, optional)
 - `coverage` (array):
   - `path` (array of strings)
-  - `level` (`explicit|passthrough|unsupported|unknown`)
+  - `level` (`explicit|passthrough|unsupported|intentionally_unsupported|unknown`)
   - `flags` (array, optional):
     - `key` (`--long` or `-s`)
     - `level`
@@ -141,7 +142,8 @@ The report is generated for a pair: `(upstream snapshot version, wrapper coverag
 Report sections (conceptual):
 - New commands/flags/args in upstream vs wrapper coverage
 - Items present but only `passthrough` (candidates for `explicit` promotion)
-- Items explicitly marked `unsupported` (intentionally unwrapped) and the policy rationale
+- Items marked `unsupported` (missing wrapper support; work-queue input)
+- Items marked `intentionally_unsupported` (intentionally unwrapped) and the policy rationale
 - Feature-gated additions (commands that appear only when all features are enabled)
 
 ## Operating Workflow
