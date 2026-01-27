@@ -6,6 +6,15 @@
     "flag": "prefer_long_else_short",
     "arg": "name"
   },
+  "globals": {
+    "root_path": [],
+    "meaning": "The root command entry (path=[]) is the canonical location for global flags/options and any top-level positional args. Global flags must be compared/reported at the root scope and must not be duplicated as per-command missing items.",
+    "effective_flags_model": {
+      "enabled": true,
+      "definition": "A command's effective flag set is the union of root flags and that command's own flags.",
+      "reporting": "Coverage deltas for global flags are reported only under the root path ([]) to avoid repeated noise across commands."
+    }
+  },
   "union": {
     "mode": "union",
     "platform_granularity": "target_triple",
@@ -69,6 +78,15 @@
     "availability": {
       "field": "available_on",
       "meaning": "Set of target triples where this unit appears in help discovery."
+    },
+    "determinism": {
+      "target_order": "as_listed_in_expected_targets",
+      "canonical_target_for_scalar_fields": "required_target_else_first_available",
+      "text_normalization": {
+        "strip_ansi": true,
+        "normalize_newlines": "lf",
+        "trim_trailing_whitespace_per_line": true
+      }
     }
   },
   "comparison": {
@@ -174,12 +192,30 @@
   "sorting": {
     "commands": "lexicographic_path",
     "flags": "by_key_then_long_then_short",
-    "args": "by_name"
+    "args": "by_name",
+    "expected_targets": "rules_expected_targets_order",
+    "inputs": "rules_expected_targets_order",
+    "available_on": "rules_expected_targets_order",
+    "conflicts": "by_unit_then_path_then_key_or_name_then_field",
+    "report": {
+      "missing_commands": "by_path",
+      "missing_flags": "by_path_then_key",
+      "missing_args": "by_path_then_name",
+      "wrapper_only_commands": "by_path",
+      "wrapper_only_flags": "by_path_then_key",
+      "wrapper_only_args": "by_path_then_name"
+    }
   },
   "validation": {
     "require_root_path_entry": true,
     "require_unique_command_paths": true,
     "require_unique_flag_keys_per_command": true,
-    "require_unique_arg_names_per_command": true
+    "require_unique_arg_names_per_command": true,
+    "uniqueness_scope": {
+      "commands": "path",
+      "flags": "path_plus_flag_key",
+      "args": "path_plus_arg_name",
+      "note": "Collisions across different command paths are expected and allowed; uniqueness is enforced only within a single command scope."
+    }
   }
 }
