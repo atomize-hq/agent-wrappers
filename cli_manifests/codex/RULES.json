@@ -41,6 +41,7 @@
     "platform_granularity": "target_triple",
     "require_same_tool": true,
     "require_same_semantic_version": true,
+    "require_semantic_version": true,
     "required_target": "x86_64-unknown-linux-musl",
     "expected_targets": [
       "x86_64-unknown-linux-musl",

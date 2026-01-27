@@ -106,6 +106,7 @@ We will store versioned upstream snapshots and treat them as generated artifacts
 Snapshots must include:
 - a root command entry represented as `path: []` so global flags/args are comparable,
 - platform metadata for where the snapshot was generated (at minimum `binary.target_triple`; `os` and `arch` are still recorded as well),
+- a parseable `binary.semantic_version` (fail snapshot/union generation if missing/unknown),
 - feature probe metadata (what features were enabled during discovery, the `stable|beta|experimental` stage for each feature, and what commands only appeared when enabled).
 
 ### Multi-Platform Discovery and Merge

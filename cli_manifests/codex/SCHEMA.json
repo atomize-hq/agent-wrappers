@@ -71,7 +71,8 @@
         "size_bytes",
         "platform",
         "target_triple",
-        "version_output"
+        "version_output",
+        "semantic_version"
       ],
       "properties": {
         "sha256": {

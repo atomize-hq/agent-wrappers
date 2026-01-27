@@ -53,8 +53,9 @@ Optional/generated:
   - `sha256` (string)
   - `size_bytes` (int)
   - `platform` (object): `os` (string), `arch` (string)
+  - `target_triple` (string): required
   - `version_output` (string)
-  - `semantic_version` (string, optional)
+  - `semantic_version` (string): required
   - `channel` (string, optional): `stable|beta|nightly|unknown` (when derivable)
   - `commit` (string, optional)
 - `commands` (array; stable-sorted):
