@@ -100,6 +100,7 @@ This ADR provides narrative context and rationale; `SCHEMA.json` + `RULES.json` 
 
 CI validation:
 - CI must hard-fail if any committed parity artifact (snapshots, wrapper coverage, reports) does not validate against `SCHEMA.json`.
+- CI must also validate per-version status metadata files against `VERSION_METADATA_SCHEMA.json`.
 
 ### Upstream Snapshots
 

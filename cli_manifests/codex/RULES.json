@@ -323,6 +323,8 @@
       "rules_file": "cli_manifests/codex/RULES.json"
     },
     "validate_committed_artifacts": [
+      "cli_manifests/codex/VERSION_METADATA_SCHEMA.json",
+      "cli_manifests/codex/versions/<version>.json",
       "cli_manifests/codex/current.json",
       "cli_manifests/codex/snapshots/<version>/union.json",
       "cli_manifests/codex/snapshots/<version>/<target_triple>.json",
