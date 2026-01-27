@@ -124,3 +124,14 @@ Standard report outputs (committed):
 - `reports/<version>/coverage.any.json`
 - `reports/<version>/coverage.all.json` (only when union `complete=true`)
 - `reports/<version>/coverage.<target_triple>.json`
+
+## Version Status Metadata (planned)
+
+To avoid ambiguity in terms like “validated”, we track per-version workflow status:
+- `versions/<version>.json` (schema: `VERSION_METADATA_SCHEMA.json`)
+
+Statuses:
+- `snapshotted`: snapshots generated and schema-valid; no wrapper claims.
+- `reported`: coverage report generated; work queue available; no wrapper validation claim.
+- `validated`: passed the validation matrix (promotion-grade for `latest_validated.txt` / `current.json`).
+- `supported`: wrapper coverage meets policy requirements for this version (stronger than validated).

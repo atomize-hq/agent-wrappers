@@ -298,9 +298,22 @@
         "reports"
       ],
       "notes": [
-        "Keep union + per-target snapshots and reports for the last 3 validated versions, plus min_supported and latest_validated pointers.",
+        "Keep union + per-target snapshots and reports for the last 3 promoted 'validated' versions (passed validation matrix), plus min_supported and latest_validated pointers.",
         "Raw help retention is governed by CI artifact retention settings."
       ]
+    }
+  },
+  "version_metadata": {
+    "path": "cli_manifests/codex/versions/<version>.json",
+    "schema": "cli_manifests/codex/VERSION_METADATA_SCHEMA.json",
+    "statuses": {
+      "snapshotted": "Snapshots generated and schema-valid; no wrapper claims.",
+      "reported": "Coverage report generated; work queue available; no wrapper validation claim.",
+      "validated": "Passed validation matrix (promotion-grade for latest_validated/current.json).",
+      "supported": "Wrapper coverage meets policy requirements for this version (stronger than validated)."
+    },
+    "promotion_gate": {
+      "latest_validated_requires": "validated"
     }
   },
   "ci_validation": {

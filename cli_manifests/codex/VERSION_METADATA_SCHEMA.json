@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cli_manifests/codex/VERSION_METADATA_SCHEMA.json",
+  "title": "Codex CLI Parity Version Metadata",
+  "description": "Status metadata for an upstream codex version within this repo's parity workflow.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "semantic_version",
+    "status",
+    "updated_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "semantic_version": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "snapshotted",
+        "reported",
+        "validated",
+        "supported"
+      ]
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "RFC3339 timestamp."
+    },
+    "notes": {
+      "type": "string"
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "snapshots_dir": {
+          "type": "string"
+        },
+        "reports_dir": {
+          "type": "string"
+        },
+        "union_complete": {
+          "type": "boolean"
+        }
+      }
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eligible_for_latest_validated": {
+          "type": "boolean",
+          "description": "True only when status=validated (promotion-grade)."
+        }
+      }
+    }
+  }
+}
+

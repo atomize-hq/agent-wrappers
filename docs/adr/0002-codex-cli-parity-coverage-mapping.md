@@ -114,6 +114,13 @@ We will store versioned upstream snapshots and treat them as generated artifacts
 Retention (committed artifacts):
 - Keep snapshots + reports for the last 3 validated versions (sliding window), plus the versions referenced by `min_supported.txt` and `latest_validated.txt`.
 
+Version status metadata:
+- To avoid overloading the word “validated”, we track per-version workflow state in `cli_manifests/codex/versions/<version>.json`:
+  - `snapshotted`: snapshots generated and schema-valid; no wrapper claims.
+  - `reported`: coverage report generated; work queue available; no wrapper validation claim.
+  - `validated`: passed the validation matrix (promotion-grade for `latest_validated.txt` / `current.json`).
+  - `supported`: wrapper coverage meets policy requirements for this version (stronger than validated).
+
 Snapshots must include:
 - a root command entry represented as `path: []` so global flags/args are comparable,
 - platform metadata for where the snapshot was generated (at minimum `binary.target_triple`; `os` and `arch` are still recorded as well),
