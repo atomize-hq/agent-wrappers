@@ -19,7 +19,7 @@ ADR 0001 established the operational workflow to manage drift:
 - validate a version via a real-binary test matrix before promoting `latest_validated.txt`.
 
 What is still missing is an automated, *granular* mapping from:
-- “what upstream exposes” (commands + flags + positional args) to
+- “what a specific upstream `codex` binary exposes” (version + platform + enabled feature set; commands/subcommands, global + per-command flags, and positional args/usage shapes) to
 - “what the wrapper explicitly supports (and how)”
 
 …so maintainers can produce a clean, structured work queue when a new stable upstream release lands.
