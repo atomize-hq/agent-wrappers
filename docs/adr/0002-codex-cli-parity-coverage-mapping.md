@@ -82,6 +82,7 @@ Notes:
 - Some upstream help text omits args present in `Usage:`; snapshots infer these and mark them as inferred.
 - Some upstream surfaces appear only when enabling feature flags; snapshots record which features were enabled and which commands only appeared when enabled.
 - Global flags/options are represented on the root command entry (`path: []`). Comparisons and reports treat global flags at the root scope to avoid repeating the same “missing global flag” across every command.
+  - The union snapshot may normalize away per-command duplicates of global flags (same canonical flag key), since the effective flag model is `root.flags ∪ command.flags`.
 
 ## Artifacts
 

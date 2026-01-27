@@ -12,7 +12,12 @@
     "effective_flags_model": {
       "enabled": true,
       "definition": "A command's effective flag set is the union of root flags and that command's own flags.",
-      "reporting": "Coverage deltas for global flags are reported only under the root path ([]) to avoid repeated noise across commands."
+      "reporting": "Coverage deltas for global flags are reported only under the root path ([]) to avoid repeated noise across commands.",
+      "union_normalization": {
+        "dedupe_per_command_flags_against_root": true,
+        "dedupe_key": "flag_key",
+        "meaning": "If a command help listing repeats a global flag already present in root flags (same canonical key), omit it from that command's flags in the union snapshot. The flag remains globally available via the effective_flags_model."
+      }
     }
   },
   "features": {
