@@ -18,6 +18,12 @@
         "dedupe_key": "flag_key",
         "meaning": "If a command help listing repeats a global flag already present in root flags (same canonical key), omit it from that command's flags in the union snapshot. The flag remains globally available via the effective_flags_model."
       }
+    },
+    "positional_args_model": {
+      "enabled": true,
+      "mode": "root_only",
+      "definition": "Global/top-level positional args are represented only on the root entry (path=[]). No automatic inheritance/\"effective args\" union is performed for subcommands.",
+      "reporting": "Coverage deltas for global positional args are reported only under the root path ([])."
     }
   },
   "features": {
