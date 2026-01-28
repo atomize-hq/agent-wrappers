@@ -1,6 +1,7 @@
 mod codex_snapshot;
 mod codex_union;
 mod codex_validate;
+mod codex_wrapper_coverage;
 
 use clap::{Parser, Subcommand};
 
@@ -19,6 +20,8 @@ enum Command {
     CodexSnapshot(codex_snapshot::Args),
     /// Merge per-target snapshots into a union snapshot under `cli_manifests/codex/`.
     CodexUnion(codex_union::Args),
+    /// Generate `cli_manifests/codex/wrapper_coverage.json` from wrapper source of truth.
+    CodexWrapperCoverage(codex_wrapper_coverage::CliArgs),
     /// Validate committed Codex parity artifacts under `cli_manifests/codex/`.
     CodexValidate(codex_validate::Args),
 }
@@ -35,6 +38,13 @@ fn main() {
             }
         },
         Command::CodexUnion(args) => match codex_union::run(args) {
+            Ok(()) => 0,
+            Err(err) => {
+                eprintln!("{err}");
+                1
+            }
+        },
+        Command::CodexWrapperCoverage(args) => match codex_wrapper_coverage::run(args) {
             Ok(()) => 0,
             Err(err) => {
                 eprintln!("{err}");
