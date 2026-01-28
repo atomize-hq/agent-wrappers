@@ -1,4 +1,5 @@
 mod codex_snapshot;
+mod codex_union;
 mod codex_validate;
 
 use clap::{Parser, Subcommand};
@@ -12,9 +13,12 @@ struct Cli {
 }
 
 #[derive(Debug, Subcommand)]
+#[allow(clippy::enum_variant_names)]
 enum Command {
     /// Generate a Codex CLI snapshot manifest under `cli_manifests/codex/`.
     CodexSnapshot(codex_snapshot::Args),
+    /// Merge per-target snapshots into a union snapshot under `cli_manifests/codex/`.
+    CodexUnion(codex_union::Args),
     /// Validate committed Codex parity artifacts under `cli_manifests/codex/`.
     CodexValidate(codex_validate::Args),
 }
@@ -24,6 +28,13 @@ fn main() {
 
     let exit_code = match cli.command {
         Command::CodexSnapshot(args) => match codex_snapshot::run(args) {
+            Ok(()) => 0,
+            Err(err) => {
+                eprintln!("{err}");
+                1
+            }
+        },
+        Command::CodexUnion(args) => match codex_union::run(args) {
             Ok(()) => 0,
             Err(err) => {
                 eprintln!("{err}");
