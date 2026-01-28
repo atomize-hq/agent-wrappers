@@ -249,3 +249,13 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree pending (`ccm-c4-ci-integ` / `wt/ccm-c4-ci-integ` to be added after docs commit)
 - Plan: merge `ccm-c4-ci-code` + `ccm-c4-ci-test`, reconcile to `C4-spec.md`, run required commands, commit via worktree, then fast-forward into `feat/codex-cli-parity-coverage-mapping`
 - Blockers: none
+
+## [2026-01-28 18:29 UTC] Integration Agent – C4-integ – END
+- Worktree `wt/ccm-c4-ci-integ` on branch `ccm-c4-ci-integ` (tip `d35d087`) merged `ccm-c4-ci-code` + `ccm-c4-ci-test`, then reconciled to `C4-spec.md` by reading `union.expected_targets` from `cli_manifests/codex/RULES.json` (and fixing a test regex so `ci.yml` is correctly detected as invoking `xtask codex-validate`).
+- Merged `ccm-c4-ci-integ` → fast-forwarded `feat/codex-cli-parity-coverage-mapping`
+- Commands:
+  - `cargo fmt` (pass; no output)
+  - `cargo clippy --workspace --all-targets -- -D warnings` (pass; `Finished \`dev\` profile [unoptimized + debuginfo] target(s) in 11.28s`)
+  - `cargo test -p xtask` (pass; all xtask spec tests including `c4_spec_ci_wiring` passed)
+  - `make preflight` (pass; runs fmt/clippy/clean/check/test; `Removed 3660 files, 1.5GiB total`)
+- Blockers: none
