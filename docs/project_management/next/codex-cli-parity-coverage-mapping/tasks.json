@@ -1,0 +1,606 @@
+[
+  {
+    "id": "C0-code",
+    "name": "Deterministic validators (code)",
+    "type": "code",
+    "phase": "C0",
+    "status": "pending",
+    "description": "Implement `xtask codex-validate` per C0-spec (production code only).",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/VALIDATOR_SPEC.md",
+      "cli_manifests/codex/VERSION_METADATA_SCHEMA.json",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C0-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C0-code.md"
+    ],
+    "acceptance_criteria": [
+      "`cargo run -p xtask -- codex-validate --root cli_manifests/codex` exists and exits 0 on compliant workspaces",
+      "Validator output is deterministic (stable ordering) and errors include required fields per RULES.json",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C0-code'",
+      "Create the task branch and worktree: `git worktree add -b ccm-c0-validate-code wt/ccm-c0-validate-code feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.",
+      "Inside `wt/ccm-c0-validate-code`, commit C0-code changes (no planning-pack docs edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity-coverage-mapping`.",
+      "Checkout `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-code'.",
+      "Remove worktree `wt/ccm-c0-validate-code`."
+    ],
+    "worktree": "wt/ccm-c0-validate-code",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C0-code.md",
+    "depends_on": [],
+    "concurrent_with": ["C0-test"]
+  },
+  {
+    "id": "C0-test",
+    "name": "Deterministic validators (test)",
+    "type": "test",
+    "phase": "C0",
+    "status": "pending",
+    "description": "Add tests validating `xtask codex-validate` behavior per C0-spec (tests only).",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/VALIDATOR_SPEC.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C0-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C0-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests cover C0 acceptance criteria (valid workspace passes; known invalid cases fail with required error fields)",
+      "No production code changes"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C0-test'",
+      "Create the task branch and worktree: `git worktree add -b ccm-c0-validate-test wt/ccm-c0-validate-test feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; targeted `cargo test ...` for the suites added/updated.",
+      "Inside `wt/ccm-c0-validate-test`, commit C0-test changes (no planning-pack docs edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity-coverage-mapping`.",
+      "Checkout `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-test'.",
+      "Remove worktree `wt/ccm-c0-validate-test`."
+    ],
+    "worktree": "wt/ccm-c0-validate-test",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C0-test.md",
+    "depends_on": [],
+    "concurrent_with": ["C0-code"]
+  },
+  {
+    "id": "C0-integ",
+    "name": "Deterministic validators (integration)",
+    "type": "integration",
+    "phase": "C0",
+    "status": "pending",
+    "description": "Merge C0 code/test and gate with fmt/clippy/tests/preflight.",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C0-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C0-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C0 merged and matches C0-spec",
+      "`cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, relevant tests, and `make preflight` all pass"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C0-integ'",
+      "Create the integration branch and worktree: `git worktree add -b ccm-c0-validate-integ wt/ccm-c0-validate-integ feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C0 into the integration worktree and reconcile behavior to the spec.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; relevant tests; `make preflight`.",
+      "Commit integration changes on the integration branch.",
+      "Fast-forward merge the integration branch into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-integ'.",
+      "Remove worktree `wt/ccm-c0-validate-integ`."
+    ],
+    "worktree": "wt/ccm-c0-validate-integ",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C0-integ.md",
+    "depends_on": ["C0-code", "C0-test"],
+    "concurrent_with": []
+  },
+
+  {
+    "id": "C1-code",
+    "name": "Per-target snapshots + union builder (code)",
+    "type": "code",
+    "phase": "C1",
+    "status": "pending",
+    "description": "Implement per-target snapshot storage + union merge tooling per C1-spec (production code only).",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/RULES.json",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C1-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C1-code.md"
+    ],
+    "acceptance_criteria": [
+      "`xtask codex-snapshot` can write per-target snapshots under `cli_manifests/codex/snapshots/<version>/<target_triple>.json`",
+      "`xtask codex-union` generates `cli_manifests/codex/snapshots/<version>/union.json` (schema-valid, deterministic)",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C1-code'",
+      "Create the task branch and worktree: `git worktree add -b ccm-c1-union-code wt/ccm-c1-union-code feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.",
+      "Inside `wt/ccm-c1-union-code`, commit C1-code changes (no planning-pack docs edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity-coverage-mapping`.",
+      "Checkout `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-code'.",
+      "Remove worktree `wt/ccm-c1-union-code`."
+    ],
+    "worktree": "wt/ccm-c1-union-code",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C1-code.md",
+    "depends_on": ["C0-integ"],
+    "concurrent_with": ["C1-test"]
+  },
+  {
+    "id": "C1-test",
+    "name": "Per-target snapshots + union builder (test)",
+    "type": "test",
+    "phase": "C1",
+    "status": "pending",
+    "description": "Add tests for per-target snapshot output + union merge behavior per C1-spec (tests only).",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/RULES.json",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C1-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C1-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests cover: required target missing => hard error; non-required missing => complete=false + missing_targets; conflicts recorded not fatal; determinism",
+      "No production code changes"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C1-test'",
+      "Create the task branch and worktree: `git worktree add -b ccm-c1-union-test wt/ccm-c1-union-test feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; targeted `cargo test ...` for suites added/updated.",
+      "Inside `wt/ccm-c1-union-test`, commit C1-test changes (no planning-pack docs edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity-coverage-mapping`.",
+      "Checkout `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-test'.",
+      "Remove worktree `wt/ccm-c1-union-test`."
+    ],
+    "worktree": "wt/ccm-c1-union-test",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C1-test.md",
+    "depends_on": ["C0-integ"],
+    "concurrent_with": ["C1-code"]
+  },
+  {
+    "id": "C1-integ",
+    "name": "Per-target snapshots + union builder (integration)",
+    "type": "integration",
+    "phase": "C1",
+    "status": "pending",
+    "description": "Merge C1 code/test and gate with fmt/clippy/tests/preflight.",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C1-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C1-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C1 merged and matches C1-spec",
+      "`cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, relevant tests, and `make preflight` all pass"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C1-integ'",
+      "Create the integration branch and worktree: `git worktree add -b ccm-c1-union-integ wt/ccm-c1-union-integ feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C1 into the integration worktree and reconcile behavior to the spec.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; relevant tests; `make preflight`.",
+      "Commit integration changes on the integration branch.",
+      "Fast-forward merge the integration branch into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-integ'.",
+      "Remove worktree `wt/ccm-c1-union-integ`."
+    ],
+    "worktree": "wt/ccm-c1-union-integ",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C1-integ.md",
+    "depends_on": ["C1-code", "C1-test"],
+    "concurrent_with": []
+  },
+
+  {
+    "id": "C2-code",
+    "name": "Wrapper coverage generator (code)",
+    "type": "code",
+    "phase": "C2",
+    "status": "pending",
+    "description": "Implement deterministic generation of `cli_manifests/codex/wrapper_coverage.json` per C2-spec (production code only).",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/RULES.json",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C2-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C2-code.md"
+    ],
+    "acceptance_criteria": [
+      "`cli_manifests/codex/wrapper_coverage.json` is generated deterministically (not hand-edited) and schema-valid",
+      "Generator supports scoping semantics and intentionally_unsupported notes per RULES/ADR",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C2-code'",
+      "Create the task branch and worktree: `git worktree add -b ccm-c2-wrapper-coverage-code wt/ccm-c2-wrapper-coverage-code feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.",
+      "Inside `wt/ccm-c2-wrapper-coverage-code`, commit C2-code changes (no planning-pack docs edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity-coverage-mapping`.",
+      "Checkout `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-code'.",
+      "Remove worktree `wt/ccm-c2-wrapper-coverage-code`."
+    ],
+    "worktree": "wt/ccm-c2-wrapper-coverage-code",
+    "integration_task": "C2-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C2-code.md",
+    "depends_on": ["C1-integ"],
+    "concurrent_with": ["C2-test"]
+  },
+  {
+    "id": "C2-test",
+    "name": "Wrapper coverage generator (test)",
+    "type": "test",
+    "phase": "C2",
+    "status": "pending",
+    "description": "Add tests ensuring wrapper_coverage generator output is deterministic and scope resolution rules behave per C2-spec (tests only).",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/RULES.json",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C2-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C2-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests cover scope semantics + overlap detection + intentionally_unsupported note requirement",
+      "No production code changes"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C2-test'",
+      "Create the task branch and worktree: `git worktree add -b ccm-c2-wrapper-coverage-test wt/ccm-c2-wrapper-coverage-test feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; targeted `cargo test ...` for suites added/updated.",
+      "Inside `wt/ccm-c2-wrapper-coverage-test`, commit C2-test changes (no planning-pack docs edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity-coverage-mapping`.",
+      "Checkout `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-test'.",
+      "Remove worktree `wt/ccm-c2-wrapper-coverage-test`."
+    ],
+    "worktree": "wt/ccm-c2-wrapper-coverage-test",
+    "integration_task": "C2-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C2-test.md",
+    "depends_on": ["C1-integ"],
+    "concurrent_with": ["C2-code"]
+  },
+  {
+    "id": "C2-integ",
+    "name": "Wrapper coverage generator (integration)",
+    "type": "integration",
+    "phase": "C2",
+    "status": "pending",
+    "description": "Merge C2 code/test and gate with fmt/clippy/tests/preflight.",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C2-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C2-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C2 merged and matches C2-spec",
+      "`cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, relevant tests, and `make preflight` all pass"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C2-integ'",
+      "Create the integration branch and worktree: `git worktree add -b ccm-c2-wrapper-coverage-integ wt/ccm-c2-wrapper-coverage-integ feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C2 into the integration worktree and reconcile behavior to the spec.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; relevant tests; `make preflight`.",
+      "Commit integration changes on the integration branch.",
+      "Fast-forward merge the integration branch into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-integ'.",
+      "Remove worktree `wt/ccm-c2-wrapper-coverage-integ`."
+    ],
+    "worktree": "wt/ccm-c2-wrapper-coverage-integ",
+    "integration_task": "C2-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C2-integ.md",
+    "depends_on": ["C2-code", "C2-test"],
+    "concurrent_with": []
+  },
+
+  {
+    "id": "C3-code",
+    "name": "Coverage reports + version metadata + pruning (code)",
+    "type": "code",
+    "phase": "C3",
+    "status": "pending",
+    "description": "Implement coverage report generation, versions metadata materialization, and deterministic retention pruning per C3-spec (production code only).",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/VERSION_METADATA_SCHEMA.json",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C3-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C3-code.md"
+    ],
+    "acceptance_criteria": [
+      "Reports are generated per RULES.json naming and validate against SCHEMA.json",
+      "`versions/<version>.json` is generated/updated and validates against VERSION_METADATA_SCHEMA.json",
+      "Retention pruning is deterministic and mechanical (no LLM decisions)",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C3-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C3-code'",
+      "Create the task branch and worktree: `git worktree add -b ccm-c3-reports-code wt/ccm-c3-reports-code feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.",
+      "Inside `wt/ccm-c3-reports-code`, commit C3-code changes (no planning-pack docs edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity-coverage-mapping`.",
+      "Checkout `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C3-code'.",
+      "Remove worktree `wt/ccm-c3-reports-code`."
+    ],
+    "worktree": "wt/ccm-c3-reports-code",
+    "integration_task": "C3-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C3-code.md",
+    "depends_on": ["C2-integ"],
+    "concurrent_with": ["C3-test"]
+  },
+  {
+    "id": "C3-test",
+    "name": "Coverage reports + version metadata + pruning (test)",
+    "type": "test",
+    "phase": "C3",
+    "status": "pending",
+    "description": "Add tests for report generation, version metadata gates, and retention pruning per C3-spec (tests only).",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/VERSION_METADATA_SCHEMA.json",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C3-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C3-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests cover: report filter semantics (any/all/exact); all errors when union incomplete; version metadata invariants; deterministic prune keep-set",
+      "No production code changes"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C3-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C3-test'",
+      "Create the task branch and worktree: `git worktree add -b ccm-c3-reports-test wt/ccm-c3-reports-test feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; targeted `cargo test ...` for suites added/updated.",
+      "Inside `wt/ccm-c3-reports-test`, commit C3-test changes (no planning-pack docs edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity-coverage-mapping`.",
+      "Checkout `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C3-test'.",
+      "Remove worktree `wt/ccm-c3-reports-test`."
+    ],
+    "worktree": "wt/ccm-c3-reports-test",
+    "integration_task": "C3-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C3-test.md",
+    "depends_on": ["C2-integ"],
+    "concurrent_with": ["C3-code"]
+  },
+  {
+    "id": "C3-integ",
+    "name": "Coverage reports + version metadata + pruning (integration)",
+    "type": "integration",
+    "phase": "C3",
+    "status": "pending",
+    "description": "Merge C3 code/test and gate with fmt/clippy/tests/preflight.",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C3-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C3-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C3 merged and matches C3-spec",
+      "`cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, relevant tests, and `make preflight` all pass"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C3-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C3-integ'",
+      "Create the integration branch and worktree: `git worktree add -b ccm-c3-reports-integ wt/ccm-c3-reports-integ feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C3 into the integration worktree and reconcile behavior to the spec.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; relevant tests; `make preflight`.",
+      "Commit integration changes on the integration branch.",
+      "Fast-forward merge the integration branch into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C3-integ'.",
+      "Remove worktree `wt/ccm-c3-reports-integ`."
+    ],
+    "worktree": "wt/ccm-c3-reports-integ",
+    "integration_task": "C3-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C3-integ.md",
+    "depends_on": ["C3-code", "C3-test"],
+    "concurrent_with": []
+  },
+
+  {
+    "id": "C4-code",
+    "name": "CI wiring (code)",
+    "type": "code",
+    "phase": "C4",
+    "status": "pending",
+    "description": "Update workflows to run snapshot→union→report→validate pipeline per C4-spec (production changes only).",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/CI_WORKFLOWS_PLAN.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C4-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C4-code.md"
+    ],
+    "acceptance_criteria": [
+      "CI runs deterministic validation (`xtask codex-validate`) as a hard gate",
+      "Update snapshot workflow produces per-target snapshots, union snapshot, reports, and version metadata (as artifacts and/or PR commits depending on permissions)",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C4-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C4-code'",
+      "Create the task branch and worktree: `git worktree add -b ccm-c4-ci-code wt/ccm-c4-ci-code feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.",
+      "Inside `wt/ccm-c4-ci-code`, commit C4-code changes (no planning-pack docs edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity-coverage-mapping`.",
+      "Checkout `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C4-code'.",
+      "Remove worktree `wt/ccm-c4-ci-code`."
+    ],
+    "worktree": "wt/ccm-c4-ci-code",
+    "integration_task": "C4-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C4-code.md",
+    "depends_on": ["C3-integ"],
+    "concurrent_with": ["C4-test"]
+  },
+  {
+    "id": "C4-test",
+    "name": "CI wiring (test)",
+    "type": "test",
+    "phase": "C4",
+    "status": "pending",
+    "description": "Add/adjust CI-facing tests/fixtures needed to validate the end-to-end pipeline per C4-spec (tests only).",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C4-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C4-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests/fixtures cover CI contract behaviors introduced in C4 (deterministic outputs, failure modes, retention keep-set correctness)",
+      "No production code changes"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C4-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C4-test'",
+      "Create the task branch and worktree: `git worktree add -b ccm-c4-ci-test wt/ccm-c4-ci-test feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; targeted `cargo test ...` for suites added/updated.",
+      "Inside `wt/ccm-c4-ci-test`, commit C4-test changes (no planning-pack docs edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-cli-parity-coverage-mapping`.",
+      "Checkout `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C4-test'.",
+      "Remove worktree `wt/ccm-c4-ci-test`."
+    ],
+    "worktree": "wt/ccm-c4-ci-test",
+    "integration_task": "C4-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C4-test.md",
+    "depends_on": ["C3-integ"],
+    "concurrent_with": ["C4-code"]
+  },
+  {
+    "id": "C4-integ",
+    "name": "CI wiring (integration)",
+    "type": "integration",
+    "phase": "C4",
+    "status": "pending",
+    "description": "Merge C4 code/test and gate with fmt/clippy/tests/preflight, ensuring CI pipeline matches the spec.",
+    "references": [
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/plan.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/C4-spec.md",
+      "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C4-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C4 merged and matches C4-spec",
+      "`cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, relevant tests, and `make preflight` all pass"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C4-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md; commit docs with message 'docs: start C4-integ'",
+      "Create the integration branch and worktree: `git worktree add -b ccm-c4-ci-integ wt/ccm-c4-ci-integ feat/codex-cli-parity-coverage-mapping`.",
+      "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C4 into the integration worktree and reconcile behavior to the spec.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; relevant tests; `make preflight`.",
+      "Commit integration changes on the integration branch.",
+      "Fast-forward merge the integration branch into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C4-integ'.",
+      "Remove worktree `wt/ccm-c4-ci-integ`."
+    ],
+    "worktree": "wt/ccm-c4-ci-integ",
+    "integration_task": "C4-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C4-integ.md",
+    "depends_on": ["C4-code", "C4-test"],
+    "concurrent_with": []
+  }
+]
+

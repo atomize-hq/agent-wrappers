@@ -88,6 +88,38 @@
           "spec": "docs/project_management/next/codex-cli-parity/C3-spec.md"
         }
       ]
+    },
+    {
+      "id": "codex_cli_parity_coverage_mapping",
+      "name": "CODEX_CLI_PARITY_COVERAGE_MAPPING",
+      "source": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "phases": [
+        {
+          "id": "C0",
+          "name": "Deterministic validators (SCHEMA + RULES)",
+          "spec": "docs/project_management/next/codex-cli-parity-coverage-mapping/C0-spec.md"
+        },
+        {
+          "id": "C1",
+          "name": "Per-target snapshots + union builder",
+          "spec": "docs/project_management/next/codex-cli-parity-coverage-mapping/C1-spec.md"
+        },
+        {
+          "id": "C2",
+          "name": "Wrapper coverage generator",
+          "spec": "docs/project_management/next/codex-cli-parity-coverage-mapping/C2-spec.md"
+        },
+        {
+          "id": "C3",
+          "name": "Reports + version metadata + pruning",
+          "spec": "docs/project_management/next/codex-cli-parity-coverage-mapping/C3-spec.md"
+        },
+        {
+          "id": "C4",
+          "name": "CI wiring (snapshot → union → report → validate)",
+          "spec": "docs/project_management/next/codex-cli-parity-coverage-mapping/C4-spec.md"
+        }
+      ]
     }
   ],
   "sequence": [
@@ -145,6 +177,53 @@
       "id": "codex_cli_parity:C3",
       "title": "Ops playbook + promotion rules",
       "depends_on": ["codex_cli_parity:C2"],
+      "blocks": []
+    },
+    {
+      "order": 200,
+      "id": "codex_cli_parity_coverage_mapping:C0",
+      "title": "Deterministic validators (SCHEMA + RULES)",
+      "depends_on": ["codex_cli_parity:C3"],
+      "blocks": [
+        "codex_cli_parity_coverage_mapping:C1",
+        "codex_cli_parity_coverage_mapping:C2",
+        "codex_cli_parity_coverage_mapping:C3",
+        "codex_cli_parity_coverage_mapping:C4"
+      ]
+    },
+    {
+      "order": 210,
+      "id": "codex_cli_parity_coverage_mapping:C1",
+      "title": "Per-target snapshots + union builder",
+      "depends_on": ["codex_cli_parity_coverage_mapping:C0"],
+      "blocks": [
+        "codex_cli_parity_coverage_mapping:C2",
+        "codex_cli_parity_coverage_mapping:C3",
+        "codex_cli_parity_coverage_mapping:C4"
+      ]
+    },
+    {
+      "order": 220,
+      "id": "codex_cli_parity_coverage_mapping:C2",
+      "title": "Wrapper coverage generator",
+      "depends_on": ["codex_cli_parity_coverage_mapping:C1"],
+      "blocks": [
+        "codex_cli_parity_coverage_mapping:C3",
+        "codex_cli_parity_coverage_mapping:C4"
+      ]
+    },
+    {
+      "order": 230,
+      "id": "codex_cli_parity_coverage_mapping:C3",
+      "title": "Reports + version metadata + pruning",
+      "depends_on": ["codex_cli_parity_coverage_mapping:C2"],
+      "blocks": ["codex_cli_parity_coverage_mapping:C4"]
+    },
+    {
+      "order": 240,
+      "id": "codex_cli_parity_coverage_mapping:C4",
+      "title": "CI wiring (snapshot → union → report → validate)",
+      "depends_on": ["codex_cli_parity_coverage_mapping:C3"],
       "blocks": []
     }
   ]
