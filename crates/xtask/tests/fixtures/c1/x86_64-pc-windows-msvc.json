@@ -1,0 +1,28 @@
+{
+  "snapshot_schema_version": 1,
+  "tool": "codex-cli",
+  "collected_at": "1970-01-01T00:00:00Z",
+  "binary": {
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "size_bytes": 1,
+    "platform": { "os": "windows", "arch": "x86_64" },
+    "target_triple": "x86_64-pc-windows-msvc",
+    "version_output": "codex 0.77.0",
+    "semantic_version": "0.77.0",
+    "channel": "stable"
+  },
+  "commands": [
+    {
+      "path": [],
+      "usage": "codex [OPTIONS] <COMMAND>",
+      "flags": [{ "long": "--json", "takes_value": false }]
+    },
+    {
+      "path": ["alpha"],
+      "usage": "codex alpha [OPTIONS] <INPUT>",
+      "args": [{ "name": "INPUT", "required": false, "variadic": false }],
+      "flags": [{ "long": "--config", "takes_value": false }]
+    }
+  ]
+}
+
