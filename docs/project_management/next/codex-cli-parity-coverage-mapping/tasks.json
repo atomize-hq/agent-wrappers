@@ -169,7 +169,7 @@
     "name": "Per-target snapshots + union builder (test)",
     "type": "test",
     "phase": "C1",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Add tests for per-target snapshot output + union merge behavior per C1-spec (tests only).",
     "references": [
       "docs/adr/0002-codex-cli-parity-coverage-mapping.md",

@@ -82,6 +82,17 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Plan: add C1 tests/fixtures for per-target snapshot output + union merge semantics (missing required target hard error; non-required missing => `complete=false` + `missing_targets`; conflicts recorded not fatal; determinism), run required commands, commit via worktree, update docs/tasks/log at end
 - Blockers: none
 
+## [2026-01-28 15:17 UTC] Test Agent – C1-test – END
+- Worktree `wt/ccm-c1-union-test` on branch `ccm-c1-union-test` (commit `80d90cf`) added C1 fixtures + tests for `xtask codex-snapshot` per-target mode and `xtask codex-union` merge semantics/determinism.
+- Commands:
+  - `cargo fmt` (pass; no output)
+  - `cargo test -p xtask --test c1_spec_snapshot_per_target` (fail: `xtask codex-snapshot` missing `--out-file` / `--raw-help-target` per C1-spec)
+  - `cargo test -p xtask --test c1_spec_union` (fail: `xtask` missing `codex-union` subcommand per C1-spec)
+- Results:
+  - Added tests: `crates/xtask/tests/c1_spec_snapshot_per_target.rs`, `crates/xtask/tests/c1_spec_union.rs`
+  - Added fixtures: `crates/xtask/tests/fixtures/c1/*.json` (per-target snapshots for expected targets with intentional conflicts)
+- Blockers: pending C1-code implementation of per-target snapshot flags/layout + `codex-union` command
+
 ## [2026-01-28 15:06 UTC] Code Agent – C1-code – START
 - Checked out `feat/codex-cli-parity-coverage-mapping`, `git pull --ff-only` (already up to date)
 - Read plan/tasks/session log/spec/kickoff prompt; updated `tasks.json` (C1-code → `in_progress`)
