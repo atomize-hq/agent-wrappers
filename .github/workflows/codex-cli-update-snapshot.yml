@@ -128,11 +128,11 @@ jobs:
             --capture-raw-help \
             --supplement cli_manifests/codex/supplement/commands.json
 
-      - name: Create PR (requires CODEX_AUTOMATION_TOKEN)
-        if: ${{ secrets.CODEX_AUTOMATION_TOKEN != '' }}
+      - name: Create PR (best effort)
+        continue-on-error: true
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.CODEX_AUTOMATION_TOKEN }}
+          token: ${{ secrets.CODEX_AUTOMATION_TOKEN || github.token }}
           commit-message: "chore: update codex cli snapshot to ${{ inputs.version }}"
           title: "chore: update codex cli snapshot to ${{ inputs.version }}"
           body: |
@@ -145,7 +145,6 @@ jobs:
           delete-branch: true
 
       - name: Upload snapshot artifacts (fallback when PR creation disabled)
-        if: ${{ secrets.CODEX_AUTOMATION_TOKEN == '' }}
         uses: actions/upload-artifact@v4
         with:
           name: "codex-cli-snapshot-${{ inputs.version }}"
