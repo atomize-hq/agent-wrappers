@@ -237,12 +237,76 @@ jobs:
           name: "codex-cli-pins-${{ inputs.version }}"
           path: .
 
-      - name: Download per-target snapshots
+      - name: Download required Linux snapshot
         uses: actions/download-artifact@v4
         with:
-          pattern: "codex-cli-snapshot-${{ inputs.version }}-*"
-          merge-multiple: true
+          name: "codex-cli-snapshot-${{ inputs.version }}-x86_64-unknown-linux-musl"
           path: .
+
+      - name: Download macOS snapshot (best effort)
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: "codex-cli-snapshot-${{ inputs.version }}-aarch64-apple-darwin"
+          path: .
+
+      - name: Download Windows snapshot (best effort)
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: "codex-cli-snapshot-${{ inputs.version }}-x86_64-pc-windows-msvc"
+          path: .
+
+      - name: Ensure required snapshot exists
+        id: ensure-linux-snapshot
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          SOURCE_DATE_EPOCH: ${{ needs.prepare.outputs.source_date_epoch }}
+        run: |
+          set -euo pipefail
+
+          ROOT="cli_manifests/codex"
+          TARGET="x86_64-unknown-linux-musl"
+          OUT="${ROOT}/snapshots/${VERSION}/${TARGET}.json"
+
+          if [ -f "$OUT" ]; then
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # If the artifact was extracted under an unexpected directory layout, relocate it.
+          FOUND="$(find . -type f -path "*/${ROOT}/snapshots/${VERSION}/${TARGET}.json" | head -n 1 || true)"
+          if [ -n "$FOUND" ]; then
+            mkdir -p "$(dirname "$OUT")"
+            if [ "$(realpath "$FOUND")" != "$(realpath "$OUT")" ]; then
+              cp "$FOUND" "$OUT"
+            fi
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Last-resort fallback: generate the required Linux snapshot from the pinned download.
+          ASSET="codex-${TARGET}.tar.gz"
+          FILE="_download/${ASSET}"
+          test -f "$FILE"
+
+          MEMBER="$(tar -tzf "$FILE" | awk 'NF && substr($0,length($0),1) != "/" {print; exit}')"
+          test -n "$MEMBER"
+          rm -rf _extract
+          mkdir -p _extract
+          tar -xzf "$FILE" -C _extract "$MEMBER"
+          install -m 0755 "_extract/$MEMBER" "./codex-${TARGET}"
+
+          cargo run -p xtask -- \
+            codex-snapshot \
+            --codex-binary "./codex-${TARGET}" \
+            --out-file "$OUT" \
+            --capture-raw-help \
+            --raw-help-target "$TARGET" \
+            --supplement "${ROOT}/supplement/commands.json"
+
+          echo "generated=true" >> "$GITHUB_OUTPUT"
 
       - name: Merge union snapshot
         shell: bash
