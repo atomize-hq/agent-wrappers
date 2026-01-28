@@ -193,3 +193,10 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Commands: `cargo fmt` (pass; no output); `cargo clippy --workspace --all-targets -- -D warnings` (pass; `Finished \`dev\` profile [unoptimized + debuginfo] target(s) in 1.73s`)
 - Result: `codex-report` writes `reports/<version>/coverage.any.json` + per-target reports (and `coverage.all.json` only when union is complete); `codex-version-metadata` materializes `versions/<version>.json`; `codex-retain` computes keep/delete sets and prunes `snapshots/<version>/` + `reports/<version>/` when `--apply` is set.
 - Blockers: none
+
+## [2026-01-28 17:20 UTC] Integration Agent – C3-integ – START
+- Checked out `feat/codex-cli-parity-coverage-mapping`, `git pull --ff-only` (already up to date)
+- Read plan/tasks/session log/spec/kickoff prompt; updated `tasks.json` (C3-integ → `in_progress`)
+- Worktree pending (`ccm-c3-reports-integ` / `wt/ccm-c3-reports-integ` to be added after docs commit)
+- Plan: merge `ccm-c3-reports-code` + `ccm-c3-reports-test`, reconcile behavior to C3-spec, run required commands, commit via worktree, then fast-forward into `feat/codex-cli-parity-coverage-mapping`
+- Blockers: none
