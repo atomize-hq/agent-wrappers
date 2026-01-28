@@ -209,7 +209,7 @@
     "name": "Per-target snapshots + union builder (integration)",
     "type": "integration",
     "phase": "C1",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Merge C1 code/test and gate with fmt/clippy/tests/preflight.",
     "references": [
       "docs/adr/0002-codex-cli-parity-coverage-mapping.md",

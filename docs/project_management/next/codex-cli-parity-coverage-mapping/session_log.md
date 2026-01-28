@@ -112,3 +112,13 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree pending (`ccm-c1-union-integ` / `wt/ccm-c1-union-integ` to be added after docs commit)
 - Plan: merge `ccm-c1-union-code` + `ccm-c1-union-test`, reconcile to C1-spec, run required commands, commit via worktree, then fast-forward into `feat/codex-cli-parity-coverage-mapping`
 - Blockers: none
+
+## [2026-01-28 15:46 UTC] Integration Agent – C1-integ – END
+- Worktree `wt/ccm-c1-union-integ` on branch `ccm-c1-union-integ` (commit `71a0140`) merged `ccm-c1-union-code` + `ccm-c1-union-test` and reconciled snapshot/raw-help target handling (per-target reads `RULES.json` + validates target; legacy raw help layout preserved; per-target test copies `RULES.json`).
+- Merged `ccm-c1-union-integ` → fast-forwarded `feat/codex-cli-parity-coverage-mapping`
+- Commands:
+  - `cargo fmt` (pass; no output)
+  - `cargo clippy --workspace --all-targets -- -D warnings` (pass; `Finished \`dev\` profile [unoptimized + debuginfo] target(s) in 9.73s`)
+  - `cargo test -p xtask` (pass)
+  - `make preflight` (pass; `Removed 3099 files, 1.2GiB total`)
+- Blockers: none
