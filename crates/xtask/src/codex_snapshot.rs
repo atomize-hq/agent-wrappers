@@ -18,13 +18,25 @@ pub struct Args {
     #[arg(long)]
     pub codex_binary: PathBuf,
 
-    /// Output directory (writes `current.json` and optional raw help captures under it).
-    #[arg(long)]
-    pub out_dir: PathBuf,
+    /// Output directory (legacy mode; writes `current.json` under this directory).
+    #[arg(
+        long,
+        required_unless_present = "out_file",
+        conflicts_with = "out_file"
+    )]
+    pub out_dir: Option<PathBuf>,
+
+    /// Output snapshot file (per-target mode; writes an UpstreamSnapshotV1 JSON file).
+    #[arg(long, required_unless_present = "out_dir", conflicts_with = "out_dir")]
+    pub out_file: Option<PathBuf>,
 
     /// Also write raw `--help` output under `raw_help/<version>/...` for debugging parser drift.
     #[arg(long)]
     pub capture_raw_help: bool,
+
+    /// Target triple used for raw help capture layout: `raw_help/<version>/<target_triple>/**`.
+    #[arg(long)]
+    pub raw_help_target: Option<String>,
 
     /// Path to `cli_manifests/codex/supplement/commands.json` (schema v1).
     #[arg(long)]
@@ -39,6 +51,18 @@ pub struct Args {
 pub enum Error {
     #[error("invalid codex binary path: {0}")]
     InvalidCodexBinary(PathBuf),
+    #[error("--capture-raw-help requires --raw-help-target")]
+    MissingRawHelpTarget,
+    #[error("failed to probe semantic version; required for per-target snapshots")]
+    MissingSemanticVersion,
+    #[error("failed to read rules file: {0}")]
+    RulesRead(String),
+    #[error("unsupported rules configuration: {0}")]
+    RulesUnsupported(String),
+    #[error("raw_help_target={0} is not in RULES.json.union.expected_targets")]
+    RawHelpTargetNotExpected(String),
+    #[error("invalid --out-file layout: {0}")]
+    InvalidOutFileLayout(String),
     #[error("I/O error: {0}")]
     Io(#[from] io::Error),
     #[error("command failed: {0}")]
@@ -51,6 +75,24 @@ pub enum Error {
     CollectedAt(String),
 }
 
+#[derive(Debug, Deserialize)]
+struct RulesFile {
+    union: RulesUnion,
+    sorting: RulesSorting,
+}
+
+#[derive(Debug, Deserialize)]
+struct RulesUnion {
+    expected_targets: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RulesSorting {
+    commands: String,
+    flags: String,
+    args: String,
+}
+
 pub fn run(args: Args) -> Result<(), Error> {
     let codex_binary = fs::canonicalize(&args.codex_binary)
         .map_err(|_| Error::InvalidCodexBinary(args.codex_binary.clone()))?;
@@ -58,27 +100,27 @@ pub fn run(args: Args) -> Result<(), Error> {
         return Err(Error::InvalidCodexBinary(codex_binary));
     }
 
-    fs::create_dir_all(&args.out_dir)?;
+    if args.capture_raw_help && args.raw_help_target.is_none() {
+        return Err(Error::MissingRawHelpTarget);
+    }
 
-    let collected_at = match args.collected_at {
-        Some(s) => {
-            OffsetDateTime::parse(&s, &Rfc3339).map_err(|_| Error::CollectedAt(s.clone()))?;
-            s
-        }
-        None => OffsetDateTime::now_utc()
-            .format(&Rfc3339)
-            .unwrap_or_else(|_| {
-                // Should be infallible with well-known formatter; keep a deterministic fallback.
-                "1970-01-01T00:00:00Z".to_string()
-            }),
+    let collected_at = if let Some(s) = args.collected_at.as_ref() {
+        OffsetDateTime::parse(s, &Rfc3339).map_err(|_| Error::CollectedAt(s.clone()))?;
+        s.clone()
+    } else {
+        deterministic_rfc3339_now()
     };
 
     let binary_meta = BinaryMetadata::collect(&codex_binary)?;
     let (version_output, semantic_version, channel, commit) = probe_version(&codex_binary)?;
 
-    let version_dir = semantic_version
-        .clone()
-        .unwrap_or_else(|| "unknown".to_string());
+    let version_dir = match (&args.out_file, &semantic_version) {
+        (Some(_), None) => return Err(Error::MissingSemanticVersion),
+        (_, Some(v)) => v.clone(),
+        (None, None) => "unknown".to_string(),
+    };
+
+    let (snapshot_out_path, raw_help_dir) = resolve_outputs(&args, &version_dir)?;
     let (features_list, features_probe_error) = probe_features(&codex_binary);
     let enabled_feature_names = features_list
         .as_ref()
@@ -91,20 +133,18 @@ pub fn run(args: Args) -> Result<(), Error> {
 
     // Always snapshot the default surface. If we can probe features, do a second discovery pass
     // with all known features enabled and merge results for maximum coverage.
-    let default_entries =
-        discover_commands(&codex_binary, &args.out_dir, &version_dir, false, &[])?;
+    let default_entries = discover_commands(&codex_binary, raw_help_dir.as_deref(), false, &[])?;
 
     let (mut command_entries, commands_added_when_all_enabled) = if enable_args.is_empty() {
         if args.capture_raw_help {
             // If we can't enable features, capture raw help for the default surface.
-            let _ = discover_commands(&codex_binary, &args.out_dir, &version_dir, true, &[]);
+            let _ = discover_commands(&codex_binary, raw_help_dir.as_deref(), true, &[]);
         }
         (default_entries, None)
     } else {
         let enabled_entries = discover_commands(
             &codex_binary,
-            &args.out_dir,
-            &version_dir,
+            raw_help_dir.as_deref(),
             args.capture_raw_help,
             &enable_args,
         )?;
@@ -120,6 +160,8 @@ pub fn run(args: Args) -> Result<(), Error> {
 
     let (known_omissions, supplemented) =
         apply_supplements(args.supplement.as_deref(), &mut command_entries)?;
+
+    normalize_command_entries(&mut command_entries);
 
     let mut commands: Vec<CommandSnapshot> = command_entries.into_values().collect();
     commands.sort_by(|a, b| cmp_path(&a.path, &b.path));
@@ -157,15 +199,148 @@ pub fn run(args: Args) -> Result<(), Error> {
     };
 
     let json = serde_json::to_string_pretty(&snapshot)?;
-    let out_path = args.out_dir.join("current.json");
-    fs::write(out_path, format!("{json}\n"))?;
+    if let Some(parent) = snapshot_out_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(snapshot_out_path, format!("{json}\n"))?;
     Ok(())
+}
+
+fn resolve_outputs(args: &Args, version_dir: &str) -> Result<(PathBuf, Option<PathBuf>), Error> {
+    let snapshot_out_path = if let Some(path) = args.out_file.as_ref() {
+        path.clone()
+    } else {
+        args.out_dir
+            .as_ref()
+            .expect("clap enforces one of out_dir/out_file")
+            .join("current.json")
+    };
+
+    let codex_root = if let Some(out_file) = args.out_file.as_ref() {
+        let version_path = out_file.parent().ok_or_else(|| {
+            Error::InvalidOutFileLayout("could not infer snapshots/<version> directory".to_string())
+        })?;
+        let got_version = version_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unknown>");
+        if got_version != version_dir {
+            return Err(Error::InvalidOutFileLayout(format!(
+                "expected parent dir name {version_dir}, got {got_version}"
+            )));
+        }
+
+        let snapshots_path = version_path.parent().ok_or_else(|| {
+            Error::InvalidOutFileLayout("could not infer snapshots directory".to_string())
+        })?;
+        let got_snapshots = snapshots_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unknown>");
+        if got_snapshots != "snapshots" {
+            return Err(Error::InvalidOutFileLayout(format!(
+                "expected snapshots/<version> layout, got .../{got_snapshots}/{got_version}"
+            )));
+        }
+
+        if let Some(target) = args.raw_help_target.as_ref() {
+            let expected = format!("{target}.json");
+            let got = out_file
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("<unknown>");
+            if got != expected {
+                return Err(Error::InvalidOutFileLayout(format!(
+                    "expected filename {expected}, got {got}"
+                )));
+            }
+        }
+
+        let codex_root = snapshots_path
+            .parent()
+            .ok_or_else(|| Error::InvalidOutFileLayout("could not infer codex root".to_string()))?;
+        codex_root.to_path_buf()
+    } else {
+        args.out_dir
+            .as_ref()
+            .expect("clap enforces one of out_dir/out_file")
+            .clone()
+    };
+
+    let rules_path = codex_root.join("RULES.json");
+    let rules: RulesFile = serde_json::from_slice(
+        &fs::read(&rules_path)
+            .map_err(|err| Error::RulesRead(format!("{}: {err}", rules_path.display())))?,
+    )?;
+    assert_supported_sorting(&rules.sorting)?;
+
+    let raw_help_dir = if args.capture_raw_help {
+        let target = args
+            .raw_help_target
+            .as_ref()
+            .expect("capture_raw_help implies raw_help_target");
+
+        if !rules.union.expected_targets.iter().any(|t| t == target) {
+            return Err(Error::RawHelpTargetNotExpected(target.clone()));
+        }
+
+        Some(codex_root.join("raw_help").join(version_dir).join(target))
+    } else {
+        None
+    };
+
+    Ok((snapshot_out_path, raw_help_dir))
+}
+
+fn assert_supported_sorting(sorting: &RulesSorting) -> Result<(), Error> {
+    let mut unsupported = Vec::new();
+
+    if sorting.commands != "lexicographic_path" {
+        unsupported.push(format!("sorting.commands={}", sorting.commands));
+    }
+    if sorting.flags != "by_key_then_long_then_short" {
+        unsupported.push(format!("sorting.flags={}", sorting.flags));
+    }
+    if sorting.args != "by_name" {
+        unsupported.push(format!("sorting.args={}", sorting.args));
+    }
+
+    if unsupported.is_empty() {
+        Ok(())
+    } else {
+        Err(Error::RulesUnsupported(unsupported.join(", ")))
+    }
+}
+
+fn normalize_command_entries(entries: &mut BTreeMap<Vec<String>, CommandSnapshot>) {
+    for cmd in entries.values_mut() {
+        if let Some(args) = cmd.args.as_mut() {
+            args.sort_by(|a, b| a.name.cmp(&b.name));
+        }
+        if let Some(flags) = cmd.flags.as_mut() {
+            flags.sort_by(flag_sort_key);
+        }
+    }
+}
+
+fn deterministic_rfc3339_now() -> String {
+    if let Ok(v) = std::env::var("SOURCE_DATE_EPOCH") {
+        if let Ok(secs) = v.parse::<i64>() {
+            if let Ok(ts) = OffsetDateTime::from_unix_timestamp(secs) {
+                return ts
+                    .format(&Rfc3339)
+                    .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string());
+            }
+        }
+    }
+    OffsetDateTime::now_utc()
+        .format(&Rfc3339)
+        .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
 }
 
 fn discover_commands(
     codex_binary: &Path,
-    out_dir: &Path,
-    version_dir: &str,
+    raw_help_dir: Option<&Path>,
     capture_raw_help: bool,
     global_args: &[String],
 ) -> Result<BTreeMap<Vec<String>, CommandSnapshot>, Error> {
@@ -176,12 +351,17 @@ fn discover_commands(
     let root_parsed = parse_help(&root_help);
 
     if capture_raw_help {
-        write_raw_help(out_dir, version_dir, &[], &root_help)?;
+        if let Some(dir) = raw_help_dir {
+            write_raw_help(dir, &[], &root_help)?;
+        }
     }
 
     let mut root_args = root_parsed.args;
     if let Some(usage) = root_parsed.usage.as_deref() {
         merge_inferred_args(&mut root_args, infer_args_from_usage(usage, &[]));
+    }
+    if !root_args.is_empty() {
+        root_args.sort_by(|a, b| a.name.cmp(&b.name));
     }
 
     let mut root_flags = root_parsed.flags;
@@ -213,8 +393,7 @@ fn discover_commands(
     let ctx = HelpCtx {
         codex_binary,
         global_args,
-        out_dir,
-        version_dir,
+        raw_help_dir,
         capture_raw_help,
     };
 
@@ -228,8 +407,7 @@ fn discover_commands(
 struct HelpCtx<'a> {
     codex_binary: &'a Path,
     global_args: &'a [String],
-    out_dir: &'a Path,
-    version_dir: &'a str,
+    raw_help_dir: Option<&'a Path>,
     capture_raw_help: bool,
 }
 
@@ -247,12 +425,17 @@ fn collect_command_recursive(
     let parsed = parse_help(&help);
 
     if ctx.capture_raw_help {
-        write_raw_help(ctx.out_dir, ctx.version_dir, &path, &help)?;
+        if let Some(dir) = ctx.raw_help_dir {
+            write_raw_help(dir, &path, &help)?;
+        }
     }
 
     let mut args = parsed.args;
     if let Some(usage) = parsed.usage.as_deref() {
         merge_inferred_args(&mut args, infer_args_from_usage(usage, &path));
+    }
+    if !args.is_empty() {
+        args.sort_by(|a, b| a.name.cmp(&b.name));
     }
 
     let mut flags = parsed.flags;
@@ -971,6 +1154,9 @@ fn merge_command_entries(
                 if let Some(extra_args) = entry.args.take() {
                     let mut args = existing.args.take().unwrap_or_default();
                     merge_inferred_args(&mut args, extra_args);
+                    if !args.is_empty() {
+                        args.sort_by(|a, b| a.name.cmp(&b.name));
+                    }
                     existing.args = if args.is_empty() { None } else { Some(args) };
                 }
 
@@ -1049,22 +1235,17 @@ fn cmp_path(a: &[String], b: &[String]) -> std::cmp::Ordering {
     a.len().cmp(&b.len())
 }
 
-fn write_raw_help(
-    out_dir: &Path,
-    version_dir: &str,
-    path: &[String],
-    help: &str,
-) -> Result<(), Error> {
+fn write_raw_help(raw_help_dir: &Path, path: &[String], help: &str) -> Result<(), Error> {
     let rel = if path.is_empty() {
-        PathBuf::from("raw_help").join(version_dir).join("help.txt")
+        PathBuf::from("help.txt")
     } else {
-        let mut p = PathBuf::from("raw_help").join(version_dir).join("commands");
+        let mut p = PathBuf::from("commands");
         for token in path {
             p.push(token);
         }
         p.join("help.txt")
     };
-    let full = out_dir.join(rel);
+    let full = raw_help_dir.join(rel);
     if let Some(parent) = full.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -1089,76 +1270,76 @@ impl BinaryMetadata {
     }
 }
 
-#[derive(Debug, Serialize)]
-struct SnapshotV1 {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct SnapshotV1 {
     snapshot_schema_version: u32,
-    tool: String,
-    collected_at: String,
-    binary: BinarySnapshot,
-    commands: Vec<CommandSnapshot>,
+    pub(crate) tool: String,
+    pub(crate) collected_at: String,
+    pub(crate) binary: BinarySnapshot,
+    pub(crate) commands: Vec<CommandSnapshot>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    features: Option<serde_json::Value>,
+    pub(crate) features: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    known_omissions: Option<Vec<String>>,
+    pub(crate) known_omissions: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize)]
-struct BinarySnapshot {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct BinarySnapshot {
     sha256: String,
     size_bytes: u64,
     platform: BinaryPlatform,
     version_output: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    semantic_version: Option<String>,
+    pub(crate) semantic_version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     channel: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     commit: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
-struct BinaryPlatform {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct BinaryPlatform {
     os: String,
     arch: String,
 }
 
-#[derive(Debug, Serialize)]
-struct CommandSnapshot {
-    path: Vec<String>,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct CommandSnapshot {
+    pub(crate) path: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    about: Option<String>,
+    pub(crate) about: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    usage: Option<String>,
+    pub(crate) usage: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     stability: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     platforms: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    args: Option<Vec<ArgSnapshot>>,
+    pub(crate) args: Option<Vec<ArgSnapshot>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    flags: Option<Vec<FlagSnapshot>>,
+    pub(crate) flags: Option<Vec<FlagSnapshot>>,
 }
 
-#[derive(Debug, Serialize)]
-struct ArgSnapshot {
-    name: String,
-    required: bool,
-    variadic: bool,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct ArgSnapshot {
+    pub(crate) name: String,
+    pub(crate) required: bool,
+    pub(crate) variadic: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    note: Option<String>,
+    pub(crate) note: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
-struct FlagSnapshot {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct FlagSnapshot {
     #[serde(skip_serializing_if = "Option::is_none")]
-    long: Option<String>,
+    pub(crate) long: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    short: Option<String>,
-    takes_value: bool,
+    pub(crate) short: Option<String>,
+    pub(crate) takes_value: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    value_name: Option<String>,
+    pub(crate) value_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    repeatable: Option<bool>,
+    pub(crate) repeatable: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     stability: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
