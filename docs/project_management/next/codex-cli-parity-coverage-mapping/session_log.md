@@ -200,3 +200,13 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree pending (`ccm-c3-reports-integ` / `wt/ccm-c3-reports-integ` to be added after docs commit)
 - Plan: merge `ccm-c3-reports-code` + `ccm-c3-reports-test`, reconcile behavior to C3-spec, run required commands, commit via worktree, then fast-forward into `feat/codex-cli-parity-coverage-mapping`
 - Blockers: none
+
+## [2026-01-28 17:28 UTC] Integration Agent – C3-integ – END
+- Worktree `wt/ccm-c3-reports-integ` on branch `ccm-c3-reports-integ` (tip `4eb4736`) merged `ccm-c3-reports-code` + `ccm-c3-reports-test`, reconciled to C3-spec (parse `RULES.json` via `rules_schema_version`; tests adjusted to satisfy `cargo clippy --all-targets`).
+- Merged `ccm-c3-reports-integ` → fast-forwarded `feat/codex-cli-parity-coverage-mapping`
+- Commands:
+  - `cargo fmt` (pass; no output)
+  - `cargo clippy --workspace --all-targets -- -D warnings` (pass; `Finished \`dev\` profile [unoptimized + debuginfo] target(s) in 0.22s`)
+  - `cargo test -p xtask` (pass; all xtask spec tests including `c3_spec_reports_metadata_retain` passed)
+  - `make preflight` (pass; runs fmt/clippy/clean/check/test; `Removed 3584 files, 1.5GiB total`)
+- Blockers: none

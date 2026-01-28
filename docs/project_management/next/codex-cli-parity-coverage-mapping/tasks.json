@@ -452,7 +452,7 @@
     "name": "Coverage reports + version metadata + pruning (integration)",
     "type": "integration",
     "phase": "C3",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Merge C3 code/test and gate with fmt/clippy/tests/preflight.",
     "references": [
       "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
