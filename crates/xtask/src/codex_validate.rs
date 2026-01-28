@@ -58,6 +58,33 @@ pub enum FatalError {
     Rules(String),
 }
 
+fn absolutize_schema_id(schema: &mut Value, schema_path: &Path) -> Result<(), FatalError> {
+    let Some(id) = schema.get("$id").and_then(|v| v.as_str()) else {
+        return Ok(());
+    };
+
+    // `jsonschema` expects `$id` to be an absolute URI. Our committed schemas use
+    // repo-relative `$id` values (e.g. `cli_manifests/codex/SCHEMA.json`) for
+    // readability, so rewrite them to a file URI at runtime.
+    if id.contains("://") {
+        return Ok(());
+    }
+
+    let abs = fs::canonicalize(schema_path)?;
+    let abs_str = abs.to_string_lossy();
+    let file_uri = if abs_str.starts_with('/') {
+        format!("file://{abs_str}")
+    } else {
+        format!("file:///{abs_str}")
+    };
+
+    if let Some(obj) = schema.as_object_mut() {
+        obj.insert("$id".to_string(), Value::String(file_uri));
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, Clone)]
 struct Violation {
     code: &'static str,
@@ -309,8 +336,11 @@ fn run_inner(args: Args) -> Result<Vec<Violation>, FatalError> {
         )));
     }
 
-    let schema_value: Value = serde_json::from_slice(&fs::read(&schema_path)?)?;
-    let version_schema_value: Value = serde_json::from_slice(&fs::read(&version_schema_path)?)?;
+    let mut schema_value: Value = serde_json::from_slice(&fs::read(&schema_path)?)?;
+    let mut version_schema_value: Value = serde_json::from_slice(&fs::read(&version_schema_path)?)?;
+
+    absolutize_schema_id(&mut schema_value, &schema_path)?;
+    absolutize_schema_id(&mut version_schema_value, &version_schema_path)?;
 
     let schema = JSONSchema::options()
         .with_draft(Draft::Draft202012)
