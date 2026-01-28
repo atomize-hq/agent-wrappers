@@ -187,3 +187,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
   - `cargo test -p xtask --test c3_spec_reports_metadata_retain` (fail; `xtask` missing `codex-report` / `codex-version-metadata` / `codex-retain`; clap stderr includes “error: unrecognized subcommand 'codex-report'”)
 - Result: C3 test suite added; it will pass once C3-code wires up the C3 subcommands per `C3-spec.md`.
 - Blockers: pending C3-code implementation of `xtask codex-report`, `xtask codex-version-metadata`, and `xtask codex-retain`.
+
+## [2026-01-28 17:09 UTC] Code Agent – C3-code – END
+- Worktree `wt/ccm-c3-reports-code` on branch `ccm-c3-reports-code` (commit `ce23101`) added C3 `xtask` subcommands: `codex-report`, `codex-version-metadata`, and `codex-retain`.
+- Commands: `cargo fmt` (pass; no output); `cargo clippy --workspace --all-targets -- -D warnings` (pass; `Finished \`dev\` profile [unoptimized + debuginfo] target(s) in 1.73s`)
+- Result: `codex-report` writes `reports/<version>/coverage.any.json` + per-target reports (and `coverage.all.json` only when union is complete); `codex-version-metadata` materializes `versions/<version>.json`; `codex-retain` computes keep/delete sets and prunes `snapshots/<version>/` + `reports/<version>/` when `--apply` is set.
+- Blockers: none
