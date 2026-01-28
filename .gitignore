@@ -3,5 +3,10 @@ target
 /.vscode
 /wt
 /codex-x86_64-unknown-linux-musl
+/codex-aarch64-apple-darwin
+/codex-x86_64-pc-windows-msvc.exe
+/_download
+/_extract
 /.codex-bins
+cli_manifests/codex/raw_help/
 *:Zone.Identifier

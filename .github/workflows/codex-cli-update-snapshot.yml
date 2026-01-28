@@ -17,11 +17,14 @@ permissions:
   contents: read
 
 jobs:
-  update:
+  prepare:
+    name: Prepare pins (artifacts.lock.json)
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.upstream.outputs.tag }}
+      source_date_epoch: ${{ steps.upstream.outputs.source_date_epoch }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
 
       - name: Fetch + validate upstream release
         id: upstream
@@ -35,8 +38,12 @@ jobs:
           curl -fsSL "https://api.github.com/repos/openai/codex/releases/tags/${TAG}" > release.json
           test "$(jq -r '.draft' release.json)" = "false"
           test "$(jq -r '.prerelease' release.json)" = "false"
+          PUBLISHED_AT="$(jq -r '.published_at' release.json)"
+          test -n "$PUBLISHED_AT" && test "$PUBLISHED_AT" != "null"
+          SOURCE_DATE_EPOCH="$(date -d "$PUBLISHED_AT" +%s)"
 
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "source_date_epoch=${SOURCE_DATE_EPOCH}" >> "$GITHUB_OUTPUT"
 
       - name: Download artifacts + update lockfile
         shell: bash
@@ -95,63 +102,221 @@ jobs:
             cli_manifests/codex/artifacts.lock.json > artifacts.lock.json.tmp
           mv artifacts.lock.json.tmp cli_manifests/codex/artifacts.lock.json
 
-          # Sanity check: linux binary is runnable on this runner.
-          LINUX_ASSET="_download/codex-x86_64-unknown-linux-musl.tar.gz"
-          MEMBER="$(tar -tzf "$LINUX_ASSET" | awk 'NF && substr($0,length($0),1) != "/" {print; exit}')"
-          test -n "$MEMBER"
-          rm -rf _extract
-          mkdir -p _extract
-          tar -xzf "$LINUX_ASSET" -C _extract "$MEMBER"
-          install -m 0755 "_extract/$MEMBER" ./codex-x86_64-unknown-linux-musl
-          ./codex-x86_64-unknown-linux-musl --version
+      - name: Upload pins + downloads
+        uses: actions/upload-artifact@v4
+        with:
+          name: "codex-cli-pins-${{ inputs.version }}"
+          if-no-files-found: error
+          path: |
+            cli_manifests/codex/artifacts.lock.json
+            _download/
 
-      - name: Update version pointers
+  snapshot:
+    name: "Snapshot (${{ matrix.target_triple }})"
+    needs: prepare
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target_triple: x86_64-unknown-linux-musl
+            runs_on: ubuntu-latest
+            asset_name: codex-x86_64-unknown-linux-musl.tar.gz
+            binary_path: ./codex-x86_64-unknown-linux-musl
+            extract: true
+          - target_triple: aarch64-apple-darwin
+            runs_on: macos-latest
+            asset_name: codex-aarch64-apple-darwin.tar.gz
+            binary_path: ./codex-aarch64-apple-darwin
+            extract: true
+          - target_triple: x86_64-pc-windows-msvc
+            runs_on: windows-latest
+            asset_name: codex-x86_64-pc-windows-msvc.exe
+            binary_path: ./codex-x86_64-pc-windows-msvc.exe
+            extract: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Download pins + downloads
+        uses: actions/download-artifact@v4
+        with:
+          name: "codex-cli-pins-${{ inputs.version }}"
+          path: .
+
+      - name: Acquire pinned Codex CLI
         shell: bash
         env:
           VERSION: ${{ inputs.version }}
-          UPDATE_MIN_SUPPORTED: ${{ inputs.update_min_supported }}
+          TARGET: ${{ matrix.target_triple }}
+          ASSET: ${{ matrix.asset_name }}
+          BIN: ${{ matrix.binary_path }}
+          EXTRACT: ${{ matrix.extract }}
         run: |
           set -euo pipefail
-          printf '%s\n' "$VERSION" > cli_manifests/codex/latest_validated.txt
-          if [ "$UPDATE_MIN_SUPPORTED" = "true" ]; then
-            printf '%s\n' "$VERSION" > cli_manifests/codex/min_supported.txt
+
+          URL="$(jq -r --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" '.artifacts[] | select(.codex_version==$v and .target_triple==$t and .asset_name==$a) | .download_url' cli_manifests/codex/artifacts.lock.json)"
+          SHA="$(jq -r --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" '.artifacts[] | select(.codex_version==$v and .target_triple==$t and .asset_name==$a) | .sha256' cli_manifests/codex/artifacts.lock.json)"
+          SIZE="$(jq -r --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" '.artifacts[] | select(.codex_version==$v and .target_triple==$t and .asset_name==$a) | .size_bytes' cli_manifests/codex/artifacts.lock.json)"
+          test -n "$URL" && test "$URL" != "null"
+          test -n "$SHA" && test "$SHA" != "null"
+          test -n "$SIZE" && test "$SIZE" != "null"
+
+          FILE="_download/${ASSET}"
+          test -f "$FILE"
+
+          python -c 'import hashlib, sys; p=sys.argv[1]; exp_sha=sys.argv[2]; exp_size=int(sys.argv[3]); b=open(p,"rb").read(); got_sha=hashlib.sha256(b).hexdigest(); got_size=len(b); assert got_sha==exp_sha, f"sha256 mismatch: expected={exp_sha} got={got_sha}"; assert got_size==exp_size, f"size mismatch: expected={exp_size} got={got_size}"; print(f"ok: {p} sha256={got_sha} size_bytes={got_size}")' "$FILE" "$SHA" "$SIZE"
+
+          if [ "$EXTRACT" = "true" ]; then
+            MEMBER="$(tar -tzf "$FILE" | awk 'NF && substr($0,length($0),1) != "/" {print; exit}')"
+            test -n "$MEMBER"
+            rm -rf _extract
+            mkdir -p _extract
+            tar -xzf "$FILE" -C _extract "$MEMBER"
+            install -m 0755 "_extract/$MEMBER" "$BIN"
+          else
+            cp "$FILE" "$BIN"
           fi
 
-      - name: Regenerate snapshot (C0)
+          "$BIN" --version
+
+      - name: Generate per-target snapshot (+ raw help)
         shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          TARGET: ${{ matrix.target_triple }}
+          BIN: ${{ matrix.binary_path }}
+          SOURCE_DATE_EPOCH: ${{ needs.prepare.outputs.source_date_epoch }}
+        run: |
+          set -euo pipefail
+          OUT="cli_manifests/codex/snapshots/${VERSION}/${TARGET}.json"
+          cargo run -p xtask -- \
+            codex-snapshot \
+            --codex-binary "$BIN" \
+            --out-file "$OUT" \
+            --capture-raw-help \
+            --raw-help-target "$TARGET" \
+            --supplement cli_manifests/codex/supplement/commands.json
+
+      - name: Upload snapshot JSON
+        uses: actions/upload-artifact@v4
+        with:
+          name: "codex-cli-snapshot-${{ inputs.version }}-${{ matrix.target_triple }}"
+          if-no-files-found: error
+          path: |
+            cli_manifests/codex/snapshots/${{ inputs.version }}/${{ matrix.target_triple }}.json
+
+      - name: Upload raw help capture (not committed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: "codex-cli-raw-help-${{ inputs.version }}-${{ matrix.target_triple }}"
+          if-no-files-found: error
+          path: |
+            cli_manifests/codex/raw_help/${{ inputs.version }}/${{ matrix.target_triple }}/
+
+  union-report-validate:
+    name: Union → Report → Validate (Linux)
+    runs-on: ubuntu-latest
+    needs: [prepare, snapshot]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Download pins + downloads
+        uses: actions/download-artifact@v4
+        with:
+          name: "codex-cli-pins-${{ inputs.version }}"
+          path: .
+
+      - name: Download per-target snapshots
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "codex-cli-snapshot-${{ inputs.version }}-*"
+          merge-multiple: true
+          path: .
+
+      - name: Merge union snapshot
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          SOURCE_DATE_EPOCH: ${{ needs.prepare.outputs.source_date_epoch }}
+        run: |
+          set -euo pipefail
+          cargo run -p xtask -- codex-union --version "$VERSION" --root cli_manifests/codex
+
+      - name: Generate wrapper coverage
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: ${{ needs.prepare.outputs.source_date_epoch }}
         run: |
           set -euo pipefail
           cargo run -p xtask -- \
-            codex-snapshot \
-            --codex-binary ./codex-x86_64-unknown-linux-musl \
-            --out-dir cli_manifests/codex \
-            --capture-raw-help \
-            --supplement cli_manifests/codex/supplement/commands.json
+            codex-wrapper-coverage \
+            --out cli_manifests/codex/wrapper_coverage.json
 
-      - name: Upload snapshot artifacts
+      - name: Generate coverage reports
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          SOURCE_DATE_EPOCH: ${{ needs.prepare.outputs.source_date_epoch }}
+        run: |
+          set -euo pipefail
+          cargo run -p xtask -- codex-report --version "$VERSION" --root cli_manifests/codex
+
+      - name: Generate version metadata (status=reported)
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          SOURCE_DATE_EPOCH: ${{ needs.prepare.outputs.source_date_epoch }}
+        run: |
+          set -euo pipefail
+          cargo run -p xtask -- \
+            codex-version-metadata \
+            --version "$VERSION" \
+            --status reported \
+            --root cli_manifests/codex
+
+      - name: Validate committed artifacts (hard gate)
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: ${{ needs.prepare.outputs.source_date_epoch }}
+        run: |
+          set -euo pipefail
+          cargo run -p xtask -- codex-validate --root cli_manifests/codex
+
+      - name: Upload committed artifact bundle (PR fallback)
         uses: actions/upload-artifact@v4
         with:
-          name: "codex-cli-snapshot-${{ inputs.version }}"
+          name: "codex-cli-artifacts-${{ inputs.version }}"
           if-no-files-found: error
           path: |
-            cli_manifests/codex/current.json
-            cli_manifests/codex/raw_help/${{ inputs.version }}/
+            cli_manifests/codex/snapshots/${{ inputs.version }}/
+            cli_manifests/codex/reports/${{ inputs.version }}/
+            cli_manifests/codex/versions/${{ inputs.version }}.json
+            cli_manifests/codex/wrapper_coverage.json
             cli_manifests/codex/artifacts.lock.json
-            cli_manifests/codex/latest_validated.txt
-            cli_manifests/codex/min_supported.txt
+
+      - name: Remove CI-only downloads (avoid PR blob commits)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf _download _extract
 
       - name: Create PR (best effort)
         continue-on-error: true
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.CODEX_AUTOMATION_TOKEN || github.token }}
-          commit-message: "chore: update codex cli snapshot to ${{ inputs.version }}"
-          title: "chore: update codex cli snapshot to ${{ inputs.version }}"
+          commit-message: "chore: codex cli artifacts for ${{ inputs.version }}"
+          title: "chore: codex cli artifacts for ${{ inputs.version }}"
           body: |
-            Updates Codex CLI snapshot artifacts and version pointers.
+            Generates Codex CLI parity artifacts for `rust-v${{ inputs.version }}` per ADR 0002.
 
-            - Downloads `rust-v${{ inputs.version }}` release assets from GitHub Releases and records `download_url` + `sha256` + `size_bytes` in `cli_manifests/codex/artifacts.lock.json` (Linux/macOS/Windows targets)
-            - Regenerates `cli_manifests/codex/current.json` (and `raw_help/<version>/...`) via `xtask codex-snapshot`
-            - Updates `cli_manifests/codex/latest_validated.txt` (and optionally `min_supported.txt`)
+            - Updates `cli_manifests/codex/artifacts.lock.json` with pinned upstream assets (size + sha256)
+            - Generates per-target snapshots under `cli_manifests/codex/snapshots/<version>/`
+            - Merges a union snapshot and generates reports + version metadata
+            - Runs `xtask codex-validate` as a hard gate
+
+            Raw help captures are uploaded as workflow artifacts (not committed).
           branch: "automation/codex-cli-${{ inputs.version }}"
           delete-branch: true

@@ -12,6 +12,19 @@ permissions:
   contents: read
 
 jobs:
+  codex-validate-artifacts:
+    name: Validate Codex committed artifacts
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('cli_manifests/codex/versions/*.json') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: xtask codex-validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run -p xtask -- codex-validate --root cli_manifests/codex
+
   versions:
     name: Read Codex version pointers
     runs-on: ubuntu-latest
