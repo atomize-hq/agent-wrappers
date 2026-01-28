@@ -15,11 +15,31 @@ jobs:
   codex-validate-artifacts:
     name: Validate Codex committed artifacts
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('cli_manifests/codex/versions/*.json') != '' }}
     steps:
       - uses: actions/checkout@v4
+      - id: codex-artifacts
+        name: Detect Codex committed artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(cli_manifests/codex/versions/*.json)
+          if (( ${#files[@]} > 0 )); then
+            echo "has_versions=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_versions=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip (no Codex artifacts committed yet)
+        if: ${{ steps.codex-artifacts.outputs.has_versions != 'true' }}
+        shell: bash
+        run: echo "No cli_manifests/codex/versions/*.json; skipping codex-validate."
+
       - uses: dtolnay/rust-toolchain@stable
+        if: ${{ steps.codex-artifacts.outputs.has_versions == 'true' }}
+
       - name: xtask codex-validate
+        if: ${{ steps.codex-artifacts.outputs.has_versions == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
