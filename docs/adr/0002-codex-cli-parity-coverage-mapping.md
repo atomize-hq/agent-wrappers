@@ -1,7 +1,7 @@
 # ADR 0002: Codex CLI Parity Coverage Mapping (Snapshot → Coverage → Work Queue)
 
 Date: 2026-01-26  
-Status: Proposed
+Status: Accepted
 
 ## Context
 

@@ -1,0 +1,2295 @@
+{
+  "schema_version": 1,
+  "generated_at": "2025-11-20T16:14:58Z",
+  "inputs": {
+    "upstream": {
+      "semantic_version": "0.61.0",
+      "mode": "union",
+      "targets": [
+        "x86_64-unknown-linux-musl"
+      ]
+    },
+    "wrapper": {
+      "schema_version": 1,
+      "wrapper_version": "0.2.0"
+    },
+    "rules": {
+      "rules_schema_version": 1
+    }
+  },
+  "platform_filter": {
+    "mode": "exact_target",
+    "target_triple": "x86_64-unknown-linux-musl"
+  },
+  "deltas": {
+    "missing_commands": [
+      {
+        "path": [],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-json-schema"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-ts"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "apply"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "resume"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features",
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features",
+          "list"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login",
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login",
+          "status"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "logout"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp-server"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "linux"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "windows"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      }
+    ],
+    "missing_flags": [
+      {
+        "path": [],
+        "key": "--add-dir",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--ask-for-approval",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--cd",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--dangerously-bypass-approvals-and-sandbox",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--full-auto",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--image",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--local-provider",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--model",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--oss",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--profile",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--sandbox",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--search",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--version",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-json-schema"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-json-schema"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-json-schema"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-json-schema"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-json-schema"
+        ],
+        "key": "--out",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-ts"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-ts"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-ts"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-ts"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-ts"
+        ],
+        "key": "--out",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "generate-ts"
+        ],
+        "key": "--prettier",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "apply"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "apply"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "apply"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "apply"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--attempts",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--env",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--add-dir",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--cd",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--color",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--dangerously-bypass-approvals-and-sandbox",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--full-auto",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--image",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--local-provider",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--model",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--oss",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--output-last-message",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--output-schema",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--profile",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--sandbox",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--skip-git-repo-check",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "resume"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "resume"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "resume"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "resume"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "resume"
+        ],
+        "key": "--last",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features",
+          "list"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features",
+          "list"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features",
+          "list"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features",
+          "list"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login"
+        ],
+        "key": "--device-auth",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login"
+        ],
+        "key": "--with-api-key",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login",
+          "status"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login",
+          "status"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login",
+          "status"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login",
+          "status"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "logout"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "logout"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "logout"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "logout"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--bearer-token-env-var",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--env",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--url",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "key": "--scopes",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp-server"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp-server"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp-server"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp-server"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--add-dir",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--all",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--ask-for-approval",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--cd",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--dangerously-bypass-approvals-and-sandbox",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--full-auto",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--image",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--last",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--local-provider",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--model",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--oss",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--profile",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--sandbox",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--search",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "linux"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "linux"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "linux"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "linux"
+        ],
+        "key": "--full-auto",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "linux"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "key": "--full-auto",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "key": "--log-denials",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "windows"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "windows"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "windows"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "windows"
+        ],
+        "key": "--full-auto",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "windows"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      }
+    ],
+    "missing_args": [
+      {
+        "path": [],
+        "name": "ARGS",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [],
+        "name": "PROMPT",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "app-server",
+          "help"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "apply"
+        ],
+        "name": "TASK_ID",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "name": "QUERY",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "help"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "name": "SHELL",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "name": "PROMPT",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "help"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "resume"
+        ],
+        "name": "PROMPT",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "resume"
+        ],
+        "name": "SESSION_ID",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "features",
+          "help"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "help"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "login",
+          "help"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "URL",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "help"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "name": "PROMPT",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "name": "SESSION_ID",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "help"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "linux"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "sandbox",
+          "windows"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      }
+    ]
+  }
+}

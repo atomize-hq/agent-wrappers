@@ -2,6 +2,10 @@
 
 Source: `docs/adr/0001-codex-cli-parity-maintenance.md`
 
+Note: the intended GitHub Actions implementation is captured by ADR 0002 and the planning pack
+`docs/project_management/next/codex-cli-parity-coverage-mapping/`. This plan is retained as the
+original ADR 0001 triad plan but is no longer the execution source of truth for CI/workflows.
+
 ## Purpose
 Implement the ADR 0001 “CLI Snapshot → Diff → Update” release-trailing workflow so this repo can detect Codex CLI drift, validate against real binaries, and keep wrapper behavior and JSONL parsing compatible across supported versions.
 

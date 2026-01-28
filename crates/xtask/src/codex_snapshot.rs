@@ -900,6 +900,7 @@ fn parse_flag_line(line: &str) -> Option<FlagSnapshot> {
     let mut long: Option<String> = None;
     let mut short: Option<String> = None;
     let mut value_name: Option<String> = None;
+    let mut repeatable: Option<bool> = None;
 
     for tok in tokens_part.split_whitespace() {
         let tok = tok.trim_end_matches(',').trim();
@@ -933,12 +934,17 @@ fn parse_flag_line(line: &str) -> Option<FlagSnapshot> {
         }
 
         if value_name.is_none() {
-            if tok.starts_with('<') && tok.ends_with('>') && tok.len() > 2 {
-                value_name = Some(
-                    tok.trim_start_matches('<')
-                        .trim_end_matches('>')
-                        .to_string(),
-                );
+            // clap formats variadic value placeholders like `<FILE>...`
+            if tok.starts_with('<') {
+                if let Some(end) = tok.find('>') {
+                    if end > 1 {
+                        value_name = Some(tok[1..end].to_string());
+                        if tok[end + 1..].contains("...") {
+                            repeatable = Some(true);
+                        }
+                        continue;
+                    }
+                }
                 continue;
             }
 
@@ -952,6 +958,11 @@ fn parse_flag_line(line: &str) -> Option<FlagSnapshot> {
         }
     }
 
+    // Reject help text bullets/continuations like `- untrusted: ...` that are not real flags.
+    if long.is_none() && short.is_none() {
+        return None;
+    }
+
     let takes_value = value_name.is_some();
 
     Some(FlagSnapshot {
@@ -959,7 +970,7 @@ fn parse_flag_line(line: &str) -> Option<FlagSnapshot> {
         short,
         takes_value,
         value_name,
-        repeatable: None,
+        repeatable,
         stability: None,
         platforms: None,
     })

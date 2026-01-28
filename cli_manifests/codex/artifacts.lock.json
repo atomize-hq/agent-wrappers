@@ -4,6 +4,22 @@
   "artifacts": [
     {
       "codex_version": "0.61.0",
+      "target_triple": "aarch64-apple-darwin",
+      "asset_name": "codex-aarch64-apple-darwin.tar.gz",
+      "download_url": "https://github.com/openai/codex/releases/download/rust-v0.61.0/codex-aarch64-apple-darwin.tar.gz",
+      "sha256": "479cc48b998bdeb5a0289883130135a51b2155666478f68ac4bf18f5dfe56102",
+      "size_bytes": 18338149
+    },
+    {
+      "codex_version": "0.61.0",
+      "target_triple": "x86_64-pc-windows-msvc",
+      "asset_name": "codex-x86_64-pc-windows-msvc.exe",
+      "download_url": "https://github.com/openai/codex/releases/download/rust-v0.61.0/codex-x86_64-pc-windows-msvc.exe",
+      "sha256": "167246de1093bbf0e6977cddcd05335af708361fc469dc7f95cef4d8f1bde83d",
+      "size_bytes": 57148928
+    },
+    {
+      "codex_version": "0.61.0",
       "target_triple": "x86_64-unknown-linux-musl",
       "asset_name": "codex-x86_64-unknown-linux-musl.tar.gz",
       "download_url": "https://github.com/openai/codex/releases/download/rust-v0.61.0/codex-x86_64-unknown-linux-musl.tar.gz",

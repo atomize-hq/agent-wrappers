@@ -3,6 +3,11 @@
 Date: 2025-12-24  
 Status: Accepted
 
+Note: CI/workflow and artifact model details are implemented per ADR 0002
+(`docs/adr/0002-codex-cli-parity-coverage-mapping.md`) and the planning pack at
+`docs/project_management/next/codex-cli-parity-coverage-mapping/`. ADR 0001 remains the
+high-level release-trailing policy and “validated” definition.
+
 ## Context
 
 This repository provides a long-running Rust binding/wrapper around the OpenAI Codex CLI (`codex`).

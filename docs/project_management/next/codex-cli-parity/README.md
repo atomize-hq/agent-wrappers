@@ -2,6 +2,10 @@
 
 Planning and execution runbook for ADR 0001.
 
+Status: superseded for CI/workflow implementation details by ADR 0002 (`docs/adr/0002-codex-cli-parity-coverage-mapping.md`).
+For the intended GitHub Actions pipeline (snapshots → union → reports → validate), use:
+- `docs/project_management/next/codex-cli-parity-coverage-mapping/`
+
 Start here:
 - `docs/project_management/next/codex-cli-parity/plan.md`
 - `docs/project_management/next/codex-cli-parity/tasks.json`
