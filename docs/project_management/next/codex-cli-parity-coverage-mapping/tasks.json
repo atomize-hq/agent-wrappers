@@ -127,7 +127,7 @@
     "name": "Per-target snapshots + union builder (code)",
     "type": "code",
     "phase": "C1",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Implement per-target snapshot storage + union merge tooling per C1-spec (production code only).",
     "references": [
       "docs/adr/0002-codex-cli-parity-coverage-mapping.md",

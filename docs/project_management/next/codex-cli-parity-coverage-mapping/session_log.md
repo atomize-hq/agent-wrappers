@@ -74,3 +74,10 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
   - `cargo test -p xtask` (pass; `c0_spec_snapshot` 4 passed, `c0_spec_validate` 5 passed)
   - `make preflight` (pass; runs `cargo fmt && cargo clippy ... && cargo clean && cargo check ... && cargo test ...`; `Removed 2946 files, 1.1GiB total`)
 - Blockers: none
+
+## [2026-01-28 15:06 UTC] Code Agent – C1-code – START
+- Checked out `feat/codex-cli-parity-coverage-mapping`, `git pull --ff-only` (already up to date)
+- Read plan/tasks/session log/spec/kickoff prompt; updated `tasks.json` (C1-code → `in_progress`)
+- Worktree pending (`ccm-c1-union-code` / `wt/ccm-c1-union-code` to be added after docs commit)
+- Plan: extend `xtask codex-snapshot` (per-target `--out-file` + raw help under `raw_help/<version>/<target_triple>`), implement `xtask codex-union` (deterministic union + conflicts per RULES/ADR), run required commands, commit via worktree, update docs/tasks/log at end
+- Blockers: none
