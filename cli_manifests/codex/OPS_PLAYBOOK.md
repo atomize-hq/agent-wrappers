@@ -5,6 +5,7 @@ This document is the maintainer runbook for keeping this repo’s Rust wrapper i
 Key policy references:
 - Source-of-truth policy/architecture: `docs/adr/0001-codex-cli-parity-maintenance.md`
 - Snapshot artifacts home: `cli_manifests/codex/README.md`
+- CI/automation plan (triggers, binary acquisition, PR loop): `cli_manifests/codex/CI_WORKFLOWS_PLAN.md`
 
 ## Core Policies (read before operating)
 
@@ -43,6 +44,12 @@ Optional inputs (only if you intend to change policy):
 Notes:
 - The workflow is responsible for downloading/extracting the upstream release artifact(s) and updating `cli_manifests/codex/artifacts.lock.json`.
 - The workflow should regenerate `cli_manifests/codex/current.json` (and optionally `cli_manifests/codex/raw_help/<version>/**`) using `xtask`.
+
+### Target end state (v1)
+
+See `cli_manifests/codex/CI_WORKFLOWS_PLAN.md` for the target end state:
+- Release Watch dispatches Update Snapshot automatically for stable releases.
+- Update Snapshot acquires binaries from GitHub Releases for Linux/macOS/Windows, generates per-target snapshots, merges a union, generates reports, and opens/updates a dedicated per-version PR branch for automation.
 
 ## Review Snapshot Diff (treat as a checklist)
 
@@ -145,4 +152,3 @@ This is a one-time (or occasional) checklist to validate the operational loop on
    - Update `cli_manifests/codex/latest_validated.txt` to `0.77.0`
    - Ensure `cli_manifests/codex/current.json` corresponds to `0.77.0`
    - Leave `min_supported.txt` at `0.61.0` unless you are explicitly changing policy
-

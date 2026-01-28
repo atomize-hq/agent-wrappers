@@ -8,6 +8,10 @@ Source of truth for the policy is `docs/adr/0001-codex-cli-parity-maintenance.md
 
 Maintainer runbook (Release Watch triage, snapshot update + review checklist, intentionally-unwrapped policy, and promotion criteria): [OPS_PLAYBOOK.md](OPS_PLAYBOOK.md)
 
+## CI Plan
+
+CI triggers + binary acquisition + PR automation plan (v1 target state): [CI_WORKFLOWS_PLAN.md](CI_WORKFLOWS_PLAN.md)
+
 ## Generate / Update (`current.json`)
 
 Canonical generator command:

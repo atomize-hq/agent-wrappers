@@ -101,6 +101,9 @@ This ADR provides narrative context and rationale; `SCHEMA.json` + `RULES.json` 
 CI validation:
 - CI must hard-fail if any committed parity artifact (snapshots, wrapper coverage, reports) does not validate against `SCHEMA.json`.
 - CI must also validate per-version status metadata files against `VERSION_METADATA_SCHEMA.json`.
+CI triggering/binary acquisition:
+- The v1 target state is: Release Watch selects stable `rust-v<MAJOR.MINOR.PATCH>` releases (non-draft, non-prerelease, no suffixes) and dispatches Update Snapshot.
+- Update Snapshot downloads upstream assets from GitHub Releases (direct download URLs), pins them in `artifacts.lock.json`, and runs multi-platform snapshot generation before union merge/report generation.
 
 Version and timestamp normalization (normative; see `RULES.json`):
 - Upstream `binary.semantic_version` is parsed from the codex binary and must be SemVer-like; promotion pointers accept stable `MAJOR.MINOR.PATCH` only.
