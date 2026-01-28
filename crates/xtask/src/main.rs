@@ -1,4 +1,5 @@
 mod codex_snapshot;
+mod codex_validate;
 
 use clap::{Parser, Subcommand};
 
@@ -14,11 +15,23 @@ struct Cli {
 enum Command {
     /// Generate a Codex CLI snapshot manifest under `cli_manifests/codex/`.
     CodexSnapshot(codex_snapshot::Args),
+    /// Validate committed Codex parity artifacts under `cli_manifests/codex/`.
+    CodexValidate(codex_validate::Args),
 }
 
-fn main() -> Result<(), codex_snapshot::Error> {
+fn main() {
     let cli = Cli::parse();
-    match cli.command {
-        Command::CodexSnapshot(args) => codex_snapshot::run(args),
-    }
+
+    let exit_code = match cli.command {
+        Command::CodexSnapshot(args) => match codex_snapshot::run(args) {
+            Ok(()) => 0,
+            Err(err) => {
+                eprintln!("{err}");
+                1
+            }
+        },
+        Command::CodexValidate(args) => codex_validate::run(args),
+    };
+
+    std::process::exit(exit_code);
 }

@@ -13,7 +13,9 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
 hex = "0.4"
+jsonschema = { version = "0.18", features = ["draft202012"] }
 regex = "1.10"
+semver = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = "0.10"
