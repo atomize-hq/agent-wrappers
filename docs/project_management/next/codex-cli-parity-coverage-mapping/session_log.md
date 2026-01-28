@@ -179,3 +179,11 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree pending (`ccm-c3-reports-test` / `wt/ccm-c3-reports-test` to be added after docs commit)
 - Plan: add `crates/xtask/tests/` coverage for `codex-report` (any/exact/all + incomplete-union gating), `codex-version-metadata` status gates, and `codex-retain` keep-set pruning; run `cargo fmt` + targeted `cargo test`; commit via worktree; update docs/tasks/log at end
 - Blockers: none
+
+## [2026-01-28 17:00 UTC] Test Agent – C3-test – END
+- Worktree `wt/ccm-c3-reports-test` on branch `ccm-c3-reports-test` (commit `d176e77`) added `crates/xtask/tests/c3_spec_reports_metadata_retain.rs` covering: `codex-report` filter semantics (any/all/exact + union incomplete behavior), `codex-version-metadata` reported gates + schema validation, and `codex-retain` keep-set pruning + deletion boundaries.
+- Commands:
+  - `cargo fmt` (pass; no output)
+  - `cargo test -p xtask --test c3_spec_reports_metadata_retain` (fail; `xtask` missing `codex-report` / `codex-version-metadata` / `codex-retain`; clap stderr includes “error: unrecognized subcommand 'codex-report'”)
+- Result: C3 test suite added; it will pass once C3-code wires up the C3 subcommands per `C3-spec.md`.
+- Blockers: pending C3-code implementation of `xtask codex-report`, `xtask codex-version-metadata`, and `xtask codex-retain`.

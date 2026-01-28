@@ -411,7 +411,7 @@
     "name": "Coverage reports + version metadata + pruning (test)",
     "type": "test",
     "phase": "C3",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Add tests for report generation, version metadata gates, and retention pruning per C3-spec (tests only).",
     "references": [
       "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
