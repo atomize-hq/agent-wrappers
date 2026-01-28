@@ -224,3 +224,11 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree pending (`ccm-c4-ci-test` / `wt/ccm-c4-ci-test` to be added after docs commit)
 - Plan: implement CI wiring contract tests/fixtures per C4-spec (no production changes), run `cargo fmt` + targeted `cargo test`, commit via worktree, update docs/tasks/log at end
 - Blockers: none
+
+## [2026-01-28 18:07 UTC] Test Agent – C4-test – END
+- Worktree `wt/ccm-c4-ci-test` on branch `ccm-c4-ci-test` (commit `1a28731`) added `crates/xtask/tests/c4_spec_ci_wiring.rs` to assert C4 CI workflow contracts for `.github/workflows/codex-cli-update-snapshot.yml` and `.github/workflows/ci.yml`.
+- Commands:
+  - `cargo fmt` (pass; no output)
+  - `cargo test -p xtask --test c4_spec_ci_wiring -- --nocapture` (fail; assertions show current workflows do not yet reference `cli_manifests/codex/RULES.json`/`expected_targets`, do not run `codex-union`/`codex-wrapper-coverage`/`codex-report`/`codex-version-metadata`/`codex-validate`, and `ci.yml` lacks the `hashFiles('cli_manifests/codex/versions/*.json') != ''` conditional gate)
+- Result: C4 CI wiring contract tests are in place; they will pass once C4-code updates the workflows per `C4-spec.md`.
+- Blockers: none

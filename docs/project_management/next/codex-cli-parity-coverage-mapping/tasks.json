@@ -532,7 +532,7 @@
     "name": "CI wiring (test)",
     "type": "test",
     "phase": "C4",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Add/adjust CI-facing tests/fixtures needed to validate the end-to-end pipeline per C4-spec (tests only).",
     "references": [
       "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
