@@ -67,6 +67,7 @@
 //! - Overrides + persistence: `capability_snapshot`, `capability_overrides`, `write_capabilities_snapshot`, `read_capabilities_snapshot`, and `capability_snapshot_matches_binary` let hosts reuse snapshots across processes and fall back to probes when fingerprints diverge.
 
 pub mod mcp;
+pub mod wrapper_coverage_manifest;
 
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
