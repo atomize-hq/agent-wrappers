@@ -45,3 +45,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree pending (`ccm-c0-validate-test` / `wt/ccm-c0-validate-test` to be added after docs commit)
 - Plan: add tests for `xtask codex-validate` per C0-spec (pass case + deterministic error cases), run required commands, commit via worktree, update docs/tasks/log at end
 - Blockers: none
+
+## [2026-01-28 14:28 UTC] Test Agent – C0-test – END
+- Worktree `wt/ccm-c0-validate-test` on branch `ccm-c0-validate-test` (commit `8418599`) adds `crates/xtask/tests/c0_spec_validate.rs` covering: minimal valid codex dir passes, report requirements by version status, `coverage.all.json` gate on `union.complete`, pointer newline enforcement, wrapper scope overlap determinism + required error fields.
+- Commands: `cargo fmt` (pass); `cargo test -p xtask --test c0_spec_validate` (fail: `xtask` has no `codex-validate` subcommand yet; clap reports “unrecognized subcommand 'codex-validate'”).
+- Result: C0 validator tests are in place; they will pass once C0-code wires up `xtask codex-validate` per C0-spec.
+- Blockers: `xtask codex-validate` not implemented on `feat/codex-cli-parity-coverage-mapping` (and `ccm-c0-validate-code` currently also lacks the subcommand), so the new tests currently fail at runtime.

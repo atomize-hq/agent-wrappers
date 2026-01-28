@@ -47,7 +47,7 @@
     "name": "Deterministic validators (test)",
     "type": "test",
     "phase": "C0",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Add tests validating `xtask codex-validate` behavior per C0-spec (tests only).",
     "references": [
       "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
