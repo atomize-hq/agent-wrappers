@@ -65,11 +65,15 @@ jobs:
 
             core.info(`Dispatching codex-cli-update-snapshot.yml for version=${candidate}`);
 
+            const ref = context.ref.startsWith("refs/heads/")
+              ? context.ref.slice("refs/heads/".length)
+              : context.ref;
+
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: "codex-cli-update-snapshot.yml",
-              ref: "feat/codex-cli-parity",
+              ref,
               inputs: {
                 version: candidate,
                 update_min_supported: "false",
