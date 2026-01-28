@@ -210,3 +210,10 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
   - `cargo test -p xtask` (pass; all xtask spec tests including `c3_spec_reports_metadata_retain` passed)
   - `make preflight` (pass; runs fmt/clippy/clean/check/test; `Removed 3584 files, 1.5GiB total`)
 - Blockers: none
+
+## [2026-01-28 18:00 UTC] Code Agent – C4-code – START
+- Checked out `feat/codex-cli-parity-coverage-mapping`, `git pull --ff-only` (already up to date)
+- Read plan/tasks/session log/spec/kickoff prompt; updated `tasks.json` (C4-code → `in_progress`)
+- Worktree pending (`ccm-c4-ci-code` / `wt/ccm-c4-ci-code` to be added after docs commit)
+- Plan: update CI workflows per C4-spec (snapshot → union → wrapper-coverage → report → version-metadata → validate + artifact uploads), then run fmt/clippy and commit via worktree
+- Blockers: none
