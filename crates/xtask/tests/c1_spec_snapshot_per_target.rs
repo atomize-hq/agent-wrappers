@@ -14,6 +14,24 @@ mod unix {
             .join("fixtures")
     }
 
+    fn repo_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .expect("CARGO_MANIFEST_DIR has 2 parents (crates/xtask)")
+            .to_path_buf()
+    }
+
+    fn write_rules_json(codex_root: &Path) {
+        fs::create_dir_all(codex_root).expect("create codex root dir");
+        let src = repo_root()
+            .join("cli_manifests")
+            .join("codex")
+            .join("RULES.json");
+        let dst = codex_root.join("RULES.json");
+        fs::copy(src, dst).expect("copy RULES.json");
+    }
+
     fn make_temp_dir(prefix: &str) -> PathBuf {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -51,6 +69,7 @@ mod unix {
         let supplement = copy_fixture("supplement_commands.json", &temp);
 
         let codex_root = temp.join("cli_manifests").join("codex");
+        write_rules_json(&codex_root);
         let version = "0.77.0";
         let target = "x86_64-unknown-linux-musl";
 
@@ -120,6 +139,7 @@ mod unix {
         let supplement = copy_fixture("supplement_commands.json", &temp);
 
         let codex_root = temp.join("cli_manifests").join("codex");
+        write_rules_json(&codex_root);
         let version = "0.77.0";
         let target = "x86_64-unknown-linux-musl";
         let out_file = codex_root

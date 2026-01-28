@@ -51,7 +51,7 @@ pub struct Args {
 pub enum Error {
     #[error("invalid codex binary path: {0}")]
     InvalidCodexBinary(PathBuf),
-    #[error("--capture-raw-help requires --raw-help-target")]
+    #[error("--capture-raw-help requires a target triple (use --raw-help-target, or infer it from --out-file)")]
     MissingRawHelpTarget,
     #[error("failed to probe semantic version; required for per-target snapshots")]
     MissingSemanticVersion,
@@ -100,10 +100,6 @@ pub fn run(args: Args) -> Result<(), Error> {
         return Err(Error::InvalidCodexBinary(codex_binary));
     }
 
-    if args.capture_raw_help && args.raw_help_target.is_none() {
-        return Err(Error::MissingRawHelpTarget);
-    }
-
     let collected_at = if let Some(s) = args.collected_at.as_ref() {
         OffsetDateTime::parse(s, &Rfc3339).map_err(|_| Error::CollectedAt(s.clone()))?;
         s.clone()
@@ -120,7 +116,8 @@ pub fn run(args: Args) -> Result<(), Error> {
         (None, None) => "unknown".to_string(),
     };
 
-    let (snapshot_out_path, raw_help_dir) = resolve_outputs(&args, &version_dir)?;
+    let (snapshot_out_path, raw_help_dir, inferred_target_triple) =
+        resolve_outputs(&args, &version_dir)?;
     let (features_list, features_probe_error) = probe_features(&codex_binary);
     let enabled_feature_names = features_list
         .as_ref()
@@ -184,6 +181,7 @@ pub fn run(args: Args) -> Result<(), Error> {
                 os: std::env::consts::OS.to_string(),
                 arch: std::env::consts::ARCH.to_string(),
             },
+            target_triple: inferred_target_triple,
             version_output,
             semantic_version,
             channel,
@@ -206,7 +204,10 @@ pub fn run(args: Args) -> Result<(), Error> {
     Ok(())
 }
 
-fn resolve_outputs(args: &Args, version_dir: &str) -> Result<(PathBuf, Option<PathBuf>), Error> {
+fn resolve_outputs(
+    args: &Args,
+    version_dir: &str,
+) -> Result<(PathBuf, Option<PathBuf>, String), Error> {
     let snapshot_out_path = if let Some(path) = args.out_file.as_ref() {
         path.clone()
     } else {
@@ -216,7 +217,7 @@ fn resolve_outputs(args: &Args, version_dir: &str) -> Result<(PathBuf, Option<Pa
             .join("current.json")
     };
 
-    let codex_root = if let Some(out_file) = args.out_file.as_ref() {
+    let (codex_root, target_triple) = if let Some(out_file) = args.out_file.as_ref() {
         let version_path = out_file.parent().ok_or_else(|| {
             Error::InvalidOutFileLayout("could not infer snapshots/<version> directory".to_string())
         })?;
@@ -243,53 +244,82 @@ fn resolve_outputs(args: &Args, version_dir: &str) -> Result<(PathBuf, Option<Pa
             )));
         }
 
-        if let Some(target) = args.raw_help_target.as_ref() {
-            let expected = format!("{target}.json");
-            let got = out_file
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or("<unknown>");
-            if got != expected {
-                return Err(Error::InvalidOutFileLayout(format!(
-                    "expected filename {expected}, got {got}"
-                )));
-            }
+        let inferred_from_out_file = out_file
+            .file_name()
+            .and_then(|s| s.to_str())
+            .and_then(|s| s.strip_suffix(".json"))
+            .ok_or_else(|| {
+                Error::InvalidOutFileLayout(
+                    "expected out-file name like <target_triple>.json".into(),
+                )
+            })?
+            .to_string();
+        let target = args
+            .raw_help_target
+            .as_ref()
+            .cloned()
+            .unwrap_or(inferred_from_out_file);
+
+        let expected = format!("{target}.json");
+        let got = out_file
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unknown>");
+        if got != expected {
+            return Err(Error::InvalidOutFileLayout(format!(
+                "expected filename {expected}, got {got}"
+            )));
         }
 
         let codex_root = snapshots_path
             .parent()
             .ok_or_else(|| Error::InvalidOutFileLayout("could not infer codex root".to_string()))?;
-        codex_root.to_path_buf()
+        (codex_root.to_path_buf(), target)
     } else {
-        args.out_dir
-            .as_ref()
-            .expect("clap enforces one of out_dir/out_file")
-            .clone()
+        (
+            args.out_dir
+                .as_ref()
+                .expect("clap enforces one of out_dir/out_file")
+                .clone(),
+            args.raw_help_target
+                .clone()
+                .unwrap_or_else(|| "unknown".to_string()),
+        )
     };
 
-    let rules_path = codex_root.join("RULES.json");
-    let rules: RulesFile = serde_json::from_slice(
-        &fs::read(&rules_path)
-            .map_err(|err| Error::RulesRead(format!("{}: {err}", rules_path.display())))?,
-    )?;
-    assert_supported_sorting(&rules.sorting)?;
-
     let raw_help_dir = if args.capture_raw_help {
-        let target = args
-            .raw_help_target
-            .as_ref()
-            .expect("capture_raw_help implies raw_help_target");
-
-        if !rules.union.expected_targets.iter().any(|t| t == target) {
-            return Err(Error::RawHelpTargetNotExpected(target.clone()));
+        let base = codex_root.join("raw_help").join(version_dir);
+        if args.raw_help_target.is_some() || args.out_file.is_some() {
+            if target_triple == "unknown" {
+                return Err(Error::MissingRawHelpTarget);
+            }
+            Some(base.join(&target_triple))
+        } else {
+            Some(base)
         }
-
-        Some(codex_root.join("raw_help").join(version_dir).join(target))
     } else {
         None
     };
 
-    Ok((snapshot_out_path, raw_help_dir))
+    if args.out_file.is_some() {
+        let rules_path = codex_root.join("RULES.json");
+        let rules: RulesFile = serde_json::from_slice(
+            &fs::read(&rules_path)
+                .map_err(|err| Error::RulesRead(format!("{}: {err}", rules_path.display())))?,
+        )?;
+        assert_supported_sorting(&rules.sorting)?;
+
+        if !rules
+            .union
+            .expected_targets
+            .iter()
+            .any(|t| t == &target_triple)
+        {
+            return Err(Error::RawHelpTargetNotExpected(target_triple));
+        }
+    }
+
+    Ok((snapshot_out_path, raw_help_dir, target_triple))
 }
 
 fn assert_supported_sorting(sorting: &RulesSorting) -> Result<(), Error> {
@@ -1288,6 +1318,7 @@ pub(crate) struct BinarySnapshot {
     sha256: String,
     size_bytes: u64,
     platform: BinaryPlatform,
+    target_triple: String,
     version_output: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) semantic_version: Option<String>,
