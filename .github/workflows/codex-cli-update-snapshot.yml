@@ -73,7 +73,7 @@ jobs:
             esac
           done < <(jq -r '.union.expected_targets[]' "$RULES")
 
-          printf '%s\n' "${entries[@]}" | jq -s '{include: .}' > snapshot_matrix.json
+          printf '%s\n' "${entries[@]}" | jq -c -s '{include: .}' > snapshot_matrix.json
           echo "snapshot_matrix=$(cat snapshot_matrix.json)" >> "$GITHUB_OUTPUT"
 
       - name: Download artifacts + update lockfile
