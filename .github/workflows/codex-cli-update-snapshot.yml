@@ -80,15 +80,16 @@ jobs:
           jq -s '.' _download/*.artifact.json > artifact.json
 
           jq \
+            --arg v "$VERSION" \
             --slurpfile new artifact.json \
             '
               .version = 1
               | .upstream_repo = "openai/codex"
               | .artifacts = (
                   ( .artifacts // [] )
-                  | map(select(.codex_version != $new[0].codex_version))
-                  + $new
-                  | unique_by(.codex_version, .target_triple)
+                  | map(select(.codex_version != $v))
+                  + $new[0]
+                  | unique_by([.codex_version, .target_triple])
                   | sort_by([(.codex_version|split(".")|map(tonumber)), .target_triple])
                 )
             ' \
