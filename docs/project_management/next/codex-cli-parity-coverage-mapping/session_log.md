@@ -217,3 +217,10 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree pending (`ccm-c4-ci-code` / `wt/ccm-c4-ci-code` to be added after docs commit)
 - Plan: update CI workflows per C4-spec (snapshot → union → wrapper-coverage → report → version-metadata → validate + artifact uploads), then run fmt/clippy and commit via worktree
 - Blockers: none
+
+## [2026-01-28 18:01 UTC] Test Agent – C4-test – START
+- Checked out `feat/codex-cli-parity-coverage-mapping`, `git pull --ff-only` (already up to date)
+- Read plan/tasks/session log/spec/kickoff prompt; updated `tasks.json` (C4-test → `in_progress`)
+- Worktree pending (`ccm-c4-ci-test` / `wt/ccm-c4-ci-test` to be added after docs commit)
+- Plan: implement CI wiring contract tests/fixtures per C4-spec (no production changes), run `cargo fmt` + targeted `cargo test`, commit via worktree, update docs/tasks/log at end
+- Blockers: none
