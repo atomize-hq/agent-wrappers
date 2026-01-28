@@ -242,3 +242,10 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
   - `cargo test -p xtask --test c4_spec_ci_wiring -- --nocapture` (fail; assertions show current workflows do not yet reference `cli_manifests/codex/RULES.json`/`expected_targets`, do not run `codex-union`/`codex-wrapper-coverage`/`codex-report`/`codex-version-metadata`/`codex-validate`, and `ci.yml` lacks the `hashFiles('cli_manifests/codex/versions/*.json') != ''` conditional gate)
 - Result: C4 CI wiring contract tests are in place; they will pass once C4-code updates the workflows per `C4-spec.md`.
 - Blockers: none
+
+## [2026-01-28 18:22 UTC] Integration Agent – C4-integ – START
+- Checked out `feat/codex-cli-parity-coverage-mapping`, `git pull --ff-only` (already up to date)
+- Read plan/tasks/session log/spec/kickoff prompt; updated `tasks.json` (C4-integ → `in_progress`)
+- Worktree pending (`ccm-c4-ci-integ` / `wt/ccm-c4-ci-integ` to be added after docs commit)
+- Plan: merge `ccm-c4-ci-code` + `ccm-c4-ci-test`, reconcile to `C4-spec.md`, run required commands, commit via worktree, then fast-forward into `feat/codex-cli-parity-coverage-mapping`
+- Blockers: none

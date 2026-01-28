@@ -570,7 +570,7 @@
     "name": "CI wiring (integration)",
     "type": "integration",
     "phase": "C4",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Merge C4 code/test and gate with fmt/clippy/tests/preflight, ensuring CI pipeline matches the spec.",
     "references": [
       "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
