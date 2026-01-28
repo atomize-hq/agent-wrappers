@@ -4,7 +4,7 @@
     "name": "Deterministic validators (code)",
     "type": "code",
     "phase": "C0",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Implement `xtask codex-validate` per C0-spec (production code only).",
     "references": [
       "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
