@@ -142,3 +142,8 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Worktree pending (`ccm-c2-wrapper-coverage-test` / `wt/ccm-c2-wrapper-coverage-test` to be added after docs commit)
 - Plan: add C2 tests for `xtask codex-wrapper-coverage` determinism and scope resolution semantics; run required commands, commit via worktree, update docs/tasks/log at end
 - Blockers: none
+
+## [2026-01-28 16:26 UTC] Test Agent – C2-test – END
+- Worktree `wt/ccm-c2-wrapper-coverage-test` on branch `ccm-c2-wrapper-coverage-test` (commit `c1f38aa`) added `crates/xtask/tests/c2_spec_wrapper_coverage.rs` covering: wrapper coverage generator determinism + wrapper_version; validator rejects `intentionally_unsupported` without `note`; validator rejects overlapping wrapper scopes (no-scope and platforms expansion).
+- Commands: `cargo fmt` (pass; no output); `cargo test -p xtask --test c2_spec_wrapper_coverage` (fail: `xtask` missing `codex-wrapper-coverage` subcommand; panics with “xtask is missing `codex-wrapper-coverage` (C2-code must add the subcommand)”).
+- Blockers: pending C2-code implementation of `xtask codex-wrapper-coverage` (command + generator) per C2-spec.

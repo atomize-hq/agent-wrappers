@@ -289,7 +289,7 @@
     "name": "Wrapper coverage generator (test)",
     "type": "test",
     "phase": "C2",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Add tests ensuring wrapper_coverage generator output is deterministic and scope resolution rules behave per C2-spec (tests only).",
     "references": [
       "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
