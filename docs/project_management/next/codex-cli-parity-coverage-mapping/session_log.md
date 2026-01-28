@@ -57,3 +57,10 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Commands: `cargo fmt` (pass); `cargo test -p xtask --test c0_spec_validate` (fail: `xtask` has no `codex-validate` subcommand yet; clap reports “unrecognized subcommand 'codex-validate'”).
 - Result: C0 validator tests are in place; they will pass once C0-code wires up `xtask codex-validate` per C0-spec.
 - Blockers: `xtask codex-validate` not implemented on `feat/codex-cli-parity-coverage-mapping` (and `ccm-c0-validate-code` currently also lacks the subcommand), so the new tests currently fail at runtime.
+
+## [2026-01-28 14:48 UTC] Integration Agent – C0-integ – START
+- Checked out `feat/codex-cli-parity-coverage-mapping`, `git pull --ff-only` (already up to date)
+- Read plan/tasks/session log/spec/kickoff prompt; updated `tasks.json` (C0-integ → `in_progress`)
+- Worktree pending (`ccm-c0-validate-integ` / `wt/ccm-c0-validate-integ` to be added after docs commit)
+- Plan: merge `ccm-c0-validate-code` + `ccm-c0-validate-test`, reconcile to C0-spec (wire `codex-validate` subcommand), run required commands, commit via worktree, then fast-forward into `feat/codex-cli-parity-coverage-mapping`
+- Blockers: none
