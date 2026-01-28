@@ -28,11 +28,11 @@ Implement the ADR 0002 “Snapshot → Coverage → Work Queue” system so main
 - Worktrees: `wt/<branch>` (in-repo; ignored by git).
 
 ## Triad Overview
-- **C0 – Deterministic validators:** Add `xtask codex-validate` to enforce `SCHEMA.json` + `RULES.json` + `VALIDATOR_SPEC.md` invariants for committed manifests (pointers, versions metadata, snapshots, reports, wrapper coverage).
-- **C1 – Per-target snapshots + union builder:** Extend `xtask codex-snapshot` to write per-target snapshots under `cli_manifests/codex/snapshots/<version>/<target_triple>.json`, and implement `xtask codex-union` to produce `snapshots/<version>/union.json` with conflict recording.
-- **C2 – Wrapper coverage generator:** Implement deterministic generation of `cli_manifests/codex/wrapper_coverage.json` from wrapper code (not hand-edited) and enforce scope semantics (`no_scope`/`platforms`/`target_triples`).
-- **C3 – Coverage reports + version metadata:** Implement deterministic report generation per `RULES.json` (`reports/<version>/coverage.*.json`), plus `versions/<version>.json` status/coverage bookkeeping and a mechanical retention/pruning tool.
-- **C4 – CI wiring (end-to-end):** Update workflows to run multi-platform snapshot generation, union/report/validate steps, upload raw help artifacts, and enforce validators in CI. Preserve the “PR best-effort + artifact fallback” policy for orgs that disallow workflow write perms.
+- **C0 – Deterministic validators:** Add `xtask codex-validate` (normative CLI in `C0-spec.md`) to enforce `SCHEMA.json` + `RULES.json` + `VALIDATOR_SPEC.md` invariants for committed manifests (pointers, versions metadata, snapshots, reports, wrapper coverage).
+- **C1 – Per-target snapshots + union builder:** Extend `xtask codex-snapshot` (add `--out-file` + `--raw-help-target`) to write per-target snapshots under `cli_manifests/codex/snapshots/<version>/<target_triple>.json`, and implement `xtask codex-union` to produce `snapshots/<version>/union.json` with conflict recording.
+- **C2 – Wrapper coverage generator:** Implement `xtask codex-wrapper-coverage` to generate `cli_manifests/codex/wrapper_coverage.json` from the single source of truth in `crates/codex/src/wrapper_coverage_manifest.rs` (not hand-edited).
+- **C3 – Coverage reports + version metadata:** Implement `xtask codex-report`, `xtask codex-version-metadata`, and `xtask codex-retain` per `RULES.json` (reports under `reports/<version>/coverage.*.json`, metadata under `versions/<version>.json`, mechanical retention).
+- **C4 – CI wiring (end-to-end):** Extend `.github/workflows/codex-cli-update-snapshot.yml` to run the multi-platform snapshot→union→wrapper-coverage→report→validate pipeline and upload artifacts; add a hard-gate `xtask codex-validate` job in `ci.yml` when committed artifacts exist; preserve the “PR best-effort + artifact fallback” policy.
 
 ## Start Checklist (all tasks)
 1. `git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only`
@@ -63,4 +63,3 @@ Implement the ADR 0002 “Snapshot → Coverage → Work Queue” system so main
 ## Context Budget & Triad Sizing
 - Aim for each triad to fit comfortably within ≤ ~40–50% of a 272k context window (spec + code/tests + recent history).
 - If a triad starts expanding (platform matrices, schema churn, broad refactors), split into additional `C<N>` phases before kickoff.
-

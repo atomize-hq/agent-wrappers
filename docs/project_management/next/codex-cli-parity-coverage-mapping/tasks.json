@@ -98,7 +98,7 @@
     ],
     "acceptance_criteria": [
       "C0 merged and matches C0-spec",
-      "`cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, relevant tests, and `make preflight` all pass"
+      "Commands executed and logged: `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p xtask`, `make preflight`"
     ],
     "start_checklist": [
       "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
@@ -109,10 +109,10 @@
       "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
     ],
     "end_checklist": [
-      "Merge upstream code/test branches for C0 into the integration worktree and reconcile behavior to the spec.",
-      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; relevant tests; `make preflight`.",
-      "Commit integration changes on the integration branch.",
-      "Fast-forward merge the integration branch into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-integ'.",
+      "Merge upstream branches `ccm-c0-validate-code` and `ccm-c0-validate-test` into the integration worktree and reconcile behavior to C0-spec.md.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test -p xtask`; `make preflight`.",
+      "Commit integration changes on branch `ccm-c0-validate-integ`.",
+      "Fast-forward merge `ccm-c0-validate-integ` into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-integ'.",
       "Remove worktree `wt/ccm-c0-validate-integ`."
     ],
     "worktree": "wt/ccm-c0-validate-integ",
@@ -139,6 +139,7 @@
     ],
     "acceptance_criteria": [
       "`xtask codex-snapshot` can write per-target snapshots under `cli_manifests/codex/snapshots/<version>/<target_triple>.json`",
+      "`xtask codex-snapshot --capture-raw-help --raw-help-target <target_triple>` writes raw help under `cli_manifests/codex/raw_help/<version>/<target_triple>/**`",
       "`xtask codex-union` generates `cli_manifests/codex/snapshots/<version>/union.json` (schema-valid, deterministic)",
       "No tests added/modified"
     ],
@@ -218,7 +219,7 @@
     ],
     "acceptance_criteria": [
       "C1 merged and matches C1-spec",
-      "`cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, relevant tests, and `make preflight` all pass"
+      "Commands executed and logged: `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p xtask`, `make preflight`"
     ],
     "start_checklist": [
       "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
@@ -229,10 +230,10 @@
       "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
     ],
     "end_checklist": [
-      "Merge upstream code/test branches for C1 into the integration worktree and reconcile behavior to the spec.",
-      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; relevant tests; `make preflight`.",
-      "Commit integration changes on the integration branch.",
-      "Fast-forward merge the integration branch into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-integ'.",
+      "Merge upstream branches `ccm-c1-union-code` and `ccm-c1-union-test` into the integration worktree and reconcile behavior to C1-spec.md.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test -p xtask`; `make preflight`.",
+      "Commit integration changes on branch `ccm-c1-union-integ`.",
+      "Fast-forward merge `ccm-c1-union-integ` into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-integ'.",
       "Remove worktree `wt/ccm-c1-union-integ`."
     ],
     "worktree": "wt/ccm-c1-union-integ",
@@ -258,7 +259,7 @@
       "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C2-code.md"
     ],
     "acceptance_criteria": [
-      "`cli_manifests/codex/wrapper_coverage.json` is generated deterministically (not hand-edited) and schema-valid",
+      "`xtask codex-wrapper-coverage` generates `cli_manifests/codex/wrapper_coverage.json` deterministically (not hand-edited) and schema-valid",
       "Generator supports scoping semantics and intentionally_unsupported notes per RULES/ADR",
       "No tests added/modified"
     ],
@@ -338,7 +339,7 @@
     ],
     "acceptance_criteria": [
       "C2 merged and matches C2-spec",
-      "`cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, relevant tests, and `make preflight` all pass"
+      "Commands executed and logged: `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p xtask`, `cargo test -p codex`, `make preflight`"
     ],
     "start_checklist": [
       "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
@@ -349,10 +350,10 @@
       "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
     ],
     "end_checklist": [
-      "Merge upstream code/test branches for C2 into the integration worktree and reconcile behavior to the spec.",
-      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; relevant tests; `make preflight`.",
-      "Commit integration changes on the integration branch.",
-      "Fast-forward merge the integration branch into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-integ'.",
+      "Merge upstream branches `ccm-c2-wrapper-coverage-code` and `ccm-c2-wrapper-coverage-test` into the integration worktree and reconcile behavior to C2-spec.md.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test -p xtask`; `cargo test -p codex`; `make preflight`.",
+      "Commit integration changes on branch `ccm-c2-wrapper-coverage-integ`.",
+      "Fast-forward merge `ccm-c2-wrapper-coverage-integ` into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-integ'.",
       "Remove worktree `wt/ccm-c2-wrapper-coverage-integ`."
     ],
     "worktree": "wt/ccm-c2-wrapper-coverage-integ",
@@ -379,9 +380,9 @@
       "docs/project_management/next/codex-cli-parity-coverage-mapping/kickoff_prompts/C3-code.md"
     ],
     "acceptance_criteria": [
-      "Reports are generated per RULES.json naming and validate against SCHEMA.json",
-      "`versions/<version>.json` is generated/updated and validates against VERSION_METADATA_SCHEMA.json",
-      "Retention pruning is deterministic and mechanical (no LLM decisions)",
+      "`xtask codex-report` generates reports per RULES.json naming and they validate against SCHEMA.json",
+      "`xtask codex-version-metadata` materializes `cli_manifests/codex/versions/<version>.json` and it validates against VERSION_METADATA_SCHEMA.json",
+      "`xtask codex-retain` retention pruning is deterministic and mechanical (no LLM decisions)",
       "No tests added/modified"
     ],
     "start_checklist": [
@@ -461,7 +462,7 @@
     ],
     "acceptance_criteria": [
       "C3 merged and matches C3-spec",
-      "`cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, relevant tests, and `make preflight` all pass"
+      "Commands executed and logged: `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p xtask`, `make preflight`"
     ],
     "start_checklist": [
       "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
@@ -472,10 +473,10 @@
       "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
     ],
     "end_checklist": [
-      "Merge upstream code/test branches for C3 into the integration worktree and reconcile behavior to the spec.",
-      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; relevant tests; `make preflight`.",
-      "Commit integration changes on the integration branch.",
-      "Fast-forward merge the integration branch into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C3-integ'.",
+      "Merge upstream branches `ccm-c3-reports-code` and `ccm-c3-reports-test` into the integration worktree and reconcile behavior to C3-spec.md.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test -p xtask`; `make preflight`.",
+      "Commit integration changes on branch `ccm-c3-reports-integ`.",
+      "Fast-forward merge `ccm-c3-reports-integ` into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C3-integ'.",
       "Remove worktree `wt/ccm-c3-reports-integ`."
     ],
     "worktree": "wt/ccm-c3-reports-integ",
@@ -579,7 +580,7 @@
     ],
     "acceptance_criteria": [
       "C4 merged and matches C4-spec",
-      "`cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, relevant tests, and `make preflight` all pass"
+      "Commands executed and logged: `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p xtask`, relevant tests, `make preflight`"
     ],
     "start_checklist": [
       "git checkout feat/codex-cli-parity-coverage-mapping && git pull --ff-only",
@@ -590,10 +591,10 @@
       "Do not edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree."
     ],
     "end_checklist": [
-      "Merge upstream code/test branches for C4 into the integration worktree and reconcile behavior to the spec.",
-      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; relevant tests; `make preflight`.",
-      "Commit integration changes on the integration branch.",
-      "Fast-forward merge the integration branch into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C4-integ'.",
+      "Merge upstream branches `ccm-c4-ci-code` and `ccm-c4-ci-test` into the integration worktree and reconcile behavior to C4-spec.md.",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test -p xtask`; relevant tests; `make preflight`.",
+      "Commit integration changes on branch `ccm-c4-ci-integ`.",
+      "Fast-forward merge `ccm-c4-ci-integ` into `feat/codex-cli-parity-coverage-mapping`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C4-integ'.",
       "Remove worktree `wt/ccm-c4-ci-integ`."
     ],
     "worktree": "wt/ccm-c4-ci-integ",
@@ -603,4 +604,3 @@
     "concurrent_with": []
   }
 ]
-

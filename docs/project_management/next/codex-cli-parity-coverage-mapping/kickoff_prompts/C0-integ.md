@@ -12,16 +12,15 @@
 6. Do **not** edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree.
 
 ## Requirements
-- Merge `ccm-c0-validate-code` and `ccm-c0-validate-test` into the integration worktree and reconcile to `docs/project_management/next/codex-cli-parity-coverage-mapping/C0-spec.md`.
+- Merge branches `ccm-c0-validate-code` + `ccm-c0-validate-test` and reconcile behavior to `docs/project_management/next/codex-cli-parity-coverage-mapping/C0-spec.md`.
 - Required commands (before handoff):
   - `cargo fmt`
   - `cargo clippy --workspace --all-targets -- -D warnings`
-  - Relevant tests (at minimum, the suites introduced by C0-test)
+  - `cargo test -p xtask`
   - `make preflight`
 
 ## End Checklist
 1. Run the required commands above and capture their outputs.
 2. Inside `wt/ccm-c0-validate-integ`, commit C0 integration changes.
-3. Fast-forward merge `ccm-c0-validate-integ` into `feat/codex-cli-parity-coverage-mapping`; update tasks/session log; commit docs (`docs: finish C0-integ`).
+3. Fast-forward merge `ccm-c0-validate-integ` into `feat/codex-cli-parity-coverage-mapping`; update `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` to `completed`; add an END entry to `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` with commands/results/blockers; commit docs (`docs: finish C0-integ`).
 4. Remove worktree `wt/ccm-c0-validate-integ`.
-

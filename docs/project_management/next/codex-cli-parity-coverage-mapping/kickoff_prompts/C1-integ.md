@@ -12,16 +12,15 @@
 6. Do **not** edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree.
 
 ## Requirements
-- Merge `ccm-c1-union-code` and `ccm-c1-union-test` into the integration worktree and reconcile to `docs/project_management/next/codex-cli-parity-coverage-mapping/C1-spec.md`.
+- Merge branches `ccm-c1-union-code` + `ccm-c1-union-test` and reconcile behavior to `docs/project_management/next/codex-cli-parity-coverage-mapping/C1-spec.md`.
 - Required commands (before handoff):
   - `cargo fmt`
   - `cargo clippy --workspace --all-targets -- -D warnings`
-  - Relevant tests
+  - `cargo test -p xtask`
   - `make preflight`
 
 ## End Checklist
 1. Run the required commands above and capture their outputs.
 2. Inside `wt/ccm-c1-union-integ`, commit C1 integration changes.
-3. Fast-forward merge `ccm-c1-union-integ` into `feat/codex-cli-parity-coverage-mapping`; update tasks/session log; commit docs (`docs: finish C1-integ`).
+3. Fast-forward merge `ccm-c1-union-integ` into `feat/codex-cli-parity-coverage-mapping`; update `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` to `completed`; add an END entry to `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` with commands/results/blockers; commit docs (`docs: finish C1-integ`).
 4. Remove worktree `wt/ccm-c1-union-integ`.
-

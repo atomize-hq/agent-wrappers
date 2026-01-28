@@ -12,16 +12,16 @@
 6. Do **not** edit `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` or `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` from the worktree.
 
 ## Requirements
-- Merge `ccm-c2-wrapper-coverage-code` and `ccm-c2-wrapper-coverage-test` into the integration worktree and reconcile to `docs/project_management/next/codex-cli-parity-coverage-mapping/C2-spec.md`.
+- Merge branches `ccm-c2-wrapper-coverage-code` + `ccm-c2-wrapper-coverage-test` and reconcile behavior to `docs/project_management/next/codex-cli-parity-coverage-mapping/C2-spec.md`.
 - Required commands (before handoff):
   - `cargo fmt`
   - `cargo clippy --workspace --all-targets -- -D warnings`
-  - Relevant tests
+  - `cargo test -p xtask`
+  - `cargo test -p codex`
   - `make preflight`
 
 ## End Checklist
 1. Run the required commands above and capture their outputs.
 2. Inside `wt/ccm-c2-wrapper-coverage-integ`, commit C2 integration changes.
-3. Fast-forward merge `ccm-c2-wrapper-coverage-integ` into `feat/codex-cli-parity-coverage-mapping`; update tasks/session log; commit docs (`docs: finish C2-integ`).
+3. Fast-forward merge `ccm-c2-wrapper-coverage-integ` into `feat/codex-cli-parity-coverage-mapping`; update `docs/project_management/next/codex-cli-parity-coverage-mapping/tasks.json` to `completed`; add an END entry to `docs/project_management/next/codex-cli-parity-coverage-mapping/session_log.md` with commands/results/blockers; commit docs (`docs: finish C2-integ`).
 4. Remove worktree `wt/ccm-c2-wrapper-coverage-integ`.
-
