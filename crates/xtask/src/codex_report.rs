@@ -46,7 +46,8 @@ pub enum ReportError {
 
 #[derive(Debug, Deserialize)]
 struct RulesFile {
-    schema_version: u32,
+    #[serde(rename = "rules_schema_version")]
+    rules_schema_version: u32,
     union: RulesUnion,
     report: RulesReport,
     sorting: RulesSorting,
@@ -823,7 +824,7 @@ fn build_report(
                 wrapper_version: wrapper.wrapper_version.clone(),
             },
             rules: ReportRulesInputsV1 {
-                rules_schema_version: rules.schema_version,
+                rules_schema_version: rules.rules_schema_version,
             },
         },
         platform_filter: PlatformFilterV1 {

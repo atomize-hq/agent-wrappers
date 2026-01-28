@@ -17,6 +17,11 @@ const TARGET_MACOS: &str = "aarch64-apple-darwin";
 const TARGET_WINDOWS: &str = "x86_64-pc-windows-msvc";
 const TARGETS: [&str; 3] = [TARGET_LINUX, TARGET_MACOS, TARGET_WINDOWS];
 
+type CommandPath = Vec<String>;
+type MissingCommandPaths = Vec<CommandPath>;
+type MissingFlagPaths = Vec<(CommandPath, String)>;
+type MissingArgPaths = Vec<(CommandPath, String)>;
+
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -317,11 +322,7 @@ fn run_xtask_codex_retain(codex_dir: &Path, apply: bool) -> std::process::Output
 
 fn extract_report_paths(
     report: &Value,
-) -> (
-    Vec<Vec<String>>,
-    Vec<(Vec<String>, String)>,
-    Vec<(Vec<String>, String)>,
-) {
+) -> (MissingCommandPaths, MissingFlagPaths, MissingArgPaths) {
     let deltas = report
         .get("deltas")
         .and_then(|v| v.as_object())
@@ -404,14 +405,13 @@ fn assert_report_common(report: &Value, expected_mode: &str, expected_target: Op
         platform_filter.get("mode").and_then(|v| v.as_str()),
         Some(expected_mode)
     );
-    match expected_target {
-        Some(target) => assert_eq!(
+    if let Some(target) = expected_target {
+        assert_eq!(
             platform_filter
                 .get("target_triple")
                 .and_then(|v| v.as_str()),
             Some(target)
-        ),
-        None => {}
+        );
     }
 }
 
