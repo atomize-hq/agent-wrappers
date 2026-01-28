@@ -14,8 +14,7 @@ on:
         type: boolean
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   update:
@@ -129,9 +128,11 @@ jobs:
             --capture-raw-help \
             --supplement cli_manifests/codex/supplement/commands.json
 
-      - name: Create PR
+      - name: Create PR (requires CODEX_AUTOMATION_TOKEN)
+        if: ${{ secrets.CODEX_AUTOMATION_TOKEN != '' }}
         uses: peter-evans/create-pull-request@v6
         with:
+          token: ${{ secrets.CODEX_AUTOMATION_TOKEN }}
           commit-message: "chore: update codex cli snapshot to ${{ inputs.version }}"
           title: "chore: update codex cli snapshot to ${{ inputs.version }}"
           body: |
@@ -142,3 +143,16 @@ jobs:
             - Updates `cli_manifests/codex/latest_validated.txt` (and optionally `min_supported.txt`)
           branch: "automation/codex-cli-${{ inputs.version }}"
           delete-branch: true
+
+      - name: Upload snapshot artifacts (fallback when PR creation disabled)
+        if: ${{ secrets.CODEX_AUTOMATION_TOKEN == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: "codex-cli-snapshot-${{ inputs.version }}"
+          if-no-files-found: error
+          path: |
+            cli_manifests/codex/current.json
+            cli_manifests/codex/raw_help/${{ inputs.version }}/
+            cli_manifests/codex/artifacts.lock.json
+            cli_manifests/codex/latest_validated.txt
+            cli_manifests/codex/min_supported.txt

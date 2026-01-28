@@ -44,6 +44,9 @@ Optional inputs (only if you intend to change policy):
 Notes:
 - The workflow is responsible for downloading/extracting the upstream release artifact(s) and updating `cli_manifests/codex/artifacts.lock.json`.
 - The workflow should regenerate `cli_manifests/codex/current.json` (and optionally `cli_manifests/codex/raw_help/<version>/**`) using `xtask`.
+- If the org/repo disables workflow write permissions for `GITHUB_TOKEN`, the workflow will not be able to open a PR; either:
+  - configure a repo secret `CODEX_AUTOMATION_TOKEN` (PAT or GitHub App token with repo write) for PR creation, or
+  - download the workflow artifact bundle and open a PR manually with the regenerated files.
 
 ### Target end state (v1)
 
