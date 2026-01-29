@@ -6,6 +6,8 @@ Key policy references:
 - Source-of-truth policy/architecture: `docs/adr/0001-codex-cli-parity-maintenance.md`
 - Snapshot artifacts home: `cli_manifests/codex/README.md`
 - CI/automation plan (triggers, binary acquisition, PR loop): `cli_manifests/codex/CI_WORKFLOWS_PLAN.md`
+- CI agent runbook (how to use reports to update wrapper): `cli_manifests/codex/CI_AGENT_RUNBOOK.md`
+- PR body template (for automation PRs): `cli_manifests/codex/PR_BODY_TEMPLATE.md`
 
 ## Core Policies (read before operating)
 
@@ -47,6 +49,18 @@ Notes:
 - If the org/repo disables workflow write permissions for `GITHUB_TOKEN`, the workflow will not be able to open a PR; either:
   - configure a repo secret `CODEX_AUTOMATION_TOKEN` (PAT or GitHub App token with repo write) for PR creation, or
   - download the workflow artifact bundle and open a PR manually with the regenerated files.
+
+## Automation PRs: Agent Instructions
+
+The Update Snapshot workflow opens a PR branch like `automation/codex-cli-<version>`.
+
+That PR is intentionally *not* the “fix parity” PR by itself; it is the **work queue** PR. The implementation work happens by:
+- using the generated report JSON to enumerate missing/unsupported surfaces, and
+- updating `crates/codex` + `crates/codex/src/wrapper_coverage_manifest.rs`, then regenerating reports.
+
+Use:
+- `cli_manifests/codex/PR_BODY_TEMPLATE.md` as the PR description template (starts with `@codex`).
+- `cli_manifests/codex/CI_AGENT_RUNBOOK.md` as the detailed operating instructions for the agent.
 
 ### Target end state (v1)
 
