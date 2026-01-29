@@ -379,7 +379,7 @@ jobs:
         continue-on-error: true
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.CODEX_AUTOMATION_TOKEN || github.token }}
+          token: ${{ secrets.AUTOMATION_TOKEN || github.token }}
           commit-message: "chore: codex cli artifacts for ${{ inputs.version }}"
           title: "chore: codex cli artifacts for ${{ inputs.version }}"
           body: |
