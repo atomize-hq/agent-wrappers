@@ -1952,27 +1952,6 @@
     ],
     "missing_args": [
       {
-        "path": [],
-        "name": "ARGS",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [],
-        "name": "PROMPT",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
         "path": [
           "app-server"
         ],
@@ -2288,6 +2267,32 @@
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
         ]
+      }
+    ],
+    "excluded_args": [
+      {
+        "path": [],
+        "name": "ARGS",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "note": "Root command dispatch pseudo-arg is excluded from wrapper parity."
+      },
+      {
+        "path": [],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "note": "Root command dispatch pseudo-arg is excluded from wrapper parity."
+      },
+      {
+        "path": [],
+        "name": "PROMPT",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "note": "Interactive TUI default-mode prompt surface is excluded from wrapper parity."
       }
     ]
   }

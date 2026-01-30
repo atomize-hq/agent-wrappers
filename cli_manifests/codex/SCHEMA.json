@@ -985,6 +985,24 @@
                 "$ref": "#/$defs/ReportArgDeltaV1"
               }
             },
+            "excluded_commands": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReportCommandDeltaV1"
+              }
+            },
+            "excluded_flags": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReportFlagDeltaV1"
+              }
+            },
+            "excluded_args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ReportArgDeltaV1"
+              }
+            },
             "passthrough_candidates": {
               "type": "array",
               "items": {

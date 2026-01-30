@@ -51,6 +51,8 @@ struct RulesFile {
     union: RulesUnion,
     report: RulesReport,
     sorting: RulesSorting,
+    #[serde(default)]
+    parity_exclusions: Option<RulesParityExclusions>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -69,9 +71,32 @@ struct RulesReportSorting {
     missing_commands: String,
     missing_flags: String,
     missing_args: String,
+    excluded_commands: String,
+    excluded_flags: String,
+    excluded_args: String,
     wrapper_only_commands: String,
     wrapper_only_flags: String,
     wrapper_only_args: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct RulesParityExclusions {
+    schema_version: u32,
+    units: Vec<ParityExclusionUnit>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct ParityExclusionUnit {
+    unit: String,
+    path: Vec<String>,
+    #[serde(default)]
+    key: Option<String>,
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    #[allow(dead_code)]
+    category: Option<String>,
+    note: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -207,6 +232,11 @@ pub fn run(args: Args) -> Result<(), ReportError> {
 
     let rules: RulesFile = serde_json::from_slice(&fs::read(&rules_path)?)?;
     assert_supported_rules(&rules)?;
+    let parity_exclusions = rules
+        .parity_exclusions
+        .as_ref()
+        .filter(|ex| ex.schema_version == 1)
+        .map(build_parity_exclusions_index);
 
     let union_path = root
         .join("snapshots")
@@ -256,6 +286,7 @@ pub fn run(args: Args) -> Result<(), ReportError> {
     {
         let report = build_report(
             &rules,
+            parity_exclusions.as_ref(),
             &args.version,
             "any",
             None,
@@ -274,6 +305,7 @@ pub fn run(args: Args) -> Result<(), ReportError> {
     for target in &input_targets {
         let report = build_report(
             &rules,
+            parity_exclusions.as_ref(),
             &args.version,
             "exact_target",
             Some(target.as_str()),
@@ -297,6 +329,7 @@ pub fn run(args: Args) -> Result<(), ReportError> {
     if union.complete {
         let report = build_report(
             &rules,
+            parity_exclusions.as_ref(),
             &args.version,
             "all",
             None,
@@ -352,6 +385,24 @@ fn assert_supported_rules(rules: &RulesFile) -> Result<(), ReportError> {
         unsupported.push(format!(
             "sorting.report.missing_args={}",
             rules.sorting.report.missing_args
+        ));
+    }
+    if rules.sorting.report.excluded_commands != "by_path" {
+        unsupported.push(format!(
+            "sorting.report.excluded_commands={}",
+            rules.sorting.report.excluded_commands
+        ));
+    }
+    if rules.sorting.report.excluded_flags != "by_path_then_key" {
+        unsupported.push(format!(
+            "sorting.report.excluded_flags={}",
+            rules.sorting.report.excluded_flags
+        ));
+    }
+    if rules.sorting.report.excluded_args != "by_path_then_name" {
+        unsupported.push(format!(
+            "sorting.report.excluded_args={}",
+            rules.sorting.report.excluded_args
         ));
     }
     if rules.sorting.report.wrapper_only_commands != "by_path" {
@@ -542,6 +593,7 @@ fn intersect(a: &BTreeSet<String>, b: &BTreeSet<String>) -> BTreeSet<String> {
 #[allow(clippy::too_many_arguments)]
 fn build_report(
     rules: &RulesFile,
+    parity_exclusions: Option<&ParityExclusionsIndex>,
     version: &str,
     platform_mode: &str,
     target_triple: Option<&str>,
@@ -569,6 +621,10 @@ fn build_report(
     let mut missing_flags: Vec<ReportFlagDeltaV1> = Vec::new();
     let mut missing_args: Vec<ReportArgDeltaV1> = Vec::new();
 
+    let mut excluded_commands: Vec<ReportCommandDeltaV1> = Vec::new();
+    let mut excluded_flags: Vec<ReportFlagDeltaV1> = Vec::new();
+    let mut excluded_args: Vec<ReportArgDeltaV1> = Vec::new();
+
     let mut passthrough_candidates: Vec<ReportCommandDeltaV1> = Vec::new();
     let mut unsupported: Vec<ReportCommandDeltaV1> = Vec::new();
     let mut intentionally_unsupported: Vec<ReportCommandDeltaV1> = Vec::new();
@@ -584,6 +640,28 @@ fn build_report(
             &rules.union.expected_targets,
             filter_mode,
         ) {
+            continue;
+        }
+
+        if let Some(ex) = parity_exclusions.and_then(|idx| idx.commands.get(path)) {
+            let cmd_res = resolve_wrapper(
+                wrapper_index
+                    .commands
+                    .get(path)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]),
+                &report_target_set,
+                &rules.union.expected_targets,
+                filter_mode,
+                "command",
+                &format!("path={}", format_path(path)),
+            )?;
+            excluded_commands.push(ReportCommandDeltaV1 {
+                path: path.clone(),
+                upstream_available_on: cmd.available_on.clone(),
+                wrapper_level: cmd_res.level.clone(),
+                note: Some(ex.note.clone()),
+            });
             continue;
         }
 
@@ -619,6 +697,31 @@ fn build_report(
             ) {
                 continue;
             }
+            if let Some(ex) = parity_exclusions
+                .and_then(|idx| idx.flags.get(&(path.clone(), flag.key.clone())))
+            {
+                let key = (path.clone(), flag.key.clone());
+                let res = resolve_wrapper(
+                    wrapper_index
+                        .flags
+                        .get(&key)
+                        .map(Vec::as_slice)
+                        .unwrap_or(&[]),
+                    &report_target_set,
+                    &rules.union.expected_targets,
+                    filter_mode,
+                    "flag",
+                    &format!("path={} key={}", format_path(path), flag.key),
+                )?;
+                excluded_flags.push(ReportFlagDeltaV1 {
+                    path: path.clone(),
+                    key: flag.key.clone(),
+                    upstream_available_on: flag.available_on.clone(),
+                    wrapper_level: res.level.clone(),
+                    note: Some(ex.note.clone()),
+                });
+                continue;
+            }
             let key = (path.clone(), flag.key.clone());
             let res = resolve_wrapper(
                 wrapper_index
@@ -642,6 +745,31 @@ fn build_report(
                 &rules.union.expected_targets,
                 filter_mode,
             ) {
+                continue;
+            }
+            if let Some(ex) =
+                parity_exclusions.and_then(|idx| idx.args.get(&(path.clone(), arg.name.clone())))
+            {
+                let key = (path.clone(), arg.name.clone());
+                let res = resolve_wrapper(
+                    wrapper_index
+                        .args
+                        .get(&key)
+                        .map(Vec::as_slice)
+                        .unwrap_or(&[]),
+                    &report_target_set,
+                    &rules.union.expected_targets,
+                    filter_mode,
+                    "arg",
+                    &format!("path={} name={}", format_path(path), arg.name),
+                )?;
+                excluded_args.push(ReportArgDeltaV1 {
+                    path: path.clone(),
+                    name: arg.name.clone(),
+                    upstream_available_on: arg.available_on.clone(),
+                    wrapper_level: res.level.clone(),
+                    note: Some(ex.note.clone()),
+                });
                 continue;
             }
             let key = (path.clone(), arg.name.clone());
@@ -766,6 +894,10 @@ fn build_report(
     missing_flags.sort_by(|a, b| cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key)));
     missing_args.sort_by(|a, b| cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name)));
 
+    excluded_commands.sort_by(|a, b| cmp_path(&a.path, &b.path));
+    excluded_flags.sort_by(|a, b| cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key)));
+    excluded_args.sort_by(|a, b| cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name)));
+
     passthrough_candidates.sort_by(|a, b| cmp_path(&a.path, &b.path));
     unsupported.sort_by(|a, b| cmp_path(&a.path, &b.path));
     intentionally_unsupported.sort_by(|a, b| cmp_path(&a.path, &b.path));
@@ -778,6 +910,21 @@ fn build_report(
         missing_commands,
         missing_flags,
         missing_args,
+        excluded_commands: if excluded_commands.is_empty() {
+            None
+        } else {
+            Some(excluded_commands)
+        },
+        excluded_flags: if excluded_flags.is_empty() {
+            None
+        } else {
+            Some(excluded_flags)
+        },
+        excluded_args: if excluded_args.is_empty() {
+            None
+        } else {
+            Some(excluded_args)
+        },
         passthrough_candidates: if passthrough_candidates.is_empty() {
             None
         } else {
@@ -1117,6 +1264,13 @@ struct ReportDeltasV1 {
     missing_args: Vec<ReportArgDeltaV1>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    excluded_commands: Option<Vec<ReportCommandDeltaV1>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    excluded_flags: Option<Vec<ReportFlagDeltaV1>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    excluded_args: Option<Vec<ReportArgDeltaV1>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     passthrough_candidates: Option<Vec<ReportCommandDeltaV1>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     unsupported: Option<Vec<ReportCommandDeltaV1>>,
@@ -1161,4 +1315,42 @@ struct ReportArgDeltaV1 {
     wrapper_level: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     note: Option<String>,
+}
+
+#[derive(Debug)]
+struct ParityExclusionsIndex {
+    commands: BTreeMap<Vec<String>, ParityExclusionUnit>,
+    flags: BTreeMap<(Vec<String>, String), ParityExclusionUnit>,
+    args: BTreeMap<(Vec<String>, String), ParityExclusionUnit>,
+}
+
+fn build_parity_exclusions_index(exclusions: &RulesParityExclusions) -> ParityExclusionsIndex {
+    let mut commands = BTreeMap::new();
+    let mut flags = BTreeMap::new();
+    let mut args = BTreeMap::new();
+
+    for unit in &exclusions.units {
+        match unit.unit.as_str() {
+            "command" => {
+                commands.insert(unit.path.clone(), unit.clone());
+            }
+            "flag" => {
+                if let Some(key) = unit.key.as_ref() {
+                    flags.insert((unit.path.clone(), key.clone()), unit.clone());
+                }
+            }
+            "arg" => {
+                if let Some(name) = unit.name.as_ref() {
+                    args.insert((unit.path.clone(), name.clone()), unit.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    ParityExclusionsIndex {
+        commands,
+        flags,
+        args,
+    }
 }

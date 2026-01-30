@@ -22,6 +22,11 @@ Feature enable policy (for exhaustive discovery):
 Scope note (positional parsing semantics):
 - The parity/coverage mapping system is help-surface based (commands/flags/positional args as discoverable from `--help` and `Usage:` inference). It does not attempt to model deeper runtime parsing semantics (operand forwarding, `--` handling, prompt placeholder expansion) unless we add a dedicated, probeable “behavioral semantics” layer later.
 
+Scope note (interactive TUI surfaces):
+- This parity/coverage mapping system targets headless embedding via the CLI execution surfaces.
+- Interactive TUI mode (`codex` with no args) is excluded from wrapper parity.
+- TUI-only help-surface units (for example: the root `PROMPT` positional arg and `--no-alt-screen`) are excluded from parity work-queue deltas via `cli_manifests/codex/RULES.json.parity_exclusions`.
+
 ADR 0001 established the operational workflow to manage drift:
 - generate a deterministic CLI snapshot from a specific `codex` binary,
 - review diffs as a checklist,

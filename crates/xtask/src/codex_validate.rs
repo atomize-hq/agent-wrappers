@@ -146,6 +146,8 @@ struct Rules {
     union: RulesUnion,
     versioning: RulesVersioning,
     wrapper_coverage: RulesWrapperCoverage,
+    #[serde(default)]
+    parity_exclusions: Option<RulesParityExclusions>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -169,6 +171,25 @@ struct RulesPointers {
 struct RulesWrapperCoverage {
     scope_semantics: RulesWrapperScopeSemantics,
     validation: RulesWrapperValidation,
+}
+
+#[derive(Debug, Deserialize)]
+struct RulesParityExclusions {
+    schema_version: u32,
+    units: Vec<ParityExclusionUnit>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct ParityExclusionUnit {
+    unit: String,
+    path: Vec<String>,
+    #[serde(default)]
+    key: Option<String>,
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    category: Option<String>,
+    note: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -243,6 +264,9 @@ struct ValidateCtx {
     schema: JSONSchema,
     version_schema: JSONSchema,
     wrapper_rules: RulesWrapperCoverage,
+    parity_exclusions_schema_version: Option<u32>,
+    parity_exclusions_raw: Option<Vec<ParityExclusionUnit>>,
+    parity_exclusions: Option<ParityExclusionsIndex>,
 }
 
 pub fn run(args: Args) -> i32 {
@@ -351,6 +375,14 @@ fn run_inner(args: Args) -> Result<Vec<Violation>, FatalError> {
         .compile(&version_schema_value)
         .map_err(|e| FatalError::SchemaCompile(e.to_string()))?;
 
+    let parity_exclusions_schema_version = rules.parity_exclusions.as_ref().map(|ex| ex.schema_version);
+    let parity_exclusions_raw = rules.parity_exclusions.as_ref().map(|ex| ex.units.clone());
+    let parity_exclusions = rules
+        .parity_exclusions
+        .as_ref()
+        .filter(|ex| ex.schema_version == 1)
+        .map(|ex| build_parity_exclusions_index(&ex.units));
+
     let mut ctx = ValidateCtx {
         root,
         required_target: rules.union.required_target,
@@ -360,6 +392,9 @@ fn run_inner(args: Args) -> Result<Vec<Violation>, FatalError> {
         schema,
         version_schema,
         wrapper_rules: rules.wrapper_coverage,
+        parity_exclusions_schema_version,
+        parity_exclusions_raw,
+        parity_exclusions,
     };
 
     if matches!(args.mode, Mode::Fix) {
@@ -367,6 +402,8 @@ fn run_inner(args: Args) -> Result<Vec<Violation>, FatalError> {
     }
 
     let mut violations = Vec::<Violation>::new();
+
+    validate_parity_exclusions_config(&mut ctx, &mut violations);
 
     // 1) Pointer files.
     let pointer_values = validate_pointers(&mut ctx, &mut violations);
@@ -1091,6 +1128,7 @@ fn require_report(
                 path,
                 "REPORT_SCHEMA_INVALID",
             );
+            validate_report_exclusions(ctx, violations, &value, path);
         }
         None => {
             if path.exists() {
@@ -1337,6 +1375,7 @@ fn validate_wrapper_coverage(ctx: &mut ValidateCtx, violations: &mut Vec<Violati
         });
     }
 
+    validate_wrapper_coverage_exclusions(ctx, violations, &parsed, &path);
     validate_wrapper_iu_notes(ctx, violations, &parsed, &path);
     validate_wrapper_scope_overlaps(ctx, violations, &parsed, &path);
 }
@@ -2024,6 +2063,441 @@ fn parse_stable_version(s: &str, stable_semver_re: &Regex) -> Option<Version> {
         return None;
     }
     Version::parse(s).ok()
+}
+
+#[derive(Debug)]
+struct ParityExclusionsIndex {
+    commands: BTreeMap<Vec<String>, ParityExclusionUnit>,
+    flags: BTreeMap<(Vec<String>, String), ParityExclusionUnit>,
+    args: BTreeMap<(Vec<String>, String), ParityExclusionUnit>,
+}
+
+fn build_parity_exclusions_index(units: &[ParityExclusionUnit]) -> ParityExclusionsIndex {
+    let mut commands = BTreeMap::new();
+    let mut flags = BTreeMap::new();
+    let mut args = BTreeMap::new();
+
+    for unit in units {
+        match unit.unit.as_str() {
+            "command" => {
+                commands.insert(unit.path.clone(), unit.clone());
+            }
+            "flag" => {
+                if let Some(key) = unit.key.as_ref() {
+                    flags.insert((unit.path.clone(), key.clone()), unit.clone());
+                }
+            }
+            "arg" => {
+                if let Some(name) = unit.name.as_ref() {
+                    args.insert((unit.path.clone(), name.clone()), unit.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    ParityExclusionsIndex {
+        commands,
+        flags,
+        args,
+    }
+}
+
+fn validate_parity_exclusions_config(ctx: &mut ValidateCtx, violations: &mut Vec<Violation>) {
+    let Some(schema_version) = ctx.parity_exclusions_schema_version else {
+        return;
+    };
+    if schema_version != 1 {
+        violations.push(Violation {
+            code: "PARITY_EXCLUSIONS_SCHEMA_VERSION",
+            path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
+            json_pointer: Some("/parity_exclusions/schema_version".to_string()),
+            message: format!(
+                "parity_exclusions.schema_version must be 1 (got {schema_version})"
+            ),
+            unit: Some("rules"),
+            command_path: None,
+            key_or_name: None,
+            field: Some("parity_exclusions"),
+            target_triple: None,
+            details: None,
+        });
+        return;
+    }
+
+    let Some(units) = ctx.parity_exclusions_raw.as_ref() else {
+        violations.push(Violation {
+            code: "PARITY_EXCLUSIONS_MISSING_UNITS",
+            path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
+            json_pointer: Some("/parity_exclusions/units".to_string()),
+            message: "parity_exclusions.units must exist".to_string(),
+            unit: Some("rules"),
+            command_path: None,
+            key_or_name: None,
+            field: Some("parity_exclusions"),
+            target_triple: None,
+            details: None,
+        });
+        return;
+    };
+
+    let mut keys = Vec::new();
+    let mut seen = BTreeSet::new();
+
+    for (idx, unit) in units.iter().enumerate() {
+        if unit.note.trim().is_empty() {
+            violations.push(Violation {
+                code: "PARITY_EXCLUSIONS_NOTE_MISSING",
+                path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
+                json_pointer: Some(format!("/parity_exclusions/units/{idx}/note")),
+                message: "parity_exclusions entry requires non-empty note".to_string(),
+                unit: Some("rules"),
+                command_path: Some(format_command_path(&unit.path)),
+                key_or_name: unit
+                    .key
+                    .clone()
+                    .or_else(|| unit.name.clone())
+                    .or_else(|| Some(unit.unit.clone())),
+                field: Some("parity_exclusions"),
+                target_triple: None,
+                details: None,
+            });
+        }
+
+        let (kind, key_or_name) = match unit.unit.as_str() {
+            "command" => {
+                if unit.key.is_some() || unit.name.is_some() {
+                    violations.push(Violation {
+                        code: "PARITY_EXCLUSIONS_INVALID_ENTRY",
+                        path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
+                        json_pointer: Some(format!("/parity_exclusions/units/{idx}")),
+                        message:
+                            "parity_exclusions command entry must not include key or name".to_string(),
+                        unit: Some("rules"),
+                        command_path: Some(format_command_path(&unit.path)),
+                        key_or_name: None,
+                        field: Some("parity_exclusions"),
+                        target_triple: None,
+                        details: None,
+                    });
+                }
+                ("command".to_string(), "".to_string())
+            }
+            "flag" => {
+                let Some(key) = unit.key.as_ref().filter(|s| !s.trim().is_empty()) else {
+                    violations.push(Violation {
+                        code: "PARITY_EXCLUSIONS_INVALID_ENTRY",
+                        path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
+                        json_pointer: Some(format!("/parity_exclusions/units/{idx}/key")),
+                        message: "parity_exclusions flag entry requires key".to_string(),
+                        unit: Some("rules"),
+                        command_path: Some(format_command_path(&unit.path)),
+                        key_or_name: None,
+                        field: Some("parity_exclusions"),
+                        target_triple: None,
+                        details: None,
+                    });
+                    continue;
+                };
+                if unit.name.is_some() {
+                    violations.push(Violation {
+                        code: "PARITY_EXCLUSIONS_INVALID_ENTRY",
+                        path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
+                        json_pointer: Some(format!("/parity_exclusions/units/{idx}/name")),
+                        message: "parity_exclusions flag entry must not include name".to_string(),
+                        unit: Some("rules"),
+                        command_path: Some(format_command_path(&unit.path)),
+                        key_or_name: Some(key.clone()),
+                        field: Some("parity_exclusions"),
+                        target_triple: None,
+                        details: None,
+                    });
+                }
+                ("flag".to_string(), key.clone())
+            }
+            "arg" => {
+                let Some(name) = unit.name.as_ref().filter(|s| !s.trim().is_empty()) else {
+                    violations.push(Violation {
+                        code: "PARITY_EXCLUSIONS_INVALID_ENTRY",
+                        path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
+                        json_pointer: Some(format!("/parity_exclusions/units/{idx}/name")),
+                        message: "parity_exclusions arg entry requires name".to_string(),
+                        unit: Some("rules"),
+                        command_path: Some(format_command_path(&unit.path)),
+                        key_or_name: None,
+                        field: Some("parity_exclusions"),
+                        target_triple: None,
+                        details: None,
+                    });
+                    continue;
+                };
+                if unit.key.is_some() {
+                    violations.push(Violation {
+                        code: "PARITY_EXCLUSIONS_INVALID_ENTRY",
+                        path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
+                        json_pointer: Some(format!("/parity_exclusions/units/{idx}/key")),
+                        message: "parity_exclusions arg entry must not include key".to_string(),
+                        unit: Some("rules"),
+                        command_path: Some(format_command_path(&unit.path)),
+                        key_or_name: Some(name.clone()),
+                        field: Some("parity_exclusions"),
+                        target_triple: None,
+                        details: None,
+                    });
+                }
+                ("arg".to_string(), name.clone())
+            }
+            other => {
+                violations.push(Violation {
+                    code: "PARITY_EXCLUSIONS_INVALID_ENTRY",
+                    path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
+                    json_pointer: Some(format!("/parity_exclusions/units/{idx}/unit")),
+                    message: format!(
+                        "parity_exclusions entry unit must be one of command|flag|arg (got {other})"
+                    ),
+                    unit: Some("rules"),
+                    command_path: Some(format_command_path(&unit.path)),
+                    key_or_name: None,
+                    field: Some("parity_exclusions"),
+                    target_triple: None,
+                    details: None,
+                });
+                continue;
+            }
+        };
+
+        let identity = (kind.clone(), unit.path.clone(), key_or_name.clone());
+        keys.push(identity.clone());
+        if !seen.insert(identity.clone()) {
+            violations.push(Violation {
+                code: "PARITY_EXCLUSIONS_DUPLICATE",
+                path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
+                json_pointer: Some("/parity_exclusions/units".to_string()),
+                message: format!(
+                    "duplicate parity_exclusions identity (unit={kind} command_path={} key_or_name={})",
+                    format_command_path(&unit.path),
+                    key_or_name
+                ),
+                unit: Some("rules"),
+                command_path: Some(format_command_path(&unit.path)),
+                key_or_name: Some(key_or_name),
+                field: Some("parity_exclusions"),
+                target_triple: None,
+                details: None,
+            });
+        }
+    }
+
+    let mut sorted = keys.clone();
+    sorted.sort();
+    if keys != sorted {
+        violations.push(Violation {
+            code: "PARITY_EXCLUSIONS_NOT_SORTED",
+            path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
+            json_pointer: Some("/parity_exclusions/units".to_string()),
+            message: "parity_exclusions.units must be stable-sorted by (unit,path,key_or_name)"
+                .to_string(),
+            unit: Some("rules"),
+            command_path: None,
+            key_or_name: None,
+            field: Some("parity_exclusions"),
+            target_triple: None,
+            details: None,
+        });
+    }
+}
+
+fn validate_report_exclusions(
+    ctx: &ValidateCtx,
+    violations: &mut Vec<Violation>,
+    report: &Value,
+    report_path: &Path,
+) {
+    let Some(index) = ctx.parity_exclusions.as_ref() else {
+        return;
+    };
+    let Some(deltas) = report.get("deltas") else {
+        return;
+    };
+
+    let missing_commands = deltas.get("missing_commands").and_then(Value::as_array);
+    let missing_flags = deltas.get("missing_flags").and_then(Value::as_array);
+    let missing_args = deltas.get("missing_args").and_then(Value::as_array);
+
+    if let Some(items) = missing_commands {
+        for (i, item) in items.iter().enumerate() {
+            let path = item.get("path").and_then(Value::as_array).map(|arr| {
+                arr.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+            });
+            let Some(path) = path else { continue };
+            if index.commands.contains_key(&path) {
+                violations.push(Violation {
+                    code: "REPORT_MISSING_INCLUDES_EXCLUDED",
+                    path: rel_path(&ctx.root, report_path),
+                    json_pointer: Some(format!("/deltas/missing_commands/{i}")),
+                    message: format!(
+                        "report missing_commands includes excluded command_path={}",
+                        format_command_path(&path)
+                    ),
+                    unit: Some("reports"),
+                    command_path: Some(format_command_path(&path)),
+                    key_or_name: None,
+                    field: Some("missing_commands"),
+                    target_triple: None,
+                    details: None,
+                });
+            }
+        }
+    }
+
+    if let Some(items) = missing_flags {
+        for (i, item) in items.iter().enumerate() {
+            let path = item.get("path").and_then(Value::as_array).map(|arr| {
+                arr.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+            });
+            let key = item.get("key").and_then(Value::as_str).map(str::to_string);
+            let (Some(path), Some(key)) = (path, key) else { continue };
+            if let Some(ex) = index.flags.get(&(path.clone(), key.clone())) {
+                violations.push(Violation {
+                    code: "REPORT_MISSING_INCLUDES_EXCLUDED",
+                    path: rel_path(&ctx.root, report_path),
+                    json_pointer: Some(format!("/deltas/missing_flags/{i}")),
+                    message: format!(
+                        "report missing_flags includes excluded flag (command_path={} key={} category={})",
+                        format_command_path(&path),
+                        key,
+                        ex.category.clone().unwrap_or_else(|| "<missing>".to_string())
+                    ),
+                    unit: Some("reports"),
+                    command_path: Some(format_command_path(&path)),
+                    key_or_name: Some(key),
+                    field: Some("missing_flags"),
+                    target_triple: None,
+                    details: None,
+                });
+            }
+        }
+    }
+
+    if let Some(items) = missing_args {
+        for (i, item) in items.iter().enumerate() {
+            let path = item.get("path").and_then(Value::as_array).map(|arr| {
+                arr.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+            });
+            let name = item.get("name").and_then(Value::as_str).map(str::to_string);
+            let (Some(path), Some(name)) = (path, name) else { continue };
+            if let Some(ex) = index.args.get(&(path.clone(), name.clone())) {
+                violations.push(Violation {
+                    code: "REPORT_MISSING_INCLUDES_EXCLUDED",
+                    path: rel_path(&ctx.root, report_path),
+                    json_pointer: Some(format!("/deltas/missing_args/{i}")),
+                    message: format!(
+                        "report missing_args includes excluded arg (command_path={} name={} category={})",
+                        format_command_path(&path),
+                        name,
+                        ex.category.clone().unwrap_or_else(|| "<missing>".to_string())
+                    ),
+                    unit: Some("reports"),
+                    command_path: Some(format_command_path(&path)),
+                    key_or_name: Some(name),
+                    field: Some("missing_args"),
+                    target_triple: None,
+                    details: None,
+                });
+            }
+        }
+    }
+}
+
+fn validate_wrapper_coverage_exclusions(
+    ctx: &ValidateCtx,
+    violations: &mut Vec<Violation>,
+    wc: &WrapperCoverageFile,
+    wc_path: &Path,
+) {
+    let Some(index) = ctx.parity_exclusions.as_ref() else {
+        return;
+    };
+
+    for (cmd_idx, cmd) in wc.coverage.iter().enumerate() {
+        if let Some(ex) = index.commands.get(&cmd.path) {
+            violations.push(Violation {
+                code: "WRAPPER_COVERAGE_INCLUDES_EXCLUDED",
+                path: rel_path(&ctx.root, wc_path),
+                json_pointer: Some(format!("/coverage/{cmd_idx}")),
+                message: format!(
+                    "wrapper_coverage includes excluded command_path={} (note={})",
+                    format_command_path(&cmd.path),
+                    ex.note
+                ),
+                unit: Some("wrapper_command"),
+                command_path: Some(format_command_path(&cmd.path)),
+                key_or_name: None,
+                field: Some("coverage"),
+                target_triple: None,
+                details: None,
+            });
+        }
+
+        for (flag_idx, flag) in cmd.flags.as_deref().unwrap_or(&[]).iter().enumerate() {
+            if let Some(ex) = index
+                .flags
+                .get(&(cmd.path.clone(), flag.key.clone()))
+            {
+                violations.push(Violation {
+                    code: "WRAPPER_COVERAGE_INCLUDES_EXCLUDED",
+                    path: rel_path(&ctx.root, wc_path),
+                    json_pointer: Some(format!("/coverage/{cmd_idx}/flags/{flag_idx}")),
+                    message: format!(
+                        "wrapper_coverage includes excluded flag (command_path={} key={} note={})",
+                        format_command_path(&cmd.path),
+                        flag.key,
+                        ex.note
+                    ),
+                    unit: Some("wrapper_flag"),
+                    command_path: Some(format_command_path(&cmd.path)),
+                    key_or_name: Some(flag.key.clone()),
+                    field: Some("flags"),
+                    target_triple: None,
+                    details: None,
+                });
+            }
+        }
+
+        for (arg_idx, arg) in cmd.args.as_deref().unwrap_or(&[]).iter().enumerate() {
+            if let Some(ex) = index
+                .args
+                .get(&(cmd.path.clone(), arg.name.clone()))
+            {
+                violations.push(Violation {
+                    code: "WRAPPER_COVERAGE_INCLUDES_EXCLUDED",
+                    path: rel_path(&ctx.root, wc_path),
+                    json_pointer: Some(format!("/coverage/{cmd_idx}/args/{arg_idx}")),
+                    message: format!(
+                        "wrapper_coverage includes excluded arg (command_path={} name={} note={})",
+                        format_command_path(&cmd.path),
+                        arg.name,
+                        ex.note
+                    ),
+                    unit: Some("wrapper_arg"),
+                    command_path: Some(format_command_path(&cmd.path)),
+                    key_or_name: Some(arg.name.clone()),
+                    field: Some("args"),
+                    target_triple: None,
+                    details: None,
+                });
+            }
+        }
+    }
 }
 
 fn is_union_snapshot(v: &Value) -> bool {

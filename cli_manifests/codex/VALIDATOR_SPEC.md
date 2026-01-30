@@ -112,6 +112,44 @@ Violation:
 - `IU_NOTE_MISSING`
   - Include unit type, `path`, and `key`/`name` where applicable.
 
+### `parity_exclusions`: excluded units must not become parity work
+
+Files:
+- `RULES.json` (`parity_exclusions`)
+- `wrapper_coverage.json`
+- `reports/<version>/coverage.*.json`
+
+Policy:
+- Interactive TUI mode and TUI-only help-surface units are excluded from parity work-queue deltas.
+
+Rules config invariants (RULES.json):
+- `parity_exclusions.schema_version` must be `1`.
+- `parity_exclusions.units[]` entries must be unique by identity:
+  - command: `path`
+  - flag: `path` + `key`
+  - arg: `path` + `name`
+- `parity_exclusions.units[]` entries must be stable-sorted by `(unit, path, key_or_name)`.
+- Every `parity_exclusions.units[]` entry must include a non-empty `note`.
+
+Wrapper coverage invariant:
+- `wrapper_coverage.json` must not contain any identity listed in `parity_exclusions.units[]` (no wrapper claim for excluded TUI surfaces).
+
+Report invariant:
+- No report may list an excluded identity under:
+  - `deltas.missing_commands`
+  - `deltas.missing_flags`
+  - `deltas.missing_args`
+
+Violations:
+- `PARITY_EXCLUSIONS_SCHEMA_VERSION`
+- `PARITY_EXCLUSIONS_MISSING_UNITS`
+- `PARITY_EXCLUSIONS_NOTE_MISSING`
+- `PARITY_EXCLUSIONS_INVALID_ENTRY`
+- `PARITY_EXCLUSIONS_DUPLICATE`
+- `PARITY_EXCLUSIONS_NOT_SORTED`
+- `WRAPPER_COVERAGE_INCLUDES_EXCLUDED`
+- `REPORT_MISSING_INCLUDES_EXCLUDED`
+
 ### `pointers`: pointer materialization, format, and consistency
 
 Pointer files are defined by `RULES.json.storage.pointers.*`.
@@ -216,4 +254,3 @@ Violations:
 - delete arbitrary files (retention pruning is a separate mechanical command)
 - modify snapshots, reports, or version metadata (except `current.json` per above)
 - invent values other than `none`
-

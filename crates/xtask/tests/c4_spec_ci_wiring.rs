@@ -95,9 +95,18 @@ fn c4_spec_ci_workflow_has_conditional_codex_validate_gate() {
     let yml = read_repo_file(".github/workflows/ci.yml");
 
     // C4-spec (normative): gate runs only when committed artifacts regime is active.
+    //
+    // Two supported implementations:
+    // - job-level hashFiles gate
+    // - a first step that detects committed versions and gates subsequent steps via outputs
+    let has_hashfiles_gate =
+        yml.contains("hashFiles('cli_manifests/codex/versions/*.json') != ''");
+    let has_step_gate = yml.contains("Detect Codex committed artifacts")
+        && yml.contains("has_versions")
+        && yml.contains("steps.codex-artifacts.outputs.has_versions");
     assert!(
-        yml.contains("hashFiles('cli_manifests/codex/versions/*.json') != ''"),
-        "ci.yml must gate codex-validate behind: hashFiles('cli_manifests/codex/versions/*.json') != ''"
+        has_hashfiles_gate || has_step_gate,
+        "ci.yml must gate codex-validate behind either hashFiles('cli_manifests/codex/versions/*.json') != '' or a Detect Codex committed artifacts step gate"
     );
 
     // Ensure the job actually runs codex-validate (not just mentions it).

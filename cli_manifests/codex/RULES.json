@@ -51,6 +51,58 @@
     "parity_model": "help_surface_only",
     "meaning": "This ruleset governs help-surface parity only (commands/flags/positional args from help and usage inference). Deeper runtime parsing semantics (operand forwarding, -- handling, prompt placeholder expansion) are out of scope unless a separate behavioral/probe layer is introduced."
   },
+  "parity_exclusions": {
+    "schema_version": 1,
+    "meaning": "Explicit, deterministic exclusions from parity work-queue deltas. Excluded units remain visible in reports under excluded_* deltas and never appear under missing_* deltas.",
+    "units": [
+      {
+        "unit": "arg",
+        "path": [],
+        "name": "ARGS",
+        "category": "tui_dispatch",
+        "note": "Root command dispatch pseudo-arg is excluded from wrapper parity."
+      },
+      {
+        "unit": "arg",
+        "path": [],
+        "name": "COMMAND",
+        "category": "tui_dispatch",
+        "note": "Root command dispatch pseudo-arg is excluded from wrapper parity."
+      },
+      {
+        "unit": "arg",
+        "path": [],
+        "name": "PROMPT",
+        "category": "tui",
+        "note": "Interactive TUI default-mode prompt surface is excluded from wrapper parity."
+      },
+      {
+        "unit": "flag",
+        "path": [],
+        "key": "--no-alt-screen",
+        "category": "tui",
+        "note": "Alt-screen control is a TUI-only surface and is excluded from wrapper parity."
+      },
+      {
+        "unit": "flag",
+        "path": [
+          "fork"
+        ],
+        "key": "--no-alt-screen",
+        "category": "tui",
+        "note": "Alt-screen control is a TUI-only surface and is excluded from wrapper parity."
+      },
+      {
+        "unit": "flag",
+        "path": [
+          "resume"
+        ],
+        "key": "--no-alt-screen",
+        "category": "tui",
+        "note": "Alt-screen control is a TUI-only surface and is excluded from wrapper parity."
+      }
+    ]
+  },
   "features": {
     "stage_strings": [
       "stable",
@@ -271,6 +323,9 @@
       "missing_args"
     ],
     "optional_deltas": [
+      "excluded_commands",
+      "excluded_flags",
+      "excluded_args",
       "passthrough_candidates",
       "unsupported",
       "intentionally_unsupported",
@@ -537,6 +592,9 @@
       "missing_commands": "by_path",
       "missing_flags": "by_path_then_key",
       "missing_args": "by_path_then_name",
+      "excluded_commands": "by_path",
+      "excluded_flags": "by_path_then_key",
+      "excluded_args": "by_path_then_name",
       "wrapper_only_commands": "by_path",
       "wrapper_only_flags": "by_path_then_key",
       "wrapper_only_args": "by_path_then_name"

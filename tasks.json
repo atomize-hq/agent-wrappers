@@ -1,0 +1,106 @@
+{
+  "title": "TUI Exclusion Policy: Parity Contracts + Tooling",
+  "status": "active",
+  "context": {
+    "problem": "The wrapper is a headless CLI wrapper and is not intended to support interactive TUI surfaces. Today, TUI-only upstream units appear as missing parity work in coverage reports.",
+    "goal": "Ensure interactive/TUI-only upstream units never land in missing parity deltas while remaining visible as excluded-by-policy.",
+    "non_goals": [
+      "Implement wrapper_coverage auto-generation (ADR 0003 follow-on).",
+      "Change upstream snapshot discovery semantics."
+    ]
+  },
+  "tasks": [
+    {
+      "id": "DOCS_TUI_POLICY_NORMATIVE",
+      "status": "done",
+      "why": "Make the TUI non-goal a normative part of parity and wrapper-coverage specs (not only ops notes), so future changes do not reintroduce TUI work items.",
+      "files": [
+        "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+        "docs/adr/0003-wrapper-coverage-auto-generation.md",
+        "docs/specs/codex-wrapper-coverage-generator-contract.md"
+      ],
+      "done_when": [
+        "Docs explicitly define TUI/interactive surfaces as excluded-from-parity work queue.",
+        "Docs define that exclusions are enforced by RULES.json + report generation (not by wrapper_coverage generation)."
+      ]
+    },
+    {
+      "id": "RULES_PARITY_EXCLUSIONS",
+      "status": "done",
+      "why": "Provide a single, explicit contract list of excluded units keyed by parity identity (path/key/name) so tooling can deterministically suppress TUI-only missing deltas.",
+      "files": [
+        "cli_manifests/codex/RULES.json"
+      ],
+      "decisions_locked": [
+        "Exclusions are explicit entries (no heuristics).",
+        "Exclusions apply to upstream->report delta classification.",
+        "Exclusions are not emitted by wrapper_coverage."
+      ],
+      "seed_exclusions": [
+        { "unit": "arg", "path": [], "name": "PROMPT", "category": "tui", "note": "Interactive TUI default-mode prompt surface is excluded from wrapper parity." },
+        { "unit": "arg", "path": [], "name": "COMMAND", "category": "tui_dispatch", "note": "Root command dispatch pseudo-arg is excluded from wrapper parity." },
+        { "unit": "arg", "path": [], "name": "ARGS", "category": "tui_dispatch", "note": "Root command dispatch pseudo-arg is excluded from wrapper parity." },
+        { "unit": "flag", "path": [], "key": "--no-alt-screen", "category": "tui", "note": "Alt-screen control is a TUI-only surface and is excluded from wrapper parity." },
+        { "unit": "flag", "path": ["resume"], "key": "--no-alt-screen", "category": "tui", "note": "Alt-screen control is a TUI-only surface and is excluded from wrapper parity." },
+        { "unit": "flag", "path": ["fork"], "key": "--no-alt-screen", "category": "tui", "note": "Alt-screen control is a TUI-only surface and is excluded from wrapper parity." }
+      ],
+      "done_when": [
+        "RULES.json contains a parity_exclusions section with unique, stable-ordered entries and required note strings."
+      ]
+    },
+    {
+      "id": "REPORT_SCHEMA_EXCLUDED_DELTAS",
+      "status": "done",
+      "why": "Reports must represent excluded-by-policy units explicitly (not as missing and not silently dropped).",
+      "files": [
+        "cli_manifests/codex/SCHEMA.json",
+        "cli_manifests/codex/RULES.json"
+      ],
+      "done_when": [
+        "SCHEMA.json allows report.deltas.excluded_commands/excluded_flags/excluded_args arrays.",
+        "RULES.json report.optional_deltas includes excluded_* and report sorting includes excluded_* rules."
+      ]
+    },
+    {
+      "id": "XTASK_REPORT_APPLIES_EXCLUSIONS",
+      "status": "done",
+      "why": "Coverage reports must stop producing parity work items for excluded TUI units while keeping them visible as excluded deltas.",
+      "files": [
+        "crates/xtask/src/codex_report.rs"
+      ],
+      "done_when": [
+        "xtask codex-report reads RULES.json parity_exclusions.",
+        "Excluded upstream units never appear in missing_* arrays.",
+        "Excluded upstream units appear in excluded_* arrays with stable ordering and the exclusion note."
+      ]
+    },
+    {
+      "id": "VALIDATOR_ENFORCES_EXCLUSIONS",
+      "status": "done",
+      "why": "Prevent regressions: excluded units must not reappear as missing work, and wrapper_coverage must not claim excluded units.",
+      "files": [
+        "cli_manifests/codex/VALIDATOR_SPEC.md",
+        "crates/xtask/src/codex_validate.rs"
+      ],
+      "done_when": [
+        "Validator fails if any excluded identity appears in missing_* report deltas.",
+        "Validator fails if wrapper_coverage.json contains an excluded identity.",
+        "Validator validates parity_exclusions entries for uniqueness and non-empty note."
+      ]
+    },
+    {
+      "id": "REGENERATE_EXISTING_REPORTS",
+      "status": "done",
+      "why": "Existing committed reports must conform to the new exclusion contract so CI stays green.",
+      "files": [
+        "cli_manifests/codex/reports/0.61.0/coverage.any.json",
+        "cli_manifests/codex/reports/0.61.0/coverage.x86_64-unknown-linux-musl.json",
+        "cli_manifests/codex/reports/0.91.0/coverage.any.json",
+        "cli_manifests/codex/reports/0.91.0/coverage.x86_64-unknown-linux-musl.json"
+      ],
+      "done_when": [
+        "Regenerated reports contain excluded_* arrays for excluded units and do not list those units as missing."
+      ]
+    }
+  ]
+}

@@ -426,13 +426,6 @@
       },
       {
         "path": [],
-        "key": "--no-alt-screen",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [],
         "key": "--oss",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
@@ -1664,15 +1657,6 @@
         "path": [
           "fork"
         ],
-        "key": "--no-alt-screen",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "fork"
-        ],
         "key": "--oss",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
@@ -2046,15 +2030,6 @@
         "path": [
           "resume"
         ],
-        "key": "--no-alt-screen",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "resume"
-        ],
         "key": "--oss",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
@@ -2366,27 +2341,6 @@
       }
     ],
     "missing_args": [
-      {
-        "path": [],
-        "name": "ARGS",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [],
-        "name": "PROMPT",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
       {
         "path": [
           "app-server"
@@ -2700,6 +2654,62 @@
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
         ]
+      }
+    ],
+    "excluded_flags": [
+      {
+        "path": [],
+        "key": "--no-alt-screen",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "note": "Alt-screen control is a TUI-only surface and is excluded from wrapper parity."
+      },
+      {
+        "path": [
+          "fork"
+        ],
+        "key": "--no-alt-screen",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "note": "Alt-screen control is a TUI-only surface and is excluded from wrapper parity."
+      },
+      {
+        "path": [
+          "resume"
+        ],
+        "key": "--no-alt-screen",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "note": "Alt-screen control is a TUI-only surface and is excluded from wrapper parity."
+      }
+    ],
+    "excluded_args": [
+      {
+        "path": [],
+        "name": "ARGS",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "note": "Root command dispatch pseudo-arg is excluded from wrapper parity."
+      },
+      {
+        "path": [],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "note": "Root command dispatch pseudo-arg is excluded from wrapper parity."
+      },
+      {
+        "path": [],
+        "name": "PROMPT",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "note": "Interactive TUI default-mode prompt surface is excluded from wrapper parity."
       }
     ]
   }
