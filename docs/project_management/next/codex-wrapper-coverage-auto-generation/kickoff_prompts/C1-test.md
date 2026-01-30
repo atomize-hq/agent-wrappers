@@ -14,19 +14,17 @@ Scope source of truth: `docs/project_management/next/codex-wrapper-coverage-auto
 2. Read: `docs/project_management/next/codex-wrapper-coverage-auto-generation/plan.md`, `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json`, `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md`, `docs/project_management/next/codex-wrapper-coverage-auto-generation/C1-spec.md`, this prompt.
 3. Update `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json`: set `C1-test` to `in_progress`.
 4. Add START entry to `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md`; commit docs with `docs: start C1-test`.
-5. Create worktree: `git worktree add -b wcg-c1-scenario-catalog-test wt/wcg-c1-scenario-catalog-test feat/codex-wrapper-coverage-auto-generation`
-6. Work only inside `wt/wcg-c1-scenario-catalog-test` for test changes.
+5. Create worktree: `git worktree add -b wcg-c1-scenarios-3-6-test wt/wcg-c1-scenarios-3-6-test feat/codex-wrapper-coverage-auto-generation`
+6. Work only inside `wt/wcg-c1-scenarios-3-6-test` for test changes.
 
 ## Test requirements (C1)
 Add/update tests under `crates/xtask/tests/` to cover:
-- Full Scenario Catalog v1 completeness and exactness against generated wrapper coverage:
+- Scenario Catalog v1 completeness and exactness for Scenarios 3-6 against generated wrapper coverage:
   - required command paths exist exactly once
   - required flags/args match exactly (no extras)
   - required capability-guarded notes exist and no other notes exist
   - no scope fields exist anywhere
-- Parity exclusions enforcement:
-  - `xtask codex-wrapper-coverage` rejects manifests containing any excluded identity from `RULES.json.parity_exclusions`.
-  - `xtask codex-report` output places excluded identities only under `excluded_*` deltas.
+- Do not add parity exclusions tests in this task (deferred to C3).
 
 ## Required commands (test role)
 - `cargo fmt`
@@ -34,7 +32,7 @@ Add/update tests under `crates/xtask/tests/` to cover:
 
 ## End checklist
 1. Run required commands and capture outputs: `cargo fmt`; `cargo test -p xtask` (and any additional targeted tests for files touched).
-2. Commit changes in `wt/wcg-c1-scenario-catalog-test` (no planning-pack edits).
-3. Outside the worktree, ensure branch `wcg-c1-scenario-catalog-test` contains the commit (fast-forward if needed). Do not merge to `feat/codex-wrapper-coverage-auto-generation`.
+2. Commit changes in `wt/wcg-c1-scenarios-3-6-test` (no planning-pack edits).
+3. Outside the worktree, ensure branch `wcg-c1-scenarios-3-6-test` contains the commit (fast-forward if needed). Do not merge to `feat/codex-wrapper-coverage-auto-generation`.
 4. Checkout `feat/codex-wrapper-coverage-auto-generation`; set `C1-test` to `completed` in `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json`; add END entry to `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md`; commit docs with `docs: finish C1-test`.
-5. Remove worktree: `git worktree remove wt/wcg-c1-scenario-catalog-test`.
+5. Remove worktree: `git worktree remove wt/wcg-c1-scenarios-3-6-test`.

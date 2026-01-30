@@ -133,8 +133,23 @@
         },
         {
           "id": "C1",
-          "name": "Full scenario catalog (v1) + parity exclusions",
+          "name": "Scenario Catalog v1 (3-6)",
           "spec": "docs/project_management/next/codex-wrapper-coverage-auto-generation/C1-spec.md"
+        },
+        {
+          "id": "C2",
+          "name": "Scenario Catalog v1 (7-9)",
+          "spec": "docs/project_management/next/codex-wrapper-coverage-auto-generation/C2-spec.md"
+        },
+        {
+          "id": "C3",
+          "name": "Scenario Catalog v1 (10-12) + parity exclusions",
+          "spec": "docs/project_management/next/codex-wrapper-coverage-auto-generation/C3-spec.md"
+        },
+        {
+          "id": "C4",
+          "name": "Integration + docs",
+          "spec": "docs/project_management/next/codex-wrapper-coverage-auto-generation/C4-spec.md"
         }
       ]
     }
@@ -248,13 +263,43 @@
       "id": "codex_wrapper_coverage_auto_generation:C0",
       "title": "Non-empty deterministic wrapper coverage",
       "depends_on": ["codex_cli_parity_coverage_mapping:C4"],
-      "blocks": ["codex_wrapper_coverage_auto_generation:C1"]
+      "blocks": [
+        "codex_wrapper_coverage_auto_generation:C1",
+        "codex_wrapper_coverage_auto_generation:C2",
+        "codex_wrapper_coverage_auto_generation:C3",
+        "codex_wrapper_coverage_auto_generation:C4"
+      ]
     },
     {
       "order": 260,
       "id": "codex_wrapper_coverage_auto_generation:C1",
-      "title": "Scenario catalog v1 + parity exclusions",
+      "title": "Scenario Catalog v1 (3-6)",
       "depends_on": ["codex_wrapper_coverage_auto_generation:C0"],
+      "blocks": [
+        "codex_wrapper_coverage_auto_generation:C2",
+        "codex_wrapper_coverage_auto_generation:C3",
+        "codex_wrapper_coverage_auto_generation:C4"
+      ]
+    },
+    {
+      "order": 270,
+      "id": "codex_wrapper_coverage_auto_generation:C2",
+      "title": "Scenario Catalog v1 (7-9)",
+      "depends_on": ["codex_wrapper_coverage_auto_generation:C1"],
+      "blocks": ["codex_wrapper_coverage_auto_generation:C3", "codex_wrapper_coverage_auto_generation:C4"]
+    },
+    {
+      "order": 280,
+      "id": "codex_wrapper_coverage_auto_generation:C3",
+      "title": "Scenario Catalog v1 (10-12) + parity exclusions",
+      "depends_on": ["codex_wrapper_coverage_auto_generation:C2"],
+      "blocks": ["codex_wrapper_coverage_auto_generation:C4"]
+    },
+    {
+      "order": 290,
+      "id": "codex_wrapper_coverage_auto_generation:C4",
+      "title": "Integration + docs",
+      "depends_on": ["codex_wrapper_coverage_auto_generation:C3"],
       "blocks": []
     }
   ]

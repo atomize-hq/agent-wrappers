@@ -32,7 +32,7 @@ Implement ADR 0003 by producing a **non-empty, deterministic** `cli_manifests/co
 - Parity exclusions (TUI policy):
   - `cli_manifests/codex/RULES.json.parity_exclusions` defines excluded identities.
   - Reports MUST classify excluded identities under `excluded_*` deltas (not `missing_*`).
-  - The wrapper coverage generator MUST NOT emit excluded identities (validator-enforced).
+  - The wrapper coverage generator MUST NOT emit excluded identities (validator-enforced; generation-time rejection is implemented in C3).
 
 ## Branch & Worktree Conventions
 - Orchestration branch: `feat/codex-wrapper-coverage-auto-generation`.
@@ -41,7 +41,10 @@ Implement ADR 0003 by producing a **non-empty, deterministic** `cli_manifests/co
 
 ## Triad Overview
 - **C0 - Non-empty deterministic core:** Implement the wrapper-derived manifest skeleton and `xtask codex-wrapper-coverage` determinism enforcement so `wrapper_coverage.json` can be generated offline and non-empty (seed Scenario 0-2; establish note/scope rules).
-- **C1 - Full scenario catalog (v1) + parity exclusions:** Implement the remaining Scenario Catalog v1 coverage (Scenarios 3-12), add tests that lock the catalog contract down, enforce parity exclusions, and refresh the committed `cli_manifests/codex/wrapper_coverage.json` artifact.
+- **C1 - Scenario Catalog v1 (3-6):** Implement Scenarios 3-6 and add tests that lock those scenarios down.
+- **C2 - Scenario Catalog v1 (7-9):** Implement Scenarios 7-9 and add tests that lock those scenarios down.
+- **C3 - Scenario Catalog v1 (10-12):** Implement Scenarios 10-12, implement parity exclusions rejection at generation time, and add tests that lock those behaviors down.
+- **C4 - Integration + docs:** Merge all scenario slices, refresh the committed `cli_manifests/codex/wrapper_coverage.json`, run report/validate gates, and reconcile documentation if required.
 
 ## Start Checklist (all tasks)
 1. `git checkout feat/codex-wrapper-coverage-auto-generation && git pull --ff-only`

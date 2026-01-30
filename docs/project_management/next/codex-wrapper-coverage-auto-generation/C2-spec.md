@@ -1,28 +1,27 @@
-# C1 - Scenario Catalog v1 (3-6) (Spec)
+# C2 - Scenario Catalog v1 (7-9) (Spec)
 
 ## Purpose
-Extend ADR 0003 wrapper coverage generation by implementing Scenario Catalog v1 Scenarios 3-6 and locking them down with tests, without refreshing committed artifacts yet.
+Extend ADR 0003 wrapper coverage generation by implementing Scenario Catalog v1 Scenarios 7-9 and locking them down with tests, without refreshing committed artifacts yet.
 
 This phase MUST keep all determinism and v1 policy constraints established in C0.
 
 ## Normative references (must drive implementation)
 - `docs/adr/0003-wrapper-coverage-auto-generation.md`
 - `docs/specs/codex-wrapper-coverage-generator-contract.md`
-- `docs/specs/codex-wrapper-coverage-scenarios-v1.md` (Scenarios 0-12; implement 3-6 in C1)
+- `docs/specs/codex-wrapper-coverage-scenarios-v1.md` (Scenarios 0-12; implement 7-9 in C2)
 - `cli_manifests/codex/RULES.json` (sorting + parity exclusions context)
 - `cli_manifests/codex/SCHEMA.json` (`WrapperCoverageV1`)
 - `cli_manifests/codex/VALIDATOR_SPEC.md` (IU notes; parity exclusions checks)
 
 ## Scope
 
-### 1) Implement Scenario Catalog v1 Scenarios 3-6
+### 1) Implement Scenario Catalog v1 Scenarios 7-9
 File: `crates/codex/src/wrapper_coverage_manifest.rs`
 
-Extend `codex::wrapper_coverage_manifest::wrapper_coverage_manifest()` to include, in addition to C0 coverage:
-- Scenario 3: `["resume"]` (flags + args as specified; includes `SESSION_ID` and `PROMPT`)
-- Scenario 4: `["apply"]`, `["diff"]`
-- Scenario 5: `["login"]`, `["login","status"]`, `["logout"]` with capability-guarded `--mcp` note policy
-- Scenario 6: `["features","list"]` with `--json`
+Extend `codex::wrapper_coverage_manifest::wrapper_coverage_manifest()` to include, in addition to prior coverage:
+- Scenario 7: `["app-server","generate-ts"]`, `["app-server","generate-json-schema"]` with `--out`, plus `--prettier` only under `["app-server","generate-ts"]`
+- Scenario 8: `["responses-api-proxy"]` with required flags
+- Scenario 9: `["stdio-to-uds"]` with `SOCKET_PATH` arg
 
 Exactness requirements (normative; tests MUST enforce):
 - For every command path listed above, emit exactly one command entry with `level: explicit`.
@@ -36,28 +35,19 @@ v1 restrictions (must hold for all emitted units):
   - `intentionally_unsupported` requires a non-empty rationale note (enforcement must remain).
   - Otherwise omit `note`.
 
-### 2) Preserve determinism and offline rules
-Files:
-- `crates/codex/src/wrapper_coverage_manifest.rs`
-- `crates/xtask/src/codex_wrapper_coverage.rs`
-
-C1 MUST NOT relax any of the hard constraints from C0:
-- `xtask codex-wrapper-coverage` MUST require `SOURCE_DATE_EPOCH` and derive `generated_at` from it (no wall-clock fallback).
-- No subprocess execution, no network access, no filesystem discovery reads, no randomness.
-
 ## Acceptance Criteria
 
-### C1 (code + integration observable outcomes)
-- `SOURCE_DATE_EPOCH=0 cargo run -p xtask -- codex-wrapper-coverage --out /tmp/wrapper_coverage.json` succeeds and includes the Scenario 3-6 paths in addition to C0 paths.
+### C2 (code + integration observable outcomes)
+- `SOURCE_DATE_EPOCH=0 cargo run -p xtask -- codex-wrapper-coverage --out /tmp/wrapper_coverage.json` succeeds and includes the Scenario 7-9 paths in addition to prior paths.
 - `/tmp/wrapper_coverage.json` remains deterministic and v1 policy compliant (no scope fields; note policy).
 
-### C1 (tests)
+### C2 (tests)
 - New/updated tests under `crates/xtask/tests/` lock down:
-  - Scenario 3-6 completeness and exactness (paths, flags, args, and notes).
+  - Scenario 7-9 completeness and exactness (paths, flags, args, and notes).
   - v1 invariants still hold (no scope; note restrictions).
 
 ## Out of Scope (deferred)
-- Implementing Scenarios 7-12.
+- Implementing Scenarios 10-12.
 - Generation-time enforcement of `RULES.json.parity_exclusions` (deferred to C3).
 - Refreshing the committed `cli_manifests/codex/wrapper_coverage.json` artifact (deferred to C4).
 

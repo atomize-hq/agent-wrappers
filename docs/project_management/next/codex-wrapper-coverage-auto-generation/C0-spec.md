@@ -88,6 +88,8 @@ Update the generator so it conforms to the generator contract:
   - v1 scope and note restrictions are enforced by generation-time validation (not only by schema)
 
 ## Out of Scope (deferred to C1)
-- Completing Scenario Catalog v1 coverage beyond Scenarios 0-2.
-- Enforcing parity exclusions against the full Scenario Catalog set (beyond the "generator must not emit excluded identities" baseline).
-- Updating the committed `cli_manifests/codex/wrapper_coverage.json` artifact (C1 integration owns the first committed refresh for ADR 0003).
+Completing Scenario Catalog v1 coverage beyond Scenarios 0-2 is deferred to later phases (C1/C2/C3).
+
+Additionally deferred:
+- Generation-time enforcement of parity exclusions (implemented in C3).
+- Updating the committed `cli_manifests/codex/wrapper_coverage.json` artifact (C4 integration owns the first committed refresh for ADR 0003).

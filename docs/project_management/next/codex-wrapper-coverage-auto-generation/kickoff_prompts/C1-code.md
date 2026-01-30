@@ -14,12 +14,13 @@ Scope source of truth: `docs/project_management/next/codex-wrapper-coverage-auto
 2. Read: `docs/project_management/next/codex-wrapper-coverage-auto-generation/plan.md`, `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json`, `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md`, `docs/project_management/next/codex-wrapper-coverage-auto-generation/C1-spec.md`, this prompt.
 3. Update `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json`: set `C1-code` to `in_progress`.
 4. Add START entry to `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md`; commit docs with `docs: start C1-code`.
-5. Create worktree: `git worktree add -b wcg-c1-scenario-catalog-code wt/wcg-c1-scenario-catalog-code feat/codex-wrapper-coverage-auto-generation`
-6. Work only inside `wt/wcg-c1-scenario-catalog-code` for code changes.
+5. Create worktree: `git worktree add -b wcg-c1-scenarios-3-6-code wt/wcg-c1-scenarios-3-6-code feat/codex-wrapper-coverage-auto-generation`
+6. Work only inside `wt/wcg-c1-scenarios-3-6-code` for code changes.
 
 ## Implementation requirements (C1)
-- Extend `wrapper_coverage_manifest()` to implement Scenarios 3-12 exactly per `C1-spec.md`.
-- Add generation-time parity exclusions enforcement in `xtask codex-wrapper-coverage` (reject excluded identities).
+- Extend `wrapper_coverage_manifest()` to implement Scenarios 3-6 exactly per `C1-spec.md`.
+- Do not implement Scenarios 7-12 in this task.
+- Do not implement generation-time parity exclusions enforcement in this task (deferred to C3).
 
 ## Required commands (code role)
 - `cargo fmt`
@@ -29,7 +30,7 @@ Allowed extra sanity check: `SOURCE_DATE_EPOCH=0 cargo run -p xtask -- codex-wra
 
 ## End checklist
 1. Run required commands and capture outputs: `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.
-2. Commit changes in `wt/wcg-c1-scenario-catalog-code` (no planning-pack edits).
-3. Outside the worktree, ensure branch `wcg-c1-scenario-catalog-code` contains the commit (fast-forward if needed). Do not merge to `feat/codex-wrapper-coverage-auto-generation`.
+2. Commit changes in `wt/wcg-c1-scenarios-3-6-code` (no planning-pack edits).
+3. Outside the worktree, ensure branch `wcg-c1-scenarios-3-6-code` contains the commit (fast-forward if needed). Do not merge to `feat/codex-wrapper-coverage-auto-generation`.
 4. Checkout `feat/codex-wrapper-coverage-auto-generation`; set `C1-code` to `completed` in `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json`; add END entry to `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md`; commit docs with `docs: finish C1-code`.
-5. Remove worktree: `git worktree remove wt/wcg-c1-scenario-catalog-code`.
+5. Remove worktree: `git worktree remove wt/wcg-c1-scenarios-3-6-code`.

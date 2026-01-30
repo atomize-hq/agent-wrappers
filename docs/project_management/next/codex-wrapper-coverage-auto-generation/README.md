@@ -6,4 +6,8 @@ Start here:
 - `docs/project_management/next/codex-wrapper-coverage-auto-generation/plan.md`
 - `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json`
 - `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md`
-
+ - `docs/project_management/next/codex-wrapper-coverage-auto-generation/C0-spec.md`
+ - `docs/project_management/next/codex-wrapper-coverage-auto-generation/C1-spec.md`
+ - `docs/project_management/next/codex-wrapper-coverage-auto-generation/C2-spec.md`
+ - `docs/project_management/next/codex-wrapper-coverage-auto-generation/C3-spec.md`
+ - `docs/project_management/next/codex-wrapper-coverage-auto-generation/C4-spec.md`

@@ -45,9 +45,7 @@
     "integration_task": "C0-integ",
     "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C0-code.md",
     "depends_on": [],
-    "concurrent_with": [
-      "C0-test"
-    ]
+    "concurrent_with": ["C0-test"]
   },
   {
     "id": "C0-test",
@@ -82,7 +80,7 @@
       "Do not edit `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json` or `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md` from the worktree."
     ],
     "end_checklist": [
-      "Run required commands (capture outputs): `cargo fmt`; `cargo test -p xtask` (and any additional targeted tests for files you touched).",
+      "Run required commands (capture outputs): `cargo fmt`; `cargo test -p xtask` (and any additional targeted tests for files touched).",
       "Inside `wt/wcg-c0-manifest-core-test`, commit C0-test changes (no planning-pack edits).",
       "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-wrapper-coverage-auto-generation`.",
       "Checkout `feat/codex-wrapper-coverage-auto-generation`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-test'.",
@@ -92,9 +90,7 @@
     "integration_task": "C0-integ",
     "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C0-test.md",
     "depends_on": [],
-    "concurrent_with": [
-      "C0-code"
-    ]
+    "concurrent_with": ["C0-code"]
   },
   {
     "id": "C0-integ",
@@ -107,6 +103,7 @@
       "docs/adr/0003-wrapper-coverage-auto-generation.md",
       "docs/specs/codex-wrapper-coverage-generator-contract.md",
       "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "cli_manifests/codex/RULES.json",
       "docs/project_management/next/codex-wrapper-coverage-auto-generation/plan.md",
       "docs/project_management/next/codex-wrapper-coverage-auto-generation/C0-spec.md",
       "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C0-integ.md"
@@ -114,7 +111,7 @@
     "acceptance_criteria": [
       "C0 merged and matches C0-spec.md",
       "Commands executed and logged: `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p xtask`, `make preflight`",
-      "`SOURCE_DATE_EPOCH=0 cargo run -p xtask -- codex-wrapper-coverage --out /tmp/wrapper_coverage.json` succeeds and output is non-empty"
+      "`SOURCE_DATE_EPOCH=0 cargo run -p xtask -- codex-wrapper-coverage --out /tmp/wrapper_coverage.json` succeeds and output is deterministic"
     ],
     "start_checklist": [
       "git checkout feat/codex-wrapper-coverage-auto-generation && git pull --ff-only",
@@ -134,19 +131,192 @@
     "worktree": "wt/wcg-c0-manifest-core-integ",
     "integration_task": "C0-integ",
     "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C0-integ.md",
-    "depends_on": [
-      "C0-code",
-      "C0-test"
-    ],
+    "depends_on": ["C0-code", "C0-test"],
     "concurrent_with": []
   },
   {
     "id": "C1-code",
-    "name": "Full scenario catalog v1 + parity exclusions (code)",
+    "name": "Scenario Catalog v1 (3-6) (code)",
     "type": "code",
     "phase": "C1",
     "status": "pending",
-    "description": "Implement the C1 spec (production code only): complete Scenario Catalog v1 coverage (Scenarios 3-12) and enforce parity exclusions at generation time.",
+    "description": "Implement Scenarios 3-6 per C1 spec (production code only).",
+    "references": [
+      "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/VALIDATOR_SPEC.md",
+      "crates/codex/src/wrapper_coverage_manifest.rs",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/plan.md",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/C1-spec.md",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C1-code.md"
+    ],
+    "acceptance_criteria": [
+      "`wrapper_coverage_manifest()` includes Scenario 3-6 paths with exact flags/args and note policy",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-wrapper-coverage-auto-generation && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md; commit docs with message 'docs: start C1-code'",
+      "Create the task branch and worktree: `git worktree add -b wcg-c1-scenarios-3-6-code wt/wcg-c1-scenarios-3-6-code feat/codex-wrapper-coverage-auto-generation`.",
+      "Do not edit `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json` or `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.",
+      "Inside `wt/wcg-c1-scenarios-3-6-code`, commit C1-code changes (no planning-pack edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-wrapper-coverage-auto-generation`.",
+      "Checkout `feat/codex-wrapper-coverage-auto-generation`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-code'.",
+      "Remove worktree `wt/wcg-c1-scenarios-3-6-code`."
+    ],
+    "worktree": "wt/wcg-c1-scenarios-3-6-code",
+    "integration_task": "C4-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C1-code.md",
+    "depends_on": ["C0-integ"],
+    "concurrent_with": ["C1-test"]
+  },
+  {
+    "id": "C1-test",
+    "name": "Scenario Catalog v1 (3-6) (test)",
+    "type": "test",
+    "phase": "C1",
+    "status": "pending",
+    "description": "Add tests for Scenarios 3-6 exactness per C1 spec (tests only).",
+    "references": [
+      "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/VALIDATOR_SPEC.md",
+      "crates/xtask/tests/c2_spec_wrapper_coverage.rs",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/plan.md",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/C1-spec.md",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C1-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests lock down Scenario 3-6 completeness and exactness",
+      "No production code changes"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-wrapper-coverage-auto-generation && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md; commit docs with message 'docs: start C1-test'",
+      "Create the task branch and worktree: `git worktree add -b wcg-c1-scenarios-3-6-test wt/wcg-c1-scenarios-3-6-test feat/codex-wrapper-coverage-auto-generation`.",
+      "Do not edit `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json` or `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo test -p xtask` (and any additional targeted tests for files you touched).",
+      "Inside `wt/wcg-c1-scenarios-3-6-test`, commit C1-test changes (no planning-pack edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-wrapper-coverage-auto-generation`.",
+      "Checkout `feat/codex-wrapper-coverage-auto-generation`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-test'.",
+      "Remove worktree `wt/wcg-c1-scenarios-3-6-test`."
+    ],
+    "worktree": "wt/wcg-c1-scenarios-3-6-test",
+    "integration_task": "C4-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C1-test.md",
+    "depends_on": ["C0-integ"],
+    "concurrent_with": ["C1-code"]
+  },
+  {
+    "id": "C2-code",
+    "name": "Scenario Catalog v1 (7-9) (code)",
+    "type": "code",
+    "phase": "C2",
+    "status": "pending",
+    "description": "Implement Scenarios 7-9 per C2 spec (production code only).",
+    "references": [
+      "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/VALIDATOR_SPEC.md",
+      "crates/codex/src/wrapper_coverage_manifest.rs",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/plan.md",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/C2-spec.md",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C2-code.md"
+    ],
+    "acceptance_criteria": [
+      "`wrapper_coverage_manifest()` includes Scenario 7-9 paths with exact flags/args and note policy",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-wrapper-coverage-auto-generation && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md; commit docs with message 'docs: start C2-code'",
+      "Create the task branch and worktree: `git worktree add -b wcg-c2-scenarios-7-9-code wt/wcg-c2-scenarios-7-9-code feat/codex-wrapper-coverage-auto-generation`.",
+      "Do not edit `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json` or `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.",
+      "Inside `wt/wcg-c2-scenarios-7-9-code`, commit C2-code changes (no planning-pack edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-wrapper-coverage-auto-generation`.",
+      "Checkout `feat/codex-wrapper-coverage-auto-generation`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-code'.",
+      "Remove worktree `wt/wcg-c2-scenarios-7-9-code`."
+    ],
+    "worktree": "wt/wcg-c2-scenarios-7-9-code",
+    "integration_task": "C4-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C2-code.md",
+    "depends_on": ["C1-code"],
+    "concurrent_with": ["C2-test"]
+  },
+  {
+    "id": "C2-test",
+    "name": "Scenario Catalog v1 (7-9) (test)",
+    "type": "test",
+    "phase": "C2",
+    "status": "pending",
+    "description": "Add tests for Scenarios 7-9 exactness per C2 spec (tests only).",
+    "references": [
+      "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/VALIDATOR_SPEC.md",
+      "crates/xtask/tests/c2_spec_wrapper_coverage.rs",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/plan.md",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/C2-spec.md",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C2-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests lock down Scenario 7-9 completeness and exactness",
+      "No production code changes"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-wrapper-coverage-auto-generation && git pull --ff-only",
+      "Read plan.md, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json (orchestration branch)",
+      "Add START entry to docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md; commit docs with message 'docs: start C2-test'",
+      "Create the task branch and worktree: `git worktree add -b wcg-c2-scenarios-7-9-test wt/wcg-c2-scenarios-7-9-test feat/codex-wrapper-coverage-auto-generation`.",
+      "Do not edit `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json` or `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md` from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): `cargo fmt`; `cargo test -p xtask` (and any additional targeted tests for files you touched).",
+      "Inside `wt/wcg-c2-scenarios-7-9-test`, commit C2-test changes (no planning-pack edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-wrapper-coverage-auto-generation`.",
+      "Checkout `feat/codex-wrapper-coverage-auto-generation`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-test'.",
+      "Remove worktree `wt/wcg-c2-scenarios-7-9-test`."
+    ],
+    "worktree": "wt/wcg-c2-scenarios-7-9-test",
+    "integration_task": "C4-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C2-test.md",
+    "depends_on": ["C1-test"],
+    "concurrent_with": ["C2-code"]
+  },
+  {
+    "id": "C3-code",
+    "name": "Scenario Catalog v1 (10-12) + parity exclusions (code)",
+    "type": "code",
+    "phase": "C3",
+    "status": "pending",
+    "description": "Implement Scenarios 10-12 and generation-time parity exclusions enforcement per C3 spec (production code only).",
     "references": [
       "docs/adr/0003-wrapper-coverage-auto-generation.md",
       "docs/specs/codex-wrapper-coverage-generator-contract.md",
@@ -158,46 +328,42 @@
       "crates/xtask/src/codex_wrapper_coverage.rs",
       "crates/xtask/src/codex_report.rs",
       "docs/project_management/next/codex-wrapper-coverage-auto-generation/plan.md",
-      "docs/project_management/next/codex-wrapper-coverage-auto-generation/C1-spec.md",
-      "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C1-code.md"
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/C3-spec.md",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C3-code.md"
     ],
     "acceptance_criteria": [
-      "`wrapper_coverage_manifest()` covers all Scenario Catalog v1 paths (Scenarios 0-12) with exact flags/args and note policy",
+      "`wrapper_coverage_manifest()` includes Scenario 10-12 paths with exact flags/args and note policy",
       "`xtask codex-wrapper-coverage` rejects any identity listed in `RULES.json.parity_exclusions`",
       "No tests added/modified"
     ],
     "start_checklist": [
       "git checkout feat/codex-wrapper-coverage-auto-generation && git pull --ff-only",
-      "Read plan.md, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Read plan.md, tasks.json, session_log.md, C3-spec.md, kickoff prompt",
       "Set task status to in_progress in docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json (orchestration branch)",
-      "Add START entry to docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md; commit docs with message 'docs: start C1-code'",
-      "Create the task branch and worktree: `git worktree add -b wcg-c1-scenario-catalog-code wt/wcg-c1-scenario-catalog-code feat/codex-wrapper-coverage-auto-generation`.",
+      "Add START entry to docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md; commit docs with message 'docs: start C3-code'",
+      "Create the task branch and worktree: `git worktree add -b wcg-c3-scenarios-10-12-code wt/wcg-c3-scenarios-10-12-code feat/codex-wrapper-coverage-auto-generation`.",
       "Do not edit `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json` or `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md` from the worktree."
     ],
     "end_checklist": [
       "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`.",
-      "Inside `wt/wcg-c1-scenario-catalog-code`, commit C1-code changes (no planning-pack edits).",
+      "Inside `wt/wcg-c3-scenarios-10-12-code`, commit C3-code changes (no planning-pack edits).",
       "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-wrapper-coverage-auto-generation`.",
-      "Checkout `feat/codex-wrapper-coverage-auto-generation`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-code'.",
-      "Remove worktree `wt/wcg-c1-scenario-catalog-code`."
+      "Checkout `feat/codex-wrapper-coverage-auto-generation`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C3-code'.",
+      "Remove worktree `wt/wcg-c3-scenarios-10-12-code`."
     ],
-    "worktree": "wt/wcg-c1-scenario-catalog-code",
-    "integration_task": "C1-integ",
-    "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C1-code.md",
-    "depends_on": [
-      "C0-integ"
-    ],
-    "concurrent_with": [
-      "C1-test"
-    ]
+    "worktree": "wt/wcg-c3-scenarios-10-12-code",
+    "integration_task": "C4-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C3-code.md",
+    "depends_on": ["C2-code"],
+    "concurrent_with": ["C3-test"]
   },
   {
-    "id": "C1-test",
-    "name": "Full scenario catalog v1 + parity exclusions (test)",
+    "id": "C3-test",
+    "name": "Scenario Catalog v1 (10-12) + parity exclusions (test)",
     "type": "test",
-    "phase": "C1",
+    "phase": "C3",
     "status": "pending",
-    "description": "Add tests validating C1: full Scenario Catalog v1 exactness, v1 scope/note restrictions, and parity exclusions semantics in generator and reports (tests only).",
+    "description": "Add tests for Scenarios 10-12 exactness and parity exclusion semantics per C3 spec (tests only).",
     "references": [
       "docs/adr/0003-wrapper-coverage-auto-generation.md",
       "docs/specs/codex-wrapper-coverage-generator-contract.md",
@@ -208,56 +374,55 @@
       "crates/xtask/src/codex_report.rs",
       "crates/xtask/tests/c2_spec_wrapper_coverage.rs",
       "docs/project_management/next/codex-wrapper-coverage-auto-generation/plan.md",
-      "docs/project_management/next/codex-wrapper-coverage-auto-generation/C1-spec.md",
-      "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C1-test.md"
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/C3-spec.md",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C3-test.md"
     ],
     "acceptance_criteria": [
-      "Tests cover C1 acceptance criteria (catalog exactness, v1 scope/note policy, parity exclusions generation/report semantics)",
+      "Tests lock down Scenario 10-12 completeness and exactness",
+      "Tests lock down parity exclusions semantics (generator rejection and report excluded_* classification)",
       "No production code changes"
     ],
     "start_checklist": [
       "git checkout feat/codex-wrapper-coverage-auto-generation && git pull --ff-only",
-      "Read plan.md, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Read plan.md, tasks.json, session_log.md, C3-spec.md, kickoff prompt",
       "Set task status to in_progress in docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json (orchestration branch)",
-      "Add START entry to docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md; commit docs with message 'docs: start C1-test'",
-      "Create the task branch and worktree: `git worktree add -b wcg-c1-scenario-catalog-test wt/wcg-c1-scenario-catalog-test feat/codex-wrapper-coverage-auto-generation`.",
+      "Add START entry to docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md; commit docs with message 'docs: start C3-test'",
+      "Create the task branch and worktree: `git worktree add -b wcg-c3-scenarios-10-12-test wt/wcg-c3-scenarios-10-12-test feat/codex-wrapper-coverage-auto-generation`.",
       "Do not edit `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json` or `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md` from the worktree."
     ],
     "end_checklist": [
       "Run required commands (capture outputs): `cargo fmt`; `cargo test -p xtask` (and any additional targeted tests for files you touched).",
-      "Inside `wt/wcg-c1-scenario-catalog-test`, commit C1-test changes (no planning-pack edits).",
+      "Inside `wt/wcg-c3-scenarios-10-12-test`, commit C3-test changes (no planning-pack edits).",
       "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into `feat/codex-wrapper-coverage-auto-generation`.",
-      "Checkout `feat/codex-wrapper-coverage-auto-generation`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-test'.",
-      "Remove worktree `wt/wcg-c1-scenario-catalog-test`."
+      "Checkout `feat/codex-wrapper-coverage-auto-generation`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C3-test'.",
+      "Remove worktree `wt/wcg-c3-scenarios-10-12-test`."
     ],
-    "worktree": "wt/wcg-c1-scenario-catalog-test",
-    "integration_task": "C1-integ",
-    "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C1-test.md",
-    "depends_on": [
-      "C0-integ"
-    ],
-    "concurrent_with": [
-      "C1-code"
-    ]
+    "worktree": "wt/wcg-c3-scenarios-10-12-test",
+    "integration_task": "C4-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C3-test.md",
+    "depends_on": ["C2-test"],
+    "concurrent_with": ["C3-code"]
   },
   {
-    "id": "C1-integ",
-    "name": "Full scenario catalog v1 + parity exclusions (integration)",
+    "id": "C4-integ",
+    "name": "Integration + docs (integration)",
     "type": "integration",
-    "phase": "C1",
+    "phase": "C4",
     "status": "pending",
-    "description": "Merge C1 code/test, reconcile to spec, refresh committed wrapper_coverage.json, and gate with fmt/clippy/tests/preflight + report/validate commands.",
+    "description": "Merge C1/C2/C3 code+tests, reconcile to specs, refresh committed wrapper_coverage.json, run report+validate gates, and reconcile docs if required.",
     "references": [
       "docs/adr/0003-wrapper-coverage-auto-generation.md",
       "docs/specs/codex-wrapper-coverage-generator-contract.md",
       "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
       "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/VALIDATOR_SPEC.md",
       "docs/project_management/next/codex-wrapper-coverage-auto-generation/plan.md",
-      "docs/project_management/next/codex-wrapper-coverage-auto-generation/C1-spec.md",
-      "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C1-integ.md"
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/C4-spec.md",
+      "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C4-integ.md"
     ],
     "acceptance_criteria": [
-      "C1 merged and matches C1-spec.md",
+      "C4 merged and matches C1/C2/C3/C4 specs",
       "Committed `cli_manifests/codex/wrapper_coverage.json` regenerated via `xtask codex-wrapper-coverage` with deterministic `SOURCE_DATE_EPOCH`",
       "Commands executed and logged: `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p xtask`, `make preflight`",
       "`SOURCE_DATE_EPOCH=0 cargo run -p xtask -- codex-report --version \"$(cat cli_manifests/codex/latest_validated.txt | tr -d '\\n')\" --root cli_manifests/codex` succeeds",
@@ -265,26 +430,31 @@
     ],
     "start_checklist": [
       "git checkout feat/codex-wrapper-coverage-auto-generation && git pull --ff-only",
-      "Read plan.md, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Read plan.md, tasks.json, session_log.md, C4-spec.md, kickoff prompt",
       "Set task status to in_progress in docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json (orchestration branch)",
-      "Add START entry to docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md; commit docs with message 'docs: start C1-integ'",
-      "Create the integration branch and worktree: `git worktree add -b wcg-c1-scenario-catalog-integ wt/wcg-c1-scenario-catalog-integ feat/codex-wrapper-coverage-auto-generation`.",
+      "Add START entry to docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md; commit docs with message 'docs: start C4-integ'",
+      "Create the integration branch and worktree: `git worktree add -b wcg-c4-integration wt/wcg-c4-integration feat/codex-wrapper-coverage-auto-generation`.",
       "Do not edit `docs/project_management/next/codex-wrapper-coverage-auto-generation/tasks.json` or `docs/project_management/next/codex-wrapper-coverage-auto-generation/session_log.md` from the worktree."
     ],
     "end_checklist": [
-      "Merge upstream branches `wcg-c1-scenario-catalog-code` and `wcg-c1-scenario-catalog-test` into the integration worktree and reconcile behavior to C1-spec.md.",
+      "Merge upstream branches for C1/C2/C3 (code + test) into the integration worktree and reconcile behavior to C1/C2/C3/C4 specs.",
       "Run required commands (capture outputs): `cargo fmt`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test -p xtask`; `make preflight`.",
       "Additionally run and capture outputs: `SOURCE_DATE_EPOCH=0 cargo run -p xtask -- codex-wrapper-coverage --out cli_manifests/codex/wrapper_coverage.json`; `SOURCE_DATE_EPOCH=0 cargo run -p xtask -- codex-report --version \"$(cat cli_manifests/codex/latest_validated.txt | tr -d '\\n')\" --root cli_manifests/codex`; `SOURCE_DATE_EPOCH=0 cargo run -p xtask -- codex-validate --root cli_manifests/codex`.",
-      "Commit integration changes on branch `wcg-c1-scenario-catalog-integ`.",
-      "Fast-forward merge `wcg-c1-scenario-catalog-integ` into `feat/codex-wrapper-coverage-auto-generation`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-integ'.",
-      "Remove worktree `wt/wcg-c1-scenario-catalog-integ`."
+      "Commit integration changes on branch `wcg-c4-integration`.",
+      "Fast-forward merge `wcg-c4-integration` into `feat/codex-wrapper-coverage-auto-generation`; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C4-integ'.",
+      "Remove worktree `wt/wcg-c4-integration`."
     ],
-    "worktree": "wt/wcg-c1-scenario-catalog-integ",
-    "integration_task": "C1-integ",
-    "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C1-integ.md",
+    "worktree": "wt/wcg-c4-integration",
+    "integration_task": "C4-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-coverage-auto-generation/kickoff_prompts/C4-integ.md",
     "depends_on": [
+      "C0-integ",
       "C1-code",
-      "C1-test"
+      "C1-test",
+      "C2-code",
+      "C2-test",
+      "C3-code",
+      "C3-test"
     ],
     "concurrent_with": []
   }

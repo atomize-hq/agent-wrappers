@@ -24,7 +24,7 @@ Scope source of truth: `docs/project_management/next/codex-wrapper-coverage-auto
 - Reconcile to `C0-spec.md`.
 - Generate a local wrapper coverage file to verify behavior:
   - `SOURCE_DATE_EPOCH=0 cargo run -p xtask -- codex-wrapper-coverage --out /tmp/wrapper_coverage.json`
-- Do not modify the committed `cli_manifests/codex/wrapper_coverage.json` artifact in C0; C1 integration owns the first committed refresh for ADR 0003.
+- Do not modify the committed `cli_manifests/codex/wrapper_coverage.json` artifact in C0; C4 integration owns the first committed refresh for ADR 0003.
 
 ## Required commands (integration role)
 - `cargo fmt`
