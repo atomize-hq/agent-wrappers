@@ -104,3 +104,10 @@ START/END entries only. Do not edit from worktrees.
 - Worktree pending (`iu4-c1-iu-roots-integ` / `wt/iu4-c1-iu-roots-integ` to be added after docs commit)
 - Plan: merge `iu4-c1-iu-roots-code` + `iu4-c1-iu-roots-test`, reconcile to C1-spec, run required commands, regenerate + validate artifacts, commit in worktree, fast-forward merge back to `feat/codex-wrapper-iu-subtree-inheritance`, then close docs
 - Blockers: none
+
+## [2026-01-31 13:58 UTC] Integration Agent – C1-integ – END
+- Worktree `wt/iu4-c1-iu-roots-integ` on branch `iu4-c1-iu-roots-integ` (commit f6a7d37) merged C1 code+tests; regenerated wrapper coverage + reports; validated per C1-spec
+- Merged `iu4-c1-iu-roots-code` + `iu4-c1-iu-roots-test`, fast-forwarded `feat/codex-wrapper-iu-subtree-inheritance`
+- Commands: `cargo fmt` (pass); `cargo clippy --workspace --all-targets -- -D warnings` (pass); `cargo test -p xtask --test c7_spec_iu_roots_adoption -- --nocapture` (pass); `cargo run -p xtask -- codex-wrapper-coverage --out cli_manifests/codex/wrapper_coverage.json` (pass); `for dir in cli_manifests/codex/reports/*; do V=\"$(basename \"$dir\")\"; cargo run -p xtask -- codex-report --version \"$V\" --root cli_manifests/codex; done` (pass); `cargo run -p xtask -- codex-validate --root cli_manifests/codex` (pass); jq verification checks (pass); `make preflight` (pass)
+- Result: reports no longer emit `missing_*` under `completion`/`cloud`/`mcp`; IU audit visibility exists under `deltas.intentionally_unsupported` for those families
+- Blockers: none
