@@ -74,6 +74,9 @@ struct RulesReportSorting {
     excluded_commands: String,
     excluded_flags: String,
     excluded_args: String,
+    passthrough_candidates: String,
+    unsupported: String,
+    intentionally_unsupported: String,
     wrapper_only_commands: String,
     wrapper_only_flags: String,
     wrapper_only_args: String,
@@ -280,6 +283,7 @@ pub fn run(args: Args) -> Result<(), ReportError> {
     let reports_dir = root.join("reports").join(&args.version);
     fs::create_dir_all(&reports_dir)?;
 
+    require_source_date_epoch_if_ci()?;
     let generated_at = deterministic_rfc3339_now();
 
     // coverage.any.json (always)
@@ -405,6 +409,24 @@ fn assert_supported_rules(rules: &RulesFile) -> Result<(), ReportError> {
             rules.sorting.report.excluded_args
         ));
     }
+    if rules.sorting.report.passthrough_candidates != "by_path" {
+        unsupported.push(format!(
+            "sorting.report.passthrough_candidates={}",
+            rules.sorting.report.passthrough_candidates
+        ));
+    }
+    if rules.sorting.report.unsupported != "by_path" {
+        unsupported.push(format!(
+            "sorting.report.unsupported={}",
+            rules.sorting.report.unsupported
+        ));
+    }
+    if rules.sorting.report.intentionally_unsupported != "by_kind_then_path_then_key_or_name" {
+        unsupported.push(format!(
+            "sorting.report.intentionally_unsupported={}",
+            rules.sorting.report.intentionally_unsupported
+        ));
+    }
     if rules.sorting.report.wrapper_only_commands != "by_path" {
         unsupported.push(format!(
             "sorting.report.wrapper_only_commands={}",
@@ -458,6 +480,18 @@ fn deterministic_rfc3339_now() -> String {
     OffsetDateTime::now_utc()
         .format(&Rfc3339)
         .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
+}
+
+fn require_source_date_epoch_if_ci() -> Result<(), ReportError> {
+    if std::env::var("CI").is_err() {
+        return Ok(());
+    }
+    if std::env::var("SOURCE_DATE_EPOCH").is_err() {
+        return Err(ReportError::Rules(
+            "CI requires SOURCE_DATE_EPOCH for deterministic generated_at".to_string(),
+        ));
+    }
+    Ok(())
 }
 
 fn write_json_pretty(path: &Path, json: &str) -> Result<(), io::Error> {
@@ -606,6 +640,13 @@ fn build_report(
 ) -> Result<CoverageReportV1, ReportError> {
     let report_target_set: BTreeSet<String> = report_targets.iter().cloned().collect();
     let expected_set: BTreeSet<String> = rules.union.expected_targets.iter().cloned().collect();
+    let iu_roots = build_iu_roots(
+        wrapper,
+        wrapper_index,
+        &report_target_set,
+        &rules.union.expected_targets,
+        filter_mode,
+    )?;
 
     if matches!(filter_mode, FilterMode::All)
         && !expected_set.is_subset(&report_target_set)
@@ -627,7 +668,7 @@ fn build_report(
 
     let mut passthrough_candidates: Vec<ReportCommandDeltaV1> = Vec::new();
     let mut unsupported: Vec<ReportCommandDeltaV1> = Vec::new();
-    let mut intentionally_unsupported: Vec<ReportCommandDeltaV1> = Vec::new();
+    let mut intentionally_unsupported: Vec<ReportIntentionallyUnsupportedDeltaV1> = Vec::new();
     let mut wrapper_only_commands: Vec<ReportCommandDeltaV1> = Vec::new();
     let mut wrapper_only_flags: Vec<ReportFlagDeltaV1> = Vec::new();
     let mut wrapper_only_args: Vec<ReportArgDeltaV1> = Vec::new();
@@ -678,15 +719,56 @@ fn build_report(
             &format!("path={}", format_path(path)),
         )?;
 
-        classify_command_delta(
-            &mut missing_commands,
-            &mut passthrough_candidates,
-            &mut unsupported,
-            &mut intentionally_unsupported,
-            path,
-            &cmd.available_on,
-            &cmd_res,
-        );
+        if cmd_res.level.is_none() {
+            if let Some(root) = find_inherited_iu_root(
+                &iu_roots,
+                path,
+                &cmd.available_on,
+                &report_target_set,
+                "command",
+            )? {
+                intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Command(
+                    ReportCommandDeltaV1 {
+                        path: path.clone(),
+                        upstream_available_on: cmd.available_on.clone(),
+                        wrapper_level: Some("intentionally_unsupported".to_string()),
+                        note: Some(root.note.clone()),
+                    },
+                ));
+            } else {
+                classify_command_delta(
+                    &mut missing_commands,
+                    &mut passthrough_candidates,
+                    &mut unsupported,
+                    path,
+                    &cmd.available_on,
+                    &cmd_res,
+                );
+            }
+        } else if cmd_res.level.as_deref() == Some("intentionally_unsupported") {
+            let note = require_non_empty_note(
+                cmd_res.note.as_deref(),
+                "command",
+                &format!("path={}", format_path(path)),
+            )?;
+            intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Command(
+                ReportCommandDeltaV1 {
+                    path: path.clone(),
+                    upstream_available_on: cmd.available_on.clone(),
+                    wrapper_level: Some("intentionally_unsupported".to_string()),
+                    note: Some(note),
+                },
+            ));
+        } else {
+            classify_command_delta(
+                &mut missing_commands,
+                &mut passthrough_candidates,
+                &mut unsupported,
+                path,
+                &cmd.available_on,
+                &cmd_res,
+            );
+        }
 
         for flag in &cmd.flags {
             if !present_on_filter(
@@ -697,8 +779,8 @@ fn build_report(
             ) {
                 continue;
             }
-            if let Some(ex) = parity_exclusions
-                .and_then(|idx| idx.flags.get(&(path.clone(), flag.key.clone())))
+            if let Some(ex) =
+                parity_exclusions.and_then(|idx| idx.flags.get(&(path.clone(), flag.key.clone())))
             {
                 let key = (path.clone(), flag.key.clone());
                 let res = resolve_wrapper(
@@ -735,7 +817,44 @@ fn build_report(
                 "flag",
                 &format!("path={} key={}", format_path(path), flag.key),
             )?;
-            classify_flag_delta(&mut missing_flags, path, flag, &res);
+            if res.level.is_none() {
+                if let Some(root) = find_inherited_iu_root(
+                    &iu_roots,
+                    path,
+                    &flag.available_on,
+                    &report_target_set,
+                    "flag",
+                )? {
+                    intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Flag(
+                        ReportFlagDeltaV1 {
+                            path: path.to_vec(),
+                            key: flag.key.clone(),
+                            upstream_available_on: flag.available_on.clone(),
+                            wrapper_level: Some("intentionally_unsupported".to_string()),
+                            note: Some(root.note.clone()),
+                        },
+                    ));
+                } else {
+                    classify_flag_delta(&mut missing_flags, path, flag, &res);
+                }
+            } else if res.level.as_deref() == Some("intentionally_unsupported") {
+                let note = require_non_empty_note(
+                    res.note.as_deref(),
+                    "flag",
+                    &format!("path={} key={}", format_path(path), flag.key),
+                )?;
+                intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Flag(
+                    ReportFlagDeltaV1 {
+                        path: path.to_vec(),
+                        key: flag.key.clone(),
+                        upstream_available_on: flag.available_on.clone(),
+                        wrapper_level: Some("intentionally_unsupported".to_string()),
+                        note: Some(note),
+                    },
+                ));
+            } else {
+                classify_flag_delta(&mut missing_flags, path, flag, &res);
+            }
         }
 
         for arg in &cmd.args {
@@ -785,7 +904,44 @@ fn build_report(
                 "arg",
                 &format!("path={} name={}", format_path(path), arg.name),
             )?;
-            classify_arg_delta(&mut missing_args, path, arg, &res);
+            if res.level.is_none() {
+                if let Some(root) = find_inherited_iu_root(
+                    &iu_roots,
+                    path,
+                    &arg.available_on,
+                    &report_target_set,
+                    "arg",
+                )? {
+                    intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Arg(
+                        ReportArgDeltaV1 {
+                            path: path.to_vec(),
+                            name: arg.name.clone(),
+                            upstream_available_on: arg.available_on.clone(),
+                            wrapper_level: Some("intentionally_unsupported".to_string()),
+                            note: Some(root.note.clone()),
+                        },
+                    ));
+                } else {
+                    classify_arg_delta(&mut missing_args, path, arg, &res);
+                }
+            } else if res.level.as_deref() == Some("intentionally_unsupported") {
+                let note = require_non_empty_note(
+                    res.note.as_deref(),
+                    "arg",
+                    &format!("path={} name={}", format_path(path), arg.name),
+                )?;
+                intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Arg(
+                    ReportArgDeltaV1 {
+                        path: path.to_vec(),
+                        name: arg.name.clone(),
+                        upstream_available_on: arg.available_on.clone(),
+                        wrapper_level: Some("intentionally_unsupported".to_string()),
+                        note: Some(note),
+                    },
+                ));
+            } else {
+                classify_arg_delta(&mut missing_args, path, arg, &res);
+            }
         }
     }
 
@@ -900,7 +1056,7 @@ fn build_report(
 
     passthrough_candidates.sort_by(|a, b| cmp_path(&a.path, &b.path));
     unsupported.sort_by(|a, b| cmp_path(&a.path, &b.path));
-    intentionally_unsupported.sort_by(|a, b| cmp_path(&a.path, &b.path));
+    intentionally_unsupported.sort_by(cmp_iu_delta);
 
     wrapper_only_commands.sort_by(|a, b| cmp_path(&a.path, &b.path));
     wrapper_only_flags.sort_by(|a, b| cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key)));
@@ -1064,7 +1220,6 @@ fn classify_command_delta(
     missing: &mut Vec<ReportCommandDeltaV1>,
     passthrough_candidates: &mut Vec<ReportCommandDeltaV1>,
     unsupported: &mut Vec<ReportCommandDeltaV1>,
-    intentionally_unsupported: &mut Vec<ReportCommandDeltaV1>,
     path: &[String],
     upstream_available_on: &[String],
     wrapper: &CoverageResolution,
@@ -1080,7 +1235,7 @@ fn classify_command_delta(
         None => missing.push(entry),
         Some("unknown") => missing.push(entry),
         Some("unsupported") => unsupported.push(entry),
-        Some("intentionally_unsupported") => intentionally_unsupported.push(entry),
+        Some("intentionally_unsupported") => {}
         Some("passthrough") => passthrough_candidates.push(entry),
         Some("explicit") => {}
         Some(other) => missing.push(ReportCommandDeltaV1 {
@@ -1097,14 +1252,14 @@ fn classify_flag_delta(
     wrapper: &CoverageResolution,
 ) {
     match wrapper.level.as_deref() {
-        None | Some("unknown") | Some("unsupported") | Some("intentionally_unsupported") => out
-            .push(ReportFlagDeltaV1 {
-                path: path.to_vec(),
-                key: flag.key.clone(),
-                upstream_available_on: flag.available_on.clone(),
-                wrapper_level: wrapper.level.clone(),
-                note: wrapper.note.clone(),
-            }),
+        None | Some("unknown") | Some("unsupported") => out.push(ReportFlagDeltaV1 {
+            path: path.to_vec(),
+            key: flag.key.clone(),
+            upstream_available_on: flag.available_on.clone(),
+            wrapper_level: wrapper.level.clone(),
+            note: wrapper.note.clone(),
+        }),
+        Some("intentionally_unsupported") => {}
         Some("explicit") | Some("passthrough") => {}
         Some(other) => out.push(ReportFlagDeltaV1 {
             path: path.to_vec(),
@@ -1123,14 +1278,14 @@ fn classify_arg_delta(
     wrapper: &CoverageResolution,
 ) {
     match wrapper.level.as_deref() {
-        None | Some("unknown") | Some("unsupported") | Some("intentionally_unsupported") => out
-            .push(ReportArgDeltaV1 {
-                path: path.to_vec(),
-                name: arg.name.clone(),
-                upstream_available_on: arg.available_on.clone(),
-                wrapper_level: wrapper.level.clone(),
-                note: wrapper.note.clone(),
-            }),
+        None | Some("unknown") | Some("unsupported") => out.push(ReportArgDeltaV1 {
+            path: path.to_vec(),
+            name: arg.name.clone(),
+            upstream_available_on: arg.available_on.clone(),
+            wrapper_level: wrapper.level.clone(),
+            note: wrapper.note.clone(),
+        }),
+        Some("intentionally_unsupported") => {}
         Some("explicit") | Some("passthrough") => {}
         Some(other) => out.push(ReportArgDeltaV1 {
             path: path.to_vec(),
@@ -1275,7 +1430,7 @@ struct ReportDeltasV1 {
     #[serde(skip_serializing_if = "Option::is_none")]
     unsupported: Option<Vec<ReportCommandDeltaV1>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    intentionally_unsupported: Option<Vec<ReportCommandDeltaV1>>,
+    intentionally_unsupported: Option<Vec<ReportIntentionallyUnsupportedDeltaV1>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     wrapper_only_commands: Option<Vec<ReportCommandDeltaV1>>,
@@ -1315,6 +1470,177 @@ struct ReportArgDeltaV1 {
     wrapper_level: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     note: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+enum ReportIntentionallyUnsupportedDeltaV1 {
+    Command(ReportCommandDeltaV1),
+    Flag(ReportFlagDeltaV1),
+    Arg(ReportArgDeltaV1),
+}
+
+#[derive(Debug, Clone)]
+struct IuRoot {
+    path: Vec<String>,
+    targets: BTreeSet<String>,
+    note: String,
+}
+
+fn build_iu_roots(
+    wrapper: &WrapperCoverageV1,
+    wrapper_index: &WrapperIndex,
+    report_target_set: &BTreeSet<String>,
+    expected_targets: &[String],
+    filter_mode: FilterMode<'_>,
+) -> Result<Vec<IuRoot>, ReportError> {
+    let mut unique_paths: BTreeSet<Vec<String>> = BTreeSet::new();
+    for cmd in &wrapper.coverage {
+        if cmd.level == "intentionally_unsupported" {
+            unique_paths.insert(cmd.path.clone());
+        }
+    }
+
+    let mut roots = Vec::new();
+    for path in unique_paths {
+        let res = resolve_wrapper(
+            wrapper_index
+                .commands
+                .get(&path)
+                .map(Vec::as_slice)
+                .unwrap_or(&[]),
+            report_target_set,
+            expected_targets,
+            filter_mode,
+            "command",
+            &format!("path={}", format_path(&path)),
+        )?;
+        if res.level.as_deref() != Some("intentionally_unsupported") {
+            continue;
+        }
+        let note = require_non_empty_note(
+            res.note.as_deref(),
+            "command",
+            &format!("path={}", format_path(&path)),
+        )?;
+        roots.push(IuRoot {
+            path,
+            targets: res.targets,
+            note,
+        });
+    }
+
+    roots.sort_by(|a, b| {
+        b.path
+            .len()
+            .cmp(&a.path.len())
+            .then_with(|| cmp_path(&a.path, &b.path))
+    });
+    Ok(roots)
+}
+
+fn find_inherited_iu_root<'a>(
+    roots: &'a [IuRoot],
+    unit_path: &[String],
+    unit_available_on: &[String],
+    report_target_set: &BTreeSet<String>,
+    unit_kind: &'static str,
+) -> Result<Option<&'a IuRoot>, ReportError> {
+    let relevant_targets: BTreeSet<String> = unit_available_on
+        .iter()
+        .filter(|t| report_target_set.contains(*t))
+        .cloned()
+        .collect();
+    if relevant_targets.is_empty() {
+        return Ok(None);
+    }
+
+    for root in roots {
+        if !is_prefix(&root.path, unit_path) {
+            continue;
+        }
+
+        let overlap: BTreeSet<String> = relevant_targets
+            .intersection(&root.targets)
+            .cloned()
+            .collect();
+        if overlap.is_empty() {
+            continue;
+        }
+        if overlap != relevant_targets {
+            return Err(ReportError::WrapperResolution {
+                unit: unit_kind.to_string(),
+                detail: format!(
+                    "IU subtree root scope mismatch: root_path={} does not cover all upstream targets for unit_path={} (root_targets={} unit_targets={})",
+                    format_path(&root.path),
+                    format_path(unit_path),
+                    root.targets.iter().cloned().collect::<Vec<_>>().join(","),
+                    relevant_targets
+                        .iter()
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join(","),
+                ),
+            });
+        }
+
+        return Ok(Some(root));
+    }
+
+    Ok(None)
+}
+
+fn is_prefix(prefix: &[String], path: &[String]) -> bool {
+    prefix.len() <= path.len() && prefix.iter().zip(path).all(|(a, b)| a == b)
+}
+
+fn require_non_empty_note(
+    note: Option<&str>,
+    unit_kind: &'static str,
+    detail: &str,
+) -> Result<String, ReportError> {
+    match note.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(v) => Ok(v.to_string()),
+        None => Err(ReportError::WrapperResolution {
+            unit: unit_kind.to_string(),
+            detail: format!("{detail} intentionally_unsupported requires non-empty note"),
+        }),
+    }
+}
+
+fn iu_kind_rank(entry: &ReportIntentionallyUnsupportedDeltaV1) -> u8 {
+    match entry {
+        ReportIntentionallyUnsupportedDeltaV1::Command(_) => 0,
+        ReportIntentionallyUnsupportedDeltaV1::Flag(_) => 1,
+        ReportIntentionallyUnsupportedDeltaV1::Arg(_) => 2,
+    }
+}
+
+fn iu_path(entry: &ReportIntentionallyUnsupportedDeltaV1) -> &[String] {
+    match entry {
+        ReportIntentionallyUnsupportedDeltaV1::Command(v) => &v.path,
+        ReportIntentionallyUnsupportedDeltaV1::Flag(v) => &v.path,
+        ReportIntentionallyUnsupportedDeltaV1::Arg(v) => &v.path,
+    }
+}
+
+fn cmp_iu_delta(
+    a: &ReportIntentionallyUnsupportedDeltaV1,
+    b: &ReportIntentionallyUnsupportedDeltaV1,
+) -> std::cmp::Ordering {
+    iu_kind_rank(a).cmp(&iu_kind_rank(b)).then_with(|| {
+        cmp_path(iu_path(a), iu_path(b)).then_with(|| match (a, b) {
+            (
+                ReportIntentionallyUnsupportedDeltaV1::Flag(a),
+                ReportIntentionallyUnsupportedDeltaV1::Flag(b),
+            ) => a.key.cmp(&b.key),
+            (
+                ReportIntentionallyUnsupportedDeltaV1::Arg(a),
+                ReportIntentionallyUnsupportedDeltaV1::Arg(b),
+            ) => a.name.cmp(&b.name),
+            _ => std::cmp::Ordering::Equal,
+        })
+    })
 }
 
 #[derive(Debug)]

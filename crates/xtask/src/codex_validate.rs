@@ -375,7 +375,8 @@ fn run_inner(args: Args) -> Result<Vec<Violation>, FatalError> {
         .compile(&version_schema_value)
         .map_err(|e| FatalError::SchemaCompile(e.to_string()))?;
 
-    let parity_exclusions_schema_version = rules.parity_exclusions.as_ref().map(|ex| ex.schema_version);
+    let parity_exclusions_schema_version =
+        rules.parity_exclusions.as_ref().map(|ex| ex.schema_version);
     let parity_exclusions_raw = rules.parity_exclusions.as_ref().map(|ex| ex.units.clone());
     let parity_exclusions = rules
         .parity_exclusions
@@ -1129,6 +1130,7 @@ fn require_report(
                 "REPORT_SCHEMA_INVALID",
             );
             validate_report_exclusions(ctx, violations, &value, path);
+            validate_report_intentionally_unsupported(ctx, violations, &value, path);
         }
         None => {
             if path.exists() {
@@ -2112,9 +2114,7 @@ fn validate_parity_exclusions_config(ctx: &mut ValidateCtx, violations: &mut Vec
             code: "PARITY_EXCLUSIONS_SCHEMA_VERSION",
             path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
             json_pointer: Some("/parity_exclusions/schema_version".to_string()),
-            message: format!(
-                "parity_exclusions.schema_version must be 1 (got {schema_version})"
-            ),
+            message: format!("parity_exclusions.schema_version must be 1 (got {schema_version})"),
             unit: Some("rules"),
             command_path: None,
             key_or_name: None,
@@ -2171,8 +2171,8 @@ fn validate_parity_exclusions_config(ctx: &mut ValidateCtx, violations: &mut Vec
                         code: "PARITY_EXCLUSIONS_INVALID_ENTRY",
                         path: rel_path(&ctx.root, &ctx.root.join("RULES.json")),
                         json_pointer: Some(format!("/parity_exclusions/units/{idx}")),
-                        message:
-                            "parity_exclusions command entry must not include key or name".to_string(),
+                        message: "parity_exclusions command entry must not include key or name"
+                            .to_string(),
                         unit: Some("rules"),
                         command_path: Some(format_command_path(&unit.path)),
                         key_or_name: None,
@@ -2362,7 +2362,9 @@ fn validate_report_exclusions(
                     .collect::<Vec<_>>()
             });
             let key = item.get("key").and_then(Value::as_str).map(str::to_string);
-            let (Some(path), Some(key)) = (path, key) else { continue };
+            let (Some(path), Some(key)) = (path, key) else {
+                continue;
+            };
             if let Some(ex) = index.flags.get(&(path.clone(), key.clone())) {
                 violations.push(Violation {
                     code: "REPORT_MISSING_INCLUDES_EXCLUDED",
@@ -2394,7 +2396,9 @@ fn validate_report_exclusions(
                     .collect::<Vec<_>>()
             });
             let name = item.get("name").and_then(Value::as_str).map(str::to_string);
-            let (Some(path), Some(name)) = (path, name) else { continue };
+            let (Some(path), Some(name)) = (path, name) else {
+                continue;
+            };
             if let Some(ex) = index.args.get(&(path.clone(), name.clone())) {
                 violations.push(Violation {
                     code: "REPORT_MISSING_INCLUDES_EXCLUDED",
@@ -2415,6 +2419,194 @@ fn validate_report_exclusions(
                 });
             }
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct IuSortKey {
+    kind_rank: u8,
+    path: Vec<String>,
+    key_or_name: String,
+}
+
+fn cmp_path_tokens(a: &[String], b: &[String]) -> std::cmp::Ordering {
+    let mut i = 0usize;
+    while i < a.len() && i < b.len() {
+        match a[i].cmp(&b[i]) {
+            std::cmp::Ordering::Equal => i += 1,
+            non_eq => return non_eq,
+        }
+    }
+    a.len().cmp(&b.len())
+}
+
+fn cmp_iu_sort_key(a: &IuSortKey, b: &IuSortKey) -> std::cmp::Ordering {
+    a.kind_rank
+        .cmp(&b.kind_rank)
+        .then_with(|| cmp_path_tokens(&a.path, &b.path))
+        .then_with(|| a.key_or_name.cmp(&b.key_or_name))
+}
+
+fn validate_report_intentionally_unsupported(
+    ctx: &ValidateCtx,
+    violations: &mut Vec<Violation>,
+    report: &Value,
+    report_path: &Path,
+) {
+    let Some(deltas) = report.get("deltas") else {
+        return;
+    };
+
+    for (list_name, items) in [
+        (
+            "missing_commands",
+            deltas.get("missing_commands").and_then(Value::as_array),
+        ),
+        (
+            "missing_flags",
+            deltas.get("missing_flags").and_then(Value::as_array),
+        ),
+        (
+            "missing_args",
+            deltas.get("missing_args").and_then(Value::as_array),
+        ),
+    ] {
+        let Some(items) = items else { continue };
+        for (i, item) in items.iter().enumerate() {
+            if item
+                .get("wrapper_level")
+                .and_then(Value::as_str)
+                .is_some_and(|s| s == "intentionally_unsupported")
+            {
+                violations.push(Violation {
+                    code: "REPORT_MISSING_INCLUDES_INTENTIONALLY_UNSUPPORTED",
+                    path: rel_path(&ctx.root, report_path),
+                    json_pointer: Some(format!("/deltas/{list_name}/{i}")),
+                    message: format!(
+                        "report {list_name} includes wrapper_level=intentionally_unsupported"
+                    ),
+                    unit: Some("reports"),
+                    command_path: item.get("path").and_then(Value::as_array).map(|arr| {
+                        arr.iter()
+                            .filter_map(Value::as_str)
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    }),
+                    key_or_name: item
+                        .get("key")
+                        .and_then(Value::as_str)
+                        .or_else(|| item.get("name").and_then(Value::as_str))
+                        .map(|s| s.to_string()),
+                    field: Some(list_name),
+                    target_triple: None,
+                    details: None,
+                });
+            }
+        }
+    }
+
+    let Some(iu_items) = deltas
+        .get("intentionally_unsupported")
+        .and_then(Value::as_array)
+    else {
+        return;
+    };
+
+    let mut keys = Vec::new();
+    for (i, item) in iu_items.iter().enumerate() {
+        let path = item.get("path").and_then(Value::as_array).map(|arr| {
+            arr.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        });
+        let Some(path) = path else { continue };
+
+        let kind_rank = if item.get("key").is_some() {
+            1u8
+        } else if item.get("name").is_some() {
+            2u8
+        } else {
+            0u8
+        };
+
+        let key_or_name = item
+            .get("key")
+            .and_then(Value::as_str)
+            .or_else(|| item.get("name").and_then(Value::as_str))
+            .unwrap_or("")
+            .to_string();
+
+        if item.get("wrapper_level").and_then(Value::as_str) != Some("intentionally_unsupported") {
+            violations.push(Violation {
+                code: "REPORT_IU_NOTE_MISSING",
+                path: rel_path(&ctx.root, report_path),
+                json_pointer: Some(format!("/deltas/intentionally_unsupported/{i}/wrapper_level")),
+                message:
+                    "intentionally_unsupported entry must have wrapper_level=intentionally_unsupported"
+                        .to_string(),
+                unit: Some("reports"),
+                command_path: Some(format_command_path(&path)),
+                key_or_name: if key_or_name.is_empty() {
+                    None
+                } else {
+                    Some(key_or_name.clone())
+                },
+                field: Some("intentionally_unsupported"),
+                target_triple: None,
+                details: None,
+            });
+        }
+
+        if item
+            .get("note")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .trim()
+            .is_empty()
+        {
+            violations.push(Violation {
+                code: "REPORT_IU_NOTE_MISSING",
+                path: rel_path(&ctx.root, report_path),
+                json_pointer: Some(format!("/deltas/intentionally_unsupported/{i}/note")),
+                message: "intentionally_unsupported entry requires non-empty note".to_string(),
+                unit: Some("reports"),
+                command_path: Some(format_command_path(&path)),
+                key_or_name: if key_or_name.is_empty() {
+                    None
+                } else {
+                    Some(key_or_name.clone())
+                },
+                field: Some("note"),
+                target_triple: None,
+                details: None,
+            });
+        }
+
+        keys.push(IuSortKey {
+            kind_rank,
+            path,
+            key_or_name,
+        });
+    }
+
+    let mut sorted = keys.clone();
+    sorted.sort_by(cmp_iu_sort_key);
+    if keys != sorted {
+        violations.push(Violation {
+            code: "REPORT_IU_NOT_SORTED",
+            path: rel_path(&ctx.root, report_path),
+            json_pointer: Some("/deltas/intentionally_unsupported".to_string()),
+            message:
+                "deltas.intentionally_unsupported must be stable-sorted by (kind,path,key_or_name)"
+                    .to_string(),
+            unit: Some("reports"),
+            command_path: None,
+            key_or_name: None,
+            field: Some("intentionally_unsupported"),
+            target_triple: None,
+            details: None,
+        });
     }
 }
 
@@ -2449,10 +2641,7 @@ fn validate_wrapper_coverage_exclusions(
         }
 
         for (flag_idx, flag) in cmd.flags.as_deref().unwrap_or(&[]).iter().enumerate() {
-            if let Some(ex) = index
-                .flags
-                .get(&(cmd.path.clone(), flag.key.clone()))
-            {
+            if let Some(ex) = index.flags.get(&(cmd.path.clone(), flag.key.clone())) {
                 violations.push(Violation {
                     code: "WRAPPER_COVERAGE_INCLUDES_EXCLUDED",
                     path: rel_path(&ctx.root, wc_path),
@@ -2474,10 +2663,7 @@ fn validate_wrapper_coverage_exclusions(
         }
 
         for (arg_idx, arg) in cmd.args.as_deref().unwrap_or(&[]).iter().enumerate() {
-            if let Some(ex) = index
-                .args
-                .get(&(cmd.path.clone(), arg.name.clone()))
-            {
+            if let Some(ex) = index.args.get(&(cmd.path.clone(), arg.name.clone())) {
                 violations.push(Violation {
                     code: "WRAPPER_COVERAGE_INCLUDES_EXCLUDED",
                     path: rel_path(&ctx.root, wc_path),
