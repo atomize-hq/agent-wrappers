@@ -65,3 +65,9 @@ START/END entries only. Do not edit from worktrees.
 - Worktree pending (`iu4-c0-report-iu-inheritance-integ` / `wt/iu4-c0-report-iu-inheritance-integ` to be added after docs commit)
 - Plan: merge `iu4-c0-report-iu-inheritance-code` + `iu4-c0-report-iu-inheritance-test`, reconcile to C0-spec, run required commands, commit in worktree, fast-forward merge back to `feat/codex-wrapper-iu-subtree-inheritance`, then close docs
 - Blockers: none
+
+## [2026-01-31 13:35 UTC] Integration Agent – C0-integ – END
+- Worktree `wt/iu4-c0-report-iu-inheritance-integ` on branch `iu4-c0-report-iu-inheritance-integ` (commit 72456d9) merged C0 code+tests; updated validator to check IU report invariants for any present reports (even when the version status does not require reports)
+- Merged `iu4-c0-report-iu-inheritance-code` + `iu4-c0-report-iu-inheritance-test`, fast-forwarded `feat/codex-wrapper-iu-subtree-inheritance`
+- Commands: `cargo fmt` (pass); `cargo clippy --workspace --all-targets -- -D warnings` (pass); `cargo test -p xtask --test c5_spec_iu_subtree_inheritance -- --nocapture` (pass); `cargo test -p xtask --test c6_spec_report_iu_validator -- --nocapture` (pass); `make preflight` (pass)
+- Blockers: none
