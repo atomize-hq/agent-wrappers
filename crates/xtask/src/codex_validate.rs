@@ -1080,24 +1080,28 @@ fn validate_version_bundle(
         .unwrap_or("unknown");
 
     let require_reports = matches!(status, "reported" | "validated" | "supported");
-    if !require_reports {
-        return;
-    }
-
     let reports_dir = ctx.root.join("reports").join(version);
     let any_report = reports_dir.join("coverage.any.json");
-    require_report(ctx, violations, version, "any", None, &any_report);
+    if require_reports {
+        require_report(ctx, violations, version, "any", None, &any_report);
+    } else {
+        validate_report_if_present(ctx, violations, &any_report);
+    }
 
     for target in &input_targets {
         let per_target = reports_dir.join(format!("coverage.{target}.json"));
-        require_report(
-            ctx,
-            violations,
-            version,
-            "per_target",
-            Some(target.as_str()),
-            &per_target,
-        );
+        if require_reports {
+            require_report(
+                ctx,
+                violations,
+                version,
+                "per_target",
+                Some(target.as_str()),
+                &per_target,
+            );
+        } else {
+            validate_report_if_present(ctx, violations, &per_target);
+        }
     }
 
     let complete = union_value
@@ -1107,7 +1111,11 @@ fn validate_version_bundle(
         .unwrap_or(false);
     if complete {
         let all_report = reports_dir.join("coverage.all.json");
-        require_report(ctx, violations, version, "all", None, &all_report);
+        if require_reports {
+            require_report(ctx, violations, version, "all", None, &all_report);
+        } else {
+            validate_report_if_present(ctx, violations, &all_report);
+        }
     }
 }
 
@@ -1159,6 +1167,23 @@ fn require_report(
             });
         }
     }
+}
+
+fn validate_report_if_present(ctx: &ValidateCtx, violations: &mut Vec<Violation>, path: &Path) {
+    let Some(value) = read_json_file(&ctx.root, path, violations, "REPORT_INVALID_JSON") else {
+        return;
+    };
+
+    schema_validate(
+        ctx,
+        violations,
+        &ctx.schema,
+        &value,
+        path,
+        "REPORT_SCHEMA_INVALID",
+    );
+    validate_report_exclusions(ctx, violations, &value, path);
+    validate_report_intentionally_unsupported(ctx, violations, &value, path);
 }
 
 fn validate_current_json(
