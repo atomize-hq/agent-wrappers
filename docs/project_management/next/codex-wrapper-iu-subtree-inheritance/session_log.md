@@ -97,3 +97,10 @@ START/END entries only. Do not edit from worktrees.
 - Commands: `cargo fmt` (pass); `cargo test -p xtask --test c7_spec_iu_roots_adoption -- --nocapture` (fail; IU roots not present in generated wrapper coverage yet)
 - Results: test asserts `completion`/`cloud`/`mcp` IU roots exist in generated wrapper coverage with exact notes, and that report deltas waive descendants from `missing_*` while remaining audit-visible under `deltas.intentionally_unsupported`
 - Blockers: pending C1-code implementation of IU roots in wrapper coverage source-of-truth
+
+## [2026-01-31 13:55 UTC] Integration Agent – C1-integ – START
+- Checked out `feat/codex-wrapper-iu-subtree-inheritance`, `git pull --ff-only` (ok)
+- Read plan/tasks/session log/spec/kickoff prompt; updated `tasks.json` (C1-integ → `in_progress`)
+- Worktree pending (`iu4-c1-iu-roots-integ` / `wt/iu4-c1-iu-roots-integ` to be added after docs commit)
+- Plan: merge `iu4-c1-iu-roots-code` + `iu4-c1-iu-roots-test`, reconcile to C1-spec, run required commands, regenerate + validate artifacts, commit in worktree, fast-forward merge back to `feat/codex-wrapper-iu-subtree-inheritance`, then close docs
+- Blockers: none
