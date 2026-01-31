@@ -46,7 +46,7 @@ Workflow: `.github/workflows/codex-cli-update-snapshot.yml`
 Trigger:
 - `workflow_dispatch` with inputs:
   - `version` (bare semver, e.g. `0.92.0`)
-  - optional `update_min_supported` (policy bump; usually `false`)
+  - optional `update_min_supported` (**deprecated**; workflow will fail if `true`)
 
 Responsibilities:
 - Acquire upstream binaries for each expected target (see “Targets” and “Assets” below).

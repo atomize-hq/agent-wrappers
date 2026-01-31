@@ -57,7 +57,7 @@
           ],
           "deliverables": [
             "Maintainer checklist for snapshot/diff/validate/release",
-            "Trial-run checklist to move 0.61.0 → 0.77.0 on Linux"
+            "Trial-run checklist to move 0.61.0 -> 0.77.0 on Linux"
           ]
         }
       ]
@@ -116,8 +116,57 @@
         },
         {
           "id": "C4",
-          "name": "CI wiring (snapshot → union → report → validate)",
+          "name": "CI wiring (snapshot -> union -> report -> validate)",
           "spec": "docs/project_management/next/codex-cli-parity-coverage-mapping/C4-spec.md"
+        }
+      ]
+    },
+    {
+      "id": "codex_wrapper_coverage_auto_generation",
+      "name": "CODEX_WRAPPER_COVERAGE_AUTO_GENERATION",
+      "source": "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "phases": [
+        {
+          "id": "C0",
+          "name": "Non-empty deterministic core",
+          "spec": "docs/project_management/next/codex-wrapper-coverage-auto-generation/C0-spec.md"
+        },
+        {
+          "id": "C1",
+          "name": "Scenario Catalog v1 (3-6)",
+          "spec": "docs/project_management/next/codex-wrapper-coverage-auto-generation/C1-spec.md"
+        },
+        {
+          "id": "C2",
+          "name": "Scenario Catalog v1 (7-9)",
+          "spec": "docs/project_management/next/codex-wrapper-coverage-auto-generation/C2-spec.md"
+        },
+        {
+          "id": "C3",
+          "name": "Scenario Catalog v1 (10-12) + parity exclusions",
+          "spec": "docs/project_management/next/codex-wrapper-coverage-auto-generation/C3-spec.md"
+        },
+        {
+          "id": "C4",
+          "name": "Integration + docs",
+          "spec": "docs/project_management/next/codex-wrapper-coverage-auto-generation/C4-spec.md"
+        }
+      ]
+    },
+    {
+      "id": "codex_wrapper_iu_subtree_inheritance",
+      "name": "CODEX_WRAPPER_IU_SUBTREE_INHERITANCE",
+      "source": "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "phases": [
+        {
+          "id": "C0",
+          "name": "Report-time IU inheritance + validation",
+          "spec": "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/C0-spec.md"
+        },
+        {
+          "id": "C1",
+          "name": "Adopt IU subtree roots",
+          "spec": "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/C1-spec.md"
         }
       ]
     }
@@ -222,8 +271,66 @@
     {
       "order": 240,
       "id": "codex_cli_parity_coverage_mapping:C4",
-      "title": "CI wiring (snapshot → union → report → validate)",
+      "title": "CI wiring (snapshot -> union -> report -> validate)",
       "depends_on": ["codex_cli_parity_coverage_mapping:C3"],
+      "blocks": []
+    },
+    {
+      "order": 250,
+      "id": "codex_wrapper_coverage_auto_generation:C0",
+      "title": "Non-empty deterministic wrapper coverage",
+      "depends_on": ["codex_cli_parity_coverage_mapping:C4"],
+      "blocks": [
+        "codex_wrapper_coverage_auto_generation:C1",
+        "codex_wrapper_coverage_auto_generation:C2",
+        "codex_wrapper_coverage_auto_generation:C3",
+        "codex_wrapper_coverage_auto_generation:C4"
+      ]
+    },
+    {
+      "order": 260,
+      "id": "codex_wrapper_coverage_auto_generation:C1",
+      "title": "Scenario Catalog v1 (3-6)",
+      "depends_on": ["codex_wrapper_coverage_auto_generation:C0"],
+      "blocks": [
+        "codex_wrapper_coverage_auto_generation:C2",
+        "codex_wrapper_coverage_auto_generation:C3",
+        "codex_wrapper_coverage_auto_generation:C4"
+      ]
+    },
+    {
+      "order": 270,
+      "id": "codex_wrapper_coverage_auto_generation:C2",
+      "title": "Scenario Catalog v1 (7-9)",
+      "depends_on": ["codex_wrapper_coverage_auto_generation:C1"],
+      "blocks": ["codex_wrapper_coverage_auto_generation:C3", "codex_wrapper_coverage_auto_generation:C4"]
+    },
+    {
+      "order": 280,
+      "id": "codex_wrapper_coverage_auto_generation:C3",
+      "title": "Scenario Catalog v1 (10-12) + parity exclusions",
+      "depends_on": ["codex_wrapper_coverage_auto_generation:C2"],
+      "blocks": ["codex_wrapper_coverage_auto_generation:C4"]
+    },
+    {
+      "order": 290,
+      "id": "codex_wrapper_coverage_auto_generation:C4",
+      "title": "Integration + docs",
+      "depends_on": ["codex_wrapper_coverage_auto_generation:C3"],
+      "blocks": []
+    },
+    {
+      "order": 300,
+      "id": "codex_wrapper_iu_subtree_inheritance:C0",
+      "title": "Report-time IU subtree inheritance",
+      "depends_on": ["codex_wrapper_coverage_auto_generation:C4"],
+      "blocks": ["codex_wrapper_iu_subtree_inheritance:C1"]
+    },
+    {
+      "order": 310,
+      "id": "codex_wrapper_iu_subtree_inheritance:C1",
+      "title": "Adopt IU subtree roots",
+      "depends_on": ["codex_wrapper_iu_subtree_inheritance:C0"],
       "blocks": []
     }
   ]

@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       update_min_supported:
-        description: "Also update min_supported.txt to this version"
+        description: "DEPRECATED: min_supported.txt is a maintainer-only policy change (this workflow will fail if true)"
         required: true
         default: false
         type: boolean
@@ -26,6 +26,15 @@ jobs:
       snapshot_matrix: ${{ steps.matrix.outputs.snapshot_matrix }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Reject automated min_supported updates (policy)
+        if: ${{ inputs.update_min_supported }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "update_min_supported=true is not supported in this workflow." >&2
+          echo "min_supported.txt is a maintainer-only policy change; update it in a separate PR." >&2
+          exit 1
 
       - name: Fetch + validate upstream release
         id: upstream
@@ -357,6 +366,16 @@ jobs:
           set -euo pipefail
           cargo run -p xtask -- codex-validate --root cli_manifests/codex
 
+      - name: Render PR body from template
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          TEMPLATE="cli_manifests/codex/PR_BODY_TEMPLATE.md"
+          test -f "$TEMPLATE"
+          sed "s/{{VERSION}}/${VERSION}/g" "$TEMPLATE" > _codex_cli_pr_body.md
+
       - name: Upload committed artifact bundle (PR fallback)
         uses: actions/upload-artifact@v4
         with:
@@ -382,14 +401,6 @@ jobs:
           token: ${{ secrets.AUTOMATION_TOKEN || github.token }}
           commit-message: "chore: codex cli artifacts for ${{ inputs.version }}"
           title: "chore: codex cli artifacts for ${{ inputs.version }}"
-          body: |
-            Generates Codex CLI parity artifacts for `rust-v${{ inputs.version }}` per ADR 0002.
-
-            - Updates `cli_manifests/codex/artifacts.lock.json` with pinned upstream assets (size + sha256)
-            - Generates per-target snapshots under `cli_manifests/codex/snapshots/<version>/`
-            - Merges a union snapshot and generates reports + version metadata
-            - Runs `xtask codex-validate` as a hard gate
-
-            Raw help captures are uploaded as workflow artifacts (not committed).
+          body-path: _codex_cli_pr_body.md
           branch: "automation/codex-cli-${{ inputs.version }}"
           delete-branch: true

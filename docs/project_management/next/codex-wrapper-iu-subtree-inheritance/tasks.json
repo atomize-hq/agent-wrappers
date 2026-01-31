@@ -1,0 +1,266 @@
+[
+  {
+    "id": "C0-code",
+    "name": "C0: Report + validate IU inheritance (code)",
+    "type": "code",
+    "phase": "C0",
+    "status": "completed",
+    "description": "Implement ADR 0004 IU subtree inheritance in xtask report + validator wiring (production code only).",
+    "references": [
+      "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/VALIDATOR_SPEC.md",
+      "crates/xtask/src/codex_report.rs",
+      "crates/xtask/src/codex_validate.rs",
+      "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/plan.md",
+      "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/C0-spec.md"
+    ],
+    "acceptance_criteria": [
+      "C0 behavior matches C0-spec (report classification + validator invariants)",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-wrapper-iu-subtree-inheritance && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-code'",
+      "Create the task branch and worktree: `git worktree add -b iu4-c0-report-iu-inheritance-code wt/iu4-c0-report-iu-inheritance-code feat/codex-wrapper-iu-subtree-inheritance`",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets -- -D warnings.",
+      "Inside wt/iu4-c0-report-iu-inheritance-code, commit C0-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/codex-wrapper-iu-subtree-inheritance.",
+      "Checkout feat/codex-wrapper-iu-subtree-inheritance; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-code'.",
+      "Remove worktree wt/iu4-c0-report-iu-inheritance-code."
+    ],
+    "worktree": "wt/iu4-c0-report-iu-inheritance-code",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/kickoff_prompts/C0-code.md",
+    "depends_on": [],
+    "concurrent_with": [
+      "C0-test"
+    ]
+  },
+  {
+    "id": "C0-test",
+    "name": "C0: Report + validate IU inheritance (test)",
+    "type": "test",
+    "phase": "C0",
+    "status": "completed",
+    "description": "Add tests/fixtures to lock ADR 0004 IU subtree inheritance behavior down (tests only).",
+    "references": [
+      "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "crates/xtask/tests/c5_spec_iu_subtree_inheritance.rs",
+      "crates/xtask/tests/c6_spec_report_iu_validator.rs",
+      "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/plan.md",
+      "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/C0-spec.md"
+    ],
+    "acceptance_criteria": [
+      "Tests cover C0 acceptance criteria",
+      "No production code changes",
+      "Required commands executed (fmt + targeted tests) and recorded in session_log.md"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-wrapper-iu-subtree-inheritance && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-test'",
+      "Create the task branch and worktree: `git worktree add -b iu4-c0-report-iu-inheritance-test wt/iu4-c0-report-iu-inheritance-test feat/codex-wrapper-iu-subtree-inheritance`",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo test -p xtask --test c5_spec_iu_subtree_inheritance -- --nocapture; cargo test -p xtask --test c6_spec_report_iu_validator -- --nocapture.",
+      "Inside wt/iu4-c0-report-iu-inheritance-test, commit C0-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/codex-wrapper-iu-subtree-inheritance.",
+      "Checkout feat/codex-wrapper-iu-subtree-inheritance; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-test'.",
+      "Remove worktree wt/iu4-c0-report-iu-inheritance-test."
+    ],
+    "worktree": "wt/iu4-c0-report-iu-inheritance-test",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/kickoff_prompts/C0-test.md",
+    "depends_on": [],
+    "concurrent_with": [
+      "C0-code"
+    ]
+  },
+  {
+    "id": "C0-integ",
+    "name": "C0: Report + validate IU inheritance (integration)",
+    "type": "integration",
+    "phase": "C0",
+    "status": "completed",
+    "description": "Merge C0 code/test, align behavior with spec, gate with fmt/clippy/tests/preflight.",
+    "references": [
+      "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/VALIDATOR_SPEC.md",
+      "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/plan.md",
+      "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/C0-spec.md"
+    ],
+    "acceptance_criteria": [
+      "C0 code/test merged and match C0-spec",
+      "cargo fmt + clippy + C0 required tests + make preflight executed and logged",
+      "Integration merged fast-forward; tasks/logs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-wrapper-iu-subtree-inheritance && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-integ'",
+      "Create the integration branch and worktree: `git worktree add -b iu4-c0-report-iu-inheritance-integ wt/iu4-c0-report-iu-inheritance-integ feat/codex-wrapper-iu-subtree-inheritance`",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C0 into the integration worktree and reconcile behavior to the spec.",
+      "Set deterministic timestamp for generated artifacts: export SOURCE_DATE_EPOCH=\"$(git log -1 --format=%ct)\"",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets -- -D warnings; cargo test -p xtask --test c5_spec_iu_subtree_inheritance -- --nocapture; cargo test -p xtask --test c6_spec_report_iu_validator -- --nocapture; make preflight.",
+      "Commit integration changes on the integration branch.",
+      "Fast-forward merge the integration branch into feat/codex-wrapper-iu-subtree-inheritance; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-integ'.",
+      "Remove worktree wt/iu4-c0-report-iu-inheritance-integ."
+    ],
+    "worktree": "wt/iu4-c0-report-iu-inheritance-integ",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/kickoff_prompts/C0-integ.md",
+    "depends_on": [
+      "C0-code",
+      "C0-test"
+    ],
+    "concurrent_with": []
+  },
+  {
+    "id": "C1-code",
+    "name": "C1: Adopt IU subtree roots (code)",
+    "type": "code",
+    "phase": "C1",
+    "status": "completed",
+    "description": "Add IU subtree roots for intentionally unwrapped command families to wrapper coverage source-of-truth (production code only).",
+    "references": [
+      "cli_manifests/codex/OPS_PLAYBOOK.md",
+      "crates/codex/src/wrapper_coverage_manifest.rs",
+      "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/plan.md",
+      "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/C1-spec.md"
+    ],
+    "acceptance_criteria": [
+      "IU subtree roots added with exact note strings per C1-spec",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-wrapper-iu-subtree-inheritance && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C1-code'",
+      "Create the task branch and worktree: `git worktree add -b iu4-c1-iu-roots-code wt/iu4-c1-iu-roots-code feat/codex-wrapper-iu-subtree-inheritance`",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets -- -D warnings.",
+      "Inside wt/iu4-c1-iu-roots-code, commit C1-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/codex-wrapper-iu-subtree-inheritance.",
+      "Checkout feat/codex-wrapper-iu-subtree-inheritance; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-code'.",
+      "Remove worktree wt/iu4-c1-iu-roots-code."
+    ],
+    "worktree": "wt/iu4-c1-iu-roots-code",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/kickoff_prompts/C1-code.md",
+    "depends_on": [
+      "C0-integ"
+    ],
+    "concurrent_with": [
+      "C1-test"
+    ]
+  },
+  {
+    "id": "C1-test",
+    "name": "C1: Adopt IU subtree roots (test)",
+    "type": "test",
+    "phase": "C1",
+    "status": "completed",
+    "description": "Add tests/fixtures verifying IU roots are emitted and reports classify descendants as IU (tests only).",
+    "references": [
+      "cli_manifests/codex/OPS_PLAYBOOK.md",
+      "crates/xtask/tests/c7_spec_iu_roots_adoption.rs",
+      "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/plan.md",
+      "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/C1-spec.md"
+    ],
+    "acceptance_criteria": [
+      "Tests cover C1 acceptance criteria",
+      "No production code changes",
+      "Required commands executed (fmt + targeted tests) and recorded in session_log.md"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-wrapper-iu-subtree-inheritance && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C1-test'",
+      "Create the task branch and worktree: `git worktree add -b iu4-c1-iu-roots-test wt/iu4-c1-iu-roots-test feat/codex-wrapper-iu-subtree-inheritance`",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo test -p xtask --test c7_spec_iu_roots_adoption -- --nocapture.",
+      "Inside wt/iu4-c1-iu-roots-test, commit C1-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/codex-wrapper-iu-subtree-inheritance.",
+      "Checkout feat/codex-wrapper-iu-subtree-inheritance; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-test'.",
+      "Remove worktree wt/iu4-c1-iu-roots-test."
+    ],
+    "worktree": "wt/iu4-c1-iu-roots-test",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/kickoff_prompts/C1-test.md",
+    "depends_on": [
+      "C0-integ"
+    ],
+    "concurrent_with": [
+      "C1-code"
+    ]
+  },
+  {
+    "id": "C1-integ",
+    "name": "C1: Adopt IU subtree roots (integration)",
+    "type": "integration",
+    "phase": "C1",
+    "status": "completed",
+    "description": "Merge C1 code/test, regenerate artifacts per spec, and gate with fmt/clippy/tests/preflight.",
+    "references": [
+      "cli_manifests/codex/OPS_PLAYBOOK.md",
+      "cli_manifests/codex/RULES.json",
+      "cli_manifests/codex/SCHEMA.json",
+      "cli_manifests/codex/VALIDATOR_SPEC.md",
+      "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/plan.md",
+      "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/C1-spec.md"
+    ],
+    "acceptance_criteria": [
+      "C1 code/test merged and match C1-spec",
+      "Artifacts regenerated per C1-spec and xtask codex-validate passes",
+      "cargo fmt + clippy + C1 required tests + make preflight executed and logged",
+      "Integration merged fast-forward; tasks/logs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/codex-wrapper-iu-subtree-inheritance && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C1-integ'",
+      "Create the integration branch and worktree: `git worktree add -b iu4-c1-iu-roots-integ wt/iu4-c1-iu-roots-integ feat/codex-wrapper-iu-subtree-inheritance`",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C1 into the integration worktree and reconcile behavior to the spec.",
+      "Set deterministic timestamp for generated artifacts: export SOURCE_DATE_EPOCH=\"$(git log -1 --format=%ct)\"",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets -- -D warnings; cargo test -p xtask --test c7_spec_iu_roots_adoption -- --nocapture.",
+      "Regenerate and validate artifacts per C1-spec (wrapper_coverage.json, reports/<version>/**, then xtask codex-validate).",
+      "Run integration gate last (capture outputs): make preflight.",
+      "Commit integration changes on the integration branch.",
+      "Fast-forward merge the integration branch into feat/codex-wrapper-iu-subtree-inheritance; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-integ'.",
+      "Remove worktree wt/iu4-c1-iu-roots-integ."
+    ],
+    "worktree": "wt/iu4-c1-iu-roots-integ",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/kickoff_prompts/C1-integ.md",
+    "depends_on": [
+      "C1-code",
+      "C1-test"
+    ],
+    "concurrent_with": []
+  }
+]

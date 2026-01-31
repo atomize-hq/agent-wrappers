@@ -99,8 +99,7 @@ fn c4_spec_ci_workflow_has_conditional_codex_validate_gate() {
     // Two supported implementations:
     // - job-level hashFiles gate
     // - a first step that detects committed versions and gates subsequent steps via outputs
-    let has_hashfiles_gate =
-        yml.contains("hashFiles('cli_manifests/codex/versions/*.json') != ''");
+    let has_hashfiles_gate = yml.contains("hashFiles('cli_manifests/codex/versions/*.json') != ''");
     let has_step_gate = yml.contains("Detect Codex committed artifacts")
         && yml.contains("has_versions")
         && yml.contains("steps.codex-artifacts.outputs.has_versions");

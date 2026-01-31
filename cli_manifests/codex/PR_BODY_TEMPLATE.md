@@ -30,6 +30,9 @@ Baseline (previously supported):
 - Baseline union snapshot: `cli_manifests/codex/snapshots/<latest_validated>/union.json`
 - Baseline report: `cli_manifests/codex/reports/<latest_validated>/coverage.any.json`
 
+Pointer policy:
+- Do not change `cli_manifests/codex/min_supported.txt` unless maintainers explicitly request a policy bump.
+
 ## What To Do (Operational Steps)
 
 1) **Triage the delta for {{VERSION}}**
@@ -77,4 +80,3 @@ Then run wrapper tests (Linux required):
 - For the required target (`x86_64-unknown-linux-musl`), `cli_manifests/codex/reports/{{VERSION}}/coverage.x86_64-unknown-linux-musl.json` has:
   - no missing/unknown/unsupported surfaces after regeneration, OR all remaining gaps are explicitly `intentionally_unsupported` with rationale notes.
 - If `snapshots/{{VERSION}}/union.json.complete == true`, meet the same criterion for all expected targets.
-

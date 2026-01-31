@@ -54,6 +54,7 @@ Work the report fields in this order:
 3) `deltas.missing_args`
 4) `deltas.unsupported` (if present)
 5) `deltas.passthrough_candidates` (if present; optional “promotion” work)
+6) `deltas.intentionally_unsupported` (if present; audit/review of explicitly waived or inherited IU surfaces)
 
 Each entry contains:
 - `path`: command path tokens (`[]` means root command)
@@ -112,6 +113,11 @@ Option B: intentionally waive
   - `note: Some("...")` (must be non-empty)
   - keep the note stable and policy-based (avoid churn).
 
+Subtree waivers (ADR 0004):
+- If an entire command family is intentionally unwrapped (e.g. `codex completion ...`), prefer marking the *parent command* as `intentionally_unsupported` with a stable rationale note.
+- After ADR 0004 is implemented, `xtask codex-report` will treat descendant commands/flags/args as `intentionally_unsupported` by inheritance unless explicitly overridden by an exact wrapper coverage entry.
+- In reports, inherited IU entries appear under `deltas.intentionally_unsupported` and MUST NOT appear under `missing_*`.
+
 ### 2) Regenerate artifacts (always do this after changes)
 
 ```bash
@@ -151,4 +157,19 @@ If union is complete:
 - Do not edit generated snapshots/reports directly; change code + coverage declarations and regenerate.
 - Do not change `RULES.json`/schemas as part of routine parity work (only in spec-changing PRs).
 - Do not update `latest_validated.txt` / pointer promotion unless explicitly requested by maintainers (promotion is a separate decision gate).
+- Do not update `min_supported.txt` unless explicitly requested by maintainers (this is a policy change, not routine parity work).
 
+## When to recommend bumping `min_supported.txt` (maintainer decision)
+
+`cli_manifests/codex/min_supported.txt` is the repo’s policy floor for “oldest upstream Codex CLI version we commit to supporting”.
+
+Agents should not change it by default, but should recommend a bump when maintaining the old floor is causing repeated friction, for example:
+- The wrapper needs pervasive version checks / capability gating that materially increases complexity solely to keep the old floor working.
+- New upstream surfaces require incompatible behavioral changes that cannot be cleanly made backwards-compatible.
+- E2E tests or CI workflows repeatedly require special-casing due to the floor version.
+
+How to make the recommendation:
+- Add a short note in the PR body or a maintainer comment describing:
+  - the current floor (`min_supported.txt`) and why it’s driving complexity,
+  - the proposed new floor (usually the oldest version we still actively validate in practice),
+  - the expected impact (what code paths / tests could be deleted or simplified).

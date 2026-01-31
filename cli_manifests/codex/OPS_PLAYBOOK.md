@@ -40,8 +40,8 @@ Preferred path: run the GitHub Actions workflow:
 Required input:
 - `version`: the exact upstream version to validate (example: `0.77.0`)
 
-Optional inputs (only if you intend to change policy):
-- “update min supported” toggle (if present): update `min_supported.txt` as part of the run
+Optional inputs:
+- “update min supported” toggle (if present): **deprecated**. `min_supported.txt` is a maintainer-only policy decision and must be updated in a separate PR (the workflow rejects automated updates).
 
 Notes:
 - The workflow is responsible for downloading/extracting the upstream release artifact(s) and updating `cli_manifests/codex/artifacts.lock.json`.
@@ -91,6 +91,12 @@ These surfaces are intentionally *not* wrapped unless/until they meet promotion 
 - Shell completion generation (`codex completion …`)
 - `codex cloud exec` (experimental/setup-time utility unless it becomes core to embedding)
 - Experimental MCP management commands (`codex mcp list/get/add/remove/login/logout`) unless they become stable and necessary
+
+Operational representation (ADR 0004):
+- After IU subtree inheritance (ADR 0004) is implemented, represent intentionally unwrapped command families as **IU subtree roots** in `crates/codex/src/wrapper_coverage_manifest.rs`:
+  - add a command entry for the parent path (e.g. `["completion"]`, `["cloud"]`, or `["mcp"]`) with `level: intentionally_unsupported` and a stable, non-empty `note`.
+  - do **not** enumerate every descendant flag/arg; descendants are classified as IU by inheritance unless explicitly overridden.
+- Reports will keep these surfaces visible under `deltas.intentionally_unsupported` (audit-friendly) while keeping `missing_*` actionable.
 
 ### Promotion Criteria (unwrapped → wrapped)
 

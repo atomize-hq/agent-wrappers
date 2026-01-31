@@ -1,6 +1,28 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-01-25T17:33:33Z",
+  "generated_at": "2026-01-31T13:56:02Z",
   "wrapper_version": "0.2.0",
-  "coverage": []
+  "coverage": [
+    {
+      "path": [
+        "cloud"
+      ],
+      "level": "intentionally_unsupported",
+      "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+    },
+    {
+      "path": [
+        "completion"
+      ],
+      "level": "intentionally_unsupported",
+      "note": "Shell completion generation is out of scope for the wrapper."
+    },
+    {
+      "path": [
+        "mcp"
+      ],
+      "level": "intentionally_unsupported",
+      "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+    }
+  ]
 }

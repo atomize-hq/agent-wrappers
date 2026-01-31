@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2025-11-20T16:14:58Z",
+  "generated_at": "2026-01-31T13:56:02Z",
   "inputs": {
     "upstream": {
       "semantic_version": "0.61.0",
@@ -67,40 +67,6 @@
       {
         "path": [
           "apply"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud",
-          "help"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "completion"
         ],
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
@@ -195,77 +161,6 @@
       {
         "path": [
           "logout"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "get"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "help"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "list"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "login"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "logout"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "remove"
         ],
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
@@ -628,147 +523,6 @@
       {
         "path": [
           "apply"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud"
-        ],
-        "key": "--version",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--attempts",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--env",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "completion"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "completion"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "completion"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "completion"
         ],
         "key": "--help",
         "upstream_available_on": [
@@ -1213,342 +967,6 @@
       },
       {
         "path": [
-          "mcp"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "key": "--bearer-token-env-var",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "key": "--env",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "key": "--url",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "get"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "get"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "get"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "get"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "get"
-        ],
-        "key": "--json",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "list"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "list"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "list"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "list"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "list"
-        ],
-        "key": "--json",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "login"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "login"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "login"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "login"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "login"
-        ],
-        "key": "--scopes",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "logout"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "logout"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "logout"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "logout"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "remove"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "remove"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "remove"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "remove"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
           "mcp-server"
         ],
         "key": "--config",
@@ -1982,44 +1400,6 @@
       },
       {
         "path": [
-          "cloud"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "name": "QUERY",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "cloud",
-          "help"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "completion"
-        ],
-        "name": "SHELL",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
           "exec"
         ],
         "name": "COMMAND",
@@ -2109,95 +1489,6 @@
           "help"
         ],
         "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "name": "NAME",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "name": "URL",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "get"
-        ],
-        "name": "NAME",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "help"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "login"
-        ],
-        "name": "NAME",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "logout"
-        ],
-        "name": "NAME",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "mcp",
-          "remove"
-        ],
-        "name": "NAME",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
         ]
@@ -2294,6 +1585,865 @@
           "x86_64-unknown-linux-musl"
         ],
         "note": "Interactive TUI default-mode prompt surface is excluded from wrapper parity."
+      }
+    ],
+    "intentionally_unsupported": [
+      {
+        "path": [
+          "cloud"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud",
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Shell completion generation is out of scope for the wrapper."
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--attempts",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--env",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Shell completion generation is out of scope for the wrapper."
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Shell completion generation is out of scope for the wrapper."
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Shell completion generation is out of scope for the wrapper."
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Shell completion generation is out of scope for the wrapper."
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--bearer-token-env-var",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--env",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--url",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "key": "--scopes",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "name": "QUERY",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "cloud",
+          "help"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "name": "SHELL",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Shell completion generation is out of scope for the wrapper."
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "URL",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "help"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
       }
     ]
   }
