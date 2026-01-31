@@ -79,6 +79,12 @@ START/END entries only. Do not edit from worktrees.
 - Plan: add IU subtree roots for `completion`, `cloud`, `mcp` in wrapper coverage source-of-truth; run required commands; commit via worktree; update docs/tasks/log at end
 - Blockers: none
 
+## [2026-01-31 13:47 UTC] Code Agent – C1-code – END
+- Worktree `wt/iu4-c1-iu-roots-code` on branch `iu4-c1-iu-roots-code` (commit 98c7fdb) added IU subtree roots for `completion`, `cloud`, `mcp` with stable note strings in wrapper coverage source-of-truth
+- Commands: `cargo fmt` (pass); `cargo clippy --workspace --all-targets -- -D warnings` (pass)
+- Result: intentionally unwrapped command families are declared as IU roots so reports can inherit IU classification for descendants (audit-visible via `deltas.intentionally_unsupported`)
+- Blockers: none
+
 ## [2026-01-31 13:44 UTC] Test Agent – C1-test – START
 - Checked out `feat/codex-wrapper-iu-subtree-inheritance`, `git pull --ff-only` (ok)
 - Read plan/tasks/session log/spec/kickoff prompt; updated `tasks.json` (C1-test → `in_progress`)

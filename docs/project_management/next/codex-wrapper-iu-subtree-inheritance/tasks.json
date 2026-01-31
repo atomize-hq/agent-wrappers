@@ -135,7 +135,7 @@
     "name": "C1: Adopt IU subtree roots (code)",
     "type": "code",
     "phase": "C1",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Add IU subtree roots for intentionally unwrapped command families to wrapper coverage source-of-truth (production code only).",
     "references": [
       "cli_manifests/codex/OPS_PLAYBOOK.md",
