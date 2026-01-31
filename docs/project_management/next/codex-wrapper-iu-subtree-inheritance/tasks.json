@@ -48,7 +48,7 @@
     "name": "C0: Report + validate IU inheritance (test)",
     "type": "test",
     "phase": "C0",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Add tests/fixtures to lock ADR 0004 IU subtree inheritance behavior down (tests only).",
     "references": [
       "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",

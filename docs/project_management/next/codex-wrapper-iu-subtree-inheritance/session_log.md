@@ -38,3 +38,10 @@ START/END entries only. Do not edit from worktrees.
 - Worktree pending (`iu4-c0-report-iu-inheritance-code` / `wt/iu4-c0-report-iu-inheritance-code` to be added after docs commit)
 - Plan: implement IU subtree inheritance + IU deltas sorting + RULES sorting parsing/validation + validator invariants; run required commands; commit via worktree; update docs/tasks/log at end
 - Blockers: none
+
+## [2026-01-31 13:07 UTC] Test Agent – C0-test – START
+- Checked out `feat/codex-wrapper-iu-subtree-inheritance`, `git pull --ff-only` (ok)
+- Read plan/tasks/session log/spec/kickoff prompt; updated `tasks.json` (C0-test → `in_progress`)
+- Worktree pending (`iu4-c0-report-iu-inheritance-test` / `wt/iu4-c0-report-iu-inheritance-test` to be added after docs commit)
+- Plan: add `c5_spec_iu_subtree_inheritance` + `c6_spec_report_iu_validator` integration-style tests and fixtures per C0-spec; run required commands; commit via worktree; update docs/tasks/log at end
+- Blockers: none
