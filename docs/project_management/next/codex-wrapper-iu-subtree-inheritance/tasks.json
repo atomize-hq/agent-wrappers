@@ -177,7 +177,7 @@
     "name": "C1: Adopt IU subtree roots (test)",
     "type": "test",
     "phase": "C1",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Add tests/fixtures verifying IU roots are emitted and reports classify descendants as IU (tests only).",
     "references": [
       "cli_manifests/codex/OPS_PLAYBOOK.md",

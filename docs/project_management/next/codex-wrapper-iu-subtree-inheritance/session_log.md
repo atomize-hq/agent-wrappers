@@ -91,3 +91,9 @@ START/END entries only. Do not edit from worktrees.
 - Worktree pending (`iu4-c1-iu-roots-test` / `wt/iu4-c1-iu-roots-test` to be added after docs commit)
 - Plan: add `crates/xtask/tests/c7_spec_iu_roots_adoption.rs` + fixtures per C1-spec; run required commands; commit via worktree; update docs/tasks/log at end
 - Blockers: C1-code branch exists (`iu4-c1-iu-roots-code`), but IU roots may not be implemented yet; test may fail until C1-code lands
+
+## [2026-01-31 13:51 UTC] Test Agent – C1-test – END
+- Worktree `wt/iu4-c1-iu-roots-test` on branch `iu4-c1-iu-roots-test` (commit 8e04875) added `crates/xtask/tests/c7_spec_iu_roots_adoption.rs` to verify C1 IU roots adoption behavior
+- Commands: `cargo fmt` (pass); `cargo test -p xtask --test c7_spec_iu_roots_adoption -- --nocapture` (fail; IU roots not present in generated wrapper coverage yet)
+- Results: test asserts `completion`/`cloud`/`mcp` IU roots exist in generated wrapper coverage with exact notes, and that report deltas waive descendants from `missing_*` while remaining audit-visible under `deltas.intentionally_unsupported`
+- Blockers: pending C1-code implementation of IU roots in wrapper coverage source-of-truth
