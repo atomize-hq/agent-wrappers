@@ -1018,7 +1018,17 @@
             "intentionally_unsupported": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/ReportSurfaceDeltaV1"
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/ReportCommandDeltaV1"
+                  },
+                  {
+                    "$ref": "#/$defs/ReportFlagDeltaV1"
+                  },
+                  {
+                    "$ref": "#/$defs/ReportArgDeltaV1"
+                  }
+                ]
               }
             },
             "wrapper_only_commands": {

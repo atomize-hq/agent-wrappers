@@ -38,9 +38,8 @@ Introduce deterministic "IU subtree inheritance" as a report-time classification
 If the wrapper explicitly marks a command path as `intentionally_unsupported`, then upstream units under that command subtree are classified as `intentionally_unsupported` by inheritance, unless overridden by explicit wrapper declarations.
 
 This decision:
-- does not change artifact schemas,
 - does not change how upstream snapshots are generated,
-- and does not change wrapper coverage generation output shape.
+- and does not change wrapper coverage generation output shape (`wrapper_coverage.json` stays the same).
 
 It changes only how `xtask codex-report` (and corresponding validation rules) interpret wrapper coverage when computing deltas.
 
@@ -61,6 +60,10 @@ An "IU subtree root" is a wrapper coverage command entry with:
 - `level = intentionally_unsupported`, and
 - a non-empty `note` rationale.
 
+Notes:
+- IU subtree roots are command entries only (flags/args are never IU roots for inheritance).
+- IU subtree roots may be nested; in that case the nearest (longest-prefix) root is used.
+
 ### Inheritance Rule
 
 For a given upstream unit U with command path `P`:
@@ -70,6 +73,12 @@ For a given upstream unit U with command path `P`:
 3. If there is at least one matching IU subtree root:
    - Choose the nearest root by longest prefix (max path length).
    - The chosen root's `note` is the inherited IU rationale for U.
+
+Applicability (scope + platform filter):
+- IU subtree inheritance is evaluated in the same report context as all other wrapper resolution:
+  - apply the report’s platform filter (`any` / `all` / `exact_target`) first,
+  - evaluate only IU roots that are applicable under that filter and wrapper scope resolution rules.
+- If scope differences would cause a unit to be IU on some relevant targets but not others in the same report run, that is treated as invalid/inconsistent (the report must fail rather than emit nondeterministic mixed classification).
 
 ### Override Rule (explicit wrapper declarations win)
 
@@ -81,13 +90,33 @@ This allows:
 
 ### Reporting Rule (do not suppress)
 
-Inherited IU units remain visible in reports:
-- they MUST NOT appear under `missing_commands`, `missing_flags`, or `missing_args`,
-- instead they MUST appear under `deltas.intentionally_unsupported` with:
+Inherited IU units remain visible and audit-friendly in reports:
+- They MUST NOT appear under `missing_commands`, `missing_flags`, or `missing_args`.
+- They MUST appear under `deltas.intentionally_unsupported` with:
+  - the unit identity (command path, and flag key / arg name when applicable),
   - `wrapper_level = intentionally_unsupported`, and
-  - `note` equal to the inherited IU rationale.
+  - `note` equal to the IU root’s rationale string.
 
 This preserves auditability and makes upstream growth under an intentionally unwrapped subtree visible, while keeping the missing work queue actionable.
+
+### Example (override + inheritance)
+
+Given:
+- Wrapper coverage declares command `["completion"]` as `intentionally_unsupported` with `note: "shell completion generation is out of scope for the wrapper"`.
+- Wrapper coverage declares command `["completion","bash"]` as `explicit` (hypothetical future support).
+- Upstream snapshot contains:
+  - commands: `["completion"]`, `["completion","bash"]`, `["completion","zsh"]`
+  - flags under `["completion","zsh"]`: `--help`, `--output`
+
+Then:
+- `["completion"]` is IU (explicit).
+- `["completion","zsh"]` is IU (inherited from `["completion"]`).
+- `["completion","bash"]` is **not** IU (explicit override wins).
+- `["completion","zsh"] --output` is IU (inherited from `["completion"]`).
+
+Reporting:
+- `["completion","zsh"]` and its `--output` flag MUST NOT appear under `missing_*`.
+- They MUST appear under `deltas.intentionally_unsupported` with the inherited note string.
 
 ### Precedence Order (deterministic)
 
@@ -97,6 +126,28 @@ When classifying an upstream unit:
 2. Explicit wrapper declaration: if the wrapper coverage explicitly declares the unit, use that level and note.
 3. IU subtree inheritance: if the unit is under an IU subtree root and not explicitly declared, classify as inherited IU.
 4. Otherwise: classify as missing/unknown/unsupported per existing report rules.
+
+### Note attachment (deterministic)
+
+- If a unit is IU due to an explicit wrapper declaration, use that unit’s own `note` (required and non-empty).
+- If a unit is IU due to inheritance, use the chosen IU root’s `note` verbatim (required and non-empty).
+
+### Sorting (deterministic)
+
+Any report list that contains IU entries MUST be stable-sorted so diffs are reviewable.
+
+For `deltas.intentionally_unsupported`, sort by:
+1. Unit kind order: command entries first, then flag entries, then arg entries  
+   (determined by the entry shape: command has neither `key` nor `name`; flag has `key`; arg has `name`)
+2. `path` (lexicographic token compare, then length; i.e. `["a"] < ["a","b"]`)
+3. For flags: `key` (lexicographic)
+4. For args: `name` (lexicographic)
+
+### Schema / contract impact (normative)
+
+To keep inherited IU entries for flags/args audit-friendly, the coverage report contract MUST allow `deltas.intentionally_unsupported` to include command, flag, and arg identities (not path-only).
+
+This ADR does not introduce new report fields; it widens what may appear in `deltas.intentionally_unsupported` so it can represent IU flags/args as well as commands.
 
 ## Consequences
 
@@ -119,6 +170,7 @@ When classifying an upstream unit:
 - This ADR does not add inheritance of flags/args from intermediate command paths in the upstream snapshot model.
 - This ADR does not change the `root_only` positional-args model.
 - This ADR does not add wildcard/pattern-based IU declarations.
+- This ADR does not change how scope resolution works in wrapper coverage; IU inheritance is a classification rule layered on top of the existing scope resolution rules.
 
 ## Alternatives Considered
 
@@ -135,7 +187,8 @@ When classifying an upstream unit:
 
 Expected changes (to be implemented in a follow-up PR):
 - Update `xtask codex-report` to apply IU subtree inheritance and emit derived IU entries under `deltas.intentionally_unsupported`.
-- Update `xtask codex-validate` to enforce that inherited IU entries never appear under `missing_*` and that IU notes are present and deterministic.
+- Update `xtask codex-validate` to enforce:
+  - `missing_*` never contains `wrapper_level = intentionally_unsupported`, and
+  - `deltas.intentionally_unsupported` entries always have a non-empty `note`.
 - Update `cli_manifests/codex/RULES.json` and `cli_manifests/codex/VALIDATOR_SPEC.md` to describe this rule without ambiguity.
 - Update `cli_manifests/codex/CI_AGENT_RUNBOOK.md` and `cli_manifests/codex/OPS_PLAYBOOK.md` to reflect the workflow: mark the parent command IU to waive a subtree.
-

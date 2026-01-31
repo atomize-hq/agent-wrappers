@@ -54,6 +54,7 @@ Work the report fields in this order:
 3) `deltas.missing_args`
 4) `deltas.unsupported` (if present)
 5) `deltas.passthrough_candidates` (if present; optional “promotion” work)
+6) `deltas.intentionally_unsupported` (if present; audit/review of explicitly waived or inherited IU surfaces)
 
 Each entry contains:
 - `path`: command path tokens (`[]` means root command)
@@ -112,6 +113,11 @@ Option B: intentionally waive
   - `note: Some("...")` (must be non-empty)
   - keep the note stable and policy-based (avoid churn).
 
+Subtree waivers (ADR 0004):
+- If an entire command family is intentionally unwrapped (e.g. `codex completion ...`), prefer marking the *parent command* as `intentionally_unsupported` with a stable rationale note.
+- After ADR 0004 is implemented, `xtask codex-report` will treat descendant commands/flags/args as `intentionally_unsupported` by inheritance unless explicitly overridden by an exact wrapper coverage entry.
+- In reports, inherited IU entries appear under `deltas.intentionally_unsupported` and MUST NOT appear under `missing_*`.
+
 ### 2) Regenerate artifacts (always do this after changes)
 
 ```bash
@@ -151,4 +157,3 @@ If union is complete:
 - Do not edit generated snapshots/reports directly; change code + coverage declarations and regenerate.
 - Do not change `RULES.json`/schemas as part of routine parity work (only in spec-changing PRs).
 - Do not update `latest_validated.txt` / pointer promotion unless explicitly requested by maintainers (promotion is a separate decision gate).
-

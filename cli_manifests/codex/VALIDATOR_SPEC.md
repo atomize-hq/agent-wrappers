@@ -33,15 +33,6 @@ Subcommand: `codex-validate`
 - `--rules <PATH>` (default: `<codex-dir>/RULES.json`)
 - `--schema <PATH>` (default: `<codex-dir>/SCHEMA.json`)
 - `--version-metadata-schema <PATH>` (default: `<codex-dir>/VERSION_METADATA_SCHEMA.json`)
-- `--checks <LIST>` (default: `all`)
-  - Comma-separated list to run a subset (e.g., `pointers,iu_notes`).
-  - Supported values:
-    - `pointers`
-    - `iu_notes`
-    - `version_metadata_validation_sets`
-    - `current_json_identity`
-    - `schemas` (optional convenience: validate JSON shape against schema files)
-    - `all`
 - `--json` (default: off)
   - Emit a machine-readable JSON report to stdout in addition to human text.
 
@@ -111,6 +102,33 @@ Applies to:
 Violation:
 - `IU_NOTE_MISSING`
   - Include unit type, `path`, and `key`/`name` where applicable.
+
+### `report_intentionally_unsupported`: IU must not be reported as missing
+
+Files:
+- `reports/<version>/coverage.*.json`
+
+Policy:
+- A unit classified as `intentionally_unsupported` (explicitly, or via IU subtree inheritance per ADR 0004) must be:
+  - absent from `deltas.missing_commands`, `deltas.missing_flags`, and `deltas.missing_args`, and
+  - present under `deltas.intentionally_unsupported` with a non-empty `note`.
+
+Rules:
+- No `missing_*` entry may have `wrapper_level == "intentionally_unsupported"`.
+- Every entry in `deltas.intentionally_unsupported` MUST include:
+  - `wrapper_level == "intentionally_unsupported"`, and
+  - a non-empty `note` (after trimming whitespace).
+
+Sorting (deterministic):
+- If `deltas.intentionally_unsupported` is present, it MUST be stable-sorted by:
+  1. unit kind order: commands (no `key` and no `name`), then flags (`key`), then args (`name`)
+  2. `path` (lexicographic token compare, then length)
+  3. `key` (flags only) or `name` (args only)
+
+Violations:
+- `REPORT_MISSING_INCLUDES_INTENTIONALLY_UNSUPPORTED`
+- `REPORT_IU_NOTE_MISSING`
+- `REPORT_IU_NOT_SORTED`
 
 ### `parity_exclusions`: excluded units must not become parity work
 

@@ -595,6 +595,9 @@
       "excluded_commands": "by_path",
       "excluded_flags": "by_path_then_key",
       "excluded_args": "by_path_then_name",
+      "passthrough_candidates": "by_path",
+      "unsupported": "by_path",
+      "intentionally_unsupported": "by_kind_then_path_then_key_or_name",
       "wrapper_only_commands": "by_path",
       "wrapper_only_flags": "by_path_then_key",
       "wrapper_only_args": "by_path_then_name"

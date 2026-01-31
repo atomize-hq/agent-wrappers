@@ -152,6 +152,23 @@
           "spec": "docs/project_management/next/codex-wrapper-coverage-auto-generation/C4-spec.md"
         }
       ]
+    },
+    {
+      "id": "codex_wrapper_iu_subtree_inheritance",
+      "name": "CODEX_WRAPPER_IU_SUBTREE_INHERITANCE",
+      "source": "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "phases": [
+        {
+          "id": "C0",
+          "name": "Report-time IU inheritance + validation",
+          "spec": "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/C0-spec.md"
+        },
+        {
+          "id": "C1",
+          "name": "Adopt IU subtree roots",
+          "spec": "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/C1-spec.md"
+        }
+      ]
     }
   ],
   "sequence": [
@@ -300,6 +317,20 @@
       "id": "codex_wrapper_coverage_auto_generation:C4",
       "title": "Integration + docs",
       "depends_on": ["codex_wrapper_coverage_auto_generation:C3"],
+      "blocks": []
+    },
+    {
+      "order": 300,
+      "id": "codex_wrapper_iu_subtree_inheritance:C0",
+      "title": "Report-time IU subtree inheritance",
+      "depends_on": ["codex_wrapper_coverage_auto_generation:C4"],
+      "blocks": ["codex_wrapper_iu_subtree_inheritance:C1"]
+    },
+    {
+      "order": 310,
+      "id": "codex_wrapper_iu_subtree_inheritance:C1",
+      "title": "Adopt IU subtree roots",
+      "depends_on": ["codex_wrapper_iu_subtree_inheritance:C0"],
       "blocks": []
     }
   ]
