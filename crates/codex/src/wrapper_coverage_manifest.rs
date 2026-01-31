@@ -75,6 +75,39 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
         schema_version: 1,
         generated_at: None,
         wrapper_version: None,
-        coverage: Vec::new(),
+        coverage: vec![
+            WrapperCommandCoverageV1 {
+                path: vec!["completion".to_string()],
+                level: CoverageLevel::IntentionallyUnsupported,
+                note: Some(
+                    "Shell completion generation is out of scope for the wrapper.".to_string(),
+                ),
+                scope: None,
+                flags: None,
+                args: None,
+            },
+            WrapperCommandCoverageV1 {
+                path: vec!["cloud".to_string()],
+                level: CoverageLevel::IntentionallyUnsupported,
+                note: Some(
+                    "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+                        .to_string(),
+                ),
+                scope: None,
+                flags: None,
+                args: None,
+            },
+            WrapperCommandCoverageV1 {
+                path: vec!["mcp".to_string()],
+                level: CoverageLevel::IntentionallyUnsupported,
+                note: Some(
+                    "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+                        .to_string(),
+                ),
+                scope: None,
+                flags: None,
+                args: None,
+            },
+        ],
     }
 }
