@@ -4,7 +4,7 @@
     "name": "C0: Report + validate IU inheritance (code)",
     "type": "code",
     "phase": "C0",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Implement ADR 0004 IU subtree inheritance in xtask report + validator wiring (production code only).",
     "references": [
       "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",

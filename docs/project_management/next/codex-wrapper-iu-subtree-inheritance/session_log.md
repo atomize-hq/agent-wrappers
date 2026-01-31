@@ -32,3 +32,9 @@ START/END entries only. Do not edit from worktrees.
 - Commands: `cargo fmt` (<pass/fail>); `cargo clippy --workspace --all-targets -- -D warnings` (<pass/fail>); <tests> (<pass/fail>); `make preflight` (<pass/fail>)
 - Blockers: <none | list>
 
+## [2026-01-31 12:56 UTC] Code Agent – C0-code – START
+- Checked out `feat/codex-wrapper-iu-subtree-inheritance`, `git pull --ff-only` (ok)
+- Read plan/tasks/session log/spec/kickoff prompt; updated `tasks.json` (C0-code → `in_progress`)
+- Worktree pending (`iu4-c0-report-iu-inheritance-code` / `wt/iu4-c0-report-iu-inheritance-code` to be added after docs commit)
+- Plan: implement IU subtree inheritance + IU deltas sorting + RULES sorting parsing/validation + validator invariants; run required commands; commit via worktree; update docs/tasks/log at end
+- Blockers: none
