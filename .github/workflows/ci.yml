@@ -101,8 +101,11 @@ jobs:
           set -euo pipefail
           export CODEX_E2E_HOME="$(mktemp -d)"
           export CODEX_HOME="$CODEX_E2E_HOME"
+          export CODEX_BINARY=./codex-x86_64-unknown-linux-musl
           cargo test -p codex
           cargo test -p codex --examples
+          cargo run -p codex --example feature_detection
+          cargo run -p codex --example capability_snapshot -- "$CODEX_BINARY" "$CODEX_E2E_HOME/capabilities.json" auto
           CODEX_E2E_BINARY=./codex-x86_64-unknown-linux-musl cargo test -p codex --test cli_e2e -- --nocapture
 
   linux-min-supported:
@@ -147,6 +150,9 @@ jobs:
           set -euo pipefail
           export CODEX_E2E_HOME="$(mktemp -d)"
           export CODEX_HOME="$CODEX_E2E_HOME"
+          export CODEX_BINARY=./codex-x86_64-unknown-linux-musl
           cargo test -p codex
           cargo test -p codex --examples
+          cargo run -p codex --example feature_detection
+          cargo run -p codex --example capability_snapshot -- "$CODEX_BINARY" "$CODEX_E2E_HOME/capabilities.json" auto
           CODEX_E2E_BINARY=./codex-x86_64-unknown-linux-musl cargo test -p codex --test cli_e2e -- --nocapture

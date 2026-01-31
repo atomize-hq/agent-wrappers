@@ -4,11 +4,147 @@
   "wrapper_version": "0.2.0",
   "coverage": [
     {
+      "path": [],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--add-dir",
+          "level": "explicit",
+          "note": "capability-guarded"
+        },
+        {
+          "key": "--ask-for-approval",
+          "level": "explicit"
+        },
+        {
+          "key": "--cd",
+          "level": "explicit"
+        },
+        {
+          "key": "--config",
+          "level": "passthrough"
+        },
+        {
+          "key": "--dangerously-bypass-approvals-and-sandbox",
+          "level": "explicit"
+        },
+        {
+          "key": "--disable",
+          "level": "passthrough"
+        },
+        {
+          "key": "--enable",
+          "level": "passthrough"
+        },
+        {
+          "key": "--full-auto",
+          "level": "explicit"
+        },
+        {
+          "key": "--help",
+          "level": "explicit"
+        },
+        {
+          "key": "--image",
+          "level": "explicit"
+        },
+        {
+          "key": "--local-provider",
+          "level": "explicit"
+        },
+        {
+          "key": "--model",
+          "level": "explicit"
+        },
+        {
+          "key": "--oss",
+          "level": "explicit"
+        },
+        {
+          "key": "--profile",
+          "level": "explicit"
+        },
+        {
+          "key": "--sandbox",
+          "level": "explicit"
+        },
+        {
+          "key": "--search",
+          "level": "explicit"
+        },
+        {
+          "key": "--version",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "app-server",
+        "generate-json-schema"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--out",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server",
+        "generate-ts"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--out",
+          "level": "explicit"
+        },
+        {
+          "key": "--prettier",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "apply"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "TASK_ID",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
       "path": [
         "cloud"
       ],
       "level": "intentionally_unsupported",
       "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+    },
+    {
+      "path": [
+        "cloud",
+        "diff"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "TASK_ID",
+          "level": "explicit"
+        }
+      ]
     },
     {
       "path": [
@@ -19,10 +155,233 @@
     },
     {
       "path": [
+        "exec"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--color",
+          "level": "explicit"
+        },
+        {
+          "key": "--json",
+          "level": "explicit"
+        },
+        {
+          "key": "--output-last-message",
+          "level": "explicit"
+        },
+        {
+          "key": "--output-schema",
+          "level": "explicit",
+          "note": "capability-guarded"
+        },
+        {
+          "key": "--skip-git-repo-check",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "PROMPT",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec",
+        "resume"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--all",
+          "level": "explicit"
+        },
+        {
+          "key": "--json",
+          "level": "explicit"
+        },
+        {
+          "key": "--last",
+          "level": "explicit"
+        },
+        {
+          "key": "--skip-git-repo-check",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "PROMPT",
+          "level": "explicit"
+        },
+        {
+          "name": "SESSION_ID",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "execpolicy",
+        "check"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--policy",
+          "level": "explicit"
+        },
+        {
+          "key": "--pretty",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "features",
+        "list"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--json",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "login"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--api-key",
+          "level": "explicit"
+        },
+        {
+          "key": "--mcp",
+          "level": "explicit",
+          "note": "capability-guarded"
+        }
+      ]
+    },
+    {
+      "path": [
+        "login",
+        "status"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "logout"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
         "mcp"
       ],
       "level": "intentionally_unsupported",
       "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+    },
+    {
+      "path": [
+        "mcp-server"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "responses-api-proxy"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--http-shutdown",
+          "level": "explicit"
+        },
+        {
+          "key": "--port",
+          "level": "explicit"
+        },
+        {
+          "key": "--server-info",
+          "level": "explicit"
+        },
+        {
+          "key": "--upstream-url",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "sandbox",
+        "linux"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "sandbox",
+        "macos"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--log-denials",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "sandbox",
+        "windows"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "stdio-to-uds"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "SOCKET_PATH",
+          "level": "explicit"
+        }
+      ]
     }
   ]
 }

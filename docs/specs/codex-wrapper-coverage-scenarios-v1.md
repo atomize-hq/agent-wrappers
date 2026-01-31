@@ -106,25 +106,24 @@ Wrapper API family:
 
 - Arg: `PROMPT` (level: `explicit`)
 
-## Scenario 3: `codex resume --json` (streaming resume)
+## Scenario 3: `codex exec --json resume` (streaming resume)
 
 Wrapper API family:
 - `CodexClient::stream_resume`
 
 ### Command entry
 
-- Path: `["resume"]` (level: `explicit`)
+- Path: `["exec","resume"]` (level: `explicit`)
 
 ### Required command-specific flags
 
-- `--json` (level: `explicit`)
-- `--output-last-message` (level: `explicit`)
-- `--output-schema` (level: `explicit`, note: `capability-guarded`)
+- `--json` (level: `explicit`)  
+  The wrapper requests JSONL output by passing `--json` to the parent `codex exec` invocation.
+- `--skip-git-repo-check` (level: `explicit`)
 - `--last` (level: `explicit`)
 - `--all` (level: `explicit`)
-- `--color` (level: `explicit`)
-- `--skip-git-repo-check` (level: `explicit`)
 Notes:
+- `--color`, `--output-last-message`, and `--output-schema` are recorded under `path=["exec"]` (Scenario 2) because the wrapper supplies them as part of the parent `codex exec --json` invocation.
 - `--model` and `--add-dir` are recorded at `path=[]` as global flags (Scenario 0).
 
 ### Required positional args
@@ -134,19 +133,26 @@ Notes:
 - Arg: `SESSION_ID` (level: `explicit`)  
   Emitted only for `ResumeSelector::Id(...)`.
 
-## Scenario 4: `codex apply` and `codex diff`
+## Scenario 4: `codex apply <TASK_ID>` and `codex cloud diff <TASK_ID>`
 
 Wrapper API family:
 - `CodexClient::apply`
+- `CodexClient::apply_task`
 - `CodexClient::diff`
+- `CodexClient::cloud_diff_task`
 
 ### Command entries
 
 - Path: `["apply"]` (level: `explicit`)
-- Path: `["diff"]` (level: `explicit`)
+- Path: `["cloud","diff"]` (level: `explicit`)
 
 Notes:
-- v1 claims no positional args for these commands.
+- `CodexClient::apply` and `CodexClient::diff` may read `CODEX_TASK_ID` as a convenience when callers do not supply a task id explicitly.
+
+### Required positional args
+
+- For `path=["apply"]`: `TASK_ID` (level: `explicit`)
+- For `path=["cloud","diff"]`: `TASK_ID` (level: `explicit`)
 
 ## Scenario 5: `codex login`, `codex login status`, `codex logout`
 

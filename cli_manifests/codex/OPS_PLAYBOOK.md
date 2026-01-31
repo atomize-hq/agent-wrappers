@@ -93,7 +93,7 @@ These surfaces are intentionally *not* wrapped unless/until they meet promotion 
 - Experimental MCP management commands (`codex mcp list/get/add/remove/login/logout`) unless they become stable and necessary
 
 Operational representation (ADR 0004):
-- After IU subtree inheritance (ADR 0004) is implemented, represent intentionally unwrapped command families as **IU subtree roots** in `crates/codex/src/wrapper_coverage_manifest.rs`:
+- Represent intentionally unwrapped command families as **IU subtree roots** in `crates/codex/src/wrapper_coverage_manifest.rs` (ADR 0004):
   - add a command entry for the parent path (e.g. `["completion"]`, `["cloud"]`, or `["mcp"]`) with `level: intentionally_unsupported` and a stable, non-empty `note`.
   - do **not** enumerate every descendant flag/arg; descendants are classified as IU by inheritance unless explicitly overridden.
 - Reports will keep these surfaces visible under `deltas.intentionally_unsupported` (audit-friendly) while keeping `missing_*` actionable.

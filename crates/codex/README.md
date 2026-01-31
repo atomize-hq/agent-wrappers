@@ -155,9 +155,11 @@ Set `json_event_log` on the builder or per request to tee every raw JSONL line t
 
 Events still flow to your `events` stream even when teeing is enabled.
 
-## Apply or inspect diffs
+## Apply or inspect task diffs
 
-`CodexClient::apply` and `CodexClient::diff` wrap `codex apply/diff`, capture stdout/stderr, and return the exit status via [`ApplyDiffArtifacts`](crates/codex/src/lib.rs). They honor the builder flags you already use for streaming:
+`CodexClient::apply_task` wraps `codex apply <TASK_ID>`, and `CodexClient::cloud_diff_task` wraps `codex cloud diff <TASK_ID>` when supported by the binary. `CodexClient::apply`/`CodexClient::diff` are convenience helpers that will append `<TASK_ID>` from `CODEX_TASK_ID` when set.
+
+All of these capture stdout/stderr and return the exit status via [`ApplyDiffArtifacts`](crates/codex/src/lib.rs). They honor the builder flags you already use for streaming:
 
 - `mirror_stdout` controls whether stdout is echoed while still being captured.
 - `quiet` suppresses stderr mirroring (stderr is always returned in the artifacts).
@@ -172,14 +174,12 @@ let client = CodexClient::builder()
     .quiet(true)          // silence stderr while capturing
     .build();
 
-let apply = client.apply().await?; // or client.diff()
+let apply = client.apply_task("t-123").await?;
 println!("exit: {}", apply.status);
 println!("stdout: {}", apply.stdout);
 println!("stderr: {}", apply.stderr);
 # Ok(()) }
 ```
-
-When you stream JSONL events, apply/diff output is also emitted inside `file_change` events and tee'd to any `json_event_log` path you configure.
 
 ## RUST_LOG defaults
 

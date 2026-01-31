@@ -21,6 +21,8 @@ Your job is to use those outputs to implement/waive wrapper support until the re
 - Per-target work queue(s): `cli_manifests/codex/reports/{{VERSION}}/coverage.<target_triple>.json`
 - Wrapper coverage manifest (generated): `cli_manifests/codex/wrapper_coverage.json`
 - Wrapper coverage source-of-truth (edit this, not the JSON): `crates/codex/src/wrapper_coverage_manifest.rs`
+- Wrapper coverage scenario catalog (normative): `docs/specs/codex-wrapper-coverage-scenarios-v1.md`
+- Wrapper coverage generator contract (normative): `docs/specs/codex-wrapper-coverage-generator-contract.md`
 - Validator contract: `cli_manifests/codex/VALIDATOR_SPEC.md`
 - Rules + policy: `cli_manifests/codex/RULES.json`
 - Agent runbook: `cli_manifests/codex/CI_AGENT_RUNBOOK.md`
@@ -73,6 +75,7 @@ Then run wrapper tests (Linux required):
 - `cargo test -p codex`
 - `cargo test -p codex --examples`
 - `CODEX_E2E_BINARY=./codex-x86_64-unknown-linux-musl cargo test -p codex --test cli_e2e -- --nocapture`
+- Optional (requires valid auth under `CODEX_E2E_HOME`): `CODEX_E2E_LIVE=1 CODEX_E2E_BINARY=./codex-x86_64-unknown-linux-musl cargo test -p codex --test cli_e2e -- --nocapture`
 
 ## Done Criteria
 

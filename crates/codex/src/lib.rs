@@ -34,7 +34,7 @@
 //! Surfaces:
 //! - [`CodexClient::send_prompt`] for a single prompt/response with optional `--json` output.
 //! - [`CodexClient::stream_exec`] for typed, real-time JSONL events from `codex exec --json`, returning an [`ExecStream`] with an event stream plus a completion future.
-//! - [`CodexClient::apply`] / [`CodexClient::diff`] to run `codex apply/diff`, echo stdout/stderr according to the builder (`mirror_stdout` / `quiet`), and return captured output + exit status.
+//! - [`CodexClient::apply`] / [`CodexClient::diff`] to run `codex apply <TASK_ID>` and `codex cloud diff <TASK_ID>`, echo stdout/stderr according to the builder (`mirror_stdout` / `quiet`), and return captured output + exit status.
 //! - [`CodexClient::generate_app_server_bindings`] to refresh app-server protocol bindings via `codex app-server generate-ts` (optional `--prettier`) or `generate-json-schema`, returning captured stdout/stderr plus the exit status.
 //! - [`CodexClient::run_sandbox`] to wrap `codex sandbox <platform>` (macOS/Linux/Windows), pass `--full-auto`/`--log-denials`/`--config`/`--enable`/`--disable`, and return the inner command status + output. macOS is the only platform that emits denial logs; Linux depends on the bundled `codex-linux-sandbox`; Windows sandboxing is experimental and relies on the upstream helper (no capability gating—non-zero exits bubble through).
 //! - [`CodexClient::check_execpolicy`] to evaluate shell commands against Starlark execpolicy files with repeatable `--policy` flags, optional pretty JSON, and parsed decision output (allow/prompt/forbidden or noMatch).
@@ -49,13 +49,14 @@
 //! - `crates/codex/examples/stream_events.rs`, `stream_last_message.rs`, `stream_with_log.rs`, and `json_stream.rs` cover typed consumption, artifact handling, log teeing, and minimal streaming.
 //!
 //! ## Resume + apply/diff
-//! - `codex resume --json --skip-git-repo-check --last` (or `--id <conversationId>`) streams the same `thread/turn/item` events as `exec` with an initial `thread.resumed`; reuse the streaming consumers above.
-//! - `codex diff --json --skip-git-repo-check` previews staged changes, and `codex apply --json` returns stdout/stderr plus the exit status for the apply step. Streams echo into `file_change` events and any configured JSON log tee.
-//! - `crates/codex/examples/resume_apply.rs` strings these together with sample payloads and lets you skip the apply call when you just want the resume stream.
+//! - `codex exec --json resume --last [-]` streams the same `thread/turn/item` events as `codex exec --json` but starts from an existing session (`thread.resumed`).
+//! - Apply/diff require task IDs: `codex apply <TASK_ID>` applies a diff, and `codex cloud diff <TASK_ID>` prints a cloud task diff when supported by the binary.
+//! - Convenience: [`CodexClient::apply`] / [`CodexClient::diff`] will append `<TASK_ID>` from `CODEX_TASK_ID` when set; otherwise they still spawn the command and return the non-zero exit status/output from the CLI.
+//! - `crates/codex/examples/resume_apply.rs` shows a CLI-native resume/apply flow and ships `--sample` fixtures for offline inspection.
 //!
 //! ## Servers and capability detection
 //! - Integrate the stdio servers via `codex mcp-server` / `codex app-server` (`crates/codex/examples/mcp_codex_flow.rs`, `mcp_codex_tool.rs`, `mcp_codex_reply.rs`, `app_server_turns.rs`, `app_server_thread_turn.rs`) to drive JSON-RPC flows, approvals, and shutdown.
-//! - Gate optional flags with `crates/codex/examples/feature_detection.rs`, which parses `codex --version` + `codex features list` to decide whether to enable streaming, log tee, resume/apply/diff helpers, or app-server endpoints. Cache feature probes per binary path and refresh them when the Codex binary path, mtime, or reported version changes; emit upgrade advisories when required capabilities are missing.
+//! - `probe_capabilities` and the `feature_detection` example focus on `--output-schema`, `--add-dir`, `codex login --mcp`, and `codex features list` availability; other subcommand drift (like cloud-only commands) is surfaced by the parity snapshot/reports in `cli_manifests/codex/`.
 //!
 //! More end-to-end flows and CLI mappings live in `crates/codex/README.md` and `crates/codex/EXAMPLES.md`.
 //!
@@ -1626,7 +1627,7 @@ impl CodexClient {
         })
     }
 
-    /// Streams structured events from `codex resume --json`.
+    /// Streams structured events from `codex exec --json resume ...`.
     pub async fn stream_resume(
         &self,
         request: ResumeRequest,
@@ -1662,7 +1663,7 @@ impl CodexClient {
 
         let mut command = Command::new(self.command_env.binary_path());
         command
-            .arg("resume")
+            .arg("exec")
             .arg("--color")
             .arg(self.color_mode.as_str())
             .arg("--skip-git-repo-check")
@@ -1674,18 +1675,6 @@ impl CodexClient {
             .current_dir(&dir_path);
 
         apply_cli_overrides(&mut command, &resolved_overrides, true);
-
-        match selector {
-            ResumeSelector::Id(id) => {
-                command.arg(id);
-            }
-            ResumeSelector::Last => {
-                command.arg("--last");
-            }
-            ResumeSelector::All => {
-                command.arg("--all");
-            }
-        }
 
         if let Some(model) = &self.model {
             command.arg("--model").arg(model);
@@ -1704,6 +1693,10 @@ impl CodexClient {
             }
         }
 
+        for image in &self.images {
+            command.arg("--image").arg(image);
+        }
+
         command.arg("--output-last-message").arg(&last_message_path);
 
         if let Some(schema_path) = &output_schema {
@@ -1717,6 +1710,25 @@ impl CodexClient {
             } else {
                 command.arg("--output-schema").arg(schema_path);
             }
+        }
+
+        command.arg("resume");
+
+        match selector {
+            ResumeSelector::Id(id) => {
+                command.arg(id);
+            }
+            ResumeSelector::Last => {
+                command.arg("--last");
+            }
+            ResumeSelector::All => {
+                command.arg("--all");
+            }
+        }
+
+        if prompt.is_some() {
+            // `codex exec resume` reads the follow-up prompt from stdin when `-` is supplied.
+            command.arg("-");
         }
 
         self.command_env.apply(&mut command)?;
@@ -1927,25 +1939,88 @@ impl CodexClient {
         }
     }
 
-    /// Applies the most recent Codex diff by invoking `codex apply`.
+    /// Applies a Codex diff by invoking `codex apply <TASK_ID>`.
     ///
     /// Stdout mirrors to the console when `mirror_stdout` is enabled; stderr mirrors unless `quiet`
     /// is set. Output and exit status are always captured and returned, and `RUST_LOG=error` is
     /// injected for the child process when the environment variable is unset.
+    ///
+    /// Convenience behavior: if `CODEX_TASK_ID` is set, it is appended as `<TASK_ID>`. When the
+    /// environment variable is missing, the subprocess is still spawned and will typically exit
+    /// non-zero with a "missing TASK_ID" error from the CLI.
     pub async fn apply(&self) -> Result<ApplyDiffArtifacts, CodexError> {
-        self.apply_or_diff("apply").await
+        let task_id = env::var_os("CODEX_TASK_ID")
+            .and_then(|v| normalize_non_empty(&v.to_string_lossy()).map(OsString::from));
+        self.apply_task_inner(task_id).await
     }
 
-    /// Shows the most recent Codex diff by invoking `codex diff`.
+    /// Applies a Codex diff by task id via `codex apply <TASK_ID>`.
+    pub async fn apply_task(
+        &self,
+        task_id: impl AsRef<str>,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let task_id = task_id.as_ref().trim();
+        if task_id.is_empty() {
+            return Err(CodexError::EmptyTaskId);
+        }
+        self.apply_task_inner(Some(OsString::from(task_id))).await
+    }
+
+    /// Shows a Codex Cloud task diff by invoking `codex cloud diff <TASK_ID>`.
     ///
     /// Mirrors stdout/stderr using the same `mirror_stdout`/`quiet` defaults as `apply`, but always
     /// returns the captured output alongside the child exit status. Applies the same `RUST_LOG`
     /// defaulting behavior when the variable is unset.
+    ///
+    /// Convenience behavior: if `CODEX_TASK_ID` is set, it is appended as `<TASK_ID>`. When the
+    /// environment variable is missing, the subprocess is still spawned and will typically exit
+    /// non-zero with a "missing TASK_ID" error from the CLI.
     pub async fn diff(&self) -> Result<ApplyDiffArtifacts, CodexError> {
-        self.apply_or_diff("diff").await
+        let task_id = env::var_os("CODEX_TASK_ID")
+            .and_then(|v| normalize_non_empty(&v.to_string_lossy()).map(OsString::from));
+        self.cloud_diff_task_inner(task_id).await
     }
 
-    async fn apply_or_diff(&self, subcommand: &str) -> Result<ApplyDiffArtifacts, CodexError> {
+    /// Shows a Codex Cloud task diff by task id via `codex cloud diff <TASK_ID>`.
+    pub async fn cloud_diff_task(
+        &self,
+        task_id: impl AsRef<str>,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let task_id = task_id.as_ref().trim();
+        if task_id.is_empty() {
+            return Err(CodexError::EmptyTaskId);
+        }
+        self.cloud_diff_task_inner(Some(OsString::from(task_id)))
+            .await
+    }
+
+    async fn apply_task_inner(
+        &self,
+        task_id: Option<OsString>,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let mut args = vec![OsString::from("apply")];
+        if let Some(task_id) = task_id {
+            args.push(task_id);
+        }
+        self.capture_codex_command(args, false).await
+    }
+
+    async fn cloud_diff_task_inner(
+        &self,
+        task_id: Option<OsString>,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let mut args = vec![OsString::from("cloud"), OsString::from("diff")];
+        if let Some(task_id) = task_id {
+            args.push(task_id);
+        }
+        self.capture_codex_command(args, false).await
+    }
+
+    async fn capture_codex_command(
+        &self,
+        args: Vec<OsString>,
+        include_search: bool,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
         let dir_ctx = self.directory_context()?;
         let resolved_overrides = resolve_cli_overrides(
             &self.cli_overrides,
@@ -1955,13 +2030,13 @@ impl CodexClient {
 
         let mut command = Command::new(self.command_env.binary_path());
         command
-            .arg(subcommand)
+            .args(&args)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true)
             .current_dir(dir_ctx.path());
 
-        apply_cli_overrides(&mut command, &resolved_overrides, false);
+        apply_cli_overrides(&mut command, &resolved_overrides, include_search);
         self.command_env.apply(&mut command)?;
 
         let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
@@ -4248,6 +4323,8 @@ pub enum CodexError {
     EmptyExecPolicyCommand,
     #[error("API key must not be empty")]
     EmptyApiKey,
+    #[error("task id must not be empty")]
+    EmptyTaskId,
     #[error("socket path must not be empty")]
     EmptySocketPath,
     #[error("failed to create temporary working directory: {0}")]
@@ -5679,7 +5756,8 @@ pub struct ExecCompletion {
     pub schema_path: Option<PathBuf>,
 }
 
-/// Captured output from `codex apply` or `codex diff`.
+/// Captured output from task-oriented subcommands such as `codex apply <TASK_ID>` or
+/// `codex cloud diff <TASK_ID>`.
 #[derive(Clone, Debug)]
 pub struct ApplyDiffArtifacts {
     /// Exit status returned by the subcommand.
@@ -8067,7 +8145,7 @@ if [[ "$cmd" == "apply" ]]; then
   echo "applied"
   echo "apply-stderr" >&2
   exit 0
-elif [[ "$cmd" == "diff" ]]; then
+elif [[ "$cmd" == "cloud" && "${2:-}" == "diff" ]]; then
   echo "diff-body"
   echo "diff-stderr" >&2
   exit 3
@@ -9603,7 +9681,7 @@ fi
         let script = format!(
             r#"#!/bin/bash
 echo "$@" >> "{log}"
-if [[ "$1" == "resume" ]]; then
+if [[ "$1" == "exec" ]]; then
   echo '{{"type":"thread.started","thread_id":"thread-1"}}'
   echo '{{"type":"turn.started","thread_id":"thread-1","turn_id":"turn-1"}}'
   echo '{{"type":"turn.completed","thread_id":"thread-1","turn_id":"turn-1"}}'

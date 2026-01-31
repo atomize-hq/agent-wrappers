@@ -16,7 +16,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut builder = CodexClient::builder()
         .timeout(Duration::from_secs(45))
         .mirror_stdout(false)
-        // codex exec 0.6.1 does not expose --ask-for-approval; set via config override instead.
+        // Some Codex versions surface approval/sandbox as global flags; the wrapper applies them
+        // via its shared override plumbing.
         .sandbox_mode(SandboxMode::WorkspaceWrite)
         .enable_feature("shell_tool")
         .disable_feature("web_search_request")

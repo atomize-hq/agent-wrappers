@@ -20,6 +20,15 @@ For a given upstream version `V`:
 - **Wrapper coverage source of truth (edit this)**  
   `crates/codex/src/wrapper_coverage_manifest.rs`
 
+Wrapper coverage is **spec-driven**:
+- Scenario catalog (normative): `docs/specs/codex-wrapper-coverage-scenarios-v1.md`
+- Generator contract (normative): `docs/specs/codex-wrapper-coverage-generator-contract.md`
+
+When you add or change any wrapper API that spawns `codex`, you must update:
+1) the wrapper implementation (`crates/codex`),
+2) the scenario catalog (to keep the generator contract accurate), and
+3) `wrapper_coverage_manifest.rs` so regenerated artifacts reflect the new surface.
+
 Baseline comparison:
 
 - `BASELINE="$(cat cli_manifests/codex/latest_validated.txt)"`
@@ -73,6 +82,10 @@ For each upstream surface (command/flag/arg), choose one:
 
 Validator rule: any `intentionally_unsupported` entry (command/flag/arg) requires a rationale note.
 
+Note policy (to avoid churn):
+- `intentionally_unsupported` entries must have a stable, non-empty `note`.
+- Capability-guarded surfaces must use `note: "capability-guarded"` (exact string) per the generator contract.
+
 ## Operating Loop (single version V)
 
 ### 0) Determine what changed vs baseline
@@ -115,7 +128,7 @@ Option B: intentionally waive
 
 Subtree waivers (ADR 0004):
 - If an entire command family is intentionally unwrapped (e.g. `codex completion ...`), prefer marking the *parent command* as `intentionally_unsupported` with a stable rationale note.
-- After ADR 0004 is implemented, `xtask codex-report` will treat descendant commands/flags/args as `intentionally_unsupported` by inheritance unless explicitly overridden by an exact wrapper coverage entry.
+- `xtask codex-report` treats descendant commands/flags/args as `intentionally_unsupported` by inheritance unless explicitly overridden by an exact wrapper coverage entry.
 - In reports, inherited IU entries appear under `deltas.intentionally_unsupported` and MUST NOT appear under `missing_*`.
 
 ### 2) Regenerate artifacts (always do this after changes)
@@ -139,6 +152,9 @@ cargo test -p codex --examples
 
 # Real CLI e2e uses an externally provided codex binary; CI sets this up on Linux.
 CODEX_E2E_BINARY=./codex-x86_64-unknown-linux-musl cargo test -p codex --test cli_e2e -- --nocapture
+
+# Optional: enable the live exec/resume/apply roundtrip (requires valid auth in CODEX_E2E_HOME).
+CODEX_E2E_LIVE=1 CODEX_E2E_BINARY=./codex-x86_64-unknown-linux-musl cargo test -p codex --test cli_e2e -- --nocapture
 ```
 
 ## “Done” (what constitutes completion)
