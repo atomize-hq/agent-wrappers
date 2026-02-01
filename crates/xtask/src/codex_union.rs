@@ -59,7 +59,31 @@ pub enum Error {
 #[derive(Debug, Deserialize)]
 struct RulesFile {
     union: RulesUnion,
+    #[serde(default)]
+    globals: RulesGlobals,
     sorting: RulesSorting,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct RulesGlobals {
+    #[serde(default)]
+    effective_flags_model: RulesEffectiveFlagsModel,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct RulesEffectiveFlagsModel {
+    #[serde(default)]
+    enabled: bool,
+    #[serde(default)]
+    union_normalization: RulesUnionNormalization,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct RulesUnionNormalization {
+    #[serde(default)]
+    dedupe_per_command_flags_against_root: bool,
+    #[serde(default)]
+    dedupe_key: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -93,6 +117,7 @@ pub fn run(args: Args) -> Result<(), Error> {
 
     let rules: RulesFile = serde_json::from_slice(&fs::read(&rules_path)?)?;
     assert_supported_sorting(&rules.sorting)?;
+    assert_supported_globals(&rules.globals)?;
 
     let expected_targets = rules.union.expected_targets;
     if expected_targets.is_empty() {
@@ -176,13 +201,17 @@ pub fn run(args: Args) -> Result<(), Error> {
     }
 
     let raw_help_root = root.join("raw_help").join(&args.version);
-    let commands = build_union_commands(
+    let mut commands = build_union_commands(
         &expected_targets,
         &rules.union.required_target,
         &args.version,
         &raw_help_root,
         &present_targets,
         &snapshots_by_target,
+    );
+    normalize_union_commands(
+        &mut commands,
+        &rules.globals.effective_flags_model,
     );
 
     let union = SnapshotUnionV2 {
@@ -208,6 +237,55 @@ pub fn run(args: Args) -> Result<(), Error> {
         format!("{}\n", serde_json::to_string_pretty(&union)?),
     )?;
     Ok(())
+}
+
+fn normalize_union_commands(commands: &mut [UnionCommandSnapshotV2], model: &RulesEffectiveFlagsModel) {
+    if !model.enabled || !model.union_normalization.dedupe_per_command_flags_against_root {
+        return;
+    }
+
+    // v1 uses key identity at union layer already (long_or_short), so we only need the `key`.
+    let root_keys: BTreeSet<String> = commands
+        .iter()
+        .find(|cmd| cmd.path.is_empty())
+        .and_then(|cmd| cmd.flags.as_ref())
+        .map(|flags| flags.iter().map(|f| f.key.clone()).collect())
+        .unwrap_or_default();
+
+    if root_keys.is_empty() {
+        return;
+    }
+
+    for cmd in commands.iter_mut() {
+        if cmd.path.is_empty() {
+            continue;
+        }
+
+        if let Some(flags) = cmd.flags.as_mut() {
+            flags.retain(|f| !root_keys.contains(&f.key));
+            if flags.is_empty() {
+                cmd.flags = None;
+            }
+        }
+
+        if let Some(conflicts) = cmd.conflicts.as_mut() {
+            conflicts.retain(|c| {
+                if c.unit != "flag" {
+                    return true;
+                }
+                if c.path != cmd.path {
+                    return true;
+                }
+                let Some(key) = c.key.as_deref() else {
+                    return true;
+                };
+                !root_keys.contains(key)
+            });
+            if conflicts.is_empty() {
+                cmd.conflicts = None;
+            }
+        }
+    }
 }
 
 fn assert_supported_sorting(sorting: &RulesSorting) -> Result<(), Error> {
@@ -238,6 +316,22 @@ fn assert_supported_sorting(sorting: &RulesSorting) -> Result<(), Error> {
         Err(Error::Rules(format!(
             "unsupported sorting rules: {}",
             unsupported.join(", ")
+        )))
+    }
+}
+
+fn assert_supported_globals(globals: &RulesGlobals) -> Result<(), Error> {
+    let model = &globals.effective_flags_model;
+    if !model.enabled || !model.union_normalization.dedupe_per_command_flags_against_root {
+        return Ok(());
+    }
+
+    let key = model.union_normalization.dedupe_key.trim();
+    if key.is_empty() || key == "flag_key" {
+        Ok(())
+    } else {
+        Err(Error::Rules(format!(
+            "unsupported globals.effective_flags_model.union_normalization.dedupe_key={key}"
         )))
     }
 }

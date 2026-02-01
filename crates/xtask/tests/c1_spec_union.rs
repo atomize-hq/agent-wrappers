@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde_json::Value;
+use serde_json::{json, Value};
 
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -61,6 +61,14 @@ fn write_snapshot_fixture(codex_root: &Path, version: &str, target_triple: &str)
     fs::create_dir_all(&dst_dir).expect("create snapshots/<version> dir");
     let dst = dst_dir.join(format!("{target_triple}.json"));
     fs::copy(src, dst).expect("copy snapshot fixture");
+}
+
+fn write_snapshot_json(codex_root: &Path, version: &str, target_triple: &str, snapshot: &Value) {
+    let dst_dir = codex_root.join("snapshots").join(version);
+    fs::create_dir_all(&dst_dir).expect("create snapshots/<version> dir");
+    let dst = dst_dir.join(format!("{target_triple}.json"));
+    fs::write(&dst, format!("{}\n", serde_json::to_string_pretty(snapshot).unwrap()))
+        .expect("write snapshot json");
 }
 
 fn run_xtask_union(codex_root: &Path, version: &str) -> std::process::Output {
@@ -297,5 +305,85 @@ fn c1_union_records_conflicts_and_is_deterministic_with_source_date_epoch() {
         arg_required.is_some(),
         "expected an arg required conflict for INPUT; conflicts={:?}",
         conflicts
+    );
+}
+
+#[test]
+fn c1_union_dedupes_per_command_flags_against_root() {
+    let temp = make_temp_dir("ccm-c1-union-dedupe-root-flags");
+    let codex_root = temp.join("cli_manifests").join("codex");
+    write_rules_json(&codex_root);
+
+    let version = "0.77.0";
+    let target = "x86_64-unknown-linux-musl";
+
+    let snapshot = json!({
+      "snapshot_schema_version": 1,
+      "tool": "codex-cli",
+      "collected_at": "1970-01-01T00:00:00Z",
+      "binary": {
+        "sha256": "00",
+        "size_bytes": 1,
+        "platform": { "os": "linux", "arch": "x86_64" },
+        "target_triple": target,
+        "version_output": format!("codex {version}"),
+        "semantic_version": version,
+        "channel": "stable"
+      },
+      "commands": [
+        {
+          "path": [],
+          "usage": "codex [OPTIONS] <COMMAND>",
+          "flags": [
+            { "long": "--help", "takes_value": false },
+            { "long": "--config", "takes_value": true, "value_name": "key=value" }
+          ]
+        },
+        {
+          "path": ["alpha"],
+          "usage": "codex alpha [OPTIONS]",
+          "flags": [
+            { "long": "--help", "takes_value": false },
+            { "long": "--config", "takes_value": true, "value_name": "key=value" },
+            { "long": "--alpha-only", "takes_value": false }
+          ]
+        }
+      ]
+    });
+
+    write_snapshot_json(&codex_root, version, target, &snapshot);
+
+    let output = run_xtask_union(&codex_root, version);
+    if !output.status.success() {
+        panic!(
+            "xtask codex-union failed:\nstatus: {}\nstdout:\n{}\nstderr:\n{}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    let union = read_union_json(&codex_root, version);
+    let alpha = get_union_command(&union, &["alpha"]);
+    let flags = alpha
+        .get("flags")
+        .and_then(Value::as_array)
+        .expect("alpha.flags is array");
+    let keys = flags
+        .iter()
+        .filter_map(|f| f.get("key").and_then(Value::as_str))
+        .collect::<Vec<_>>();
+
+    assert!(
+        !keys.contains(&"--help"),
+        "expected per-command --help to be deduped against root; flags={keys:?}"
+    );
+    assert!(
+        !keys.contains(&"--config"),
+        "expected per-command --config to be deduped against root; flags={keys:?}"
+    );
+    assert!(
+        keys.contains(&"--alpha-only"),
+        "expected alpha-only flag to remain; flags={keys:?}"
     );
 }

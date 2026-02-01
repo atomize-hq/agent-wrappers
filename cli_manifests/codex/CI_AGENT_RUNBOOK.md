@@ -29,6 +29,9 @@ When you add or change any wrapper API that spawns `codex`, you must update:
 2) the scenario catalog (to keep the generator contract accurate), and
 3) `wrapper_coverage_manifest.rs` so regenerated artifacts reflect the new surface.
 
+Anti-goal:
+- Do **not** “zero out” `missing_*` by bulk-adding upstream-discovered commands/flags/args into `wrapper_coverage_manifest.rs` unless the wrapper actually spawns/supports those surfaces. If the report shows obviously-global flags missing under many commands (for example `--help`, `--config`, `--enable`, `--disable`), treat it as a snapshot/union/report normalization bug and fix the generator instead of papering over it in wrapper coverage.
+
 Baseline comparison:
 
 - `BASELINE="$(cat cli_manifests/codex/latest_validated.txt)"`

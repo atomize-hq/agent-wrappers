@@ -331,8 +331,8 @@ mod unix {
             "exec args include PROMPT inferred from usage"
         );
         assert!(
-            arg_names.contains(&"COMMAND"),
-            "exec args include COMMAND inferred from usage"
+            !arg_names.contains(&"COMMAND"),
+            "exec args must not include COMMAND pseudo-arg when Commands: section is present"
         );
 
         let exec_flags = exec

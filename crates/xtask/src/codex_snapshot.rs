@@ -388,7 +388,10 @@ fn discover_commands(
 
     let mut root_args = root_parsed.args;
     if let Some(usage) = root_parsed.usage.as_deref() {
-        merge_inferred_args(&mut root_args, infer_args_from_usage(usage, &[]));
+        merge_inferred_args(
+            &mut root_args,
+            infer_args_from_usage(usage, &[], !root_parsed.subcommands.is_empty()),
+        );
     }
     if !root_args.is_empty() {
         root_args.sort_by(|a, b| a.name.cmp(&b.name));
@@ -462,7 +465,10 @@ fn collect_command_recursive(
 
     let mut args = parsed.args;
     if let Some(usage) = parsed.usage.as_deref() {
-        merge_inferred_args(&mut args, infer_args_from_usage(usage, &path));
+        merge_inferred_args(
+            &mut args,
+            infer_args_from_usage(usage, &path, !parsed.subcommands.is_empty()),
+        );
     }
     if !args.is_empty() {
         args.sort_by(|a, b| a.name.cmp(&b.name));
@@ -1067,7 +1073,7 @@ fn merge_inferred_args(args: &mut Vec<ArgSnapshot>, inferred: Vec<ArgSnapshot>) 
     }
 }
 
-fn infer_args_from_usage(usage: &str, cmd_path: &[String]) -> Vec<ArgSnapshot> {
+fn infer_args_from_usage(usage: &str, cmd_path: &[String], has_subcommands: bool) -> Vec<ArgSnapshot> {
     let mut out = Vec::new();
 
     for line in usage.lines() {
@@ -1117,6 +1123,13 @@ fn infer_args_from_usage(usage: &str, cmd_path: &[String]) -> Vec<ArgSnapshot> {
                 Some(v) => v,
                 None => continue,
             };
+
+            // Clap often represents subcommand dispatch using `[COMMAND]` and `[ARGS]` in usage lines
+            // even when the help output includes an explicit `Commands:` section. Treat these as
+            // implementation details, not stable positional args, and avoid inferring them.
+            if has_subcommands && matches!(name.as_str(), "COMMAND" | "ARGS") {
+                continue;
+            }
 
             // Avoid duplicates across multiple usage variants.
             if out.iter().any(|a: &ArgSnapshot| a.name == name) {
