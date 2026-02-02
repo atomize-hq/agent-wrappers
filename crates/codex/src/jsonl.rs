@@ -29,7 +29,7 @@ impl JsonlThreadEventParser {
     /// - Returns `Err(ExecStreamError)` on JSON parse / normalization / typed parse failures.
     pub fn parse_line(&mut self, line: &str) -> Result<Option<ThreadEvent>, ExecStreamError> {
         let line = line.strip_suffix('\r').unwrap_or(line);
-        if line.trim().is_empty() {
+        if line.chars().all(|ch| ch.is_whitespace()) {
             return Ok(None);
         }
 
