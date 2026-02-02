@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-01-27T11:50:52Z",
+  "generated_at": "2026-02-01T15:00:23Z",
   "wrapper_version": "0.2.0",
   "coverage": [
     {
@@ -82,7 +82,13 @@
       "path": [
         "app-server"
       ],
-      "level": "explicit"
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--analytics-default-enabled",
+          "level": "explicit"
+        }
+      ]
     },
     {
       "path": [
@@ -116,6 +122,19 @@
     },
     {
       "path": [
+        "app-server",
+        "help"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
         "apply"
       ],
       "level": "explicit",
@@ -130,13 +149,115 @@
       "path": [
         "cloud"
       ],
-      "level": "intentionally_unsupported",
-      "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "cloud",
+        "apply"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--attempt",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "TASK_ID",
+          "level": "explicit"
+        }
+      ]
     },
     {
       "path": [
         "cloud",
         "diff"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--attempt",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "TASK_ID",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "exec"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--attempts",
+          "level": "explicit"
+        },
+        {
+          "key": "--branch",
+          "level": "explicit"
+        },
+        {
+          "key": "--env",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "QUERY",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "help"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "list"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--cursor",
+          "level": "explicit"
+        },
+        {
+          "key": "--env",
+          "level": "explicit"
+        },
+        {
+          "key": "--json",
+          "level": "explicit"
+        },
+        {
+          "key": "--limit",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "status"
       ],
       "level": "explicit",
       "args": [
@@ -191,6 +312,19 @@
     {
       "path": [
         "exec",
+        "help"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec",
         "resume"
       ],
       "level": "explicit",
@@ -225,6 +359,45 @@
     },
     {
       "path": [
+        "exec",
+        "review"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--base",
+          "level": "explicit"
+        },
+        {
+          "key": "--commit",
+          "level": "explicit"
+        },
+        {
+          "key": "--json",
+          "level": "explicit"
+        },
+        {
+          "key": "--skip-git-repo-check",
+          "level": "explicit"
+        },
+        {
+          "key": "--title",
+          "level": "explicit"
+        },
+        {
+          "key": "--uncommitted",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "PROMPT",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
         "execpolicy",
         "check"
       ],
@@ -248,13 +421,64 @@
     },
     {
       "path": [
+        "features"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "features",
+        "help"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
         "features",
         "list"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "fork"
       ],
       "level": "explicit",
       "flags": [
         {
-          "key": "--json",
+          "key": "--all",
+          "level": "explicit"
+        },
+        {
+          "key": "--last",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "PROMPT",
+          "level": "explicit"
+        },
+        {
+          "name": "SESSION_ID",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "help"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "COMMAND",
           "level": "explicit"
         }
       ]
@@ -270,9 +494,30 @@
           "level": "explicit"
         },
         {
+          "key": "--device-auth",
+          "level": "explicit"
+        },
+        {
           "key": "--mcp",
           "level": "explicit",
           "note": "capability-guarded"
+        },
+        {
+          "key": "--with-api-key",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "login",
+        "help"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
         }
       ]
     },
@@ -293,8 +538,128 @@
       "path": [
         "mcp"
       ],
-      "level": "intentionally_unsupported",
-      "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "mcp",
+        "add"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--bearer-token-env-var",
+          "level": "explicit"
+        },
+        {
+          "key": "--env",
+          "level": "explicit"
+        },
+        {
+          "key": "--url",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
+        },
+        {
+          "name": "NAME",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "get"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--json",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "NAME",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "help"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--json",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "login"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--scopes",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "NAME",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "logout"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "NAME",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "remove"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "NAME",
+          "level": "explicit"
+        }
+      ]
     },
     {
       "path": [
@@ -322,6 +687,81 @@
         },
         {
           "key": "--upstream-url",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "resume"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--all",
+          "level": "explicit"
+        },
+        {
+          "key": "--last",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "PROMPT",
+          "level": "explicit"
+        },
+        {
+          "name": "SESSION_ID",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "review"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--base",
+          "level": "explicit"
+        },
+        {
+          "key": "--commit",
+          "level": "explicit"
+        },
+        {
+          "key": "--title",
+          "level": "explicit"
+        },
+        {
+          "key": "--uncommitted",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "PROMPT",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "sandbox"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "sandbox",
+        "help"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "COMMAND",
           "level": "explicit"
         }
       ]

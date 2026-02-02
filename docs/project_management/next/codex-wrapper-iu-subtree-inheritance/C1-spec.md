@@ -8,13 +8,9 @@ After ADR 0004 is implemented, represent intentionally unwrapped command familie
 ### Wrapper coverage source-of-truth update
 Update `crates/codex/src/wrapper_coverage_manifest.rs` to add IU subtree roots (command entries) with non-empty, stable notes for these intentionally unwrapped families:
 - `["completion"]`
-- `["cloud"]`
-- `["mcp"]`
 
 Exact note strings (stable; copy verbatim):
 - `["completion"]`: `Shell completion generation is out of scope for the wrapper.`
-- `["cloud"]`: `Cloud command family is intentionally unwrapped (setup/experimental utility).`
-- `["mcp"]`: `MCP management commands are intentionally unwrapped (experimental/admin surface).`
 
 Notes:
 - These are command entries (IU roots). Do not enumerate descendant flags/args for the purpose of waiving the subtree; ADR 0004 inheritance handles descendants.
@@ -44,13 +40,13 @@ Required verification (deterministic; run all checks against `coverage.any.json`
 - Define `V` as: `V="$(cat cli_manifests/codex/latest_validated.txt)"`
 - Require file exists: `test -f "cli_manifests/codex/reports/${V}/coverage.any.json"`
 - Confirm no `missing_commands` entries exist under the IU roots:
-  - `jq -e '.deltas.missing_commands[]? | select(.path[0] == "completion" or .path[0] == "cloud" or .path[0] == "mcp")' "cli_manifests/codex/reports/${V}/coverage.any.json"` MUST produce no output (exit non-zero).
+  - `jq -e '.deltas.missing_commands[]? | select(.path[0] == "completion")' "cli_manifests/codex/reports/${V}/coverage.any.json"` MUST produce no output (exit non-zero).
 - Confirm no `missing_flags` entries exist under the IU roots:
-  - `jq -e '.deltas.missing_flags[]? | select(.path[0] == "completion" or .path[0] == "cloud" or .path[0] == "mcp")' "cli_manifests/codex/reports/${V}/coverage.any.json"` MUST produce no output (exit non-zero).
+  - `jq -e '.deltas.missing_flags[]? | select(.path[0] == "completion")' "cli_manifests/codex/reports/${V}/coverage.any.json"` MUST produce no output (exit non-zero).
 - Confirm no `missing_args` entries exist under the IU roots:
-  - `jq -e '.deltas.missing_args[]? | select(.path[0] == "completion" or .path[0] == "cloud" or .path[0] == "mcp")' "cli_manifests/codex/reports/${V}/coverage.any.json"` MUST produce no output (exit non-zero).
+  - `jq -e '.deltas.missing_args[]? | select(.path[0] == "completion")' "cli_manifests/codex/reports/${V}/coverage.any.json"` MUST produce no output (exit non-zero).
 - Confirm IU audit visibility exists:
-  - `jq -e '.deltas.intentionally_unsupported[]? | select(.path[0] == "completion" or .path[0] == "cloud" or .path[0] == "mcp")' "cli_manifests/codex/reports/${V}/coverage.any.json"` MUST produce one or more entries (exit zero).
+  - `jq -e '.deltas.intentionally_unsupported[]? | select(.path[0] == "completion")' "cli_manifests/codex/reports/${V}/coverage.any.json"` MUST produce one or more entries (exit zero).
 
 ## Tests (required; normative)
 
@@ -61,7 +57,7 @@ Required new test file:
 
 The test MUST:
 1. Materialize a minimal valid `cli_manifests/codex` directory in a temp folder by copying repo `SCHEMA.json`, `RULES.json`, and `VERSION_METADATA_SCHEMA.json`.
-2. Provide a minimal union snapshot that contains a descendant surface under each IU root (`completion`, `cloud`, `mcp`) so inherited IU classification is observable.
+2. Provide a minimal union snapshot that contains a descendant surface under the IU root (`completion`) so inherited IU classification is observable.
 3. Run `xtask codex-wrapper-coverage` against a build that includes the C1 IU roots in `crates/codex/src/wrapper_coverage_manifest.rs` (this is a real-code-path generator run; no hand-edited JSON).
 4. Run `xtask codex-report` and assert that descendants under those roots do not appear in `missing_*` and do appear under `deltas.intentionally_unsupported`.
 

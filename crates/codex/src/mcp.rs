@@ -657,6 +657,7 @@ impl AppRuntime {
                 .clone()
                 .or_else(|| defaults.current_dir.clone()),
             env,
+            app_server_analytics_default_enabled: defaults.app_server_analytics_default_enabled,
             mirror_stdio: self.mirror_stdio.unwrap_or(defaults.mirror_stdio),
             startup_timeout: self
                 .startup_timeout_ms
@@ -1839,6 +1840,8 @@ pub struct StdioServerConfig {
     pub code_home: Option<PathBuf>,
     pub current_dir: Option<PathBuf>,
     pub env: Vec<(OsString, OsString)>,
+    /// Enables the `codex app-server --analytics-default-enabled` flag when launching app-server.
+    pub app_server_analytics_default_enabled: bool,
     pub mirror_stdio: bool,
     pub startup_timeout: Duration,
 }
@@ -2297,6 +2300,10 @@ impl JsonRpcTransport {
         let mut command = Command::new(&config.binary);
         command
             .arg(subcommand)
+            .args(
+                (subcommand == "app-server" && config.app_server_analytics_default_enabled)
+                    .then_some(OsString::from("--analytics-default-enabled")),
+            )
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
@@ -2949,12 +2956,18 @@ for line in sys.stdin:
         let script_path = dir.path().join("fake-codex-app");
         let script = r#"#!/usr/bin/env python3
 import json
+import os
 import sys
 import threading
 import time
 
 pending = {}
 turn_lookup = {}
+
+log_path = os.environ.get("ARGV_LOG")
+if log_path:
+    with open(log_path, "w", encoding="utf-8") as fh:
+        fh.write(json.dumps(sys.argv[1:]) + "\n")
 
 def send(payload):
     sys.stdout.write(json.dumps(payload) + "\n")
@@ -3065,6 +3078,7 @@ time.sleep(30)
             code_home: None,
             current_dir: None,
             env: Vec::new(),
+            app_server_analytics_default_enabled: false,
             mirror_stdio: false,
             startup_timeout: Duration::from_secs(5),
         }
@@ -3095,6 +3109,39 @@ time.sleep(30)
             .await
             .expect("spawn app server");
         (dir, server)
+    }
+
+    #[tokio::test]
+    async fn app_server_launch_can_enable_analytics_flag() {
+        let (dir, script) = write_fake_app_server();
+        let log_path = dir.path().join("argv.json");
+
+        let mut config = test_config(script);
+        config.app_server_analytics_default_enabled = true;
+        config.env.push((
+            OsString::from("ARGV_LOG"),
+            OsString::from(log_path.as_os_str()),
+        ));
+
+        let client = test_client();
+        let server = CodexAppServer::start(config, client)
+            .await
+            .expect("spawn app server");
+
+        let mut argv_line = None;
+        for _ in 0..50 {
+            if let Ok(contents) = fs::read_to_string(&log_path) {
+                argv_line = contents.lines().next().map(str::to_string);
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+
+        let argv_line = argv_line.expect("argv log should be written");
+        let argv: Vec<String> = serde_json::from_str(&argv_line).expect("argv json");
+        assert_eq!(argv, vec!["app-server", "--analytics-default-enabled"]);
+
+        server.shutdown().await.expect("shutdown server");
     }
 
     #[test]
@@ -3388,6 +3435,7 @@ time.sleep(30)
                 (OsString::from("BASE_ONLY"), OsString::from("base")),
                 (OsString::from("OVERRIDE_ME"), OsString::from("base")),
             ],
+            app_server_analytics_default_enabled: false,
             mirror_stdio: true,
             startup_timeout: Duration::from_secs(5),
         };
@@ -3485,6 +3533,7 @@ time.sleep(30)
             code_home: None,
             current_dir: None,
             env: Vec::new(),
+            app_server_analytics_default_enabled: false,
             mirror_stdio: false,
             startup_timeout: Duration::from_secs(2),
         };
@@ -4112,6 +4161,7 @@ time.sleep(30)
                     OsString::from("base-default"),
                 ),
             ],
+            app_server_analytics_default_enabled: false,
             mirror_stdio: true,
             startup_timeout: Duration::from_secs(3),
         };
@@ -4243,6 +4293,7 @@ time.sleep(30)
             code_home: Some(dir.path().to_path_buf()),
             current_dir: None,
             env: Vec::new(),
+            app_server_analytics_default_enabled: false,
             mirror_stdio: false,
             startup_timeout: Duration::from_secs(2),
         };
@@ -4338,6 +4389,7 @@ time.sleep(30)
                 (OsString::from("DEFAULT_ONLY"), OsString::from("base")),
                 (OsString::from("OVERRIDE_ME"), OsString::from("base")),
             ],
+            app_server_analytics_default_enabled: false,
             mirror_stdio: false,
             startup_timeout: Duration::from_secs(3),
         };
@@ -4462,6 +4514,7 @@ time.sleep(30)
                 OsString::from("APP_RUNTIME_LIFECYCLE"),
                 OsString::from("default"),
             )],
+            app_server_analytics_default_enabled: false,
             mirror_stdio: false,
             startup_timeout: Duration::from_secs(3),
         };
@@ -4567,6 +4620,7 @@ time.sleep(30)
                 (OsString::from("APP_POOL_ENV"), OsString::from("default")),
                 (OsString::from("POOL_ONLY"), OsString::from("base")),
             ],
+            app_server_analytics_default_enabled: false,
             mirror_stdio: false,
             startup_timeout: Duration::from_secs(3),
         };
@@ -4753,6 +4807,7 @@ time.sleep(30)
             code_home: Some(code_home.clone()),
             current_dir: None,
             env: Vec::new(),
+            app_server_analytics_default_enabled: false,
             mirror_stdio: false,
             startup_timeout: Duration::from_secs(3),
         };
@@ -4833,6 +4888,7 @@ time.sleep(30)
                 OsString::from("MCP_RUNTIME_ENV_E8"),
                 OsString::from("manager-ok"),
             )],
+            app_server_analytics_default_enabled: false,
             mirror_stdio: false,
             startup_timeout: Duration::from_secs(5),
         };
@@ -4905,6 +4961,7 @@ time.sleep(30)
             code_home: None,
             current_dir: None,
             env: Vec::new(),
+            app_server_analytics_default_enabled: false,
             mirror_stdio: false,
             startup_timeout: Duration::from_secs(2),
         };
@@ -4969,6 +5026,7 @@ time.sleep(30)
             code_home: None,
             current_dir: None,
             env: Vec::new(),
+            app_server_analytics_default_enabled: false,
             mirror_stdio: false,
             startup_timeout: Duration::from_secs(2),
         };

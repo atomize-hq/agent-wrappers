@@ -200,8 +200,45 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                 &["cloud", "diff"],
                 CoverageLevel::Explicit,
                 None,
+                vec![flag("--attempt", CoverageLevel::Explicit)],
+                vec![arg("TASK_ID", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["cloud", "apply"],
+                CoverageLevel::Explicit,
+                None,
+                vec![flag("--attempt", CoverageLevel::Explicit)],
+                vec![arg("TASK_ID", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["cloud", "status"],
+                CoverageLevel::Explicit,
+                None,
                 vec![],
                 vec![arg("TASK_ID", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["cloud", "list"],
+                CoverageLevel::Explicit,
+                None,
+                vec![
+                    flag("--cursor", CoverageLevel::Explicit),
+                    flag("--env", CoverageLevel::Explicit),
+                    flag("--json", CoverageLevel::Explicit),
+                    flag("--limit", CoverageLevel::Explicit),
+                ],
+                vec![],
+            ),
+            command(
+                &["cloud", "exec"],
+                CoverageLevel::Explicit,
+                None,
+                vec![
+                    flag("--env", CoverageLevel::Explicit),
+                    flag("--attempts", CoverageLevel::Explicit),
+                    flag("--branch", CoverageLevel::Explicit),
+                ],
+                vec![arg("QUERY", CoverageLevel::Explicit)],
             ),
 
             // Scenario 5: login/logout.
@@ -212,6 +249,8 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                 vec![
                     flag_note("--mcp", CoverageLevel::Explicit, "capability-guarded"),
                     flag("--api-key", CoverageLevel::Explicit),
+                    flag("--device-auth", CoverageLevel::Explicit),
+                    flag("--with-api-key", CoverageLevel::Explicit),
                 ],
                 vec![],
             ),
@@ -223,7 +262,7 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                 &["features", "list"],
                 CoverageLevel::Explicit,
                 None,
-                vec![flag("--json", CoverageLevel::Explicit)],
+                vec![],
                 vec![],
             ),
 
@@ -270,6 +309,7 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
             ),
 
             // Scenario 10: `codex sandbox <platform>`.
+            command(&["sandbox"], CoverageLevel::Explicit, None, vec![], vec![]),
             command(
                 &["sandbox", "macos"],
                 CoverageLevel::Explicit,
@@ -306,35 +346,183 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
 
             // Scenario 12: stdio servers.
             command(&["mcp-server"], CoverageLevel::Explicit, None, vec![], vec![]),
-            command(&["app-server"], CoverageLevel::Explicit, None, vec![], vec![]),
+            command(
+                &["app-server"],
+                CoverageLevel::Explicit,
+                None,
+                vec![flag("--analytics-default-enabled", CoverageLevel::Explicit)],
+                vec![],
+            ),
+            command(&["cloud"], CoverageLevel::Explicit, None, vec![], vec![]),
+            command(&["mcp"], CoverageLevel::Explicit, None, vec![], vec![]),
+            command(
+                &["mcp", "list"],
+                CoverageLevel::Explicit,
+                None,
+                vec![flag("--json", CoverageLevel::Explicit)],
+                vec![],
+            ),
+            command(
+                &["mcp", "get"],
+                CoverageLevel::Explicit,
+                None,
+                vec![flag("--json", CoverageLevel::Explicit)],
+                vec![arg("NAME", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["mcp", "add"],
+                CoverageLevel::Explicit,
+                None,
+                vec![
+                    flag("--url", CoverageLevel::Explicit),
+                    flag("--bearer-token-env-var", CoverageLevel::Explicit),
+                    flag("--env", CoverageLevel::Explicit),
+                ],
+                vec![
+                    arg("NAME", CoverageLevel::Explicit),
+                    arg("COMMAND", CoverageLevel::Explicit),
+                ],
+            ),
+            command(
+                &["mcp", "remove"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("NAME", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["mcp", "logout"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("NAME", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["mcp", "login"],
+                CoverageLevel::Explicit,
+                None,
+                vec![flag("--scopes", CoverageLevel::Explicit)],
+                vec![arg("NAME", CoverageLevel::Explicit)],
+            ),
+
+            // `codex help` command family (variadic COMMAND).
+            command(
+                &["help"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("COMMAND", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["exec", "help"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("COMMAND", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["features", "help"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("COMMAND", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["login", "help"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("COMMAND", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["app-server", "help"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("COMMAND", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["sandbox", "help"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("COMMAND", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["cloud", "help"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("COMMAND", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["mcp", "help"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("COMMAND", CoverageLevel::Explicit)],
+            ),
+
+            // New 0.92.0 command surfaces.
+            command(&["features"], CoverageLevel::Explicit, None, vec![], vec![]),
+            command(
+                &["exec", "review"],
+                CoverageLevel::Explicit,
+                None,
+                vec![
+                    flag("--base", CoverageLevel::Explicit),
+                    flag("--commit", CoverageLevel::Explicit),
+                    flag("--json", CoverageLevel::Explicit),
+                    flag("--skip-git-repo-check", CoverageLevel::Explicit),
+                    flag("--title", CoverageLevel::Explicit),
+                    flag("--uncommitted", CoverageLevel::Explicit),
+                ],
+                vec![arg("PROMPT", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["review"],
+                CoverageLevel::Explicit,
+                None,
+                vec![
+                    flag("--base", CoverageLevel::Explicit),
+                    flag("--commit", CoverageLevel::Explicit),
+                    flag("--title", CoverageLevel::Explicit),
+                    flag("--uncommitted", CoverageLevel::Explicit),
+                ],
+                vec![arg("PROMPT", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["resume"],
+                CoverageLevel::Explicit,
+                None,
+                vec![
+                    flag("--all", CoverageLevel::Explicit),
+                    flag("--last", CoverageLevel::Explicit),
+                ],
+                vec![
+                    arg("PROMPT", CoverageLevel::Explicit),
+                    arg("SESSION_ID", CoverageLevel::Explicit),
+                ],
+            ),
+            command(
+                &["fork"],
+                CoverageLevel::Explicit,
+                None,
+                vec![
+                    flag("--all", CoverageLevel::Explicit),
+                    flag("--last", CoverageLevel::Explicit),
+                ],
+                vec![
+                    arg("PROMPT", CoverageLevel::Explicit),
+                    arg("SESSION_ID", CoverageLevel::Explicit),
+                ],
+            ),
 
             WrapperCommandCoverageV1 {
                 path: vec!["completion".to_string()],
                 level: CoverageLevel::IntentionallyUnsupported,
                 note: Some(
                     "Shell completion generation is out of scope for the wrapper.".to_string(),
-                ),
-                scope: None,
-                flags: None,
-                args: None,
-            },
-            WrapperCommandCoverageV1 {
-                path: vec!["cloud".to_string()],
-                level: CoverageLevel::IntentionallyUnsupported,
-                note: Some(
-                    "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-                        .to_string(),
-                ),
-                scope: None,
-                flags: None,
-                args: None,
-            },
-            WrapperCommandCoverageV1 {
-                path: vec!["mcp".to_string()],
-                level: CoverageLevel::IntentionallyUnsupported,
-                note: Some(
-                    "MCP management commands are intentionally unwrapped (experimental/admin surface)."
-                        .to_string(),
                 ),
                 scope: None,
                 flags: None,

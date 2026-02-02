@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-01-31T13:56:02Z",
+  "generated_at": "2026-02-01T15:00:23Z",
   "inputs": {
     "upstream": {
       "semantic_version": "0.91.0",
@@ -21,124 +21,12 @@
     "mode": "any"
   },
   "deltas": {
-    "missing_commands": [
-      {
-        "path": [
-          "app-server",
-          "help"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "exec",
-          "help"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "exec",
-          "review"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "features"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "features",
-          "help"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "fork"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "help"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "login",
-          "help"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "resume"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "review"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "sandbox"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "sandbox",
-          "help"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      }
-    ],
+    "missing_commands": [],
     "missing_flags": [
       {
         "path": [
           "app-server"
         ],
-        "key": "--analytics-default-enabled",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "app-server"
-        ],
         "key": "--config",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
@@ -281,6 +169,251 @@
       {
         "path": [
           "apply"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "apply"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "apply"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "apply"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "apply"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "diff"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "diff"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "diff"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "diff"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "exec"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "list"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "list"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "list"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "list"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "status"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "status"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "status"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "cloud",
+          "status"
         ],
         "key": "--help",
         "upstream_available_on": [
@@ -507,26 +640,6 @@
           "exec",
           "review"
         ],
-        "key": "--base",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "exec",
-          "review"
-        ],
-        "key": "--commit",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "exec",
-          "review"
-        ],
         "key": "--config",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
@@ -587,47 +700,7 @@
           "exec",
           "review"
         ],
-        "key": "--json",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "exec",
-          "review"
-        ],
         "key": "--model",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "exec",
-          "review"
-        ],
-        "key": "--skip-git-repo-check",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "exec",
-          "review"
-        ],
-        "key": "--title",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "exec",
-          "review"
-        ],
-        "key": "--uncommitted",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
         ]
@@ -713,15 +786,6 @@
           "fork"
         ],
         "key": "--add-dir",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "fork"
-        ],
-        "key": "--all",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
         ]
@@ -811,15 +875,6 @@
         "path": [
           "fork"
         ],
-        "key": "--last",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "fork"
-        ],
         "key": "--local-provider",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
@@ -892,15 +947,6 @@
         "path": [
           "login"
         ],
-        "key": "--device-auth",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "login"
-        ],
         "key": "--disable",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
@@ -920,15 +966,6 @@
           "login"
         ],
         "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "login"
-        ],
-        "key": "--with-api-key",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
         ]
@@ -1003,6 +1040,42 @@
       {
         "path": [
           "logout"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--disable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--enable",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
         ],
         "key": "--help",
         "upstream_available_on": [
@@ -1050,15 +1123,6 @@
           "resume"
         ],
         "key": "--add-dir",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "resume"
-        ],
-        "key": "--all",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
         ]
@@ -1148,15 +1212,6 @@
         "path": [
           "resume"
         ],
-        "key": "--last",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "resume"
-        ],
         "key": "--local-provider",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
@@ -1220,24 +1275,6 @@
         "path": [
           "review"
         ],
-        "key": "--base",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "review"
-        ],
-        "key": "--commit",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "review"
-        ],
         "key": "--config",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
@@ -1266,24 +1303,6 @@
           "review"
         ],
         "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "review"
-        ],
-        "key": "--title",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "review"
-        ],
-        "key": "--uncommitted",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
         ]
@@ -1487,8 +1506,7 @@
       },
       {
         "path": [
-          "app-server",
-          "help"
+          "cloud"
         ],
         "name": "COMMAND",
         "upstream_available_on": [
@@ -1506,64 +1524,7 @@
       },
       {
         "path": [
-          "exec",
-          "help"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "exec",
-          "review"
-        ],
-        "name": "PROMPT",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
           "features"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "features",
-          "help"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "fork"
-        ],
-        "name": "PROMPT",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "fork"
-        ],
-        "name": "SESSION_ID",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "help"
         ],
         "name": "COMMAND",
         "upstream_available_on": [
@@ -1581,37 +1542,9 @@
       },
       {
         "path": [
-          "login",
-          "help"
+          "mcp"
         ],
         "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "resume"
-        ],
-        "name": "PROMPT",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "resume"
-        ],
-        "name": "SESSION_ID",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "review"
-        ],
-        "name": "PROMPT",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
         ]
@@ -1619,16 +1552,6 @@
       {
         "path": [
           "sandbox"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ]
-      },
-      {
-        "path": [
-          "sandbox",
-          "help"
         ],
         "name": "COMMAND",
         "upstream_available_on": [
@@ -1695,71 +1618,6 @@
     "intentionally_unsupported": [
       {
         "path": [
-          "cloud"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "apply"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "help"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "list"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "status"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
           "completion"
         ],
         "upstream_available_on": [
@@ -1767,430 +1625,6 @@
         ],
         "wrapper_level": "intentionally_unsupported",
         "note": "Shell completion generation is out of scope for the wrapper."
-      },
-      {
-        "path": [
-          "mcp"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
-      },
-      {
-        "path": [
-          "mcp",
-          "help"
-        ],
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
-      },
-      {
-        "path": [
-          "cloud"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud"
-        ],
-        "key": "--version",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "apply"
-        ],
-        "key": "--attempt",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "apply"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "apply"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "apply"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "apply"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "diff"
-        ],
-        "key": "--attempt",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "diff"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "diff"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "diff"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "diff"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--attempts",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--branch",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--env",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "list"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "list"
-        ],
-        "key": "--cursor",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "list"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "list"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "list"
-        ],
-        "key": "--env",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "list"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "list"
-        ],
-        "key": "--json",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "list"
-        ],
-        "key": "--limit",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "status"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "status"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "status"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "status"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
       },
       {
         "path": [
@@ -2235,109 +1669,6 @@
         ],
         "wrapper_level": "intentionally_unsupported",
         "note": "Shell completion generation is out of scope for the wrapper."
-      },
-      {
-        "path": [
-          "mcp"
-        ],
-        "key": "--config",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
-      },
-      {
-        "path": [
-          "mcp"
-        ],
-        "key": "--disable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
-      },
-      {
-        "path": [
-          "mcp"
-        ],
-        "key": "--enable",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
-      },
-      {
-        "path": [
-          "mcp"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
-      },
-      {
-        "path": [
-          "cloud"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "apply"
-        ],
-        "name": "TASK_ID",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "exec"
-        ],
-        "name": "QUERY",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "help"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
-      },
-      {
-        "path": [
-          "cloud",
-          "status"
-        ],
-        "name": "TASK_ID",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Cloud command family is intentionally unwrapped (setup/experimental utility)."
       },
       {
         "path": [
@@ -2349,29 +1680,6 @@
         ],
         "wrapper_level": "intentionally_unsupported",
         "note": "Shell completion generation is out of scope for the wrapper."
-      },
-      {
-        "path": [
-          "mcp"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
-      },
-      {
-        "path": [
-          "mcp",
-          "help"
-        ],
-        "name": "COMMAND",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "MCP management commands are intentionally unwrapped (experimental/admin surface)."
       }
     ],
     "wrapper_only_commands": [
@@ -2379,6 +1687,66 @@
         "path": [
           "execpolicy",
           "check"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
         ],
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
@@ -2429,17 +1797,6 @@
       },
       {
         "path": [
-          "features",
-          "list"
-        ],
-        "key": "--json",
-        "upstream_available_on": [
-          "x86_64-unknown-linux-musl"
-        ],
-        "wrapper_level": "explicit"
-      },
-      {
-        "path": [
           "login"
         ],
         "key": "--api-key",
@@ -2458,6 +1815,72 @@
         ],
         "wrapper_level": "explicit",
         "note": "capability-guarded"
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--bearer-token-env-var",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--env",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--url",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "key": "--scopes",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
       },
       {
         "path": [
@@ -2507,6 +1930,72 @@
           "check"
         ],
         "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "name": "NAME",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "name": "NAME",
         "upstream_available_on": [
           "x86_64-unknown-linux-musl"
         ],

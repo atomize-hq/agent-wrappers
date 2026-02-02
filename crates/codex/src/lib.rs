@@ -1838,6 +1838,40 @@ impl CodexClient {
         spawn_with_retry(&mut command, self.command_env.binary_path())
     }
 
+    /// Spawns a `codex login --device-auth` session.
+    ///
+    /// The returned child inherits `kill_on_drop` so abandoning the handle cleans up the login helper.
+    pub fn spawn_device_auth_login_process(&self) -> Result<tokio::process::Child, CodexError> {
+        let mut command = Command::new(self.command_env.binary_path());
+        command
+            .arg("login")
+            .arg("--device-auth")
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true);
+
+        self.command_env.apply(&mut command)?;
+
+        spawn_with_retry(&mut command, self.command_env.binary_path())
+    }
+
+    /// Spawns a `codex login --with-api-key` session (interactive API-key flow).
+    ///
+    /// The returned child inherits `kill_on_drop` so abandoning the handle cleans up the login helper.
+    pub fn spawn_with_api_key_login_process(&self) -> Result<tokio::process::Child, CodexError> {
+        let mut command = Command::new(self.command_env.binary_path());
+        command
+            .arg("login")
+            .arg("--with-api-key")
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true);
+
+        self.command_env.apply(&mut command)?;
+
+        spawn_with_retry(&mut command, self.command_env.binary_path())
+    }
+
     /// Spawns `codex login --mcp` when the probed binary advertises support.
     ///
     /// Returns `Ok(None)` when the capability is unknown or unsupported so
@@ -2286,6 +2320,524 @@ impl CodexClient {
             features,
             format,
         })
+    }
+
+    /// Runs `codex features` and returns captured output.
+    pub async fn features(
+        &self,
+        request: FeaturesCommandRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        self.run_simple_command_with_overrides(
+            vec![OsString::from("features")],
+            request.overrides,
+        )
+        .await
+    }
+
+    /// Runs `codex <scope> help [COMMAND]...` and returns captured output.
+    pub async fn help(
+        &self,
+        request: HelpCommandRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let mut args: Vec<OsString> = request
+            .scope
+            .argv_prefix()
+            .iter()
+            .map(|value| OsString::from(*value))
+            .collect();
+        args.extend(request.command.into_iter().map(OsString::from));
+        self.run_simple_command_with_overrides(args, request.overrides).await
+    }
+
+    /// Runs `codex review [OPTIONS] [PROMPT]` and returns captured output.
+    pub async fn review(
+        &self,
+        request: ReviewCommandRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
+            return Err(CodexError::EmptyPrompt);
+        }
+
+        let mut args = vec![OsString::from("review")];
+        if let Some(base) = request.base {
+            if !base.trim().is_empty() {
+                args.push(OsString::from("--base"));
+                args.push(OsString::from(base));
+            }
+        }
+        if let Some(commit) = request.commit {
+            if !commit.trim().is_empty() {
+                args.push(OsString::from("--commit"));
+                args.push(OsString::from(commit));
+            }
+        }
+        if let Some(title) = request.title {
+            if !title.trim().is_empty() {
+                args.push(OsString::from("--title"));
+                args.push(OsString::from(title));
+            }
+        }
+        if request.uncommitted {
+            args.push(OsString::from("--uncommitted"));
+        }
+        if let Some(prompt) = request.prompt {
+            if !prompt.trim().is_empty() {
+                args.push(OsString::from(prompt));
+            }
+        }
+
+        self.run_simple_command_with_overrides(args, request.overrides).await
+    }
+
+    /// Runs `codex exec review [OPTIONS] [PROMPT]` and returns captured output.
+    pub async fn exec_review(
+        &self,
+        request: ExecReviewCommandRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
+            return Err(CodexError::EmptyPrompt);
+        }
+
+        let mut args = vec![OsString::from("exec"), OsString::from("review")];
+        if let Some(base) = request.base {
+            if !base.trim().is_empty() {
+                args.push(OsString::from("--base"));
+                args.push(OsString::from(base));
+            }
+        }
+        if let Some(commit) = request.commit {
+            if !commit.trim().is_empty() {
+                args.push(OsString::from("--commit"));
+                args.push(OsString::from(commit));
+            }
+        }
+        if request.json {
+            args.push(OsString::from("--json"));
+        }
+        if request.skip_git_repo_check {
+            args.push(OsString::from("--skip-git-repo-check"));
+        }
+        if let Some(title) = request.title {
+            if !title.trim().is_empty() {
+                args.push(OsString::from("--title"));
+                args.push(OsString::from(title));
+            }
+        }
+        if request.uncommitted {
+            args.push(OsString::from("--uncommitted"));
+        }
+        if let Some(prompt) = request.prompt {
+            if !prompt.trim().is_empty() {
+                args.push(OsString::from(prompt));
+            }
+        }
+
+        self.run_simple_command_with_overrides(args, request.overrides).await
+    }
+
+    /// Runs `codex resume [OPTIONS] [SESSION_ID] [PROMPT]` and returns captured output.
+    pub async fn resume_session(
+        &self,
+        request: ResumeSessionRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
+            return Err(CodexError::EmptyPrompt);
+        }
+
+        let mut args = vec![OsString::from("resume")];
+        if request.all {
+            args.push(OsString::from("--all"));
+        }
+        if request.last {
+            args.push(OsString::from("--last"));
+        }
+        if let Some(session_id) = request.session_id {
+            if !session_id.trim().is_empty() {
+                args.push(OsString::from(session_id));
+            }
+        }
+        if let Some(prompt) = request.prompt {
+            if !prompt.trim().is_empty() {
+                args.push(OsString::from(prompt));
+            }
+        }
+
+        self.run_simple_command_with_overrides(args, request.overrides).await
+    }
+
+    /// Runs `codex fork [OPTIONS] [SESSION_ID] [PROMPT]` and returns captured output.
+    pub async fn fork_session(
+        &self,
+        request: ForkSessionRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
+            return Err(CodexError::EmptyPrompt);
+        }
+
+        let mut args = vec![OsString::from("fork")];
+        if request.all {
+            args.push(OsString::from("--all"));
+        }
+        if request.last {
+            args.push(OsString::from("--last"));
+        }
+        if let Some(session_id) = request.session_id {
+            if !session_id.trim().is_empty() {
+                args.push(OsString::from(session_id));
+            }
+        }
+        if let Some(prompt) = request.prompt {
+            if !prompt.trim().is_empty() {
+                args.push(OsString::from(prompt));
+            }
+        }
+
+        self.run_simple_command_with_overrides(args, request.overrides).await
+    }
+
+    /// Runs `codex cloud --help` and returns captured output.
+    pub async fn cloud_overview(
+        &self,
+        request: CloudOverviewRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        self.run_simple_command_with_overrides(
+            vec![OsString::from("cloud"), OsString::from("--help")],
+            request.overrides,
+        )
+        .await
+    }
+
+    /// Lists Codex Cloud tasks via `codex cloud list`.
+    pub async fn cloud_list(
+        &self,
+        request: CloudListRequest,
+    ) -> Result<CloudListOutput, CodexError> {
+        let CloudListRequest {
+            json,
+            env_id,
+            limit,
+            cursor,
+            overrides,
+        } = request;
+
+        let mut args = vec![OsString::from("cloud"), OsString::from("list")];
+        if let Some(env_id) = env_id {
+            args.push(OsString::from("--env"));
+            args.push(OsString::from(env_id));
+        }
+        if let Some(limit) = limit {
+            args.push(OsString::from("--limit"));
+            args.push(OsString::from(limit.to_string()));
+        }
+        if let Some(cursor) = cursor {
+            args.push(OsString::from("--cursor"));
+            args.push(OsString::from(cursor));
+        }
+        if json {
+            args.push(OsString::from("--json"));
+        }
+
+        let artifacts = self.run_simple_command_with_overrides(args, overrides).await?;
+        let parsed = if json {
+            Some(serde_json::from_str(&artifacts.stdout).map_err(|source| CodexError::JsonParse {
+                context: "cloud list",
+                stdout: artifacts.stdout.clone(),
+                source,
+            })?)
+        } else {
+            None
+        };
+
+        Ok(CloudListOutput {
+            status: artifacts.status,
+            stdout: artifacts.stdout,
+            stderr: artifacts.stderr,
+            json: parsed,
+        })
+    }
+
+    /// Shows the status of a Codex Cloud task via `codex cloud status <TASK_ID>`.
+    pub async fn cloud_status(
+        &self,
+        request: CloudStatusRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let task_id = request.task_id.trim();
+        if task_id.is_empty() {
+            return Err(CodexError::EmptyTaskId);
+        }
+
+        self.run_simple_command_with_overrides(
+            vec![
+                OsString::from("cloud"),
+                OsString::from("status"),
+                OsString::from(task_id),
+            ],
+            request.overrides,
+        )
+        .await
+    }
+
+    /// Shows the unified diff for a Codex Cloud task via `codex cloud diff [--attempt N] <TASK_ID>`.
+    pub async fn cloud_diff(
+        &self,
+        request: CloudDiffRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let task_id = request.task_id.trim();
+        if task_id.is_empty() {
+            return Err(CodexError::EmptyTaskId);
+        }
+
+        let mut args = vec![OsString::from("cloud"), OsString::from("diff")];
+        if let Some(attempt) = request.attempt {
+            args.push(OsString::from("--attempt"));
+            args.push(OsString::from(attempt.to_string()));
+        }
+        args.push(OsString::from(task_id));
+        self.run_simple_command_with_overrides(args, request.overrides)
+            .await
+    }
+
+    /// Applies the diff for a Codex Cloud task locally via `codex cloud apply [--attempt N] <TASK_ID>`.
+    pub async fn cloud_apply(
+        &self,
+        request: CloudApplyRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let task_id = request.task_id.trim();
+        if task_id.is_empty() {
+            return Err(CodexError::EmptyTaskId);
+        }
+
+        let mut args = vec![OsString::from("cloud"), OsString::from("apply")];
+        if let Some(attempt) = request.attempt {
+            args.push(OsString::from("--attempt"));
+            args.push(OsString::from(attempt.to_string()));
+        }
+        args.push(OsString::from(task_id));
+        self.run_simple_command_with_overrides(args, request.overrides)
+            .await
+    }
+
+    /// Submits a new Codex Cloud task via `codex cloud exec`.
+    pub async fn cloud_exec(
+        &self,
+        request: CloudExecRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let env_id = request.env_id.trim();
+        if env_id.is_empty() {
+            return Err(CodexError::EmptyEnvId);
+        }
+
+        let mut args = vec![OsString::from("cloud"), OsString::from("exec")];
+        args.push(OsString::from("--env"));
+        args.push(OsString::from(env_id));
+        if let Some(attempts) = request.attempts {
+            args.push(OsString::from("--attempts"));
+            args.push(OsString::from(attempts.to_string()));
+        }
+        if let Some(branch) = request.branch {
+            args.push(OsString::from("--branch"));
+            args.push(OsString::from(branch));
+        }
+        if let Some(query) = request.query {
+            args.push(OsString::from(query));
+        }
+
+        self.run_simple_command_with_overrides(args, request.overrides)
+            .await
+    }
+
+    /// Runs `codex mcp --help` and returns captured output.
+    pub async fn mcp_overview(
+        &self,
+        request: McpOverviewRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        self.run_simple_command_with_overrides(
+            vec![OsString::from("mcp"), OsString::from("--help")],
+            request.overrides,
+        )
+        .await
+    }
+
+    /// Lists configured MCP servers via `codex mcp list`.
+    pub async fn mcp_list(&self, request: McpListRequest) -> Result<McpListOutput, CodexError> {
+        let McpListRequest { json, overrides } = request;
+        let mut args = vec![OsString::from("mcp"), OsString::from("list")];
+        if json {
+            args.push(OsString::from("--json"));
+        }
+
+        let artifacts = self.run_simple_command_with_overrides(args, overrides).await?;
+        let parsed = if json {
+            Some(serde_json::from_str(&artifacts.stdout).map_err(|source| CodexError::JsonParse {
+                context: "mcp list",
+                stdout: artifacts.stdout.clone(),
+                source,
+            })?)
+        } else {
+            None
+        };
+
+        Ok(McpListOutput {
+            status: artifacts.status,
+            stdout: artifacts.stdout,
+            stderr: artifacts.stderr,
+            json: parsed,
+        })
+    }
+
+    /// Gets a configured MCP server entry via `codex mcp get <NAME>`.
+    pub async fn mcp_get(&self, request: McpGetRequest) -> Result<McpListOutput, CodexError> {
+        let name = request.name.trim();
+        if name.is_empty() {
+            return Err(CodexError::EmptyMcpServerName);
+        }
+
+        let mut args = vec![OsString::from("mcp"), OsString::from("get")];
+        if request.json {
+            args.push(OsString::from("--json"));
+        }
+        args.push(OsString::from(name));
+
+        let artifacts = self
+            .run_simple_command_with_overrides(args, request.overrides)
+            .await?;
+        let parsed = if request.json {
+            Some(serde_json::from_str(&artifacts.stdout).map_err(|source| CodexError::JsonParse {
+                context: "mcp get",
+                stdout: artifacts.stdout.clone(),
+                source,
+            })?)
+        } else {
+            None
+        };
+
+        Ok(McpListOutput {
+            status: artifacts.status,
+            stdout: artifacts.stdout,
+            stderr: artifacts.stderr,
+            json: parsed,
+        })
+    }
+
+    /// Adds an MCP server configuration entry via `codex mcp add`.
+    pub async fn mcp_add(&self, request: McpAddRequest) -> Result<ApplyDiffArtifacts, CodexError> {
+        let name = request.name.trim();
+        if name.is_empty() {
+            return Err(CodexError::EmptyMcpServerName);
+        }
+
+        let mut args = vec![OsString::from("mcp"), OsString::from("add"), OsString::from(name)];
+        match request.transport {
+            McpAddTransport::StreamableHttp {
+                url,
+                bearer_token_env_var,
+            } => {
+                let url = url.trim();
+                if url.is_empty() {
+                    return Err(CodexError::EmptyMcpUrl);
+                }
+                args.push(OsString::from("--url"));
+                args.push(OsString::from(url));
+                if let Some(env_var) = bearer_token_env_var {
+                    if !env_var.trim().is_empty() {
+                        args.push(OsString::from("--bearer-token-env-var"));
+                        args.push(OsString::from(env_var));
+                    }
+                }
+            }
+            McpAddTransport::Stdio { env, command } => {
+                if command.is_empty() {
+                    return Err(CodexError::EmptyMcpCommand);
+                }
+                for (key, value) in env {
+                    let key = key.trim();
+                    if key.is_empty() {
+                        continue;
+                    }
+                    args.push(OsString::from("--env"));
+                    args.push(OsString::from(format!("{key}={value}")));
+                }
+                args.push(OsString::from("--"));
+                args.extend(command);
+            }
+        }
+
+        self.run_simple_command_with_overrides(args, request.overrides)
+            .await
+    }
+
+    /// Removes an MCP server configuration entry via `codex mcp remove <NAME>`.
+    pub async fn mcp_remove(
+        &self,
+        request: McpRemoveRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let name = request.name.trim();
+        if name.is_empty() {
+            return Err(CodexError::EmptyMcpServerName);
+        }
+
+        self.run_simple_command_with_overrides(
+            vec![
+                OsString::from("mcp"),
+                OsString::from("remove"),
+                OsString::from(name),
+            ],
+            request.overrides,
+        )
+        .await
+    }
+
+    /// Deauthenticates from an MCP server via `codex mcp logout <NAME>`.
+    pub async fn mcp_logout(
+        &self,
+        request: McpLogoutRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let name = request.name.trim();
+        if name.is_empty() {
+            return Err(CodexError::EmptyMcpServerName);
+        }
+
+        self.run_simple_command_with_overrides(
+            vec![
+                OsString::from("mcp"),
+                OsString::from("logout"),
+                OsString::from(name),
+            ],
+            request.overrides,
+        )
+        .await
+    }
+
+    /// Spawns `codex mcp login <NAME> [--scopes ...]`.
+    pub fn spawn_mcp_oauth_login_process(
+        &self,
+        request: McpOauthLoginRequest,
+    ) -> Result<tokio::process::Child, CodexError> {
+        let name = request.name.trim();
+        if name.is_empty() {
+            return Err(CodexError::EmptyMcpServerName);
+        }
+
+        let resolved_overrides =
+            resolve_cli_overrides(&self.cli_overrides, &request.overrides, self.model.as_deref());
+
+        let mut command = Command::new(self.command_env.binary_path());
+        command
+            .arg("mcp")
+            .arg("login")
+            .arg(name)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true);
+
+        if !request.scopes.is_empty() {
+            command.arg("--scopes").arg(request.scopes.join(","));
+        }
+
+        apply_cli_overrides(&mut command, &resolved_overrides, true);
+        self.command_env.apply(&mut command)?;
+
+        spawn_with_retry(&mut command, self.command_env.binary_path())
     }
 
     /// Starts the `codex responses-api-proxy` helper with a supplied API key.
@@ -3013,6 +3565,82 @@ impl CodexClient {
         }
 
         env::current_dir().map_err(|source| CodexError::WorkingDirectory { source })
+    }
+
+    async fn run_simple_command_with_overrides(
+        &self,
+        args: Vec<OsString>,
+        overrides: CliOverridesPatch,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let dir_ctx = self.directory_context()?;
+        let resolved_overrides =
+            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+
+        let mut command = Command::new(self.command_env.binary_path());
+        command
+            .args(args)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .current_dir(dir_ctx.path());
+
+        apply_cli_overrides(&mut command, &resolved_overrides, true);
+
+        self.command_env.apply(&mut command)?;
+
+        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+
+        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+
+        let stdout_task = tokio::spawn(tee_stream(
+            stdout,
+            ConsoleTarget::Stdout,
+            self.mirror_stdout,
+        ));
+        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+
+        let timeout = self.timeout;
+        let wait_task = async move {
+            let _dir_ctx = dir_ctx;
+            let status = child
+                .wait()
+                .await
+                .map_err(|source| CodexError::Wait { source })?;
+            let stdout_bytes = stdout_task
+                .await
+                .map_err(CodexError::Join)?
+                .map_err(CodexError::CaptureIo)?;
+            let stderr_bytes = stderr_task
+                .await
+                .map_err(CodexError::Join)?
+                .map_err(CodexError::CaptureIo)?;
+            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+        };
+
+        let (status, stdout_bytes, stderr_bytes) = if timeout.is_zero() {
+            wait_task.await?
+        } else {
+            match time::timeout(timeout, wait_task).await {
+                Ok(result) => result?,
+                Err(_) => {
+                    return Err(CodexError::Timeout { timeout });
+                }
+            }
+        };
+
+        if !status.success() {
+            return Err(CodexError::NonZeroExit {
+                status,
+                stderr: String::from_utf8(stderr_bytes)?,
+            });
+        }
+
+        Ok(ApplyDiffArtifacts {
+            status,
+            stdout: String::from_utf8(stdout_bytes)?,
+            stderr: String::from_utf8(stderr_bytes)?,
+        })
     }
 
     async fn run_basic_command<S, I>(&self, args: I) -> Result<CommandOutput, CodexError>
@@ -4295,6 +4923,13 @@ pub enum CodexError {
     NonZeroExit { status: ExitStatus, stderr: String },
     #[error("codex output was not valid UTF-8: {0}")]
     InvalidUtf8(#[from] std::string::FromUtf8Error),
+    #[error("failed to parse {context} JSON output: {source}")]
+    JsonParse {
+        context: &'static str,
+        stdout: String,
+        #[source]
+        source: serde_json::Error,
+    },
     #[error("failed to parse execpolicy JSON output: {source}")]
     ExecPolicyParse {
         stdout: String,
@@ -4325,6 +4960,14 @@ pub enum CodexError {
     EmptyApiKey,
     #[error("task id must not be empty")]
     EmptyTaskId,
+    #[error("environment id must not be empty")]
+    EmptyEnvId,
+    #[error("MCP server name must not be empty")]
+    EmptyMcpServerName,
+    #[error("MCP server command must not be empty")]
+    EmptyMcpCommand,
+    #[error("MCP server URL must not be empty")]
+    EmptyMcpUrl,
     #[error("socket path must not be empty")]
     EmptySocketPath,
     #[error("failed to create temporary working directory: {0}")]
@@ -5391,6 +6034,802 @@ impl FeaturesListRequest {
 impl Default for FeaturesListRequest {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Request for `codex features`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FeaturesCommandRequest {
+    /// Per-call CLI overrides layered on top of the builder.
+    pub overrides: CliOverridesPatch,
+}
+
+impl FeaturesCommandRequest {
+    pub fn new() -> Self {
+        Self {
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    /// Replaces the default CLI overrides for this request.
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+impl Default for FeaturesCommandRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Selector for `codex help`-style command families.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HelpScope {
+    Root,
+    Exec,
+    Features,
+    Login,
+    AppServer,
+    Sandbox,
+    Cloud,
+    Mcp,
+}
+
+impl HelpScope {
+    fn argv_prefix(&self) -> &'static [&'static str] {
+        match self {
+            HelpScope::Root => &["help"],
+            HelpScope::Exec => &["exec", "help"],
+            HelpScope::Features => &["features", "help"],
+            HelpScope::Login => &["login", "help"],
+            HelpScope::AppServer => &["app-server", "help"],
+            HelpScope::Sandbox => &["sandbox", "help"],
+            HelpScope::Cloud => &["cloud", "help"],
+            HelpScope::Mcp => &["mcp", "help"],
+        }
+    }
+}
+
+/// Request for `codex <scope> help [COMMAND]...`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HelpCommandRequest {
+    pub scope: HelpScope,
+    /// Optional command path components appended after `help` (variadic upstream).
+    pub command: Vec<String>,
+    /// Per-call CLI overrides layered on top of the builder.
+    pub overrides: CliOverridesPatch,
+}
+
+impl HelpCommandRequest {
+    pub fn new(scope: HelpScope) -> Self {
+        Self {
+            scope,
+            command: Vec::new(),
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    /// Appends one or more command tokens to the help invocation.
+    pub fn command<I, S>(mut self, tokens: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.command.extend(tokens.into_iter().map(Into::into));
+        self
+    }
+
+    /// Replaces the default CLI overrides for this request.
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+/// Request for `codex review [OPTIONS] [PROMPT]`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ReviewCommandRequest {
+    pub prompt: Option<String>,
+    pub base: Option<String>,
+    pub commit: Option<String>,
+    pub title: Option<String>,
+    pub uncommitted: bool,
+    /// Per-call CLI overrides layered on top of the builder.
+    pub overrides: CliOverridesPatch,
+}
+
+impl ReviewCommandRequest {
+    pub fn new() -> Self {
+        Self {
+            prompt: None,
+            base: None,
+            commit: None,
+            title: None,
+            uncommitted: false,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+        let prompt = prompt.into();
+        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
+        self
+    }
+
+    pub fn base(mut self, branch: impl Into<String>) -> Self {
+        let branch = branch.into();
+        self.base = (!branch.trim().is_empty()).then_some(branch);
+        self
+    }
+
+    pub fn commit(mut self, sha: impl Into<String>) -> Self {
+        let sha = sha.into();
+        self.commit = (!sha.trim().is_empty()).then_some(sha);
+        self
+    }
+
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        let title = title.into();
+        self.title = (!title.trim().is_empty()).then_some(title);
+        self
+    }
+
+    pub fn uncommitted(mut self, enable: bool) -> Self {
+        self.uncommitted = enable;
+        self
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+impl Default for ReviewCommandRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Request for `codex exec review [OPTIONS] [PROMPT]`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ExecReviewCommandRequest {
+    pub prompt: Option<String>,
+    pub base: Option<String>,
+    pub commit: Option<String>,
+    pub title: Option<String>,
+    pub uncommitted: bool,
+    pub json: bool,
+    pub skip_git_repo_check: bool,
+    /// Per-call CLI overrides layered on top of the builder.
+    pub overrides: CliOverridesPatch,
+}
+
+impl ExecReviewCommandRequest {
+    pub fn new() -> Self {
+        Self {
+            prompt: None,
+            base: None,
+            commit: None,
+            title: None,
+            uncommitted: false,
+            json: false,
+            skip_git_repo_check: true,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+        let prompt = prompt.into();
+        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
+        self
+    }
+
+    pub fn base(mut self, branch: impl Into<String>) -> Self {
+        let branch = branch.into();
+        self.base = (!branch.trim().is_empty()).then_some(branch);
+        self
+    }
+
+    pub fn commit(mut self, sha: impl Into<String>) -> Self {
+        let sha = sha.into();
+        self.commit = (!sha.trim().is_empty()).then_some(sha);
+        self
+    }
+
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        let title = title.into();
+        self.title = (!title.trim().is_empty()).then_some(title);
+        self
+    }
+
+    pub fn uncommitted(mut self, enable: bool) -> Self {
+        self.uncommitted = enable;
+        self
+    }
+
+    pub fn json(mut self, enable: bool) -> Self {
+        self.json = enable;
+        self
+    }
+
+    pub fn skip_git_repo_check(mut self, enable: bool) -> Self {
+        self.skip_git_repo_check = enable;
+        self
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+impl Default for ExecReviewCommandRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Request for `codex resume [OPTIONS] [SESSION_ID] [PROMPT]`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResumeSessionRequest {
+    pub session_id: Option<String>,
+    pub prompt: Option<String>,
+    pub all: bool,
+    pub last: bool,
+    /// Per-call CLI overrides layered on top of the builder.
+    pub overrides: CliOverridesPatch,
+}
+
+impl ResumeSessionRequest {
+    pub fn new() -> Self {
+        Self {
+            session_id: None,
+            prompt: None,
+            all: false,
+            last: false,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn session_id(mut self, session_id: impl Into<String>) -> Self {
+        let session_id = session_id.into();
+        self.session_id = (!session_id.trim().is_empty()).then_some(session_id);
+        self
+    }
+
+    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+        let prompt = prompt.into();
+        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
+        self
+    }
+
+    pub fn all(mut self, enable: bool) -> Self {
+        self.all = enable;
+        self
+    }
+
+    pub fn last(mut self, enable: bool) -> Self {
+        self.last = enable;
+        self
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+impl Default for ResumeSessionRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Request for `codex fork [OPTIONS] [SESSION_ID] [PROMPT]`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ForkSessionRequest {
+    pub session_id: Option<String>,
+    pub prompt: Option<String>,
+    pub all: bool,
+    pub last: bool,
+    /// Per-call CLI overrides layered on top of the builder.
+    pub overrides: CliOverridesPatch,
+}
+
+impl ForkSessionRequest {
+    pub fn new() -> Self {
+        Self {
+            session_id: None,
+            prompt: None,
+            all: false,
+            last: false,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn session_id(mut self, session_id: impl Into<String>) -> Self {
+        let session_id = session_id.into();
+        self.session_id = (!session_id.trim().is_empty()).then_some(session_id);
+        self
+    }
+
+    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+        let prompt = prompt.into();
+        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
+        self
+    }
+
+    pub fn all(mut self, enable: bool) -> Self {
+        self.all = enable;
+        self
+    }
+
+    pub fn last(mut self, enable: bool) -> Self {
+        self.last = enable;
+        self
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+impl Default for ForkSessionRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Request for `codex cloud` (overview/help).
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CloudOverviewRequest {
+    pub overrides: CliOverridesPatch,
+}
+
+impl CloudOverviewRequest {
+    pub fn new() -> Self {
+        Self {
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+impl Default for CloudOverviewRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Request for `codex cloud list`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CloudListRequest {
+    pub json: bool,
+    pub env_id: Option<String>,
+    pub limit: Option<u32>,
+    pub cursor: Option<String>,
+    pub overrides: CliOverridesPatch,
+}
+
+impl CloudListRequest {
+    pub fn new() -> Self {
+        Self {
+            json: false,
+            env_id: None,
+            limit: None,
+            cursor: None,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn json(mut self, enable: bool) -> Self {
+        self.json = enable;
+        self
+    }
+
+    pub fn env_id(mut self, env_id: impl Into<String>) -> Self {
+        let env_id = env_id.into();
+        self.env_id = (!env_id.trim().is_empty()).then_some(env_id);
+        self
+    }
+
+    pub fn limit(mut self, limit: u32) -> Self {
+        self.limit = Some(limit);
+        self
+    }
+
+    pub fn cursor(mut self, cursor: impl Into<String>) -> Self {
+        let cursor = cursor.into();
+        self.cursor = (!cursor.trim().is_empty()).then_some(cursor);
+        self
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+impl Default for CloudListRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Output from `codex cloud list`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CloudListOutput {
+    pub status: ExitStatus,
+    pub stdout: String,
+    pub stderr: String,
+    /// Parsed JSON output when `--json` was requested.
+    pub json: Option<Value>,
+}
+
+/// Request for `codex cloud status <TASK_ID>`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CloudStatusRequest {
+    pub task_id: String,
+    pub overrides: CliOverridesPatch,
+}
+
+impl CloudStatusRequest {
+    pub fn new(task_id: impl Into<String>) -> Self {
+        Self {
+            task_id: task_id.into(),
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+/// Request for `codex cloud diff [--attempt N] <TASK_ID>`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CloudDiffRequest {
+    pub task_id: String,
+    pub attempt: Option<u32>,
+    pub overrides: CliOverridesPatch,
+}
+
+impl CloudDiffRequest {
+    pub fn new(task_id: impl Into<String>) -> Self {
+        Self {
+            task_id: task_id.into(),
+            attempt: None,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn attempt(mut self, attempt: u32) -> Self {
+        self.attempt = Some(attempt);
+        self
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+/// Request for `codex cloud apply [--attempt N] <TASK_ID>`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CloudApplyRequest {
+    pub task_id: String,
+    pub attempt: Option<u32>,
+    pub overrides: CliOverridesPatch,
+}
+
+impl CloudApplyRequest {
+    pub fn new(task_id: impl Into<String>) -> Self {
+        Self {
+            task_id: task_id.into(),
+            attempt: None,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn attempt(mut self, attempt: u32) -> Self {
+        self.attempt = Some(attempt);
+        self
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+/// Request for `codex cloud exec`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CloudExecRequest {
+    pub env_id: String,
+    pub query: Option<String>,
+    pub attempts: Option<u32>,
+    pub branch: Option<String>,
+    pub overrides: CliOverridesPatch,
+}
+
+impl CloudExecRequest {
+    pub fn new(env_id: impl Into<String>) -> Self {
+        Self {
+            env_id: env_id.into(),
+            query: None,
+            attempts: None,
+            branch: None,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn query(mut self, query: impl Into<String>) -> Self {
+        let query = query.into();
+        self.query = (!query.trim().is_empty()).then_some(query);
+        self
+    }
+
+    pub fn attempts(mut self, attempts: u32) -> Self {
+        self.attempts = Some(attempts);
+        self
+    }
+
+    pub fn branch(mut self, branch: impl Into<String>) -> Self {
+        let branch = branch.into();
+        self.branch = (!branch.trim().is_empty()).then_some(branch);
+        self
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+/// Request for `codex mcp` (overview/help).
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct McpOverviewRequest {
+    pub overrides: CliOverridesPatch,
+}
+
+impl McpOverviewRequest {
+    pub fn new() -> Self {
+        Self {
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+impl Default for McpOverviewRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Request for `codex mcp list`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct McpListRequest {
+    pub json: bool,
+    pub overrides: CliOverridesPatch,
+}
+
+impl McpListRequest {
+    pub fn new() -> Self {
+        Self {
+            json: false,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn json(mut self, enable: bool) -> Self {
+        self.json = enable;
+        self
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+impl Default for McpListRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Output from `codex mcp list`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct McpListOutput {
+    pub status: ExitStatus,
+    pub stdout: String,
+    pub stderr: String,
+    pub json: Option<Value>,
+}
+
+/// Request for `codex mcp get <NAME>`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct McpGetRequest {
+    pub name: String,
+    pub json: bool,
+    pub overrides: CliOverridesPatch,
+}
+
+impl McpGetRequest {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            json: false,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn json(mut self, enable: bool) -> Self {
+        self.json = enable;
+        self
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+/// Transport for `codex mcp add`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum McpAddTransport {
+    Stdio {
+        env: Vec<(String, String)>,
+        command: Vec<OsString>,
+    },
+    StreamableHttp {
+        url: String,
+        bearer_token_env_var: Option<String>,
+    },
+}
+
+/// Request for `codex mcp add`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct McpAddRequest {
+    pub name: String,
+    pub transport: McpAddTransport,
+    pub overrides: CliOverridesPatch,
+}
+
+impl McpAddRequest {
+    pub fn stdio(name: impl Into<String>, command: Vec<OsString>) -> Self {
+        Self {
+            name: name.into(),
+            transport: McpAddTransport::Stdio {
+                env: Vec::new(),
+                command,
+            },
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn streamable_http(name: impl Into<String>, url: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            transport: McpAddTransport::StreamableHttp {
+                url: url.into(),
+                bearer_token_env_var: None,
+            },
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        if let McpAddTransport::Stdio { env, .. } = &mut self.transport {
+            env.push((key.into(), value.into()));
+        }
+        self
+    }
+
+    pub fn bearer_token_env_var(mut self, env_var: impl Into<String>) -> Self {
+        if let McpAddTransport::StreamableHttp {
+            bearer_token_env_var,
+            ..
+        } = &mut self.transport
+        {
+            let env_var = env_var.into();
+            *bearer_token_env_var = (!env_var.trim().is_empty()).then_some(env_var);
+        }
+        self
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+/// Request for `codex mcp remove <NAME>`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct McpRemoveRequest {
+    pub name: String,
+    pub overrides: CliOverridesPatch,
+}
+
+impl McpRemoveRequest {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+/// Request for `codex mcp logout <NAME>`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct McpLogoutRequest {
+    pub name: String,
+    pub overrides: CliOverridesPatch,
+}
+
+impl McpLogoutRequest {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+/// Request for `codex mcp login <NAME>` (OAuth).
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct McpOauthLoginRequest {
+    pub name: String,
+    pub scopes: Vec<String>,
+    pub overrides: CliOverridesPatch,
+}
+
+impl McpOauthLoginRequest {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            scopes: Vec::new(),
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn scopes<I, S>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.scopes
+            .extend(scopes.into_iter().map(|s| s.into()).filter(|s| !s.trim().is_empty()));
+        self
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
     }
 }
 
@@ -7519,6 +8958,330 @@ JSON
                 "--json"
             ]
         );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn supports_help_review_fork_resume_and_features_commands() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+printf "%s\n" "$@"
+"#,
+        );
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+
+        let features = client
+            .features(FeaturesCommandRequest::new())
+            .await
+            .unwrap();
+        assert_eq!(features.stdout.lines().collect::<Vec<_>>(), vec!["features"]);
+
+        let help = client
+            .help(HelpCommandRequest::new(HelpScope::Root).command(["exec", "review"]))
+            .await
+            .unwrap();
+        assert_eq!(
+            help.stdout.lines().collect::<Vec<_>>(),
+            vec!["help", "exec", "review"]
+        );
+
+        let review = client
+            .review(
+                ReviewCommandRequest::new()
+                    .base("main")
+                    .commit("abc123")
+                    .title("hello")
+                    .uncommitted(true)
+                    .prompt("please review"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            review.stdout.lines().collect::<Vec<_>>(),
+            vec![
+                "review",
+                "--base",
+                "main",
+                "--commit",
+                "abc123",
+                "--title",
+                "hello",
+                "--uncommitted",
+                "please review"
+            ]
+        );
+
+        let exec_review = client
+            .exec_review(
+                ExecReviewCommandRequest::new()
+                    .base("main")
+                    .commit("abc123")
+                    .title("hello")
+                    .uncommitted(true)
+                    .json(true)
+                    .prompt("please review"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            exec_review.stdout.lines().collect::<Vec<_>>(),
+            vec![
+                "exec",
+                "review",
+                "--base",
+                "main",
+                "--commit",
+                "abc123",
+                "--json",
+                "--skip-git-repo-check",
+                "--title",
+                "hello",
+                "--uncommitted",
+                "please review"
+            ]
+        );
+
+        let resume = client
+            .resume_session(
+                ResumeSessionRequest::new()
+                    .all(true)
+                    .last(true)
+                    .session_id("sess-1")
+                    .prompt("resume prompt"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            resume.stdout.lines().collect::<Vec<_>>(),
+            vec!["resume", "--all", "--last", "sess-1", "resume prompt"]
+        );
+
+        let fork = client
+            .fork_session(
+                ForkSessionRequest::new()
+                    .all(true)
+                    .last(true)
+                    .session_id("sess-1")
+                    .prompt("fork prompt"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            fork.stdout.lines().collect::<Vec<_>>(),
+            vec!["fork", "--all", "--last", "sess-1", "fork prompt"]
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn cloud_list_parses_json_and_maps_args() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+printf "%s\n" "$@" 1>&2
+cat <<'JSON'
+{"tasks":[],"cursor":null}
+JSON
+"#,
+        );
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+
+        let output = client
+            .cloud_list(
+                CloudListRequest::new()
+                    .json(true)
+                    .env_id("env-1")
+                    .limit(3)
+                    .cursor("cur-1"),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(output.json, Some(json!({"tasks": [], "cursor": null})));
+        assert_eq!(
+            output.stderr.lines().collect::<Vec<_>>(),
+            vec![
+                "cloud",
+                "list",
+                "--env",
+                "env-1",
+                "--limit",
+                "3",
+                "--cursor",
+                "cur-1",
+                "--json"
+            ]
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn cloud_exec_maps_args_and_rejects_empty_env_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+printf "%s\n" "$@"
+"#,
+        );
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+
+        let output = client
+            .cloud_exec(
+                CloudExecRequest::new("env-1")
+                    .attempts(2)
+                    .branch("main")
+                    .query("hello"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            output.stdout.lines().collect::<Vec<_>>(),
+            vec![
+                "cloud",
+                "exec",
+                "--env",
+                "env-1",
+                "--attempts",
+                "2",
+                "--branch",
+                "main",
+                "hello"
+            ]
+        );
+
+        let err = client.cloud_exec(CloudExecRequest::new("  ")).await.unwrap_err();
+        assert!(matches!(err, CodexError::EmptyEnvId));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn mcp_list_get_and_add_map_args_and_parse_json() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+printf "%s\n" "$@" 1>&2
+cat <<'JSON'
+{"servers":[{"name":"files"}]}
+JSON
+"#,
+        );
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+
+        let list = client
+            .mcp_list(McpListRequest::new().json(true))
+            .await
+            .unwrap();
+        assert_eq!(list.json, Some(json!({"servers": [{"name": "files"}]})));
+        assert_eq!(
+            list.stderr.lines().collect::<Vec<_>>(),
+            vec!["mcp", "list", "--json"]
+        );
+
+        let get = client
+            .mcp_get(McpGetRequest::new("files").json(true))
+            .await
+            .unwrap();
+        assert_eq!(get.json, Some(json!({"servers": [{"name": "files"}]})));
+        assert_eq!(
+            get.stderr.lines().collect::<Vec<_>>(),
+            vec!["mcp", "get", "--json", "files"]
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn mcp_add_maps_transports_and_validates_required_fields() {
+        let dir = tempfile::tempdir().unwrap();
+        let script_path = write_fake_codex(
+            dir.path(),
+            r#"#!/usr/bin/env bash
+printf "%s\n" "$@"
+"#,
+        );
+
+        let client = CodexClient::builder()
+            .binary(&script_path)
+            .mirror_stdout(false)
+            .quiet(true)
+            .build();
+
+        let stdio = client
+            .mcp_add(
+                McpAddRequest::stdio("files", vec![OsString::from("node"), OsString::from("srv")])
+                    .env("TOKEN", "abc"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            stdio.stdout.lines().collect::<Vec<_>>(),
+            vec![
+                "mcp",
+                "add",
+                "files",
+                "--env",
+                "TOKEN=abc",
+                "--",
+                "node",
+                "srv"
+            ]
+        );
+
+        let http = client
+            .mcp_add(
+                McpAddRequest::streamable_http("http", "https://example.test")
+                    .bearer_token_env_var("TOKEN_ENV"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            http.stdout.lines().collect::<Vec<_>>(),
+            vec![
+                "mcp",
+                "add",
+                "http",
+                "--url",
+                "https://example.test",
+                "--bearer-token-env-var",
+                "TOKEN_ENV"
+            ]
+        );
+
+        let err = client
+            .mcp_add(McpAddRequest::stdio("files", Vec::new()))
+            .await
+            .unwrap_err();
+        assert!(matches!(err, CodexError::EmptyMcpCommand));
+
+        let err = client
+            .mcp_add(McpAddRequest::streamable_http("bad", "  "))
+            .await
+            .unwrap_err();
+        assert!(matches!(err, CodexError::EmptyMcpUrl));
     }
 
     #[cfg(unix)]

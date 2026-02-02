@@ -159,6 +159,7 @@ fn config_from_env() -> StdioServerConfig {
         code_home,
         current_dir: None,
         env: Vec::new(),
+        app_server_analytics_default_enabled: false,
         mirror_stdio: true,
         startup_timeout: Duration::from_secs(10),
     }

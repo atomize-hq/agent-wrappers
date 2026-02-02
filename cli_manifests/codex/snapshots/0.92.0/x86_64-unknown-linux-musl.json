@@ -1,7 +1,7 @@
 {
   "snapshot_schema_version": 1,
   "tool": "codex-cli",
-  "collected_at": "2026-01-27T11:50:52Z",
+  "collected_at": "2026-02-02T00:00:00Z",
   "binary": {
     "sha256": "285b8121885d4bb3c35a59047761e010a67ef779ebedf0c9b703c84744eeafc7",
     "size_bytes": 64419240,
@@ -1245,6 +1245,107 @@
     {
       "path": [
         "mcp",
+        "add"
+      ],
+      "usage": "codex mcp add [OPTIONS] <NAME> (--url <URL> | -- <COMMAND>...)",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": true,
+          "variadic": true,
+          "note": "Command to launch the MCP server. Use --url for a streamable HTTP server"
+        },
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name for the MCP server configuration"
+        }
+      ],
+      "flags": [
+        {
+          "long": "--bearer-token-env-var",
+          "takes_value": true,
+          "value_name": "ENV_VAR"
+        },
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--env",
+          "takes_value": true,
+          "value_name": "KEY=VALUE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--url",
+          "takes_value": true,
+          "value_name": "URL"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "get"
+      ],
+      "usage": "codex mcp get [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to display"
+        }
+      ],
+      "flags": [
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--json",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
         "help"
       ],
       "usage": "codex mcp help [COMMAND]...",
@@ -1254,6 +1355,159 @@
           "required": false,
           "variadic": true,
           "note": "Print help for the subcommand(s)"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "usage": "codex mcp list [OPTIONS]",
+      "flags": [
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--json",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "login"
+      ],
+      "usage": "codex mcp login [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to authenticate with oauth"
+        }
+      ],
+      "flags": [
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scopes",
+          "takes_value": true,
+          "value_name": "SCOPE,SCOPE"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "logout"
+      ],
+      "usage": "codex mcp logout [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to deauthenticate"
+        }
+      ],
+      "flags": [
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "remove"
+      ],
+      "usage": "codex mcp remove [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server configuration to remove"
+        }
+      ],
+      "flags": [
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
         }
       ]
     },

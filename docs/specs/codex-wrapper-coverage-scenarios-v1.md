@@ -175,6 +175,8 @@ The generator MUST emit the following flags under `path=["login"]`:
 
 - `--mcp` (level: `explicit`, note: `capability-guarded`)
 - `--api-key` (level: `explicit`)
+- `--device-auth` (level: `explicit`)
+- `--with-api-key` (level: `explicit`)
 
 The generator MUST NOT emit any flags or args under:
 - `path=["login","status"]`
@@ -189,9 +191,10 @@ Wrapper API family:
 
 - Path: `["features","list"]` (level: `explicit`)
 
-### Required command-specific flags
+### Flags/args
 
-- `--json` (level: `explicit`)
+The generator MUST NOT emit any command-specific flags or positional args under:
+- `path=["features","list"]`
 
 ## Scenario 7: `codex app-server generate-ts` / `generate-json-schema`
 
@@ -293,6 +296,177 @@ Wrapper API family:
 - Path: `["mcp-server"]` (level: `explicit`)
 - Path: `["app-server"]` (level: `explicit`)
 
+### Required command-specific flags
+
+The generator MUST emit the following flag under `path=["app-server"]`:
+
+- `--analytics-default-enabled` (level: `explicit`)
+
 Notes:
 - If upstream snapshots do not include these paths for a given version, reports will include them as `wrapper_only_commands`.
 - If upstream snapshots include these paths for a given version, report comparison will align by identity automatically.
+
+## Scenario 13: `codex help` command families
+
+Wrapper API family:
+- `CodexClient::help`
+
+### Command entries
+
+- Path: `["help"]` (level: `explicit`)
+- Path: `["exec","help"]` (level: `explicit`)
+- Path: `["features","help"]` (level: `explicit`)
+- Path: `["login","help"]` (level: `explicit`)
+- Path: `["app-server","help"]` (level: `explicit`)
+- Path: `["sandbox","help"]` (level: `explicit`)
+- Path: `["cloud","help"]` (level: `explicit`)
+- Path: `["mcp","help"]` (level: `explicit`)
+
+### Required positional args
+
+- Arg: `COMMAND` (level: `explicit`)  
+  Note: upstream treats `COMMAND` as variadic; v1 records it as a single positional identity.
+
+## Scenario 14: `codex review` and `codex exec review`
+
+Wrapper API family:
+- `CodexClient::review`
+- `CodexClient::exec_review`
+
+### Command entries
+
+- Path: `["review"]` (level: `explicit`)
+- Path: `["exec","review"]` (level: `explicit`)
+
+### Required command-specific flags
+
+For `path=["review"]`:
+- `--base` (level: `explicit`)
+- `--commit` (level: `explicit`)
+- `--title` (level: `explicit`)
+- `--uncommitted` (level: `explicit`)
+
+For `path=["exec","review"]`:
+- `--base` (level: `explicit`)
+- `--commit` (level: `explicit`)
+- `--json` (level: `explicit`)
+- `--skip-git-repo-check` (level: `explicit`)
+- `--title` (level: `explicit`)
+- `--uncommitted` (level: `explicit`)
+
+### Required positional args
+
+- For `path=["review"]`: `PROMPT` (level: `explicit`)
+- For `path=["exec","review"]`: `PROMPT` (level: `explicit`)
+
+## Scenario 15: `codex resume` and `codex fork`
+
+Wrapper API family:
+- `CodexClient::resume_session`
+- `CodexClient::fork_session`
+
+### Command entries
+
+- Path: `["resume"]` (level: `explicit`)
+- Path: `["fork"]` (level: `explicit`)
+
+### Required command-specific flags
+
+For both `path=["resume"]` and `path=["fork"]`:
+- `--all` (level: `explicit`)
+- `--last` (level: `explicit`)
+
+### Required positional args
+
+For both `path=["resume"]` and `path=["fork"]`:
+- Arg: `SESSION_ID` (level: `explicit`)
+- Arg: `PROMPT` (level: `explicit`)
+
+## Scenario 16: `codex features`
+
+Wrapper API family:
+- `CodexClient::features`
+
+### Command entry
+
+- Path: `["features"]` (level: `explicit`)
+
+## Scenario 17: `codex cloud` task management
+
+Wrapper API family:
+- `CodexClient::cloud_list`
+- `CodexClient::cloud_status`
+- `CodexClient::cloud_diff`
+- `CodexClient::cloud_apply`
+- `CodexClient::cloud_exec`
+
+### Command entries
+
+- Path: `["cloud"]` (level: `explicit`)
+- Path: `["cloud","list"]` (level: `explicit`)
+- Path: `["cloud","status"]` (level: `explicit`)
+- Path: `["cloud","diff"]` (level: `explicit`)
+- Path: `["cloud","apply"]` (level: `explicit`)
+- Path: `["cloud","exec"]` (level: `explicit`)
+
+### Flags/args
+
+For `path=["cloud","list"]`:
+- `--env` (level: `explicit`)
+- `--limit` (level: `explicit`)
+- `--cursor` (level: `explicit`)
+- `--json` (level: `explicit`)
+
+For `path=["cloud","diff"]` and `path=["cloud","apply"]`:
+- `--attempt` (level: `explicit`)
+- `TASK_ID` (level: `explicit`)
+
+For `path=["cloud","status"]`:
+- `TASK_ID` (level: `explicit`)
+
+For `path=["cloud","exec"]`:
+- `--env` (level: `explicit`)
+- `--attempts` (level: `explicit`)
+- `--branch` (level: `explicit`)
+- `QUERY` (level: `explicit`)
+
+Notes:
+- `CodexClient::diff` and `CodexClient::cloud_diff_task` remain as convenience APIs that read `CODEX_TASK_ID` when present; they still align to `path=["cloud","diff"]`.
+
+## Scenario 18: `codex mcp` management commands
+
+Wrapper API family:
+- `CodexClient::mcp_list`
+- `CodexClient::mcp_get`
+- `CodexClient::mcp_add`
+- `CodexClient::mcp_remove`
+- `CodexClient::mcp_logout`
+- `CodexClient::spawn_mcp_oauth_login_process`
+
+### Command entries
+
+- Path: `["mcp"]` (level: `explicit`)
+- Path: `["mcp","list"]` (level: `explicit`)
+- Path: `["mcp","get"]` (level: `explicit`)
+- Path: `["mcp","add"]` (level: `explicit`)
+- Path: `["mcp","remove"]` (level: `explicit`)
+- Path: `["mcp","logout"]` (level: `explicit`)
+- Path: `["mcp","login"]` (level: `explicit`)
+
+### Flags/args
+
+For `path=["mcp","list"]` and `path=["mcp","get"]`:
+- `--json` (level: `explicit`)
+
+For `path=["mcp","get"]` / `path=["mcp","remove"]` / `path=["mcp","logout"]` / `path=["mcp","login"]`:
+- `NAME` (level: `explicit`)
+
+For `path=["mcp","login"]`:
+- `--scopes` (level: `explicit`)
+
+For `path=["mcp","add"]`:
+- `--url` (level: `explicit`)
+- `--bearer-token-env-var` (level: `explicit`)
+- `--env` (level: `explicit`)
+- `NAME` (level: `explicit`)
+- `COMMAND` (level: `explicit`)

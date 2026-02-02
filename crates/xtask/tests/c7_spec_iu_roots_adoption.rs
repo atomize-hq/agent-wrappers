@@ -14,10 +14,6 @@ const TARGET_WINDOWS: &str = "x86_64-pc-windows-msvc";
 const TARGETS: [&str; 3] = [TARGET_LINUX, TARGET_MACOS, TARGET_WINDOWS];
 
 const NOTE_COMPLETION: &str = "Shell completion generation is out of scope for the wrapper.";
-const NOTE_CLOUD: &str =
-    "Cloud command family is intentionally unwrapped (setup/experimental utility).";
-const NOTE_MCP: &str =
-    "MCP management commands are intentionally unwrapped (experimental/admin surface).";
 
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -107,28 +103,6 @@ fn write_union_snapshot(codex_dir: &Path) {
             ],
             "args": [
                 { "name": "SHELL", "available_on": TARGETS }
-            ]
-        },
-        { "path": ["cloud"], "available_on": TARGETS },
-        {
-            "path": ["cloud", "login"],
-            "available_on": TARGETS,
-            "flags": [
-                { "key": "--profile", "long": "--profile", "takes_value": true, "available_on": TARGETS }
-            ],
-            "args": [
-                { "name": "PROFILE", "available_on": TARGETS }
-            ]
-        },
-        { "path": ["mcp"], "available_on": TARGETS },
-        {
-            "path": ["mcp", "list"],
-            "available_on": TARGETS,
-            "flags": [
-                { "key": "--json", "long": "--json", "takes_value": false, "available_on": TARGETS }
-            ],
-            "args": [
-                { "name": "FILTER", "available_on": TARGETS }
             ]
         }
     ]);
@@ -294,8 +268,6 @@ fn c7_iu_roots_are_generated_and_reports_waive_descendants() {
         "wrapper coverage generated_at must be deterministic with SOURCE_DATE_EPOCH=0"
     );
     assert_wrapper_coverage_contains_iuroot(&wrapper_coverage, &["completion"], NOTE_COMPLETION);
-    assert_wrapper_coverage_contains_iuroot(&wrapper_coverage, &["cloud"], NOTE_CLOUD);
-    assert_wrapper_coverage_contains_iuroot(&wrapper_coverage, &["mcp"], NOTE_MCP);
 
     let output = run_xtask_codex_report(&codex_dir);
     assert!(
@@ -334,7 +306,7 @@ fn c7_iu_roots_are_generated_and_reports_waive_descendants() {
         .and_then(Value::as_array)
         .expect("deltas.intentionally_unsupported array");
 
-    for root in ["completion", "cloud", "mcp"] {
+    for root in ["completion"] {
         assert!(
             !has_path0(missing_commands, root),
             "missing_commands must not contain IU descendants under {root}"

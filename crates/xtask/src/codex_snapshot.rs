@@ -871,6 +871,9 @@ fn parse_section_header(t: &str) -> Option<Section> {
 }
 
 fn parse_command_token(line: &str) -> Option<String> {
+    if !line.starts_with(' ') && !line.starts_with('\t') {
+        return None;
+    }
     let trimmed = line.trim_start();
     if trimmed.starts_with('-') {
         return None;
@@ -879,10 +882,10 @@ fn parse_command_token(line: &str) -> Option<String> {
     // on-the-same-line description. Wrapped descriptions (continuation lines) should not be
     // interpreted as additional command tokens.
     let (head, desc) = split_tokens_and_desc(trimmed);
-    if desc.is_empty() {
+    let token = head.split_whitespace().next()?;
+    if desc.is_empty() && head.trim() != token {
         return None;
     }
-    let token = head.split_whitespace().next()?;
     if token
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
@@ -1073,7 +1076,11 @@ fn merge_inferred_args(args: &mut Vec<ArgSnapshot>, inferred: Vec<ArgSnapshot>) 
     }
 }
 
-fn infer_args_from_usage(usage: &str, cmd_path: &[String], has_subcommands: bool) -> Vec<ArgSnapshot> {
+fn infer_args_from_usage(
+    usage: &str,
+    cmd_path: &[String],
+    has_subcommands: bool,
+) -> Vec<ArgSnapshot> {
     let mut out = Vec::new();
 
     for line in usage.lines() {
@@ -1103,16 +1110,31 @@ fn infer_args_from_usage(usage: &str, cmd_path: &[String], has_subcommands: bool
         }
 
         let mut prev_was_flag = false;
+        let mut after_double_dash = false;
         for tok in tokens.into_iter().skip(idx) {
-            if tok.starts_with('-') {
-                prev_was_flag = true;
+            let tok = tok.trim_matches(|c| matches!(c, '(' | ')' | '|'));
+            if tok.is_empty() {
                 continue;
             }
-            if prev_was_flag {
-                // Likely a value name for the previous flag (e.g., `--out <DIR>`). Don’t treat it
-                // as a positional argument.
-                prev_was_flag = false;
-                continue;
+
+            if !after_double_dash {
+                if tok == "--" {
+                    after_double_dash = true;
+                    prev_was_flag = false;
+                    continue;
+                }
+
+                if tok.starts_with('-') {
+                    prev_was_flag = true;
+                    continue;
+                }
+
+                if prev_was_flag {
+                    // Likely a value name for the previous flag (e.g., `--out <DIR>`). Don’t treat it
+                    // as a positional argument.
+                    prev_was_flag = false;
+                    continue;
+                }
             }
 
             if tok.eq_ignore_ascii_case("[options]") || tok.eq_ignore_ascii_case("options") {

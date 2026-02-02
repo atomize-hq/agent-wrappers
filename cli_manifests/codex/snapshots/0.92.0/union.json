@@ -2,7 +2,7 @@
   "snapshot_schema_version": 2,
   "tool": "codex-cli",
   "mode": "union",
-  "collected_at": "2026-01-27T11:50:52Z",
+  "collected_at": "2026-02-02T01:18:50.31420169Z",
   "expected_targets": [
     "x86_64-unknown-linux-musl",
     "aarch64-apple-darwin",
@@ -16,7 +16,7 @@
   "inputs": [
     {
       "target_triple": "x86_64-unknown-linux-musl",
-      "collected_at": "2026-01-27T11:50:52Z",
+      "collected_at": "2026-02-02T00:00:00Z",
       "binary": {
         "sha256": "285b8121885d4bb3c35a59047761e010a67ef779ebedf0c9b703c84744eeafc7",
         "size_bytes": 64419240,
@@ -1020,6 +1020,96 @@
     {
       "path": [
         "mcp",
+        "add"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp add [OPTIONS] <NAME> (--url <URL> | -- <COMMAND>...)",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": true,
+          "variadic": true,
+          "note": "Command to launch the MCP server. Use --url for a streamable HTTP server",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name for the MCP server configuration",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--bearer-token-env-var",
+          "long": "--bearer-token-env-var",
+          "takes_value": true,
+          "value_name": "ENV_VAR",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--env",
+          "long": "--env",
+          "takes_value": true,
+          "value_name": "KEY=VALUE",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--url",
+          "long": "--url",
+          "takes_value": true,
+          "value_name": "URL",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "get"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp get [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to display",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
         "help"
       ],
       "available_on": [
@@ -1032,6 +1122,100 @@
           "required": false,
           "variadic": true,
           "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp list [OPTIONS]",
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "login"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp login [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to authenticate with oauth",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--scopes",
+          "long": "--scopes",
+          "takes_value": true,
+          "value_name": "SCOPE,SCOPE",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "logout"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp logout [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to deauthenticate",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "remove"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp remove [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server configuration to remove",
           "available_on": [
             "x86_64-unknown-linux-musl"
           ]

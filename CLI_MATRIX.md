@@ -7,7 +7,7 @@ This is a static inventory from `codex --help` and subcommand help, plus known `
 - `exec` subcommands: `resume`.
 - `mcp` subcommands: `list`, `get`, `add`, `remove`, `login`, `logout` (experimental; needs `experimental_use_rmcp_client = true`).
 - `app-server` subcommands: `generate-ts`, `generate-json-schema`.
-- `cloud` subcommands: `exec`.
+- `cloud` subcommands: `list`, `status`, `diff`, `apply`, `exec`.
 - `features` subcommands: `list`.
 - `execpolicy` subcommands: `check`.
 - `sandbox` subcommands (platform): `macos`, `linux`, `windows` (not shown in `--help` but present in code/docs).
@@ -45,7 +45,7 @@ This is a static inventory from `codex --help` and subcommand help, plus known `
 - `mcp`: subcommands list/get/add/remove/login/logout (experimental). Only shared config flags.
 - `mcp-server`: stdio MCP server; only shared config flags.
 - `app-server`: subcommands generate-ts / generate-json-schema; only shared config flags.
-- `cloud`: subcommand exec; only shared config flags.
+- `cloud`: subcommands list/status/diff/apply/exec; only shared config flags.
 - `features`: subcommand list; only shared config flags.
 - `execpolicy`: subcommand check; flags `--policy <PATH>` (repeatable, merged), optional `--pretty`, trailing `-- <COMMAND...>`; outputs JSON `{match:{decision:allow|prompt|forbidden,rules:[...]}}` or `{"noMatch":{}}` on miss.
 - `sandbox`: platform subcommands macos/linux/windows (in code, not shown in `--help`).
@@ -68,11 +68,11 @@ This is a static inventory from `codex --help` and subcommand help, plus known `
 - Auth/session remains basic (login/status/logout only).
 - Tests primarily live in inline unit tests (lib.rs, mcp.rs) and examples/doc-tests; no end-to-end coverage with a real CLI binary yet.
 - `check_execpolicy` wraps `codex execpolicy check` with policy paths/pretty flag/command argv and forwards shared overrides (config/profile/approval/sandbox/local-provider/cd/search); returns parsed JSON and captured stdout/stderr/status.
-- `list_features` wraps `codex features list` with an opt-in `--json` flag (falls back to parsing the text table when JSON is unavailable) and forwards shared overrides (config/profile/approval/sandbox/local-provider/cd/search); returns parsed feature entries plus captured stdout/stderr/status.
+- `list_features` wraps `codex features list` and forwards shared overrides (config/profile/approval/sandbox/local-provider/cd/search); parses the text table output (Codex CLI 0.92.0 rejects `--json`).
 - `generate_app_server_bindings` wraps `codex app-server generate-ts`/`generate-json-schema`, forwards shared overrides (config/profile/search/approval/sandbox/local-provider/cd), creates the `--out` directory, supports TypeScript `--prettier`, and surfaces non-zero exits as `NonZeroExit`.
 - `run_sandbox` wraps `codex sandbox <macos|linux|windows>` with `--full-auto`, macOS `--log-denials`, and request `--config/--enable/--disable` flags; other CLI overrides (approval/profile/search/sandbox) are intentionally not forwarded on this subcommand.
 - Sandbox caveats: macOS is the only platform that emits denial logs; Linux relies on the bundled `codex-linux-sandbox` helper; Windows sandboxing is experimental and depends on the upstream helper. The wrapper does not gate availability—unsupported/misconfigured installs will return non-zero statuses via `SandboxRun`.
 - `start_responses_api_proxy` wraps `codex responses-api-proxy`, writes the API key to stdin, forwards `--port`/`--server-info`/`--http-shutdown`/`--upstream-url`, and exposes a helper to parse `{port,pid}` from the server-info file when requested. Stdout/stderr stay piped; drain them if you need long-running logs.
 - `stdio_to_uds` wraps `codex stdio-to-uds <SOCKET_PATH>` with piped stdio so callers can bridge Unix domain sockets manually; working dir follows the request override, then the builder, then the current process dir. Keep stdout/stderr drained to avoid backpressure when the relay emits output.
 - CLI `--oss` and `--enable/--disable` feature toggles now flow through builder/request helpers; feature toggles are additive, and per-request overrides can disable a builder `--oss`.
-- The wrapper does not cover `codex cloud exec` or the shell-completion helper; call the CLI directly when needed (experimental/setup-time utilities—e.g., `codex cloud exec -- <cmd>` or `codex completion bash/zsh/fish`).
+- The wrapper covers `codex cloud` (list/status/diff/apply/exec) and `codex mcp` (list/get/add/remove/login/logout); shell completion generation remains out of scope.

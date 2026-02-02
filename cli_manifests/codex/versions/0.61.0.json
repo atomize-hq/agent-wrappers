@@ -1,18 +1,16 @@
 {
   "schema_version": 1,
   "semantic_version": "0.61.0",
-  "status": "validated",
-  "updated_at": "2025-11-20T16:14:58Z",
+  "status": "reported",
+  "updated_at": "2026-02-01T15:00:23Z",
   "artifacts": {
     "snapshots_dir": "snapshots/0.61.0",
     "reports_dir": "reports/0.61.0",
     "union_complete": false
   },
   "coverage": {
-    "supported_targets": [
-      "x86_64-unknown-linux-musl"
-    ],
-    "supported_required_target": true
+    "supported_targets": [],
+    "supported_required_target": false
   },
   "validation": {
     "passed_targets": [
@@ -22,6 +20,6 @@
     "skipped_targets": []
   },
   "promotion": {
-    "eligible_for_latest_validated": true
+    "eligible_for_latest_validated": false
   }
 }
