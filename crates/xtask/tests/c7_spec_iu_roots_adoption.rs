@@ -306,7 +306,8 @@ fn c7_iu_roots_are_generated_and_reports_waive_descendants() {
         .and_then(Value::as_array)
         .expect("deltas.intentionally_unsupported array");
 
-    for root in ["completion"] {
+    {
+        let root = "completion";
         assert!(
             !has_path0(missing_commands, root),
             "missing_commands must not contain IU descendants under {root}"

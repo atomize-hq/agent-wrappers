@@ -4,7 +4,7 @@
     "name": "C0: Offline JSONL parsing API (code)",
     "type": "code",
     "phase": "C0",
-    "status": "pending",
+    "status": "completed",
     "description": "Implement the public offline JSONL parsing API per the contract (production code only).",
     "references": [
       "docs/adr/0005-codex-jsonl-log-parser-api.md",
@@ -47,7 +47,7 @@
     "name": "C0: Offline JSONL parsing API (test)",
     "type": "test",
     "phase": "C0",
-    "status": "pending",
+    "status": "completed",
     "description": "Add tests validating the offline parser scenario catalog (tests only).",
     "references": [
       "docs/specs/codex-thread-event-jsonl-parser-contract.md",
@@ -59,7 +59,7 @@
       "docs/project_management/next/codex-jsonl-log-parser-api/C0-spec.md"
     ],
     "acceptance_criteria": [
-      "Tests cover scenario catalog A–F",
+      "Tests cover scenario catalog A\u2013F",
       "No production code changes",
       "Required commands executed (fmt + targeted tests) and recorded in session_log.md"
     ],
@@ -91,7 +91,7 @@
     "name": "C0: Offline JSONL parsing API (integration)",
     "type": "integration",
     "phase": "C0",
-    "status": "pending",
+    "status": "completed",
     "description": "Merge C0 code/test, reconcile to spec, and gate with fmt/clippy/tests/preflight.",
     "references": [
       "docs/adr/0005-codex-jsonl-log-parser-api.md",
@@ -132,4 +132,3 @@
     "concurrent_with": []
   }
 ]
-

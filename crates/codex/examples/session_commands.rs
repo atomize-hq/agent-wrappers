@@ -30,7 +30,7 @@ fn env_truthy(key: &str) -> bool {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args: Vec<String> = env::args().skip(1).collect();
-    let subcommand = args.get(0).cloned().unwrap_or_else(|| "help".to_string());
+    let subcommand = args.first().cloned().unwrap_or_else(|| "help".to_string());
 
     let client = real_cli::default_client();
 

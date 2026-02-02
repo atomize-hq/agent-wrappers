@@ -75,7 +75,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         }
         "get" => {
-            let name = args.get(0).ok_or("usage: mcp_manage get <NAME> [--json]")?;
+            let name = args
+                .first()
+                .ok_or("usage: mcp_manage get <NAME> [--json]")?;
             let json = args.iter().any(|v| v == "--json");
             let output = client
                 .mcp_get(McpGetRequest::new(name.to_string()).json(json))
@@ -96,7 +98,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let client = real_cli::build_client_with_home(&home);
 
             let name = args
-                .get(0)
+                .first()
                 .cloned()
                 .unwrap_or_else(|| "example".to_string());
             let url = args
@@ -118,7 +120,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         "add" => {
             let name = args
-                .get(0)
+                .first()
                 .ok_or("usage: mcp_manage add <NAME> (--url <URL> | -- <COMMAND>...)")?
                 .to_string();
             let mut tail = args.into_iter().skip(1).collect::<Vec<_>>();
@@ -131,21 +133,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 match tail[0].as_str() {
                     "--url" => {
                         tail.remove(0);
-                        url = tail.get(0).cloned();
+                        url = tail.first().cloned();
                         if url.is_some() {
                             tail.remove(0);
                         }
                     }
                     "--bearer-token-env-var" => {
                         tail.remove(0);
-                        bearer_token_env_var = tail.get(0).cloned();
+                        bearer_token_env_var = tail.first().cloned();
                         if bearer_token_env_var.is_some() {
                             tail.remove(0);
                         }
                     }
                     "--env" => {
                         tail.remove(0);
-                        if let Some(kv) = tail.get(0).cloned() {
+                        if let Some(kv) = tail.first().cloned() {
                             tail.remove(0);
                             if let Some((k, v)) = kv.split_once('=') {
                                 env_pairs.push((k.to_string(), v.to_string()));
@@ -173,7 +175,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 let command = tail
                     .iter()
                     .skip(delimiter + 1)
-                    .map(|s| OsString::from(s))
+                    .map(OsString::from)
                     .collect::<Vec<_>>();
 
                 let mut request = McpAddRequest::stdio(name, command);
@@ -187,7 +189,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         "add-http" => {
             let name = args
-                .get(0)
+                .first()
                 .ok_or("usage: mcp_manage add-http <NAME> <URL> [TOKEN_ENV]")?;
             let url = args
                 .get(1)
@@ -204,7 +206,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         "add-stdio" => {
             let name = args
-                .get(0)
+                .first()
                 .ok_or("usage: mcp_manage add-stdio <NAME> -- <COMMAND>...")?;
             let delimiter = args
                 .iter()
@@ -213,7 +215,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let command = args
                 .iter()
                 .skip(delimiter + 1)
-                .map(|s| OsString::from(s))
+                .map(OsString::from)
                 .collect::<Vec<_>>();
             let output = client
                 .mcp_add(McpAddRequest::stdio(name.to_string(), command))
@@ -221,14 +223,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             print!("{}", output.stdout);
         }
         "remove" => {
-            let name = args.get(0).ok_or("usage: mcp_manage remove <NAME>")?;
+            let name = args.first().ok_or("usage: mcp_manage remove <NAME>")?;
             let output = client
                 .mcp_remove(McpRemoveRequest::new(name.to_string()))
                 .await?;
             print!("{}", output.stdout);
         }
         "logout" => {
-            let name = args.get(0).ok_or("usage: mcp_manage logout <NAME>")?;
+            let name = args.first().ok_or("usage: mcp_manage logout <NAME>")?;
             let output = client
                 .mcp_logout(McpLogoutRequest::new(name.to_string()))
                 .await?;
@@ -236,7 +238,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         "login" => {
             let name = args
-                .get(0)
+                .first()
                 .ok_or("usage: mcp_manage login <NAME> [scopes...]")?;
             let scopes = args.iter().skip(1).cloned().collect::<Vec<_>>();
             let mut request = McpOauthLoginRequest::new(name.to_string());

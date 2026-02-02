@@ -62,7 +62,7 @@ fn examples_manifest_covers_all_explicit_wrapper_commands() {
         if cmd.path.is_empty() {
             continue;
         }
-        if map.get(&cmd.path).is_none() {
+        if !map.contains_key(&cmd.path) {
             missing.push(cmd.path);
         }
     }

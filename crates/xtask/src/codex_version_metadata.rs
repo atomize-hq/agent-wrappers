@@ -521,6 +521,13 @@ fn compute_coverage(
         .map(build_parity_exclusions_index)
         .unwrap_or_default();
 
+    let gate = CoverageGate {
+        allowed: &allowed,
+        disallowed: &disallowed,
+        treat_missing_as,
+        parity_exclusions: &parity_exclusions,
+    };
+
     let mut supported_targets = Vec::new();
 
     for target in &rules.union.expected_targets {
@@ -528,16 +535,7 @@ fn compute_coverage(
             continue;
         }
 
-        if is_supported_on_target(
-            rules,
-            union,
-            &wrapper_index,
-            target,
-            &allowed,
-            &disallowed,
-            treat_missing_as,
-            &parity_exclusions,
-        ) {
+        if is_supported_on_target(rules, union, &wrapper_index, target, &gate) {
             supported_targets.push(target.clone());
         }
     }
@@ -552,22 +550,26 @@ fn compute_coverage(
     })
 }
 
+struct CoverageGate<'a> {
+    allowed: &'a BTreeSet<&'a str>,
+    disallowed: &'a BTreeSet<&'a str>,
+    treat_missing_as: &'a str,
+    parity_exclusions: &'a ParityExclusionsIndex,
+}
+
 fn is_supported_on_target(
     rules: &RulesFile,
     union: &UnionSnapshotV2,
     wrapper_index: &WrapperIndex,
     target: &str,
-    allowed: &BTreeSet<&str>,
-    disallowed: &BTreeSet<&str>,
-    treat_missing_as: &str,
-    parity_exclusions: &ParityExclusionsIndex,
+    gate: &CoverageGate<'_>,
 ) -> bool {
     for cmd in &union.commands {
         if !cmd.available_on.iter().any(|t| t == target) {
             continue;
         }
 
-        if parity_exclusions.commands.contains(&cmd.path) {
+        if gate.parity_exclusions.commands.contains(&cmd.path) {
             continue;
         }
 
@@ -579,9 +581,11 @@ fn is_supported_on_target(
                 .unwrap_or(&[]),
             target,
         )
-        .unwrap_or_else(|| treat_missing_as.to_string());
+        .unwrap_or_else(|| gate.treat_missing_as.to_string());
 
-        if disallowed.contains(cmd_level.as_str()) || !allowed.contains(cmd_level.as_str()) {
+        if gate.disallowed.contains(cmd_level.as_str())
+            || !gate.allowed.contains(cmd_level.as_str())
+        {
             return false;
         }
         if cmd_level == "intentionally_unsupported"
@@ -608,7 +612,8 @@ fn is_supported_on_target(
             if !flag.available_on.iter().any(|t| t == target) {
                 continue;
             }
-            if parity_exclusions
+            if gate
+                .parity_exclusions
                 .flags
                 .contains(&(cmd.path.clone(), flag.key.clone()))
             {
@@ -623,9 +628,11 @@ fn is_supported_on_target(
                     .unwrap_or(&[]),
                 target,
             )
-            .unwrap_or_else(|| treat_missing_as.to_string());
+            .unwrap_or_else(|| gate.treat_missing_as.to_string());
 
-            if disallowed.contains(flag_level.as_str()) || !allowed.contains(flag_level.as_str()) {
+            if gate.disallowed.contains(flag_level.as_str())
+                || !gate.allowed.contains(flag_level.as_str())
+            {
                 return false;
             }
             if flag_level == "intentionally_unsupported"
@@ -653,7 +660,8 @@ fn is_supported_on_target(
             if !arg.available_on.iter().any(|t| t == target) {
                 continue;
             }
-            if parity_exclusions
+            if gate
+                .parity_exclusions
                 .args
                 .contains(&(cmd.path.clone(), arg.name.clone()))
             {
@@ -668,9 +676,11 @@ fn is_supported_on_target(
                     .unwrap_or(&[]),
                 target,
             )
-            .unwrap_or_else(|| treat_missing_as.to_string());
+            .unwrap_or_else(|| gate.treat_missing_as.to_string());
 
-            if disallowed.contains(arg_level.as_str()) || !allowed.contains(arg_level.as_str()) {
+            if gate.disallowed.contains(arg_level.as_str())
+                || !gate.allowed.contains(arg_level.as_str())
+            {
                 return false;
             }
             if arg_level == "intentionally_unsupported"

@@ -74,14 +74,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 match flag.as_str() {
                     "--env" => {
                         args.remove(0);
-                        env_id = args.get(0).cloned();
+                        env_id = args.first().cloned();
                         if env_id.is_some() {
                             args.remove(0);
                         }
                     }
                     "--limit" => {
                         args.remove(0);
-                        let value = args.get(0).cloned();
+                        let value = args.first().cloned();
                         if let Some(value) = value {
                             args.remove(0);
                             limit = value.parse::<u32>().ok();
@@ -89,7 +89,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     }
                     "--cursor" => {
                         args.remove(0);
-                        cursor = args.get(0).cloned();
+                        cursor = args.first().cloned();
                         if cursor.is_some() {
                             args.remove(0);
                         }
@@ -125,7 +125,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         "status" => {
             let task_id = args
-                .get(0)
+                .first()
                 .ok_or("usage: cloud_tasks status <TASK_ID>")?
                 .to_string();
             let output = client
@@ -135,7 +135,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         "diff" => {
             let task_id = args
-                .get(0)
+                .first()
                 .ok_or("usage: cloud_tasks diff <TASK_ID> [--attempt N]")?
                 .to_string();
             let attempt = args
@@ -151,7 +151,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         "apply" => {
             let task_id = args
-                .get(0)
+                .first()
                 .ok_or("usage: cloud_tasks apply <TASK_ID> [--attempt N]")?
                 .to_string();
             let attempt = args
@@ -175,14 +175,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 match args[0].as_str() {
                     "--env" => {
                         args.remove(0);
-                        env_id = args.get(0).cloned();
+                        env_id = args.first().cloned();
                         if env_id.is_some() {
                             args.remove(0);
                         }
                     }
                     "--attempts" => {
                         args.remove(0);
-                        let value = args.get(0).cloned();
+                        let value = args.first().cloned();
                         if let Some(value) = value {
                             args.remove(0);
                             attempts = value.parse::<u32>().ok();
@@ -190,14 +190,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     }
                     "--branch" => {
                         args.remove(0);
-                        branch = args.get(0).cloned();
+                        branch = args.first().cloned();
                         if branch.is_some() {
                             args.remove(0);
                         }
                     }
                     "--" => {
                         args.remove(0);
-                        query.extend(args.drain(..));
+                        query.append(&mut args);
                         break;
                     }
                     other => {

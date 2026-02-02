@@ -20,7 +20,7 @@ mod real_cli;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let mut args: Vec<String> = env::args().skip(1).collect();
-    let last = take_flag(&mut args, "--last");
+    let _last = take_flag(&mut args, "--last");
     let all = take_flag(&mut args, "--all");
     let resume_id = take_value(&mut args, "--resume-id");
     let prompt = take_value(&mut args, "--prompt").unwrap_or_else(|| "continue".to_string());
@@ -29,8 +29,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ResumeSelector::Id(id)
     } else if all {
         ResumeSelector::All
-    } else if last {
-        ResumeSelector::Last
     } else {
         ResumeSelector::Last
     };
