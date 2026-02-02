@@ -4,7 +4,7 @@
     "name": "C0: Offline JSONL parsing API (code)",
     "type": "code",
     "phase": "C0",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Implement the public offline JSONL parsing API per the contract (production code only).",
     "references": [
       "docs/adr/0005-codex-jsonl-log-parser-api.md",
@@ -132,4 +132,3 @@
     "concurrent_with": []
   }
 ]
-

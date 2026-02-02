@@ -32,3 +32,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Commands: `cargo fmt` (<pass/fail>); `cargo clippy --workspace --all-targets -- -D warnings` (<pass/fail>); <tests> (<pass/fail>); `make preflight` (<pass/fail>)
 - Blockers: <none | list>
 
+## [2026-02-02 21:32 UTC] Code Agent – C0-code – START
+- Checked out `feat/codex-jsonl-log-parser-api`, `git pull --ff-only` (up to date)
+- Read plan/tasks/session log/spec/kickoff prompt; updated `tasks.json` (C0-code → `in_progress`)
+- Worktree pending (`jp5-c0-jsonl-parser-api-code` / `wt/jp5-c0-jsonl-parser-api-code` to be added after docs commit)
+- Plan: implement `codex::jsonl` offline parser + crate-root reexports reusing streaming normalization; run required commands; commit via worktree; update docs/log at end
+- Blockers: none
