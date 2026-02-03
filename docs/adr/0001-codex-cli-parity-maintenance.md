@@ -18,7 +18,7 @@ The Codex CLI has a fast release cadence and its surface area evolves across:
 - JSONL event schemas (`--json`) and server notification schemas (MCP/app-server)
 - Optional/experimental features (e.g., cloud utilities, experimental MCP management commands)
 
-An in-depth audit (“`Audit of the Codex Wrapper and Coverage Gaps.docx.md`”) found the wrapper is in good shape for “major stable” CLI coverage and that most remaining gaps are intentional (e.g., interactive TUI mode, shell completion, some experimental surfaces). The biggest long-term risk is drift: new releases can change flags and JSON schemas, and we need a reliable process to detect and respond to changes quickly.
+An earlier in-depth audit (kept in git history) found the wrapper is in good shape for “major stable” CLI coverage and that most remaining gaps are intentional (e.g., interactive TUI mode, shell completion, some experimental surfaces). The biggest long-term risk is drift: new releases can change flags and JSON schemas, and we need a reliable process to detect and respond to changes quickly.
 
 We also observed real-world drift across Codex CLI versions (e.g., JSONL payload shape changes in older binaries), reinforcing the need for:
 
@@ -264,8 +264,7 @@ Real-binary smoke tests and examples should be:
 
 This ADR commits us to building on existing pieces already present in the repo:
 
-- Static inventory: `CLI_MATRIX.md` (currently pegged to older CLI versions)
-- Capability probing + cache policies: `crates/codex/src/lib.rs` and `_archived/workstreams/F_versioning_features/BRIEF.md`
+- Capability probing + cache policies: `crates/codex/src/lib.rs`
 - Real-binary E2E harness: `crates/codex/tests/cli_e2e.rs`
 - Examples + fixtures: `crates/codex/examples/*` and `crates/codex/examples/fixtures/*`
 - Auth isolation + seeding helpers: `CodexHomeLayout::seed_auth_from` and related docs/examples

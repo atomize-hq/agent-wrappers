@@ -40,14 +40,10 @@ What is still missing is an automated, *granular* mapping from:
 
 ### Existing (legacy) inventories
 
-The repo contains older, static inventories used during early planning:
-- `capability_manifest.json` (static “supports matrix”, created in the init commit)
-- `CLI_MATRIX.md` (static command/flag inventory)
-
-These are useful as historical reference but are not suitable as long-term sources of truth:
-- they are not generated deterministically from code or binaries,
-- they are not granularly keyed for reliable automated diffs,
-- they will drift unless manually maintained.
+This repo previously contained older, static inventories used during early planning (for example a
+static “supports matrix” and a static command/flag inventory). Those files were intentionally
+removed to avoid drift and duplicated sources of truth; use git history if you need the historical
+reference.
 
 This ADR defines the replacement system: generated upstream snapshots + generated wrapper coverage + deterministic reports.
 

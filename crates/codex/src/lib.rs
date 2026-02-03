@@ -3735,8 +3735,8 @@ impl Default for CodexClient {
 
 /// Builder for [`CodexClient`].
 ///
-/// Workstream I1 (CLI parity) documents planned builder/request extensions for missing
-/// CLI flags and config overrides in `_archived/workstreams/I_cli_parity/design_notes/I1-design-parity-apis.md`.
+/// CLI parity planning and implementation history lives under `docs/project_management/next/`
+/// (see `docs/project_management/next/codex-cli-parity/`) and the parity ADRs in `docs/adr/`.
 #[derive(Clone, Debug)]
 pub struct CodexClientBuilder {
     binary: PathBuf,

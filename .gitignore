@@ -10,3 +10,5 @@ target
 /.codex-bins
 cli_manifests/codex/raw_help/
 *:Zone.Identifier
+/codex-stream.log
+/error.log

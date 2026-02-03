@@ -27,7 +27,7 @@ Templates live at `docs/project_management/next/_TEMPLATE_feature/` and should b
 
 Notes for this repo:
 - Worktrees in this repo should be created under `wt/<branch>` inside the repo. Do not edit feature docs/logs from inside a worktree.
-- Legacy `workstreams/*` planning is archived under `_archived/workstreams/`; triad execution is driven by `docs/project_management/next/<feature>/tasks.json` + specs + kickoff prompts.
+- Legacy workstream planning docs are intentionally not part of the active system; triad execution is driven by `docs/project_management/next/<feature>/tasks.json` + specs + kickoff prompts.
 
 ## Required Content (no ambiguity)
 ### `plan.md`

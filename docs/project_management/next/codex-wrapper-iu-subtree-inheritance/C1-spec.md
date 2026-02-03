@@ -72,4 +72,4 @@ Test constants (hard requirements for determinism):
 ## Out of Scope
 - Changing which surfaces are “intentionally unwrapped” (policy is owned by ops docs).
 - Adding IU roots for other command families not listed above.
-- Converting legacy inventories (`CLI_MATRIX.md`, `capability_manifest.json`) into a separate IU list.
+- Converting historical legacy inventories (removed; see git history) into a separate IU list.
