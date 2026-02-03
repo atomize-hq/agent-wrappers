@@ -73,6 +73,30 @@
       "download_url": "https://github.com/openai/codex/releases/download/rust-v0.92.0/codex-x86_64-unknown-linux-musl.tar.gz",
       "sha256": "757c00c23c69d61a8e372d9a05266bba0d6107058ad8902dd818b787f4825b31",
       "size_bytes": 25165519
+    },
+    {
+      "codex_version": "0.93.0",
+      "target_triple": "aarch64-apple-darwin",
+      "asset_name": "codex-aarch64-apple-darwin.tar.gz",
+      "download_url": "https://github.com/openai/codex/releases/download/rust-v0.93.0/codex-aarch64-apple-darwin.tar.gz",
+      "sha256": "ad1dfb08d8ccfdcdcf945c6e4e86b6470d69052c74741a1dd9fa04566f407abe",
+      "size_bytes": 21905844
+    },
+    {
+      "codex_version": "0.93.0",
+      "target_triple": "x86_64-pc-windows-msvc",
+      "asset_name": "codex-x86_64-pc-windows-msvc.exe",
+      "download_url": "https://github.com/openai/codex/releases/download/rust-v0.93.0/codex-x86_64-pc-windows-msvc.exe",
+      "sha256": "93bffea8ed781691dc6e956084245e2538db33f4a9ed6bd15e54eb5be38466fd",
+      "size_bytes": 75855496
+    },
+    {
+      "codex_version": "0.93.0",
+      "target_triple": "x86_64-unknown-linux-musl",
+      "asset_name": "codex-x86_64-unknown-linux-musl.tar.gz",
+      "download_url": "https://github.com/openai/codex/releases/download/rust-v0.93.0/codex-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "3574eef71b062c17904b0761c397a97709ef28e99c616e2d1db261b2ea293d07",
+      "size_bytes": 27587712
     }
   ]
 }

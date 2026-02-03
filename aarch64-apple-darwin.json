@@ -1,17 +1,17 @@
 {
   "snapshot_schema_version": 1,
   "tool": "codex-cli",
-  "collected_at": "2026-01-27T11:50:52Z",
+  "collected_at": "2026-01-31T06:59:51Z",
   "binary": {
-    "sha256": "3ab9679d9b0fb27a72d5f0c3d2dfa272285af2d37c0516477402d3d08261ae27",
-    "size_bytes": 46599040,
+    "sha256": "c42f63ee9bce65a491a3274ef3184967563a61894360ec6163fdeae45efc0535",
+    "size_bytes": 51216112,
     "platform": {
       "os": "macos",
       "arch": "aarch64"
     },
     "target_triple": "aarch64-apple-darwin",
-    "version_output": "codex-cli 0.92.0",
-    "semantic_version": "0.92.0",
+    "version_output": "codex-cli 0.93.0",
+    "semantic_version": "0.93.0",
     "channel": "stable"
   },
   "commands": [
@@ -749,7 +749,7 @@
           "name": "SESSION_ID",
           "required": false,
           "variadic": false,
-          "note": "Conversation/session id (UUID). When provided, resumes this session. If omitted, use\n--last to pick the most recent recorded session"
+          "note": "Conversation/session id (UUID) or thread name. UUIDs take precedence if it parses. If\nomitted, use --last to pick the most recent recorded session"
         }
       ],
       "flags": [
@@ -896,6 +896,82 @@
         "features"
       ],
       "usage": "codex features [OPTIONS] <COMMAND>",
+      "flags": [
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "features",
+        "disable"
+      ],
+      "usage": "codex features disable [OPTIONS] <FEATURE>",
+      "args": [
+        {
+          "name": "FEATURE",
+          "required": true,
+          "variadic": false,
+          "note": "Feature key to update (for example: unified_exec)"
+        }
+      ],
+      "flags": [
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "features",
+        "enable"
+      ],
+      "usage": "codex features enable [OPTIONS] <FEATURE>",
+      "args": [
+        {
+          "name": "FEATURE",
+          "required": true,
+          "variadic": false,
+          "note": "Feature key to update (for example: unified_exec)"
+        }
+      ],
       "flags": [
         {
           "long": "--config",
@@ -1245,6 +1321,107 @@
     {
       "path": [
         "mcp",
+        "add"
+      ],
+      "usage": "codex mcp add [OPTIONS] <NAME> (--url <URL> | -- <COMMAND>...)",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": true,
+          "variadic": true,
+          "note": "Command to launch the MCP server. Use --url for a streamable HTTP server"
+        },
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name for the MCP server configuration"
+        }
+      ],
+      "flags": [
+        {
+          "long": "--bearer-token-env-var",
+          "takes_value": true,
+          "value_name": "ENV_VAR"
+        },
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--env",
+          "takes_value": true,
+          "value_name": "KEY=VALUE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--url",
+          "takes_value": true,
+          "value_name": "URL"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "get"
+      ],
+      "usage": "codex mcp get [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to display"
+        }
+      ],
+      "flags": [
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--json",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
         "help"
       ],
       "usage": "codex mcp help [COMMAND]...",
@@ -1254,6 +1431,159 @@
           "required": false,
           "variadic": true,
           "note": "Print help for the subcommand(s)"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "usage": "codex mcp list [OPTIONS]",
+      "flags": [
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--json",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "login"
+      ],
+      "usage": "codex mcp login [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to authenticate with oauth"
+        }
+      ],
+      "flags": [
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scopes",
+          "takes_value": true,
+          "value_name": "SCOPE,SCOPE"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "logout"
+      ],
+      "usage": "codex mcp logout [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to deauthenticate"
+        }
+      ],
+      "flags": [
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "remove"
+      ],
+      "usage": "codex mcp remove [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server configuration to remove"
+        }
+      ],
+      "flags": [
+        {
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
         }
       ]
     },
@@ -1302,7 +1632,7 @@
           "name": "SESSION_ID",
           "required": false,
           "variadic": false,
-          "note": "Conversation/session id (UUID). When provided, resumes this session. If omitted, use\n--last to pick the most recent recorded session"
+          "note": "Conversation/session id (UUID) or thread name. UUIDs take precedence if it parses. If\nomitted, use --last to pick the most recent recorded session"
         }
       ],
       "flags": [
@@ -1643,14 +1973,40 @@
   "features": {
     "commands_added_when_all_enabled": [],
     "enabled_for_snapshot": [
+      "apps",
+      "enable_request_compression",
+      "personality",
+      "request_rule",
       "shell_snapshot",
       "shell_tool",
+      "skill_mcp_dependency_install",
       "steer",
       "undo",
       "unified_exec",
+      "web_search_cached",
       "web_search_request"
     ],
     "listed": [
+      {
+        "effective": false,
+        "name": "apps",
+        "stage": "experimental"
+      },
+      {
+        "effective": true,
+        "name": "enable_request_compression",
+        "stage": "stable"
+      },
+      {
+        "effective": false,
+        "name": "personality",
+        "stage": "experimental"
+      },
+      {
+        "effective": true,
+        "name": "request_rule",
+        "stage": "stable"
+      },
       {
         "effective": false,
         "name": "shell_snapshot",
@@ -1659,6 +2015,11 @@
       {
         "effective": true,
         "name": "shell_tool",
+        "stage": "stable"
+      },
+      {
+        "effective": true,
+        "name": "skill_mcp_dependency_install",
         "stage": "stable"
       },
       {
@@ -1678,8 +2039,13 @@
       },
       {
         "effective": false,
+        "name": "web_search_cached",
+        "stage": "deprecated"
+      },
+      {
+        "effective": false,
         "name": "web_search_request",
-        "stage": "stable"
+        "stage": "deprecated"
       }
     ],
     "mode": "default_plus_all_enabled"
