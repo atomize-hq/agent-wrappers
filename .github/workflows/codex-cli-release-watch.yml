@@ -58,8 +58,33 @@ jobs:
             const latestValidated = fs.readFileSync("cli_manifests/codex/latest_validated.txt", "utf8").trim();
 
             core.info(`latest_validated=${latestValidated} latest_stable=${latestStable} candidate=${candidate}`);
+            // If we're already validated on the latest stable upstream release, do not dispatch
+            // a snapshot update (even if the "stable-minus-one" candidate differs).
+            if (latestStable === latestValidated) {
+              core.info("latest_stable matches latest_validated; nothing to do.");
+              return;
+            }
             if (candidate === latestValidated) {
               core.info("Candidate matches latest_validated; nothing to do.");
+              return;
+            }
+
+            // Safety: never dispatch an older candidate than what we already have validated.
+            const validatedSemver = { version: latestValidated, nums: latestValidated.split(".").map((p) => Number(p)) };
+            if (validatedSemver.nums.length !== 3 || validatedSemver.nums.some((n) => Number.isNaN(n))) {
+              core.setFailed(`latest_validated.txt is not a stable semver: ${latestValidated}`);
+              return;
+            }
+            const candidateSemver = { version: candidate, nums: candidate.split(".").map((p) => Number(p)) };
+            if (candidateSemver.nums.length !== 3 || candidateSemver.nums.some((n) => Number.isNaN(n))) {
+              core.setFailed(`candidate is not a stable semver: ${candidate}`);
+              return;
+            }
+            // Compare as SemVer (major/minor/patch) without any prerelease/build data.
+            const candidateIsOlderOrEqual =
+              cmpSemverDesc(candidateSemver, validatedSemver) >= 0;
+            if (candidateIsOlderOrEqual) {
+              core.info("Candidate is not newer than latest_validated; nothing to do.");
               return;
             }
 
