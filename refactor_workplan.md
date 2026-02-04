@@ -176,8 +176,8 @@ The refactor program is “Done” when:
 
 ##### P0.0 — Preflight: confirm “claimed already done” baseline items
 
-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
-Last Updated: YYYY-MM-DD
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
 
 - Goal: Confirm whether “claimed already done” items are present *in the working tree* and update Phase 0 statuses accordingly.
 - Expected files touched: **None** (verification-only).
@@ -190,8 +190,8 @@ Last Updated: YYYY-MM-DD
 
 ##### P0.1 — Fix RustSec advisory: `bytes` RUSTSEC-2026-0007 (>= 1.11.1)
 
-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
-Last Updated: YYYY-MM-DD
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
 
 - Goal: Ensure the workspace resolves RUSTSEC-2026-0007 by upgrading `bytes` to `>= 1.11.1`.
 - Expected files touched (if remediation required):
@@ -207,8 +207,8 @@ Last Updated: YYYY-MM-DD
 
 ##### P0.2 — Establish license policy via `deny.toml` (licenses gate)
 
-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
-Last Updated: YYYY-MM-DD
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
 
 - Goal: Ensure `cargo deny check licenses` uses an explicit repository policy and passes.
 - Expected files touched (if remediation required):
@@ -224,8 +224,8 @@ Last Updated: YYYY-MM-DD
 
 ##### P0.3 — Re-check duplicates and document resolution approach (if any)
 
-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
-Last Updated: YYYY-MM-DD
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
 
 - Goal: Confirm whether duplicate crate versions exist and decide whether to address them now or defer.
 - Expected files touched (if remediation required):
@@ -247,8 +247,8 @@ Last Updated: YYYY-MM-DD
 
 ##### P1.0 — Define the `lib.rs` seam map (no code moves yet)
 
-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
-Last Updated: YYYY-MM-DD
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
 
 - Goal: Produce a concrete extraction order and module boundary map for `lib.rs` without changing behavior.
 - Expected files touched:
@@ -261,8 +261,8 @@ Last Updated: YYYY-MM-DD
 
 ##### P1.1 — Seam extraction: Home/env plumbing (`home.rs`) (API preserved)
 
-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
-Last Updated: YYYY-MM-DD
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
 
 - Goal: Extract CODEX_HOME layout + command env plumbing into `crates/codex/src/home.rs` and re-export from `lib.rs` without changing APIs.
 - Expected files touched (if not already landed):
@@ -275,15 +275,31 @@ Last Updated: YYYY-MM-DD
 - Risk: Low–Medium (module extraction can perturb visibility/import paths).
 - Rollback: Move code back into `lib.rs` and revert re-export changes.
 
-##### P1.2 — Next seam extraction (TBD after P1.0)
+##### P1.2 — Seam extraction: Capability probing + caching (`capabilities/*`) (API preserved)
 
-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
-Last Updated: YYYY-MM-DD
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
 
-- Goal: Extract the next highest-cohesion seam from `lib.rs` (e.g., command execution wrappers, capability cache, apply/diff IO).
+- Goal: Extract capability probing, snapshot/override serialization, TTL/backoff, and in-memory caching helpers into `crates/codex/src/capabilities/*`, preserving existing public API paths via re-exports.
 - Expected files touched:
   - `crates/codex/src/lib.rs`
-  - One new module file under `crates/codex/src/` (or a small module directory).
+  - `crates/codex/src/capabilities/` (module)
+- Acceptance criteria (“done when”):
+  - All §4.1 gates pass.
+  - No public API path changes (façade + re-exports).
+  - Extracted module meets §7.3 size policy (or has documented exception).
+- Risk: Medium.
+- Rollback: Revert module move and re-exports.
+
+##### P1.3 — Seam extraction: Apply/diff request + artifacts (`apply_diff.rs`) (API preserved)
+
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
+
+- Goal: Extract apply/diff request modeling and artifact capture helpers into `crates/codex/src/apply_diff.rs`, preserving existing public API paths via re-exports.
+- Expected files touched:
+  - `crates/codex/src/lib.rs`
+  - `crates/codex/src/apply_diff.rs`
 - Acceptance criteria (“done when”):
   - All §4.1 gates pass.
   - No public API path changes (façade + re-exports).
@@ -379,7 +395,7 @@ Record *each* advisory encountered and the chosen remediation. At minimum, inclu
 
 | Advisory ID | Crate | Affected Version(s) | Introduced via | Remediation | Verification (commands + result) | Notes |
 |---|---|---|---|---|---|---|
-| RUSTSEC-2026-0007 | bytes | 1.11.0 | see dependency trees in `audit_pack/supply_chain/cargo_audit.txt` | Upgrade to >= 1.11.1 | `cargo audit`, `cargo deny check advisories` | Critical |
+| RUSTSEC-2026-0007 | bytes | 1.11.0 | see dependency trees in `audit_pack/supply_chain/cargo_audit.txt` | Upgrade to >= 1.11.1 | 2026-02-04: `cargo audit` PASS; `cargo deny check advisories` PASS | Critical |
 
 ### 6.2 License policy tracking (cargo-deny)
 
@@ -389,9 +405,9 @@ Track policy decisions here:
 
 | Policy item | Decision | Date | Rationale | Status |
 |---|---|---|---|---|
-| Allowed license expressions | TBD | YYYY-MM-DD | Keep policy permissive but explicit | Proposed |
-| Target triples for graph | TBD | YYYY-MM-DD | Scope checks to supported release targets | Proposed |
-| Confidence threshold | TBD | YYYY-MM-DD | Reduce false positives vs strict enforcement | Proposed |
+| Allowed license expressions | `MIT`, `Apache-2.0`, `Apache-2.0 WITH LLVM-exception`, `BSD-2-Clause`, `BSL-1.0`, `Unicode-3.0` | 2026-02-04 | Explicit permissive policy in `deny.toml` | Accepted |
+| Target triples for graph | `x86_64-unknown-linux-musl`, `aarch64-apple-darwin`, `x86_64-pc-windows-msvc` | 2026-02-04 | Scope checks to supported distribution targets | Accepted |
+| Confidence threshold | 0.8 | 2026-02-04 | Balance false positives vs enforcement | Accepted |
 
 ### 6.3 Duplicate versions triage
 
@@ -399,8 +415,8 @@ Evidence source: `audit_pack/deps/cargo_tree_duplicates.txt` (audit time).
 
 | Crate | Duplicate versions? | Evidence | Decision (fix/defer) | Rationale | Status |
 |---|---:|---|---|---|---|
-| getrandom | TBD | `audit_pack/deps/cargo_tree_duplicates.txt` | TBD | Conflicting baseline vs evidence | Proposed |
-| windows-sys | TBD | `audit_pack/deps/cargo_tree_duplicates.txt` | TBD | Conflicting baseline vs evidence | Proposed |
+| getrandom | Yes (`0.2.17`, `0.3.4`) | Audit-time: `audit_pack/deps/cargo_tree_duplicates.txt` (no duplicates printed). Current (2026-02-04): `cargo tree -d --target all` shows duplicates via `jsonschema`/`ahash` and `tempfile`. | Defer | Resolving likely requires upgrading transitive crates (non-goal in Phase 0 unless required for security/compliance); keep note and revisit if it becomes a policy requirement. | Done |
+| windows-sys | Yes (`0.60.2`, `0.61.2`) | Audit-time: `audit_pack/deps/cargo_tree_duplicates.txt` (no duplicates printed). Current (2026-02-04): `cargo tree -d --target all` shows duplicates via `tokio`/`reqwest`/`socket2` and CLI deps. | Defer | Same rationale as above; no gate currently failing and no security advisory forcing consolidation. | Done |
 
 ---
 
@@ -410,12 +426,16 @@ Evidence source: `audit_pack/deps/cargo_tree_duplicates.txt` (audit time).
 
 **Rule:** `lib.rs` remains the façade; extracted modules keep stable public API via `pub use` re-exports from `lib.rs`. Do not change public item paths without an explicit migration plan (§9 decision log).
 
-Initial seam candidates (refine in P1.0):
-1) Home/env plumbing → `home.rs` (claimed first seam; see baseline summary in §1.4).
-2) Capability probing + caching → `capabilities.rs` / `capabilities/*`.
-3) Apply/diff request/response modeling + IO helpers → `apply.rs`, `diff.rs`, etc.
-4) JSONL streaming/event parsing → `jsonl.rs` (already present; may need further split).
-5) App-server helpers / codegen wrappers → dedicated module.
+Seam order (defined in P1.0; extract in PR-sized steps):
+1) Home/env plumbing → `home.rs` (P1.1; already present in working tree).
+2) Capability probing + caching → `capabilities.rs` (P1.2).
+3) Apply/diff request + artifacts → `apply_diff.rs` (P1.3).
+4) Execpolicy modeling + parsing → `execpolicy.rs` (planned; define when scheduled).
+5) Builder/config/flags surfaces → one or more cohesive modules (planned; define when scheduled).
+
+Notes / dependencies:
+- `capabilities.rs` is used by the builder/client for cache policies, overrides, and probes; extract before apply/diff to reduce cross-cutting churn.
+- `apply_diff.rs` depends on command execution plumbing but should remain API-stable via re-exports from `lib.rs`.
 
 ### 7.2 `crates/codex/src/mcp.rs` boundaries and extraction order (Phase 2)
 
@@ -486,6 +506,92 @@ Add entries as work lands. Format:
 - Diffs/PRs:
   - TBD
 
+### 2026-02-04 — Phase 0 preflight: verify supply-chain remediation state
+
+- Scope/step: P0.0 (preflight verification); status updates for P0.1/P0.2 based on observed gates
+- Why: Audit pack recorded supply-chain gate failures (`audit_pack/supply_chain/cargo_audit.txt`, `audit_pack/supply_chain/cargo_deny_advisories.txt`, `audit_pack/supply_chain/cargo_deny_licenses.txt`); baseline summary claimed remediation already landed.
+- What changed:
+  - Verified current workspace passes all §4.1 gates (see Validation results).
+  - Confirmed `bytes` is at `1.11.1` in `Cargo.lock` (addresses RUSTSEC-2026-0007).
+  - Confirmed explicit `cargo-deny` policy exists (`deny.toml`) and licenses gate passes.
+  - (Observation for later P0.3) `cargo tree -d --target all` shows duplicates for `getrandom` and `windows-sys` even though `audit_pack/deps/cargo_tree_duplicates.txt` reported none (likely due to command flags/targets at audit time).
+- Validation results (paste concise results, not full logs):
+  - `cargo fmt --all -- --check`: PASS
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS
+  - `cargo test --all-targets --all-features`: PASS
+  - `cargo audit`: PASS
+  - `cargo deny check advisories`: PASS
+  - `cargo deny check licenses`: PASS
+- Diffs/PRs:
+  - None (verification-only; no code changes)
+
+### 2026-02-04 — Phase 0 duplicates triage (defer)
+
+- Scope/step: P0.3
+- Why: Baseline summary claimed duplicates existed, but audit evidence (`audit_pack/deps/cargo_tree_duplicates.txt`) printed none; current `cargo tree -d --target all` shows duplicates (target scoping likely explains the discrepancy).
+- What changed:
+  - Documented current duplicate versions for `getrandom` and `windows-sys` in §6.3 and captured the decision to defer consolidation in §9.
+- Validation results:
+  - `cargo tree -d --target all`: duplicates present (`getrandom`, `windows-sys`)
+  - §4.1 gates: unchanged (no code changes in this step)
+- Diffs/PRs:
+  - None
+
+### 2026-02-04 — Define Phase 1 seam map
+
+- Scope/step: P1.0
+- Why: Prepare PR-sized `lib.rs` seam extractions guided by the file-size policy derived from `audit_pack/metrics/loc_summary.txt`.
+- What changed:
+  - Updated §7.1 seam order and expanded Phase 1 checklist to include explicit P1.2 (capabilities) and P1.3 (apply/diff) steps.
+- Validation results:
+  - N/A (planning-only change)
+- Diffs/PRs:
+  - None
+
+### 2026-02-04 — Verify home seam extraction
+
+- Scope/step: P1.1
+- Why: Baseline summary claimed `home.rs` was already extracted; confirm the working tree state and size policy compliance before continuing Phase 1.
+- What changed:
+  - Verified `crates/codex/src/home.rs` exists, is re-exported from `crates/codex/src/lib.rs`, and is within the soft threshold (290 LOC).
+- Validation results:
+  - `cargo test --all-targets --all-features`: PASS (see subsequent Phase 1 extraction entries)
+- Diffs/PRs:
+  - None (verification-only; status update)
+
+### 2026-02-04 — Extract capabilities module
+
+- Scope/step: P1.2
+- Why: Reduce `crates/codex/src/lib.rs` “god module” size while preserving stable public API paths; keep new files within §7.3 thresholds (`audit_pack/metrics/loc_summary.txt`).
+- What changed:
+  - Moved capability probing/caching types + helpers into `crates/codex/src/capabilities/` and re-exported via `crates/codex/src/lib.rs`.
+  - Ensured split files are within size policy (new modules ≤ 326 LOC).
+- Validation results:
+  - `cargo fmt --all -- --check`: PASS
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS
+  - `cargo test --all-targets --all-features`: PASS
+  - `cargo audit`: PASS
+  - `cargo deny check advisories`: PASS
+  - `cargo deny check licenses`: PASS
+- Diffs/PRs:
+  - None
+
+### 2026-02-04 — Extract apply/diff module
+
+- Scope/step: P1.3
+- Why: Isolate apply/diff request + artifacts types from `lib.rs` while keeping public API paths stable via re-exports.
+- What changed:
+  - Moved `ApplyDiffArtifacts`, `CloudDiffRequest`, and `CloudApplyRequest` into `crates/codex/src/apply_diff.rs` and re-exported via `crates/codex/src/lib.rs`.
+- Validation results:
+  - `cargo fmt --all -- --check`: PASS
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS
+  - `cargo test --all-targets --all-features`: PASS
+  - `cargo audit`: PASS
+  - `cargo deny check advisories`: PASS
+  - `cargo deny check licenses`: PASS
+- Diffs/PRs:
+  - None
+
 ---
 
 ## 9) Open Questions / Decisions (lightweight log)
@@ -494,6 +600,6 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
 
 | Decision | Date | Status (Proposed/Accepted/Rejected) | Rationale | Notes |
 |---|---|---|---|---|
-| Confirm Phase 0 remediation state vs audit pack | YYYY-MM-DD | Proposed | Audit pack shows failures; baseline claims fixes | Execute P0.0 |
-| Duplicate versions policy (fix now vs defer) | YYYY-MM-DD | Proposed | Conflicting baseline vs `cargo tree -d` evidence | Execute P0.3 |
-| Allowlist license expressions in `deny.toml` | YYYY-MM-DD | Proposed | `cargo deny` defaults fail without config | Execute P0.2 |
+| Confirm Phase 0 remediation state vs audit pack | 2026-02-04 | Accepted | Audit pack shows failures; baseline claims fixes | Preflight gates are green; see §8 “Phase 0 preflight…” entry. |
+| Duplicate versions policy (fix now vs defer) | 2026-02-04 | Accepted | Non-goal: dependency upgrades beyond security/compliance in Phase 0 | `cargo tree -d --target all` shows `getrandom` + `windows-sys` duplicates; `audit_pack/deps/cargo_tree_duplicates.txt` showed none (audit-time command likely ran without `--target all`). Decision: defer consolidation unless a security/compliance gate requires it. |
+| Allowlist license expressions in `deny.toml` | 2026-02-04 | Accepted | `cargo deny` defaults fail without config; policy must be explicit | `deny.toml` establishes allowlist + target scoping + confidence; `cargo deny check licenses` PASS (see §8 “Phase 0 preflight…” entry). |
