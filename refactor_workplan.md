@@ -578,8 +578,8 @@ Last Updated: 2026-02-04
 
 ##### P3.7 — Split xtask module: `codex_report` (extract report domains) with deterministic output preserved
 
-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
-Last Updated: YYYY-MM-DD
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
 
 - Goal: Further reduce `crates/xtask/src/codex_report.rs` by extracting report domain logic (rules parsing, filtering semantics, output shaping/sorting) into `crates/xtask/src/codex_report/*` without changing outputs.
 - Expected files touched:
@@ -1093,6 +1093,27 @@ Add entries as work lands. Format:
   - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-04/P3.6_cargo_deny_licenses.txt`)
 - Diffs/PRs:
   - None (no commit; workplan-only journal entry)
+
+### 2026-02-04 — P3.7 codex_report domain split
+
+- Scope/step: P3.7
+- Why this step is next:
+  - Earliest not-done item in Phase 3 queue: `Status: [ ] Not Started  [ ] In Progress  [ ] Done` (P3.7).
+- What changed:
+  - Split `crates/xtask/src/codex_report.rs` into a small façade (`Args`, `ReportError`, `run`) and extracted report domain logic into `crates/xtask/src/codex_report/*` (rules parsing, wrapper indexing/resolution, report computation/serialization).
+  - Kept deterministic output semantics (stable sort order, `serde_json::to_string_pretty` + trailing newline; `SOURCE_DATE_EPOCH` support unchanged).
+- Validation results (§4.1):
+  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-04/P3.7_cargo_fmt_check_final.txt`)
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-04/P3.7_cargo_clippy.txt`)
+  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-04/P3.7_cargo_test.txt`)
+  - `cargo audit`: PASS (`evidence_runs/2026-02-04/P3.7_cargo_audit.txt`)
+  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-04/P3.7_cargo_deny_advisories.txt`)
+  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-04/P3.7_cargo_deny_licenses.txt`)
+- Evidence/patches:
+  - Code diff: `evidence_runs/2026-02-04/SESSION_code_diff_final.patch`
+  - Workplan diff: `evidence_runs/2026-02-04/SESSION_workplan_diff_final.patch`
+- Commit:
+  - `29b3880fe387e831dcb29d9eb7de035dbcf1e6cf`
 
 ---
 
