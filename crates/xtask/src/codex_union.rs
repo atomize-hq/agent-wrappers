@@ -5,13 +5,17 @@ use std::{
 };
 
 use clap::Parser;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
-use crate::codex_snapshot::{
-    ArgSnapshot, BinarySnapshot, CommandSnapshot, FlagSnapshot, SnapshotV1,
+use crate::codex_snapshot::{ArgSnapshot, CommandSnapshot, FlagSnapshot, SnapshotV1};
+
+mod schema;
+use schema::{
+    SnapshotUnionV2, UnionArgSnapshotV2, UnionCommandSnapshotV2, UnionConflictEntryV2,
+    UnionConflictEvidenceV2, UnionFlagSnapshotV2, UnionInputV2,
 };
 
 #[derive(Debug, Parser)]
@@ -357,101 +361,6 @@ fn deterministic_rfc3339_now() -> String {
     OffsetDateTime::now_utc()
         .format(&Rfc3339)
         .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
-}
-
-#[derive(Debug, Serialize)]
-struct SnapshotUnionV2 {
-    snapshot_schema_version: u32,
-    tool: String,
-    mode: String,
-    collected_at: String,
-    expected_targets: Vec<String>,
-    complete: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    missing_targets: Option<Vec<String>>,
-    inputs: Vec<UnionInputV2>,
-    commands: Vec<UnionCommandSnapshotV2>,
-}
-
-#[derive(Debug, Serialize)]
-struct UnionInputV2 {
-    target_triple: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    collected_at: Option<String>,
-    binary: BinarySnapshot,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    features: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    known_omissions: Option<Vec<String>>,
-}
-
-#[derive(Debug, Serialize)]
-struct UnionCommandSnapshotV2 {
-    path: Vec<String>,
-    available_on: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    about: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    usage: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    args: Option<Vec<UnionArgSnapshotV2>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    flags: Option<Vec<UnionFlagSnapshotV2>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    conflicts: Option<Vec<UnionConflictEntryV2>>,
-}
-
-#[derive(Debug, Serialize)]
-struct UnionFlagSnapshotV2 {
-    key: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    long: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    short: Option<String>,
-    takes_value: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    value_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    repeatable: Option<bool>,
-    available_on: Vec<String>,
-}
-
-#[derive(Debug, Serialize)]
-struct UnionArgSnapshotV2 {
-    name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    required: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    variadic: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    inferred_from_usage: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    note: Option<String>,
-    available_on: Vec<String>,
-}
-
-#[derive(Debug, Serialize)]
-struct UnionConflictEntryV2 {
-    unit: String,
-    path: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    key: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    name: Option<String>,
-    field: String,
-    values_by_target: BTreeMap<String, serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    help_context: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    evidence: Option<UnionConflictEvidenceV2>,
-}
-
-#[derive(Debug, Serialize)]
-struct UnionConflictEvidenceV2 {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    help_ref_by_target: Option<BTreeMap<String, String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    help_sha256_by_target: Option<BTreeMap<String, String>>,
 }
 
 fn build_union_commands(

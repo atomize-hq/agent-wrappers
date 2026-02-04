@@ -10,6 +10,9 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
+mod models;
+use models::{UnionSnapshotV2, WrapperCoverageV1, WrapperScope};
+
 #[derive(Debug, Parser)]
 pub struct Args {
     /// Root `cli_manifests/codex` directory.
@@ -137,82 +140,6 @@ fn build_parity_exclusions_index(exclusions: &RulesParityExclusions) -> ParityEx
         }
     }
     index
-}
-
-#[derive(Debug, Deserialize, Clone)]
-struct UnionSnapshotV2 {
-    snapshot_schema_version: u32,
-    mode: String,
-    complete: bool,
-    inputs: Vec<UnionInputV2>,
-    commands: Vec<UnionCommandV2>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-struct UnionInputV2 {
-    target_triple: String,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-struct UnionCommandV2 {
-    path: Vec<String>,
-    available_on: Vec<String>,
-    #[serde(default)]
-    flags: Vec<UnionFlagV2>,
-    #[serde(default)]
-    args: Vec<UnionArgV2>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-struct UnionFlagV2 {
-    key: String,
-    available_on: Vec<String>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-struct UnionArgV2 {
-    name: String,
-    available_on: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct WrapperCoverageV1 {
-    schema_version: u32,
-    coverage: Vec<WrapperCommandCoverageV1>,
-}
-
-#[derive(Debug, Deserialize)]
-struct WrapperCommandCoverageV1 {
-    path: Vec<String>,
-    level: String,
-    note: Option<String>,
-    scope: Option<WrapperScope>,
-    #[serde(default)]
-    flags: Vec<WrapperFlagCoverageV1>,
-    #[serde(default)]
-    args: Vec<WrapperArgCoverageV1>,
-}
-
-#[derive(Debug, Deserialize)]
-struct WrapperFlagCoverageV1 {
-    key: String,
-    level: String,
-    note: Option<String>,
-    scope: Option<WrapperScope>,
-}
-
-#[derive(Debug, Deserialize)]
-struct WrapperArgCoverageV1 {
-    name: String,
-    level: String,
-    note: Option<String>,
-    scope: Option<WrapperScope>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-struct WrapperScope {
-    platforms: Option<Vec<String>>,
-    target_triples: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]

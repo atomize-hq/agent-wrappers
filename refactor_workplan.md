@@ -404,8 +404,8 @@ Last Updated: 2026-02-04
 
 ##### P3.0 — Identify xtask domain boundaries and deterministic contracts
 
-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
-Last Updated: YYYY-MM-DD
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
 
 - Goal: Document domain boundaries and determinism requirements (sorting, stable output formats, snapshot expectations).
 - Expected files touched:
@@ -415,15 +415,79 @@ Last Updated: YYYY-MM-DD
 - Risk: Low.
 - Rollback: N/A.
 
-##### P3.1 — Split one xtask module (smallest-first) with deterministic output preserved
+##### P3.1 — Split xtask module: `codex_version_metadata` (extract JSON model types) with deterministic output preserved
+
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
+
+- Goal: Reduce `crates/xtask/src/codex_version_metadata.rs` size by extracting leaf JSON model/types into `crates/xtask/src/codex_version_metadata/models.rs` without changing outputs.
+- Expected files touched:
+  - `crates/xtask/src/codex_version_metadata.rs`
+  - `crates/xtask/src/codex_version_metadata/models.rs`
+- Acceptance criteria (“done when”):
+  - `cargo test --all-targets --all-features` passes (xtask tests are the determinism guard).
+  - `cargo clippy --all-targets --all-features -- -D warnings` passes.
+  - Output determinism preserved (validated by existing snapshot/spec tests; no golden changes unless explicitly approved).
+- Risk: Medium.
+- Rollback: Revert module move; restore original file content.
+
+##### P3.2 — Split xtask module: `codex_union` (extract schema structs) with deterministic output preserved
+
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
+
+- Goal: Reduce `crates/xtask/src/codex_union.rs` size by extracting union snapshot schema structs into `crates/xtask/src/codex_union/schema.rs` without changing outputs.
+- Expected files touched:
+  - `crates/xtask/src/codex_union.rs`
+  - `crates/xtask/src/codex_union/schema.rs`
+- Acceptance criteria (“done when”):
+  - `cargo test --all-targets --all-features` passes (xtask tests are the determinism guard).
+  - `cargo clippy --all-targets --all-features -- -D warnings` passes.
+  - Output determinism preserved (validated by existing snapshot/spec tests; no golden changes unless explicitly approved).
+- Risk: Medium.
+- Rollback: Revert module move; restore original file content.
+
+##### P3.3 — Split xtask module: `codex_snapshot` (extract schema structs) with deterministic output preserved
+
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
+
+- Goal: Reduce `crates/xtask/src/codex_snapshot.rs` size by extracting per-target snapshot schema structs into `crates/xtask/src/codex_snapshot/schema.rs` without changing outputs.
+- Expected files touched:
+  - `crates/xtask/src/codex_snapshot.rs`
+  - `crates/xtask/src/codex_snapshot/schema.rs`
+- Acceptance criteria (“done when”):
+  - `cargo test --all-targets --all-features` passes (xtask tests are the determinism guard).
+  - `cargo clippy --all-targets --all-features -- -D warnings` passes.
+  - Output determinism preserved (validated by existing snapshot/spec tests; no golden changes unless explicitly approved).
+- Risk: Medium.
+- Rollback: Revert module move; restore original file content.
+
+##### P3.4 — Split xtask module: `codex_report` (extract schema structs) with deterministic output preserved
+
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
+
+- Goal: Reduce `crates/xtask/src/codex_report.rs` size by extracting report input schema structs into `crates/xtask/src/codex_report/models.rs` without changing outputs.
+- Expected files touched:
+  - `crates/xtask/src/codex_report.rs`
+  - `crates/xtask/src/codex_report/models.rs`
+- Acceptance criteria (“done when”):
+  - `cargo test --all-targets --all-features` passes (xtask tests are the determinism guard).
+  - `cargo clippy --all-targets --all-features -- -D warnings` passes.
+  - Output determinism preserved (validated by existing snapshot/spec tests; no golden changes unless explicitly approved).
+- Risk: Medium.
+- Rollback: Revert module move; restore original file content.
+
+##### P3.5 — Split xtask module: `codex_validate` (extract model + rules structs) with deterministic output preserved
 
 Status: [ ] Not Started  [ ] In Progress  [ ] Done  
 Last Updated: YYYY-MM-DD
 
-- Goal: Extract one domain (e.g., report generation vs snapshot IO) into a module without changing outputs.
+- Goal: Reduce `crates/xtask/src/codex_validate.rs` size by extracting leaf model and rules structs into `crates/xtask/src/codex_validate/models.rs` without changing outputs.
 - Expected files touched:
-  - One of: `crates/xtask/src/codex_validate.rs`, `crates/xtask/src/codex_report.rs`, `crates/xtask/src/codex_snapshot.rs`, etc.
-  - New module file(s) under `crates/xtask/src/`.
+  - `crates/xtask/src/codex_validate.rs`
+  - `crates/xtask/src/codex_validate/models.rs`
 - Acceptance criteria (“done when”):
   - `cargo test --all-targets --all-features` passes (xtask tests are the determinism guard).
   - `cargo clippy --all-targets --all-features -- -D warnings` passes.
@@ -527,10 +591,28 @@ Policy:
 
 ### 7.4 `crates/xtask` modularization boundaries (Phase 3)
 
-Initial candidates (refine in P3.0):
-- Snapshot IO vs transformation logic
-- Validation rules engine vs report formatting
-- Schema/version metadata extraction vs file system scanning
+Boundaries + extraction order (defined in P3.0; keep deterministic outputs):
+
+- Determinism contracts (must remain true after each P3.x step):
+  - Sorting is stable and explicit: use `BTreeMap`/`BTreeSet` or `sort_by` with total ordering; tie-breakers must be deterministic.
+  - Generated timestamps are deterministic under `SOURCE_DATE_EPOCH` (tests set this); if unset, fall back to wall-clock.
+  - JSON outputs use stable formatting (`serde_json::to_string_pretty`) and end with a trailing newline.
+  - Outputs are derived only from inputs under `<root>` (default `cli_manifests/codex`) and CLI args; no ambient FS scans outside the root.
+  - Existing `crates/xtask/tests/*` are the determinism guard; P3.x steps must not require golden/output updates unless explicitly approved.
+
+- Domain boundaries (split “god modules” by domain seams):
+  - Snapshot domain (`codex_snapshot`): help probing + parsing vs schema model structs vs IO layout.
+  - Union domain (`codex_union`): merge/normalization logic vs union schema structs vs IO layout.
+  - Report domain (`codex_report`): report computation vs report models/schema vs sorting/filter semantics.
+  - Version metadata domain (`codex_version_metadata`): policy gates vs derived metadata schema vs input loaders.
+  - Validation domain (`codex_validate`): schema compilation + JSON Schema validation vs custom rule checks vs violation/report formatting.
+
+- Extraction order (smallest-first, reversible; each step keeps CLI behavior stable):
+  1) `codex_version_metadata`: move leaf model structs into `codex_version_metadata/models.rs` (P3.1).
+  2) `codex_union`: move union schema structs into `codex_union/schema.rs` (P3.2).
+  3) `codex_snapshot`: move snapshot schema structs into `codex_snapshot/schema.rs` (P3.3).
+  4) `codex_report`: move report input schema structs into `codex_report/models.rs` (P3.4).
+  5) `codex_validate`: move rules/model structs into `codex_validate/models.rs` (P3.5).
 
 ---
 
@@ -677,6 +759,86 @@ Add entries as work lands. Format:
 - Diffs/PRs:
   - None (no commit)
 
+### 2026-02-04 — Phase 3 kickoff: define xtask boundaries + determinism contracts
+
+- Scope/step: P3.0
+- Why: Phase 3 targets xtask “god modules” identified by the audit baseline metrics; keep determinism guarded by existing xtask spec tests (`audit_pack/metrics/loc_summary.txt`).
+- What changed:
+  - Updated §7.4 with determinism contracts, domain boundaries, and an explicit smallest-first extraction order.
+  - Expanded Phase 3 checklist with concrete steps (P3.1–P3.5) and per-step acceptance criteria.
+- Validation results:
+  - N/A (planning-only change)
+- Diffs/PRs:
+  - None
+
+### 2026-02-04 — Phase 3 split: `codex_version_metadata` models extraction
+
+- Scope/step: P3.1
+- Why: Start Phase 3 “smallest-first” by extracting leaf JSON model structs from `crates/xtask/src/codex_version_metadata.rs` to reduce file size without changing behavior.
+- What changed:
+  - Added `crates/xtask/src/codex_version_metadata/models.rs` and moved union/wrapper coverage JSON model structs into it.
+  - Updated `crates/xtask/src/codex_version_metadata.rs` to `mod models;` and use the extracted types (no CLI/output changes intended).
+- Validation results:
+  - `cargo fmt --all -- --check`: PASS (`audit_pack/execution/2026-02-04/P3.1_cargo_fmt_check_final.txt`)
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`audit_pack/execution/2026-02-04/P3.1_cargo_clippy_final.txt`)
+  - `cargo test --all-targets --all-features`: PASS (`audit_pack/execution/2026-02-04/P3.1_cargo_test.txt`)
+  - `cargo audit`: PASS (`audit_pack/execution/2026-02-04/P3.1_cargo_audit.txt`)
+  - `cargo deny check advisories`: PASS (`audit_pack/execution/2026-02-04/P3.1_cargo_deny_advisories.txt`)
+  - `cargo deny check licenses`: PASS (`audit_pack/execution/2026-02-04/P3.1_cargo_deny_licenses.txt`)
+- Diffs/PRs:
+  - None
+
+### 2026-02-04 — Phase 3 split: `codex_union` schema extraction
+
+- Scope/step: P3.2
+- Why: Continue Phase 3 smallest-first by extracting union snapshot schema structs from `crates/xtask/src/codex_union.rs` to reduce file size while preserving deterministic output.
+- What changed:
+  - Added `crates/xtask/src/codex_union/schema.rs` and moved `SnapshotUnionV2` and related union schema structs into it.
+  - Updated `crates/xtask/src/codex_union.rs` to `mod schema;` and use the extracted schema types (no CLI/output changes intended).
+- Validation results:
+  - `cargo fmt --all -- --check`: PASS (`audit_pack/execution/2026-02-04/P3.2_cargo_fmt_check_final2.txt`)
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`audit_pack/execution/2026-02-04/P3.2_cargo_clippy_final.txt`)
+  - `cargo test --all-targets --all-features`: PASS (`audit_pack/execution/2026-02-04/P3.2_cargo_test.txt`)
+  - `cargo audit`: PASS (`audit_pack/execution/2026-02-04/P3.2_cargo_audit.txt`)
+  - `cargo deny check advisories`: PASS (`audit_pack/execution/2026-02-04/P3.2_cargo_deny_advisories.txt`)
+  - `cargo deny check licenses`: PASS (`audit_pack/execution/2026-02-04/P3.2_cargo_deny_licenses.txt`)
+- Diffs/PRs:
+  - None
+
+### 2026-02-04 — Phase 3 split: `codex_snapshot` schema extraction
+
+- Scope/step: P3.3
+- Why: Reduce `crates/xtask/src/codex_snapshot.rs` size by extracting snapshot schema structs while preserving the existing `crate::codex_snapshot::{...}` type paths used by other xtask modules.
+- What changed:
+  - Added `crates/xtask/src/codex_snapshot/schema.rs` and moved snapshot + supplement schema structs into it.
+  - Updated `crates/xtask/src/codex_snapshot.rs` to `mod schema;` and re-export the schema types (no CLI/output changes intended).
+- Validation results:
+  - `cargo fmt --all -- --check`: PASS (`audit_pack/execution/2026-02-04/P3.3_cargo_fmt_check_final2.txt`)
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`audit_pack/execution/2026-02-04/P3.3_cargo_clippy_final.txt`)
+  - `cargo test --all-targets --all-features`: PASS (`audit_pack/execution/2026-02-04/P3.3_cargo_test.txt`)
+  - `cargo audit`: PASS (`audit_pack/execution/2026-02-04/P3.3_cargo_audit.txt`)
+  - `cargo deny check advisories`: PASS (`audit_pack/execution/2026-02-04/P3.3_cargo_deny_advisories.txt`)
+  - `cargo deny check licenses`: PASS (`audit_pack/execution/2026-02-04/P3.3_cargo_deny_licenses.txt`)
+- Diffs/PRs:
+  - None
+
+### 2026-02-04 — Phase 3 split: `codex_report` models extraction
+
+- Scope/step: P3.4
+- Why: Reduce `crates/xtask/src/codex_report.rs` size by extracting leaf input model structs (union snapshot + wrapper coverage) while preserving deterministic report output (guarded by xtask spec tests).
+- What changed:
+  - Added `crates/xtask/src/codex_report/models.rs` and moved union/wrapper coverage JSON model structs into it.
+  - Updated `crates/xtask/src/codex_report.rs` to `mod models;` and use the extracted types (no CLI/output changes intended).
+- Validation results:
+  - `cargo fmt --all -- --check`: PASS (`audit_pack/execution/2026-02-04/P3.4_cargo_fmt_check_final.txt`)
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`audit_pack/execution/2026-02-04/P3.4_cargo_clippy_final.txt`)
+  - `cargo test --all-targets --all-features`: PASS (`audit_pack/execution/2026-02-04/P3.4_cargo_test.txt`)
+  - `cargo audit`: PASS (`audit_pack/execution/2026-02-04/P3.4_cargo_audit.txt`)
+  - `cargo deny check advisories`: PASS (`audit_pack/execution/2026-02-04/P3.4_cargo_deny_advisories.txt`)
+  - `cargo deny check licenses`: PASS (`audit_pack/execution/2026-02-04/P3.4_cargo_deny_licenses.txt`)
+- Diffs/PRs:
+  - None
+
 ---
 
 ## 9) Open Questions / Decisions (lightweight log)
@@ -688,3 +850,4 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
 | Confirm Phase 0 remediation state vs audit pack | 2026-02-04 | Accepted | Audit pack shows failures; baseline claims fixes | Preflight gates are green; see §8 “Phase 0 preflight…” entry. |
 | Duplicate versions policy (fix now vs defer) | 2026-02-04 | Accepted | Non-goal: dependency upgrades beyond security/compliance in Phase 0 | `cargo tree -d --target all` shows `getrandom` + `windows-sys` duplicates; `audit_pack/deps/cargo_tree_duplicates.txt` showed none (audit-time command likely ran without `--target all`). Decision: defer consolidation unless a security/compliance gate requires it. |
 | Allowlist license expressions in `deny.toml` | 2026-02-04 | Accepted | `cargo deny` defaults fail without config; policy must be explicit | `deny.toml` establishes allowlist + target scoping + confidence; `cargo deny check licenses` PASS (see §8 “Phase 0 preflight…” entry). |
+| Execution evidence location (`audit_pack/execution/YYYY-MM-DD/...`) | 2026-02-04 | Accepted | Program requires evidence citations via `audit_pack/` paths | Add execution logs as new files under `audit_pack/execution/` while keeping the audit-time baseline evidence files in §2 unchanged. |

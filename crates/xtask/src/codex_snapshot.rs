@@ -12,6 +12,12 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
+mod schema;
+use schema::SupplementV1;
+pub(crate) use schema::{
+    ArgSnapshot, BinaryPlatform, BinarySnapshot, CommandSnapshot, FlagSnapshot, SnapshotV1,
+};
+
 #[derive(Debug, Parser)]
 pub struct Args {
     /// Path to the `codex` binary to snapshot.
@@ -1347,97 +1353,6 @@ impl BinaryMetadata {
         let size_bytes = bytes.len() as u64;
         Ok(Self { sha256, size_bytes })
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct SnapshotV1 {
-    snapshot_schema_version: u32,
-    pub(crate) tool: String,
-    pub(crate) collected_at: String,
-    pub(crate) binary: BinarySnapshot,
-    pub(crate) commands: Vec<CommandSnapshot>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) features: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) known_omissions: Option<Vec<String>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct BinarySnapshot {
-    sha256: String,
-    size_bytes: u64,
-    platform: BinaryPlatform,
-    target_triple: String,
-    version_output: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) semantic_version: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    channel: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    commit: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct BinaryPlatform {
-    os: String,
-    arch: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct CommandSnapshot {
-    pub(crate) path: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) about: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) usage: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    stability: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    platforms: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) args: Option<Vec<ArgSnapshot>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) flags: Option<Vec<FlagSnapshot>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ArgSnapshot {
-    pub(crate) name: String,
-    pub(crate) required: bool,
-    pub(crate) variadic: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) note: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct FlagSnapshot {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) long: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) short: Option<String>,
-    pub(crate) takes_value: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) value_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) repeatable: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    stability: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    platforms: Option<Vec<String>>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct SupplementV1 {
-    version: u32,
-    commands: Vec<SupplementCommand>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct SupplementCommand {
-    path: Vec<String>,
-    #[serde(default)]
-    platforms: Option<Vec<String>>,
-    note: String,
 }
 
 fn apply_supplements(

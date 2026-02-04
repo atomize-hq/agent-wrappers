@@ -1,0 +1,15 @@
+    Checking xtask v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/xtask)
+error: unused imports: `UnionArgV2`, `UnionCommandV2`, `UnionFlagV2`, `UnionInputV2`, `WrapperArgCoverageV1`, `WrapperCommandCoverageV1`, and `WrapperFlagCoverageV1`
+  --> crates/xtask/src/codex_version_metadata.rs:15:5
+   |
+15 |     UnionArgV2, UnionCommandV2, UnionFlagV2, UnionInputV2, UnionSnapshotV2, WrapperArgCoverageV1,
+   |     ^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^^^^  ^^^^^^^^^^^^                   ^^^^^^^^^^^^^^^^^^^^
+16 |     WrapperCommandCoverageV1, WrapperCoverageV1, WrapperFlagCoverageV1, WrapperScope,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^                     ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `-D unused-imports` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+error: could not compile `xtask` (bin "xtask" test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `xtask` (bin "xtask") due to 1 previous error

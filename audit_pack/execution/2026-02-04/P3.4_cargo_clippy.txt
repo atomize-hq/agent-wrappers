@@ -1,0 +1,37 @@
+    Checking xtask v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/xtask)
+error[E0412]: cannot find type `UnionFlagV2` in this scope
+    --> crates/xtask/src/codex_report.rs:1176:12
+     |
+1176 |     flag: &UnionFlagV2,
+     |            ^^^^^^^^^^^ not found in this scope
+     |
+note: struct `crate::codex_version_metadata::models::UnionFlagV2` exists but is inaccessible
+    --> crates/xtask/src/codex_version_metadata/models.rs:28:1
+     |
+28   | pub(super) struct UnionFlagV2 {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing this struct
+     |
+1    + use crate::codex_report::models::UnionFlagV2;
+     |
+
+error[E0412]: cannot find type `UnionArgV2` in this scope
+    --> crates/xtask/src/codex_report.rs:1202:11
+     |
+1202 |     arg: &UnionArgV2,
+     |           ^^^^^^^^^^ not found in this scope
+     |
+note: struct `crate::codex_version_metadata::models::UnionArgV2` exists but is inaccessible
+    --> crates/xtask/src/codex_version_metadata/models.rs:34:1
+     |
+34   | pub(super) struct UnionArgV2 {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not accessible
+help: consider importing this struct
+     |
+1    + use crate::codex_report::models::UnionArgV2;
+     |
+
+For more information about this error, try `rustc --explain E0412`.
+error: could not compile `xtask` (bin "xtask") due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `xtask` (bin "xtask" test) due to 2 previous errors
