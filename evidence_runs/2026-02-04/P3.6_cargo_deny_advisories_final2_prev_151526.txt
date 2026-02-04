@@ -1,0 +1,8 @@
+2026-02-04 20:13:24 [ERROR] failed to fetch advisory database https://github.com/RustSec/advisory-db: An IO error occurred when talking to the server: error sending request for url (https://github.com/RustSec/advisory-db/info/refs?service=git-upload-pack)
+==== exit_code=1 ====
+==== retrying after transient network/DNS error ====
+2026-02-04 20:13:26 [ERROR] failed to fetch advisory database https://github.com/RustSec/advisory-db: An IO error occurred when talking to the server: error sending request for url (https://github.com/RustSec/advisory-db/info/refs?service=git-upload-pack)
+==== exit_code=1 ====
+==== retrying after transient network/DNS error ====
+2026-02-04 20:13:29 [ERROR] failed to fetch advisory database https://github.com/RustSec/advisory-db: An IO error occurred when talking to the server: error sending request for url (https://github.com/RustSec/advisory-db/info/refs?service=git-upload-pack)
+==== exit_code=1 ====

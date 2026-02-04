@@ -1,0 +1,84 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_validate/pointers.rs:1:
+[31m-use std::{
+(B[m[31m-    fs, io,
+(B[m[31m-    path::Path,
+(B[m[31m-};
+(B[m[32m+use std::{fs, io, path::Path};
+(B[m 
+ use regex::Regex;
+ 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_validate/pointers.rs:310:
+     out
+ }
+ 
+[31m-fn pointer_violation(ctx: &ValidateCtx, code: &'static str, path: &Path, message: &str) -> Violation {
+(B[m[32m+fn pointer_violation(
+(B[m[32m+    ctx: &ValidateCtx,
+(B[m[32m+    code: &'static str,
+(B[m[32m+    path: &Path,
+(B[m[32m+    message: &str,
+(B[m[32m+) -> Violation {
+(B[m     Violation {
+         code,
+         path: rel_path(&ctx.root, path),
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_validate/report_invariants.rs:54:
+     }
+ }
+ 
+[31m-pub(super) fn validate_report_if_present(ctx: &ValidateCtx, violations: &mut Vec<Violation>, path: &Path) {
+(B[m[31m-    let Some(value) = schema::read_json_file(&ctx.root, path, violations, "REPORT_INVALID_JSON") else {
+(B[m[32m+pub(super) fn validate_report_if_present(
+(B[m[32m+    ctx: &ValidateCtx,
+(B[m[32m+    violations: &mut Vec<Violation>,
+(B[m[32m+    path: &Path,
+(B[m[32m+) {
+(B[m[32m+    let Some(value) = schema::read_json_file(&ctx.root, path, violations, "REPORT_INVALID_JSON")
+(B[m[32m+    else {
+(B[m         return;
+     };
+ 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_validate/report_invariants.rs:71:
+     validate_report_intentionally_unsupported(ctx, violations, &value, path);
+ }
+ 
+[31m-fn validate_report_exclusions(ctx: &ValidateCtx, violations: &mut Vec<Violation>, report: &Value, report_path: &Path) {
+(B[m[32m+fn validate_report_exclusions(
+(B[m[32m+    ctx: &ValidateCtx,
+(B[m[32m+    violations: &mut Vec<Violation>,
+(B[m[32m+    report: &Value,
+(B[m[32m+    report_path: &Path,
+(B[m[32m+) {
+(B[m     let Some(index) = ctx.parity_exclusions.as_ref() else {
+         return;
+     };
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_validate/schema.rs:1:
+[31m-use std::{
+(B[m[31m-    fs, io,
+(B[m[31m-    path::Path,
+(B[m[31m-};
+(B[m[32m+use std::{fs, io, path::Path};
+(B[m 
+ use jsonschema::JSONSchema;
+ use serde_json::Value;
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_validate/schema.rs:8:
+ 
+ use super::{rel_path, FatalError, ValidateCtx, Violation};
+ 
+[31m-pub(super) fn absolutize_schema_id(schema: &mut Value, schema_path: &Path) -> Result<(), FatalError> {
+(B[m[32m+pub(super) fn absolutize_schema_id(
+(B[m[32m+    schema: &mut Value,
+(B[m[32m+    schema_path: &Path,
+(B[m[32m+) -> Result<(), FatalError> {
+(B[m     let Some(id) = schema.get("$id").and_then(|v| v.as_str()) else {
+         return Ok(());
+     };
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_validate.rs:442:
+         &union_path,
+         violations,
+         "UNION_INVALID_JSON",
+[31m-    )
+(B[m[31m-    {
+(B[m[32m+    ) {
+(B[m         Some(value) => {
+             schema::schema_validate(
+                 ctx,

@@ -1,0 +1,458 @@
+    Checking codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)
+error: unused imports: `collections::HashMap` and `ffi::OsString`
+  --> crates/codex/src/mcp.rs:19:11
+   |
+19 | use std::{collections::HashMap, ffi::OsString, io, sync::Arc, time::Duration};
+   |           ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^
+   |
+   = note: `-D unused-imports` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+error: unused imports: `Mutex`, `mpsc`, and `oneshot`
+  --> crates/codex/src/mcp.rs:23:19
+   |
+23 | use tokio::sync::{mpsc, oneshot, Mutex};
+   |                   ^^^^  ^^^^^^^  ^^^^^
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1016:27
+     |
+1016 |         let first_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+     |                           ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1028:28
+     |
+1028 |         let second_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+     |                            ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1042:24
+     |
+1042 |         let response = time::timeout(Duration::from_secs(2), handle.response)
+     |                        ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1074:28
+     |
+1074 |         let cancel_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+     |                            ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1092:24
+     |
+1092 |         let response = time::timeout(Duration::from_secs(2), handle.response)
+     |                        ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1115:30
+     |
+1115 |         let first_response = time::timeout(Duration::from_secs(2), first.response)
+     |                              ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1130:24
+     |
+1130 |         let approval = time::timeout(Duration::from_secs(2), reply.events.recv())
+     |                        ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1142:24
+     |
+1142 |         let complete = time::timeout(Duration::from_secs(2), reply.events.recv())
+     |                        ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1154:30
+     |
+1154 |         let reply_response = time::timeout(Duration::from_secs(2), reply.response)
+     |                              ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1180:31
+     |
+1180 |         let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+     |                               ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1203:27
+     |
+1203 |         let first_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+     |                           ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1220:28
+     |
+1220 |         let second_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+     |                            ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1237:24
+     |
+1237 |         let response = time::timeout(Duration::from_secs(2), handle.response)
+     |                        ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1265:31
+     |
+1265 |         let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+     |                               ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1289:28
+     |
+1289 |         let cancel_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+     |                            ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1310:24
+     |
+1310 |         let response = time::timeout(Duration::from_secs(2), handle.response)
+     |                        ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1331:31
+     |
+1331 |         let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+     |                               ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1349:31
+     |
+1349 |         let resume_response = time::timeout(Duration::from_secs(2), resume_handle.response)
+     |                               ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1377:20
+     |
+1377 |         let item = time::timeout(Duration::from_secs(2), turn.events.recv())
+     |                    ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1393:24
+     |
+1393 |         let complete = time::timeout(Duration::from_secs(2), turn.events.recv())
+     |                        ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1410:29
+     |
+1410 |         let turn_response = time::timeout(Duration::from_secs(2), turn.response)
+     |                             ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1438:31
+     |
+1438 |         let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+     |                               ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1460:27
+     |
+1460 |         let first_event = time::timeout(Duration::from_secs(2), turn.events.recv())
+     |                           ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1484:28
+     |
+1484 |         let cancel_event = time::timeout(Duration::from_secs(2), turn.events.recv())
+     |                            ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1505:29
+     |
+1505 |         let turn_response = time::timeout(Duration::from_secs(2), turn.response)
+     |                             ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1511:34
+     |
+1511 |         let interrupt_response = time::timeout(Duration::from_secs(2), interrupt.response)
+     |                                  ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:1983:31
+     |
+1983 |         let thread_response = time::timeout(Duration::from_secs(2), thread.response)
+     |                               ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:2146:24
+     |
+2146 |         let response = time::timeout(Duration::from_secs(2), thread.response)
+     |                        ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:2281:17
+     |
+2281 |         let _ = time::timeout(Duration::from_secs(2), alpha_thread.response)
+     |                 ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `BufReader`
+    --> crates/codex/src/mcp.rs:2352:26
+     |
+2352 |         let mut reader = BufReader::new(handle.stdout_mut());
+     |                          ^^^^^^^^^ use of undeclared type `BufReader`
+     |
+help: consider importing one of these structs
+     |
+262  +     use crate::BufReader;
+     |
+262  +     use crate::stdio::BufReader;
+     |
+262  +     use std::io::BufReader;
+     |
+262  +     use futures_util::io::BufReader;
+     |
+       and 1 other candidate
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/mcp.rs:2354:17
+     |
+2354 |         let _ = time::timeout(Duration::from_secs(2), reader.read_line(&mut line))
+     |                 ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+help: consider importing one of these modules
+     |
+262  +     use crate::time;
+     |
+262  +     use tokio::time;
+     |
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `codex` (lib test) due to 33 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `codex` (lib) due to 2 previous errors

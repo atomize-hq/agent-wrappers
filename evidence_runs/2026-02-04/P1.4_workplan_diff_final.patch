@@ -1,0 +1,259 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 03222a6..879a19c 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -32,7 +32,9 @@ This file is updated as execution progresses; the audit pack is immutable eviden
+ 3) Preserve public API paths unless explicitly authorized; if an API change is desirable, propose it separately with a migration plan.  
+ 4) Every step must have acceptance criteria and a “done when” gate.  
+ 5) Prefer small PR-sized steps. Each step should be independently reviewable and reversible.  
+-6) Evidence must be cited via exact `audit_pack/` file paths (do not hand-wave).
++6) Evidence must be cited via exact file paths (do not hand-wave).
++   - Audit-time evidence: `audit_pack/...` (immutable snapshot).
++   - Execution-time evidence (future runs): `evidence_runs/YYYY-MM-DD/...` (see §8.1). Legacy execution evidence may still be under `audit_pack/execution/...` and must not be moved.
+ 
+ ### 1.3 Non-goals (unless explicitly added later)
+ 
+@@ -46,7 +48,7 @@ This file is updated as execution progresses; the audit pack is immutable eviden
+ - Critical: bytes 1.11.0 vuln RUSTSEC-2026-0007 → fix >= 1.11.1
+ - Critical: cargo-deny license check fails without explicit deny.toml policy
+ - Medium: duplicate crate versions getrandom/windows-sys
+-- High: “god modules” above thresholds; Median ≈ 130.5, P75 ≈ 290.75 → soft = 300, P90 ≈ 603.5 → hard = 604, ceiling=1000 (post-refactor; see `audit_pack/post_refactor/post_refactor_tokei.txt`)
++- High: “god modules” above thresholds; Median ≈ 130.5, P75 ≈ 290.75 → soft = 300, P90 ≈ 603.5 → hard = 604, ceiling=1000 (post-refactor; see `evidence_runs/2026-02-04/post_refactor_tokei.json`)
+ - Phases:
+   - Phase 0: supply chain triage (lockfile + deny.toml) with acceptance criteria listed below
+   - Phase 1: modularize crates/codex/src/lib.rs (keep façade + re-exports). First seam: home/env → home.rs (API preserved)
+@@ -65,6 +67,11 @@ This file is updated as execution progresses; the audit pack is immutable eviden
+ 
+ These are the required provenance inputs for this program. Do not edit them; reference them.
+ 
++- Policy note (evidence storage):
++  - `audit_pack/` is the audit-time immutable snapshot.
++  - **Future execution evidence** (command outputs, diffs, notes) is stored under `evidence_runs/YYYY-MM-DD/`.
++  - `audit_pack/execution/*` is **legacy execution evidence already generated**; do not move it (keep referencing it as-is).
++
+ - `audit_pack/README.md` — audit pack entry point, contents, and failure/skip summary.
+ - `audit_pack/meta/commands.log` — provenance log of what was executed (timestamp | cwd | command | exit).
+ - `audit_pack/supply_chain/cargo_audit.txt` — `cargo audit` output and vulnerability tree.
+@@ -83,27 +90,38 @@ Optional (often useful, still immutable):
+ - `audit_pack/supply_chain/cargo_deny_sources.txt` / `audit_pack/supply_chain/cargo_deny_bans.txt` — deny sources/bans checks.
+ - `audit_pack/meta/environment.txt` / `audit_pack/meta/versions.txt` — environment and tool versions at audit time.
+ - `audit_pack/repo/tree.txt` — shallow repo tree snapshot.
+-- `audit_pack/post_refactor/post_refactor_tokei.txt` — post-refactor Rust LOC distribution + top offenders (derived from tokei JSON).
+-- `audit_pack/post_refactor/post_refactor_tokei_files_sorted.txt` — post-refactor `tokei` output sorted by lines.
+-- `audit_pack/post_refactor/post_refactor_cargo_tree_duplicates.txt` — post-refactor `cargo tree -d --target all` duplicates output.
++- `audit_pack/post_refactor/post_refactor_tokei.txt` — legacy derived post-refactor LOC summary (kept for provenance; do not update).
++- `audit_pack/post_refactor/post_refactor_tokei_files_sorted.txt` — legacy post-refactor `tokei` output sorted by lines (kept for provenance; do not update).
++- `audit_pack/post_refactor/post_refactor_cargo_tree_duplicates.txt` — legacy post-refactor `cargo tree -d --target all` duplicates output (kept for provenance; do not update).
++- `audit_pack/execution/2026-02-04/` — legacy execution evidence already generated (kept for provenance; do not move).
++
++Execution evidence (current run; append-only):
++- `evidence_runs/2026-02-04/post_refactor_tokei.json` — post-refactor tokei JSON used for §3.1 thresholds.
++- `evidence_runs/2026-02-04/post_refactor_tokei_files_sorted.txt` — post-refactor tokei sorted output used for §3.2 top offenders.
++- `evidence_runs/2026-02-04/post_refactor_cargo_tree_duplicates_target_all.txt` — post-refactor duplicates output used for §6.3 triage.
+ 
+ ---
+ 
+ ## 3) Baseline Metrics (and current failure signals)
+ 
+-### 3.1 Maintainability thresholds (from audit)
++### 3.1 Maintainability thresholds (post-refactor distribution)
+ 
+-Post-refactor distribution from `audit_pack/post_refactor/post_refactor_tokei.txt` (derived from tokei per-file code LOC):
++Computed from `evidence_runs/2026-02-04/post_refactor_tokei.json` (Rust per-file code LOC; percentiles use the same linear interpolation as `type=7`):
+ - Rust files: 86
+-- Total Rust LOC: 31,362
+-- Median ≈ 130.5
+-- P75 ≈ 290.75 → **soft threshold = 300**
+-- P90 ≈ 603.5 → **hard threshold = 604**
+-- **ceiling (program policy) = 1000**
++- Median = 130.5
++- P75 = 290.75
++- P90 = 603.5
++
++Policy application:
++- `soft := max(300, P75)` → **soft = 300**
++- `hard := min(1000, max(600, P90))` → hard = 603.5 → **hard = 604** (rounded up to whole LOC)
++- `ceiling := 1000` → **ceiling = 1000**
++
++Note: These replace the audit-time thresholds from `audit_pack/metrics/loc_summary.txt` (P75=302, P90=746).
+ 
+ ### 3.2 Top offenders (largest Rust files)
+ 
+-Post-refactor top 10 from `audit_pack/post_refactor/post_refactor_tokei_files_sorted.txt` (Rust file code LOC):
++Post-refactor top 10 from `evidence_runs/2026-02-04/post_refactor_tokei_files_sorted.txt` (Rust per-file code LOC):
+ - `crates/codex/src/lib.rs` — 8,904 LOC (>> ceiling)
+ - `crates/codex/src/mcp.rs` — 2,713 LOC (>> ceiling)
+ - `crates/xtask/src/codex_validate.rs` — 2,362 LOC (>> ceiling)
+@@ -248,6 +266,10 @@ Last Updated: 2026-02-04
+ 
+ **Phase goal:** Reduce `lib.rs` from “god module” size by extracting cohesive modules while preserving existing public API paths through re-exports.
+ 
++Phase Status: [ ] Not Started  [x] In Progress  [ ] Done  
++Last Updated: 2026-02-04  
++Reason: `crates/codex/src/lib.rs` remains above the program ceiling per §3.2 (evidence: `evidence_runs/2026-02-04/post_refactor_tokei_files_sorted.txt`).
++
+ ##### P1.0 — Define the `lib.rs` seam map (no code moves yet)
+ 
+ Status: [ ] Not Started  [ ] In Progress  [x] Done  
+@@ -312,8 +334,8 @@ Last Updated: 2026-02-04
+ 
+ ##### P1.4 — Seam extraction: Execpolicy modeling + parsing (`execpolicy.rs`) (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-04
+ 
+ - Goal: Extract execpolicy modeling/parsing and related helpers into `crates/codex/src/execpolicy.rs`, preserving existing public API paths via re-exports from `lib.rs`.
+ - Expected files touched:
+@@ -334,6 +356,10 @@ Last Updated: YYYY-MM-DD
+ 
+ **Phase goal:** Split `mcp.rs` into a module tree while maintaining stable public APIs via re-exports from `mcp` (and/or `lib.rs`).
+ 
++Phase Status: [ ] Not Started  [x] In Progress  [ ] Done  
++Last Updated: 2026-02-04  
++Reason: `crates/codex/src/mcp.rs` remains above the program ceiling per §3.2 (evidence: `evidence_runs/2026-02-04/post_refactor_tokei_files_sorted.txt`).
++
+ ##### P2.0 — Define the `mcp.rs` seam map (no code moves yet)
+ 
+ Status: [ ] Not Started  [ ] In Progress  [x] Done  
+@@ -437,6 +463,10 @@ Last Updated: YYYY-MM-DD
+ 
+ #### Phase 3 — Split xtask “rule engine” files by domain sections; keep determinism
+ 
++Phase Status: [ ] Not Started  [x] In Progress  [ ] Done  
++Last Updated: 2026-02-04  
++Reason: `crates/xtask/src/codex_validate.rs`, `crates/xtask/src/codex_report.rs`, and `crates/xtask/src/codex_snapshot.rs` remain above the program ceiling per §3.2 (evidence: `evidence_runs/2026-02-04/post_refactor_tokei_files_sorted.txt`).
++
+ ##### P3.0 — Identify xtask domain boundaries and deterministic contracts
+ 
+ Status: [ ] Not Started  [ ] In Progress  [x] Done  
+@@ -608,12 +638,12 @@ Track policy decisions here:
+ 
+ Evidence sources:
+ - Audit-time: `audit_pack/deps/cargo_tree_duplicates.txt` (`cargo tree -d` without `--target all`; “nothing to print”).
+-- Post-refactor/current: `audit_pack/post_refactor/post_refactor_cargo_tree_duplicates.txt` (`cargo tree -d --target all`; duplicates present).
++- Post-refactor/current: `evidence_runs/2026-02-04/post_refactor_cargo_tree_duplicates_target_all.txt` (`cargo tree -d --target all`; duplicates present).
+ 
+ | Crate | Duplicate versions? | Evidence | Decision (fix/defer) | Rationale | Status |
+ |---|---:|---|---|---|---|
+-| getrandom | Yes (`0.2.17`, `0.3.4`) | Post-refactor: `audit_pack/post_refactor/post_refactor_cargo_tree_duplicates.txt` shows `getrandom 0.2.17` via `jsonschema → xtask` and `getrandom 0.3.4` via `ahash` (through `jsonschema`) and `tempfile → codex → xtask`. | Defer | Resolving likely requires upgrading transitive crates (non-goal in Phase 0 unless required for security/compliance); keep note and revisit if it becomes a policy requirement. | Done |
+-| windows-sys | Yes (`0.60.2`, `0.61.2`) | Post-refactor: `audit_pack/post_refactor/post_refactor_cargo_tree_duplicates.txt` shows `windows-sys 0.60.2` via `socket2 → tokio/reqwest` and `windows-sys 0.61.2` via `clap`/`anstream` plus `tempfile`/`tokio`. | Defer | Same rationale as above; no gate currently failing and no security advisory forcing consolidation. | Done |
++| getrandom | Yes (`0.2.17`, `0.3.4`) | `evidence_runs/2026-02-04/post_refactor_cargo_tree_duplicates_target_all.txt` shows `getrandom 0.2.17` via `jsonschema → xtask` and `getrandom 0.3.4` via `ahash` (through `jsonschema`) and `tempfile → codex → xtask`. | Defer | Resolving likely requires upgrading transitive crates (non-goal in Phase 0 unless required for security/compliance); keep note and revisit if it becomes a policy requirement. | Done |
++| windows-sys | Yes (`0.60.2`, `0.61.2`) | `evidence_runs/2026-02-04/post_refactor_cargo_tree_duplicates_target_all.txt` shows `windows-sys 0.60.2` via `socket2 → tokio/reqwest` and `windows-sys 0.61.2` via `clap`/`anstream` plus `tempfile`/`tokio`. | Defer | Same rationale as above; no gate currently failing and no security advisory forcing consolidation. | Done |
+ 
+ ---
+ 
+@@ -663,7 +693,7 @@ Notes / dependencies:
+ 
+ ### 7.3 File size policy (applies during refactor)
+ 
+-Derived from post-refactor distribution in `audit_pack/post_refactor/post_refactor_tokei.txt`:
++Derived from post-refactor distribution in `evidence_runs/2026-02-04/post_refactor_tokei.json`:
+ - Soft threshold: 300 LOC (P75 ≈ 290.75)
+ - Hard threshold: 604 LOC (P90 ≈ 603.5)
+ - Absolute ceiling: 1000 LOC
+@@ -706,6 +736,15 @@ Boundaries + extraction order (defined in P3.0; keep deterministic outputs):
+ 
+ ## 8) Execution Journal (append-only)
+ 
++### 8.1 Execution evidence storage (future runs)
++
++Store future command outputs and diffs under `evidence_runs/YYYY-MM-DD/` using this naming convention:
++- `evidence_runs/YYYY-MM-DD/<step_id>_<command>.txt` (example: `evidence_runs/2026-02-04/P2.5_cargo_test.txt`)
++- `evidence_runs/YYYY-MM-DD/<step_id>_git_diff.txt`
++- `evidence_runs/YYYY-MM-DD/<step_id>_notes.md` (optional)
++
++Legacy note: Any prior evidence already stored under `audit_pack/execution/YYYY-MM-DD/` remains valid and must not be moved or deleted.
++
+ Add entries as work lands. Format:
+ 
+ ### YYYY-MM-DD — <short title>
+@@ -715,12 +754,12 @@ Add entries as work lands. Format:
+ - What changed:
+   - <bullet list of changes; keep concise>
+ - Validation results (paste concise results, not full logs):
+-  - `cargo fmt --all -- --check`: PASS/FAIL
+-  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS/FAIL
+-  - `cargo test --all-targets --all-features`: PASS/FAIL
+-  - `cargo audit`: PASS/FAIL (list advisories if FAIL)
+-  - `cargo deny check advisories`: PASS/FAIL
+-  - `cargo deny check licenses`: PASS/FAIL
++  - `cargo fmt --all -- --check`: PASS/FAIL (evidence: `evidence_runs/YYYY-MM-DD/<step_id>_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS/FAIL (evidence: `evidence_runs/YYYY-MM-DD/<step_id>_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS/FAIL (evidence: `evidence_runs/YYYY-MM-DD/<step_id>_cargo_test.txt`)
++  - `cargo audit`: PASS/FAIL (evidence: `evidence_runs/YYYY-MM-DD/<step_id>_cargo_audit.txt`)
++  - `cargo deny check advisories`: PASS/FAIL (evidence: `evidence_runs/YYYY-MM-DD/<step_id>_cargo_deny_advisories.txt`)
++  - `cargo deny check licenses`: PASS/FAIL (evidence: `evidence_runs/YYYY-MM-DD/<step_id>_cargo_deny_licenses.txt`)
+ - Diffs/PRs:
+   - <link(s) or commit hash(es)>
+ 
+@@ -961,15 +1000,47 @@ Add entries as work lands. Format:
+ - Scope/step: Planning/metrics refresh (adds follow-on steps P1.4, P2.5, P3.6–P3.8)
+ - Why: Post-refactor file-size distribution and top offenders changed after Phase 1–3 extractions; remaining seams (MCP JSON-RPC transport and deeper xtask splits) are still outstanding.
+ - What changed:
+-  - Updated §3.1 and §7.3 thresholds to post-refactor distribution (soft=300, hard=604, ceiling=1000) based on `audit_pack/post_refactor/post_refactor_tokei.txt`.
+-  - Replaced §3.2 “Top offenders” with post-refactor top-10 list from `audit_pack/post_refactor/post_refactor_tokei_files_sorted.txt`.
+-  - Updated §6.3 duplicates evidence to `audit_pack/post_refactor/post_refactor_cargo_tree_duplicates.txt` and summarized the two duplicate groups (`getrandom`, `windows-sys`).
++  - Updated §3.1 and §7.3 thresholds to the post-refactor distribution (soft=300, hard=604, ceiling=1000) based on `evidence_runs/2026-02-04/post_refactor_tokei.json`.
++  - Replaced §3.2 “Top offenders” with the post-refactor top-10 list from `evidence_runs/2026-02-04/post_refactor_tokei_files_sorted.txt`.
++  - Updated §6.3 duplicates evidence to `evidence_runs/2026-02-04/post_refactor_cargo_tree_duplicates_target_all.txt` and summarized the two duplicate groups (`getrandom`, `windows-sys`).
+   - Added new not-started checklist items: P1.4, P2.5, P3.6, P3.7, P3.8.
+ - Validation results:
+   - N/A (documentation/planning update; no functional changes)
+ - Diffs/PRs:
+   - None
+ 
++### 2026-02-04 — Post-refactor metrics refresh & workplan reconciliation
++
++- Scope/step: Planning/metrics refresh (workplan reconciliation only; no code changes)
++- Why: Ensure workplan thresholds, top offenders, and duplicates evidence match the latest post-refactor metrics so remaining >1000 LOC files are correctly scheduled before any further refactor execution.
++- What changed:
++  - Stored post-refactor metrics evidence under `evidence_runs/2026-02-04/` (copies for normalization; legacy `audit_pack/…` copies are preserved).
++  - Recomputed §3.1 distribution from `evidence_runs/2026-02-04/post_refactor_tokei.json` and applied the threshold policy (soft=300, hard=604, ceiling=1000).
++  - Replaced §3.2 top-10 offenders using `evidence_runs/2026-02-04/post_refactor_tokei_files_sorted.txt`.
++  - Updated §6.3 duplicates evidence to `evidence_runs/2026-02-04/post_refactor_cargo_tree_duplicates_target_all.txt` (kept “defer consolidation” decision; evidence refreshed).
++  - Corrected phase status drift: Phase 1/2/3 are explicitly “In Progress” while any associated files remain >1000 LOC (see §3.2); follow-on steps remain queued (P1.4, P2.5, P3.6–P3.8).
++- Validation results:
++  - N/A (documentation/planning update; no functional changes)
++- Diffs/PRs:
++  - None
++
++### 2026-02-04 — P1.4 execpolicy seam extraction
++
++- Scope/step: P1.4 (Phase 1 seam extraction)
++- Why: `crates/codex/src/lib.rs` still contains the execpolicy modeling/parsing/types and method implementation; extracting the seam reduces `lib.rs` surface area while preserving `codex::*` public API paths.
++- What changed:
++  - Added `crates/codex/src/execpolicy.rs` containing `CodexClient::check_execpolicy` plus `ExecPolicy*` request/response/types.
++  - Updated `crates/codex/src/lib.rs` to `mod execpolicy;` and re-export the `ExecPolicy*` types at the crate root (API preserved).
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-04/P1.4_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-04/P1.4_cargo_clippy_all_targets_all_features.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-04/P1.4_cargo_test_all_targets_all_features.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-04/P1.4_cargo_audit.txt`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-04/P1.4_cargo_deny_advisories.txt`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-04/P1.4_cargo_deny_licenses.txt`)
++- Diffs/PRs:
++  - None (no commit; code diff at `evidence_runs/2026-02-04/P1.4_code_diff.patch`; workplan diff at `evidence_runs/2026-02-04/P1.4_workplan_diff_final.patch`)
++
+ ---
+ 
+ ## 9) Open Questions / Decisions (lightweight log)
+@@ -981,5 +1052,16 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ | Confirm Phase 0 remediation state vs audit pack | 2026-02-04 | Accepted | Audit pack shows failures; baseline claims fixes | Preflight gates are green; see §8 “Phase 0 preflight…” entry. |
+ | Duplicate versions policy (fix now vs defer) | 2026-02-04 | Accepted | Non-goal: dependency upgrades beyond security/compliance in Phase 0 | `cargo tree -d --target all` shows `getrandom` + `windows-sys` duplicates; `audit_pack/deps/cargo_tree_duplicates.txt` showed none (audit-time command likely ran without `--target all`). Decision: defer consolidation unless a security/compliance gate requires it. |
+ | Allowlist license expressions in `deny.toml` | 2026-02-04 | Accepted | `cargo deny` defaults fail without config; policy must be explicit | `deny.toml` establishes allowlist + target scoping + confidence; `cargo deny check licenses` PASS (see §8 “Phase 0 preflight…” entry). |
+-| Execution evidence location (`audit_pack/execution/YYYY-MM-DD/...`) | 2026-02-04 | Accepted | Program requires evidence citations via `audit_pack/` paths | Add execution logs as new files under `audit_pack/execution/` while keeping the audit-time baseline evidence files in §2 unchanged. |
++| Legacy execution evidence location (`audit_pack/execution/YYYY-MM-DD/...`) | 2026-02-04 | Accepted | Preserve provenance for already-generated evidence | Keep existing execution artifacts under `audit_pack/execution/...` as-is (do not move/delete). New execution evidence goes under `evidence_runs/...` (§8.1). |
+ | Post-plan work request: “complete next 5 tasks” vs remaining checklist items | 2026-02-04 | Accepted | Workplan needed additional scope to reflect remaining seams beyond P3.5 | Added P1.4 (execpolicy seam), P2.5 (JSON-RPC transport), and P3.6–P3.8 (deeper xtask splits) as Not Started follow-ons. |
++| Execution evidence storage policy (`evidence_runs/YYYY-MM-DD/`); keep `audit_pack/execution/*` legacy | 2026-02-04 | Accepted | Provenance clarity: separate immutable audit snapshot (`audit_pack/`) from ongoing execution runs | Store new evidence under `evidence_runs/…` with stable filenames (§8.1). Do not move/delete existing `audit_pack/execution/…` evidence; continue citing it where already referenced. |
++
++---
++
++## 10) Next 5 Tasks (execution queue; do not start until this workplan is current)
++
++1) P2.5 — JSON-RPC transport extraction (stdio transport → `mcp/jsonrpc.rs`) (API preserved)
++2) P3.6 — Split xtask module: `codex_validate` (extract validation passes) with deterministic output preserved
++3) P3.7 — Split xtask module: `codex_report` (extract report domains) with deterministic output preserved
++4) P3.8 — Split xtask module: `codex_snapshot` (extract snapshot pipeline domains) with deterministic output preserved
++5) TBD — Pick next Phase 1 `lib.rs` seam after reassessing remaining `lib.rs` responsibilities and size offenders.

@@ -1,0 +1,43 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/jsonrpc.rs:103:
+                         break;
+                     }
+                     Err(source) => {
+[31m-                        let is_busy = matches!(source.kind(), std::io::ErrorKind::ExecutableFileBusy)
+(B[m[31m-                            || source.raw_os_error() == Some(26);
+(B[m[32m+                        let is_busy =
+(B[m[32m+                            matches!(source.kind(), std::io::ErrorKind::ExecutableFileBusy)
+(B[m[32m+                                || source.raw_os_error() == Some(26);
+(B[m                         if is_busy && attempt < 4 {
+                             tokio::time::sleep(backoff).await;
+                             backoff = std::cmp::min(backoff * 2, Duration::from_millis(50));
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/jsonrpc.rs:141:
+             config.mirror_stdio,
+         ));
+ 
+[31m-        let stderr_handle = stderr.map(|stderr| tokio::spawn(stderr_task(stderr, config.mirror_stdio)));
+(B[m[32m+        let stderr_handle =
+(B[m[32m+            stderr.map(|stderr| tokio::spawn(stderr_task(stderr, config.mirror_stdio)));
+(B[m 
+         let mut tasks = vec![writer_handle, reader_handle];
+         if let Some(handle) = stderr_handle {
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/jsonrpc.rs:596:
+     let mut guard = sinks.lock().await;
+     guard.retain(|tx| tx.send(event.clone()).is_ok());
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp.rs:16:
+ //! requests. Runtime and pool helpers keep resume hints/metadata intact while starting,
+ //! reusing, and stopping app-server instances.
+ 
+[31m-use std::{
+(B[m[31m-    collections::HashMap,
+(B[m[31m-    ffi::OsString,
+(B[m[31m-    io,
+(B[m[31m-    sync::Arc,
+(B[m[31m-    time::Duration,
+(B[m[31m-};
+(B[m[32m+use std::{collections::HashMap, ffi::OsString, io, sync::Arc, time::Duration};
+(B[m 
+ use serde_json::{json, Value};
+ use thiserror::Error;
