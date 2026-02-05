@@ -1,0 +1,18 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/tests_runtime_app/app_runtime_api.rs:256:
+         other => panic!("unexpected start result: {other:?}"),
+     }
+ }
+-
+ 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/tests_runtime_app/app_runtime_pool_api.rs:291:
+     let after = fs::read_to_string(manager.config_path()).expect("read config after");
+     assert_eq!(before, after);
+ }
+-
+ 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/tests_runtime_app/runtime_api.rs:239:
+ 
+     env::remove_var(env_var);
+ }
+-
+ 

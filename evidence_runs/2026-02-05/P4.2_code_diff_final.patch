@@ -1,0 +1,1997 @@
+diff --git a/crates/codex/src/mcp/tests_runtime_app.rs b/crates/codex/src/mcp/tests_runtime_app.rs
+index 490143a..c055dac 100644
+--- a/crates/codex/src/mcp/tests_runtime_app.rs
++++ b/crates/codex/src/mcp/tests_runtime_app.rs
+@@ -1,979 +1,4 @@
+-use super::test_support::{prelude::*, *};
+-use super::*;
+-
+-#[test]
+-fn runtime_api_lists_launchers_without_changing_config() {
+-    let (dir, manager) = temp_config_manager();
+-    let stdio_env_key = "MCP_RUNTIME_API_STDIO_ENV";
+-    let request_env_key = "MCP_RUNTIME_API_REQUEST_ENV";
+-    let http_env_key = "MCP_RUNTIME_API_HTTP_ENV";
+-    env::set_var(http_env_key, "token-api");
+-
+-    let mut stdio = stdio_definition("runtime-api-stdio");
+-    stdio.description = Some("stdio runtime".into());
+-    stdio.tags = vec!["local".into()];
+-    stdio.tools = Some(McpToolConfig {
+-        enabled: vec!["fmt".into()],
+-        disabled: vec!["lint".into()],
+-    });
+-    if let McpTransport::Stdio(ref mut stdio_def) = stdio.transport {
+-        stdio_def.args.push("--flag".into());
+-        stdio_def
+-            .env
+-            .insert(stdio_env_key.into(), "runtime-env".into());
+-        stdio_def.timeout_ms = Some(2400);
+-    }
+-
+-    let mut env_map = BTreeMap::new();
+-    env_map.insert(request_env_key.to_string(), "injected".to_string());
+-
+-    manager
+-        .add_server(AddServerRequest {
+-            name: "local-api".into(),
+-            definition: stdio,
+-            overwrite: false,
+-            env: env_map,
+-            bearer_token: None,
+-        })
+-        .expect("add stdio server");
+-
+-    let mut http = streamable_definition("https://example.test/runtime-api", http_env_key);
+-    http.description = Some("http runtime".into());
+-    http.tags = vec!["remote".into()];
+-    http.tools = Some(McpToolConfig {
+-        enabled: vec!["alpha".into()],
+-        disabled: vec!["beta".into()],
+-    });
+-    if let McpTransport::StreamableHttp(ref mut http_def) = http.transport {
+-        http_def.headers.insert("X-Req".into(), "true".into());
+-        http_def.request_timeout_ms = Some(2200);
+-    }
+-
+-    manager
+-        .add_server(AddServerRequest {
+-            name: "remote-api".into(),
+-            definition: http,
+-            overwrite: false,
+-            env: BTreeMap::new(),
+-            bearer_token: None,
+-        })
+-        .expect("add http server");
+-
+-    let before = fs::read_to_string(manager.config_path()).expect("read config before");
+-    let cwd = dir.path().join("cwd");
+-
+-    let defaults = StdioServerConfig {
+-        binary: PathBuf::from("codex"),
+-        code_home: Some(dir.path().to_path_buf()),
+-        current_dir: Some(cwd.clone()),
+-        env: vec![
+-            (OsString::from("DEFAULT_ONLY"), OsString::from("default")),
+-            (
+-                OsString::from(request_env_key),
+-                OsString::from("base-default"),
+-            ),
+-        ],
+-        app_server_analytics_default_enabled: false,
+-        mirror_stdio: true,
+-        startup_timeout: Duration::from_secs(3),
+-    };
+-
+-    let api = McpRuntimeApi::from_config(&manager, &defaults).expect("runtime api");
+-
+-    let available = api.available();
+-    assert_eq!(available.len(), 2);
+-
+-    let stdio_summary = available
+-        .iter()
+-        .find(|entry| entry.name == "local-api")
+-        .expect("stdio summary");
+-    assert_eq!(stdio_summary.transport, McpRuntimeSummaryTransport::Stdio);
+-    let stdio_tools = stdio_summary.tools.as_ref().expect("stdio tools");
+-    assert_eq!(stdio_tools.enabled, vec!["fmt".to_string()]);
+-    assert_eq!(stdio_tools.disabled, vec!["lint".to_string()]);
+-
+-    let stdio_launcher = api.stdio_launcher("local-api").expect("stdio launcher");
+-    assert_eq!(stdio_launcher.args, vec!["--flag".to_string()]);
+-    assert_eq!(stdio_launcher.timeout, Duration::from_millis(2400));
+-    assert!(stdio_launcher.mirror_stdio);
+-    assert_eq!(stdio_launcher.current_dir.as_deref(), Some(cwd.as_path()));
+-
+-    let env_map: HashMap<OsString, OsString> = stdio_launcher.env.into_iter().collect();
+-    assert_eq!(
+-        env_map.get(&OsString::from("CODEX_HOME")),
+-        Some(&dir.path().as_os_str().to_os_string())
+-    );
+-    assert_eq!(
+-        env_map.get(&OsString::from("DEFAULT_ONLY")),
+-        Some(&OsString::from("default"))
+-    );
+-    assert_eq!(
+-        env_map.get(&OsString::from(request_env_key)),
+-        Some(&OsString::from("injected"))
+-    );
+-    assert_eq!(
+-        env_map.get(&OsString::from(stdio_env_key)),
+-        Some(&OsString::from("runtime-env"))
+-    );
+-
+-    let http_connector = api.http_connector("remote-api").expect("http connector");
+-    assert_eq!(http_connector.bearer_token.as_deref(), Some("token-api"));
+-    assert_eq!(
+-        http_connector
+-            .headers
+-            .get("Authorization")
+-            .map(String::as_str),
+-        Some("Bearer token-api")
+-    );
+-    assert_eq!(
+-        http_connector.headers.get("X-Req").map(String::as_str),
+-        Some("true")
+-    );
+-    assert_eq!(
+-        http_connector.request_timeout,
+-        Some(Duration::from_millis(2200))
+-    );
+-
+-    let http_tools = available
+-        .iter()
+-        .find(|entry| entry.name == "remote-api")
+-        .and_then(|entry| entry.tools.as_ref())
+-        .expect("http tools");
+-    assert_eq!(http_tools.enabled, vec!["alpha".to_string()]);
+-    assert_eq!(http_tools.disabled, vec!["beta".to_string()]);
+-
+-    match api.stdio_launcher("remote-api") {
+-        Err(McpRuntimeError::UnsupportedTransport {
+-            name,
+-            expected,
+-            actual,
+-        }) => {
+-            assert_eq!(name, "remote-api");
+-            assert_eq!(expected, "stdio");
+-            assert_eq!(actual, "streamable_http");
+-        }
+-        other => panic!("unexpected result: {other:?}"),
+-    }
+-
+-    match api.http_connector("local-api") {
+-        Err(McpRuntimeError::UnsupportedTransport {
+-            name,
+-            expected,
+-            actual,
+-        }) => {
+-            assert_eq!(name, "local-api");
+-            assert_eq!(expected, "streamable_http");
+-            assert_eq!(actual, "stdio");
+-        }
+-        other => panic!("unexpected http result: {other:?}"),
+-    }
+-
+-    let after = fs::read_to_string(manager.config_path()).expect("read config after");
+-    assert_eq!(before, after);
+-
+-    env::remove_var(http_env_key);
+-    env::remove_var(request_env_key);
+-}
+-
+-#[test]
+-fn runtime_api_prepare_http_is_non_destructive() {
+-    let (dir, manager) = temp_config_manager();
+-    let env_var = "MCP_RUNTIME_API_PREPARE";
+-    env::set_var(env_var, "prepare-token");
+-
+-    let mut http = streamable_definition("https://example.test/prepare", env_var);
+-    http.tags = vec!["prepare".into()];
+-    http.tools = Some(McpToolConfig {
+-        enabled: vec!["delta".into()],
+-        disabled: vec![],
+-    });
+-
+-    manager
+-        .add_server(AddServerRequest {
+-            name: "prepare-http".into(),
+-            definition: http,
+-            overwrite: false,
+-            env: BTreeMap::new(),
+-            bearer_token: None,
+-        })
+-        .expect("add http server");
+-
+-    let before = fs::read_to_string(manager.config_path()).expect("read config before");
+-
+-    let defaults = StdioServerConfig {
+-        binary: PathBuf::from("codex"),
+-        code_home: Some(dir.path().to_path_buf()),
+-        current_dir: None,
+-        env: Vec::new(),
+-        app_server_analytics_default_enabled: false,
+-        mirror_stdio: false,
+-        startup_timeout: Duration::from_secs(2),
+-    };
+-
+-    let api = McpRuntimeApi::from_config(&manager, &defaults).expect("runtime api");
+-    let handle = api.prepare("prepare-http").expect("prepare http");
+-
+-    match handle {
+-        McpRuntimeHandle::StreamableHttp(http_handle) => {
+-            assert_eq!(http_handle.name, "prepare-http");
+-            assert_eq!(
+-                http_handle.connector.bearer_token.as_deref(),
+-                Some("prepare-token")
+-            );
+-            assert_eq!(
+-                http_handle
+-                    .connector
+-                    .headers
+-                    .get("Authorization")
+-                    .map(String::as_str),
+-                Some("Bearer prepare-token")
+-            );
+-            let tools = http_handle.tools.expect("tool hints");
+-            assert_eq!(tools.enabled, vec!["delta".to_string()]);
+-        }
+-        other => panic!("expected http handle, got {other:?}"),
+-    }
+-
+-    let after = fs::read_to_string(manager.config_path()).expect("read config after");
+-    assert_eq!(before, after);
+-
+-    env::remove_var(env_var);
+-}
+-
+-#[test]
+-fn app_runtime_api_lists_and_merges_without_writes() {
+-    let (dir, manager) = temp_config_manager();
+-
+-    let alpha_home = dir.path().join("app-home-a");
+-    let alpha_cwd = dir.path().join("app-cwd-a");
+-    let mut alpha_env = BTreeMap::new();
+-    alpha_env.insert("APP_RUNTIME_ENV".into(), "alpha".into());
+-    alpha_env.insert("OVERRIDE_ME".into(), "runtime".into());
+-
+-    manager
+-        .add_app_runtime(AddAppRuntimeRequest {
+-            name: "alpha".into(),
+-            definition: AppRuntimeDefinition {
+-                description: Some("local app".into()),
+-                tags: vec!["local".into()],
+-                env: alpha_env,
+-                code_home: Some(alpha_home.clone()),
+-                current_dir: Some(alpha_cwd.clone()),
+-                mirror_stdio: Some(true),
+-                startup_timeout_ms: Some(4200),
+-                binary: Some(PathBuf::from("/bin/app-alpha")),
+-                metadata: serde_json::json!({"thread": "t-alpha"}),
+-            },
+-            overwrite: false,
+-        })
+-        .expect("add alpha app runtime");
+-
+-    let mut beta_env = BTreeMap::new();
+-    beta_env.insert("APP_RUNTIME_ENV".into(), "beta".into());
+-
+-    manager
+-        .add_app_runtime(AddAppRuntimeRequest {
+-            name: "beta".into(),
+-            definition: AppRuntimeDefinition {
+-                description: None,
+-                tags: vec!["default".into()],
+-                env: beta_env,
+-                code_home: None,
+-                current_dir: None,
+-                mirror_stdio: None,
+-                startup_timeout_ms: None,
+-                binary: None,
+-                metadata: serde_json::json!({"resume": true}),
+-            },
+-            overwrite: false,
+-        })
+-        .expect("add beta app runtime");
+-
+-    let before = fs::read_to_string(manager.config_path()).expect("read config before");
+-
+-    let default_home = dir.path().join("default-home");
+-    let default_cwd = dir.path().join("default-cwd");
+-    let defaults = StdioServerConfig {
+-        binary: PathBuf::from("codex"),
+-        code_home: Some(default_home.clone()),
+-        current_dir: Some(default_cwd.clone()),
+-        env: vec![
+-            (OsString::from("DEFAULT_ONLY"), OsString::from("base")),
+-            (OsString::from("OVERRIDE_ME"), OsString::from("base")),
+-        ],
+-        app_server_analytics_default_enabled: false,
+-        mirror_stdio: false,
+-        startup_timeout: Duration::from_secs(3),
+-    };
+-
+-    let api = AppRuntimeApi::from_config(&manager, &defaults).expect("app runtime api");
+-
+-    let available = api.available();
+-    assert_eq!(available.len(), 2);
+-
+-    let alpha_summary = available
+-        .iter()
+-        .find(|entry| entry.name == "alpha")
+-        .expect("alpha summary");
+-    assert_eq!(alpha_summary.description.as_deref(), Some("local app"));
+-    assert_eq!(alpha_summary.tags, vec!["local".to_string()]);
+-    assert_eq!(
+-        alpha_summary.metadata,
+-        serde_json::json!({"thread": "t-alpha"})
+-    );
+-
+-    let alpha = api.prepare("alpha").expect("prepare alpha");
+-    assert_eq!(alpha.name, "alpha");
+-    assert_eq!(alpha.metadata, serde_json::json!({"thread": "t-alpha"}));
+-    assert_eq!(alpha.config.binary, PathBuf::from("/bin/app-alpha"));
+-    assert_eq!(
+-        alpha.config.code_home.as_deref(),
+-        Some(alpha_home.as_path())
+-    );
+-    assert_eq!(
+-        alpha.config.current_dir.as_deref(),
+-        Some(alpha_cwd.as_path())
+-    );
+-    assert!(alpha.config.mirror_stdio);
+-    assert_eq!(alpha.config.startup_timeout, Duration::from_millis(4200));
+-
+-    let alpha_env: HashMap<OsString, OsString> = alpha.config.env.into_iter().collect();
+-    assert_eq!(
+-        alpha_env.get(&OsString::from("CODEX_HOME")),
+-        Some(&alpha_home.as_os_str().to_os_string())
+-    );
+-    assert_eq!(
+-        alpha_env.get(&OsString::from("DEFAULT_ONLY")),
+-        Some(&OsString::from("base"))
+-    );
+-    assert_eq!(
+-        alpha_env.get(&OsString::from("OVERRIDE_ME")),
+-        Some(&OsString::from("runtime"))
+-    );
+-    assert_eq!(
+-        alpha_env.get(&OsString::from("APP_RUNTIME_ENV")),
+-        Some(&OsString::from("alpha"))
+-    );
+-
+-    let beta = api.stdio_config("beta").expect("beta config");
+-    assert_eq!(beta.binary, PathBuf::from("codex"));
+-    assert_eq!(beta.code_home.as_deref(), Some(default_home.as_path()));
+-    assert_eq!(beta.current_dir.as_deref(), Some(default_cwd.as_path()));
+-    assert!(!beta.mirror_stdio);
+-    assert_eq!(beta.startup_timeout, Duration::from_secs(3));
+-
+-    let beta_env: HashMap<OsString, OsString> = beta.env.into_iter().collect();
+-    assert_eq!(
+-        beta_env.get(&OsString::from("CODEX_HOME")),
+-        Some(&default_home.as_os_str().to_os_string())
+-    );
+-    assert_eq!(
+-        beta_env.get(&OsString::from("DEFAULT_ONLY")),
+-        Some(&OsString::from("base"))
+-    );
+-    assert_eq!(
+-        beta_env.get(&OsString::from("OVERRIDE_ME")),
+-        Some(&OsString::from("base"))
+-    );
+-    assert_eq!(
+-        beta_env.get(&OsString::from("APP_RUNTIME_ENV")),
+-        Some(&OsString::from("beta"))
+-    );
+-
+-    let beta_summary = available
+-        .iter()
+-        .find(|entry| entry.name == "beta")
+-        .expect("beta summary");
+-    assert_eq!(beta_summary.metadata, serde_json::json!({"resume": true}));
+-
+-    let after = fs::read_to_string(manager.config_path()).expect("read config after");
+-    assert_eq!(before, after);
+-}
+-
+-#[tokio::test]
+-async fn app_runtime_lifecycle_starts_and_stops_without_mutation() {
+-    let (config_dir, manager) = temp_config_manager();
+-    let (_server_dir, server_path) = write_fake_app_server();
+-    let code_home = config_dir.path().join("app-lifecycle-home");
+-
+-    let mut env_map = BTreeMap::new();
+-    env_map.insert("APP_RUNTIME_LIFECYCLE".into(), "runtime-env".into());
+-
+-    let metadata = serde_json::json!({"resume_thread": "thread-lifecycle"});
+-    manager
+-        .add_app_runtime(AddAppRuntimeRequest {
+-            name: "lifecycle".into(),
+-            definition: AppRuntimeDefinition {
+-                description: Some("app lifecycle".into()),
+-                tags: vec!["app".into()],
+-                env: env_map,
+-                code_home: None,
+-                current_dir: None,
+-                mirror_stdio: Some(true),
+-                startup_timeout_ms: Some(1500),
+-                binary: None,
+-                metadata: metadata.clone(),
+-            },
+-            overwrite: false,
+-        })
+-        .expect("add app runtime");
+-
+-    let defaults = StdioServerConfig {
+-        binary: server_path.clone(),
+-        code_home: Some(code_home.clone()),
+-        current_dir: None,
+-        env: vec![(
+-            OsString::from("APP_RUNTIME_LIFECYCLE"),
+-            OsString::from("default"),
+-        )],
+-        app_server_analytics_default_enabled: false,
+-        mirror_stdio: false,
+-        startup_timeout: Duration::from_secs(3),
+-    };
+-
+-    let before = fs::read_to_string(manager.config_path()).expect("read config before");
+-    let api = AppRuntimeApi::from_config(&manager, &defaults).expect("build api");
+-    let client = test_client();
+-
+-    let runtime = api
+-        .start("lifecycle", client.clone())
+-        .await
+-        .expect("start runtime");
+-    assert_eq!(runtime.name, "lifecycle");
+-    assert_eq!(runtime.metadata, metadata);
+-
+-    let env_values: HashMap<OsString, OsString> = runtime.config.env.iter().cloned().collect();
+-    assert_eq!(
+-        env_values.get(&OsString::from("CODEX_HOME")),
+-        Some(&code_home.as_os_str().to_os_string())
+-    );
+-    assert_eq!(
+-        env_values.get(&OsString::from("APP_RUNTIME_LIFECYCLE")),
+-        Some(&OsString::from("runtime-env"))
+-    );
+-
+-    let thread = runtime
+-        .server
+-        .thread_start(ThreadStartParams {
+-            thread_id: None,
+-            metadata: serde_json::json!({"from": "lifecycle"}),
+-        })
+-        .await
+-        .expect("thread start");
+-    let thread_response = time::timeout(Duration::from_secs(2), thread.response)
+-        .await
+-        .expect("thread response timeout")
+-        .expect("recv thread response")
+-        .expect("thread response ok");
+-    let thread_id = thread_response
+-        .get("thread_id")
+-        .and_then(Value::as_str)
+-        .unwrap_or_default()
+-        .to_string();
+-    assert!(!thread_id.is_empty());
+-
+-    runtime.stop().await.expect("shutdown runtime");
+-
+-    let after = fs::read_to_string(manager.config_path()).expect("read config after");
+-    assert_eq!(before, after);
+-
+-    let prepared = api.prepare("lifecycle").expect("prepare after stop");
+-    assert_eq!(prepared.metadata, metadata);
+-}
+-
+-#[tokio::test]
+-async fn app_runtime_api_not_found_errors() {
+-    let api = AppRuntimeApi::new(Vec::new());
+-    match api.prepare("missing") {
+-        Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "missing"),
+-        other => panic!("unexpected result: {other:?}"),
+-    }
+-
+-    let client = test_client();
+-    match api.start("missing", client).await {
+-        Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "missing"),
+-        other => panic!("unexpected start result: {other:?}"),
+-    }
+-}
+-
+-#[tokio::test]
+-async fn app_runtime_pool_api_reuses_and_restarts_stdio() {
+-    let (config_dir, manager) = temp_config_manager();
+-    let (_server_dir, server_path) = write_fake_app_server();
+-    let code_home = config_dir.path().join("app-pool-home");
+-
+-    let mut env_map = BTreeMap::new();
+-    env_map.insert("APP_POOL_ENV".into(), "runtime".into());
+-
+-    let metadata = serde_json::json!({"resume_thread": "thread-pool"});
+-    manager
+-        .add_app_runtime(AddAppRuntimeRequest {
+-            name: "pooled".into(),
+-            definition: AppRuntimeDefinition {
+-                description: Some("pooled app".into()),
+-                tags: vec!["pool".into()],
+-                env: env_map,
+-                code_home: None,
+-                current_dir: None,
+-                mirror_stdio: Some(true),
+-                startup_timeout_ms: Some(2000),
+-                binary: None,
+-                metadata: metadata.clone(),
+-            },
+-            overwrite: false,
+-        })
+-        .expect("add app runtime");
+-
+-    let defaults = StdioServerConfig {
+-        binary: server_path.clone(),
+-        code_home: Some(code_home.clone()),
+-        current_dir: None,
+-        env: vec![
+-            (OsString::from("APP_POOL_ENV"), OsString::from("default")),
+-            (OsString::from("POOL_ONLY"), OsString::from("base")),
+-        ],
+-        app_server_analytics_default_enabled: false,
+-        mirror_stdio: false,
+-        startup_timeout: Duration::from_secs(3),
+-    };
+-
+-    let before = fs::read_to_string(manager.config_path()).expect("read config before");
+-    let api = AppRuntimePoolApi::from_config(&manager, &defaults).expect("build pool api");
+-    let client = test_client();
+-
+-    let available = api.available();
+-    assert_eq!(available.len(), 1);
+-    let pooled_summary = &available[0];
+-    assert_eq!(pooled_summary.name, "pooled");
+-    assert_eq!(pooled_summary.metadata, metadata);
+-
+-    let launcher = api.launcher("pooled").expect("pooled launcher");
+-    assert_eq!(launcher.description.as_deref(), Some("pooled app"));
+-    assert_eq!(launcher.metadata, metadata);
+-
+-    let launcher_config = launcher.config.clone();
+-    assert_eq!(launcher_config.binary, server_path);
+-    assert_eq!(
+-        launcher_config.code_home.as_deref(),
+-        Some(code_home.as_path())
+-    );
+-    assert_eq!(launcher_config.startup_timeout, Duration::from_secs(2));
+-
+-    let launcher_env: HashMap<OsString, OsString> = launcher_config.env.into_iter().collect();
+-    assert_eq!(
+-        launcher_env.get(&OsString::from("CODEX_HOME")),
+-        Some(&code_home.as_os_str().to_os_string())
+-    );
+-    assert_eq!(
+-        launcher_env.get(&OsString::from("POOL_ONLY")),
+-        Some(&OsString::from("base"))
+-    );
+-    assert_eq!(
+-        launcher_env.get(&OsString::from("APP_POOL_ENV")),
+-        Some(&OsString::from("runtime"))
+-    );
+-
+-    let stdio_config = api
+-        .stdio_config("pooled")
+-        .expect("pooled stdio config without starting");
+-    assert_eq!(stdio_config.binary, server_path);
+-    assert_eq!(stdio_config.code_home.as_deref(), Some(code_home.as_path()));
+-    let stdio_env: HashMap<OsString, OsString> = stdio_config.env.into_iter().collect();
+-    assert_eq!(
+-        stdio_env.get(&OsString::from("POOL_ONLY")),
+-        Some(&OsString::from("base"))
+-    );
+-    assert_eq!(
+-        stdio_env.get(&OsString::from("CODEX_HOME")),
+-        Some(&code_home.as_os_str().to_os_string())
+-    );
+-    assert_eq!(
+-        stdio_env.get(&OsString::from("APP_POOL_ENV")),
+-        Some(&OsString::from("runtime"))
+-    );
+-
+-    assert!(api.running().await.is_empty());
+-
+-    let runtime = api
+-        .start("pooled", client.clone())
+-        .await
+-        .expect("start pooled runtime");
+-    assert_eq!(runtime.name, "pooled");
+-    assert_eq!(runtime.metadata, metadata);
+-
+-    let env_values: HashMap<OsString, OsString> = runtime.config.env.iter().cloned().collect();
+-    assert_eq!(
+-        env_values.get(&OsString::from("CODEX_HOME")),
+-        Some(&code_home.as_os_str().to_os_string())
+-    );
+-    assert_eq!(
+-        env_values.get(&OsString::from("POOL_ONLY")),
+-        Some(&OsString::from("base"))
+-    );
+-    assert_eq!(
+-        env_values.get(&OsString::from("APP_POOL_ENV")),
+-        Some(&OsString::from("runtime"))
+-    );
+-
+-    let thread = runtime
+-        .server
+-        .thread_start(ThreadStartParams {
+-            thread_id: None,
+-            metadata: serde_json::json!({"from": "pool"}),
+-        })
+-        .await
+-        .expect("thread start");
+-    let response = time::timeout(Duration::from_secs(2), thread.response)
+-        .await
+-        .expect("thread response timeout")
+-        .expect("recv thread response")
+-        .expect("thread response ok");
+-    let thread_id = response
+-        .get("thread_id")
+-        .and_then(Value::as_str)
+-        .unwrap_or_default()
+-        .to_string();
+-    assert!(!thread_id.is_empty());
+-
+-    let running = api.running().await;
+-    let running_summary = running
+-        .iter()
+-        .find(|summary| summary.name == "pooled")
+-        .expect("running summary present");
+-    assert_eq!(running_summary.metadata, metadata);
+-
+-    let reused = api
+-        .start("pooled", client.clone())
+-        .await
+-        .expect("reuse pooled runtime");
+-    assert!(Arc::ptr_eq(&runtime, &reused));
+-
+-    api.stop("pooled").await.expect("stop pooled runtime");
+-    match api.stop("pooled").await {
+-        Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "pooled"),
+-        other => panic!("expected not found on second stop, got {other:?}"),
+-    }
+-
+-    assert!(api.running().await.is_empty());
+-
+-    let restarted = api
+-        .start("pooled", client)
+-        .await
+-        .expect("restart pooled runtime");
+-    assert!(!Arc::ptr_eq(&runtime, &restarted));
+-    assert_eq!(restarted.metadata, metadata);
+-
+-    let prepared = api.prepare("pooled").expect("prepare after restart");
+-    assert_eq!(prepared.metadata, metadata);
+-
+-    let after = fs::read_to_string(manager.config_path()).expect("read config after");
+-    assert_eq!(before, after);
+-}
+-
+-#[tokio::test]
+-async fn app_runtime_pool_api_stop_all_shuts_down_runtimes() {
+-    let (config_dir, manager) = temp_config_manager();
+-    let (_server_dir, server_path) = write_fake_app_server();
+-    let code_home = config_dir.path().join("app-pool-stop-home");
+-
+-    let alpha_metadata = serde_json::json!({"resume_thread": "alpha"});
+-    manager
+-        .add_app_runtime(AddAppRuntimeRequest {
+-            name: "alpha".into(),
+-            definition: AppRuntimeDefinition {
+-                description: Some("alpha runtime".into()),
+-                tags: vec!["pool".into()],
+-                env: BTreeMap::new(),
+-                code_home: None,
+-                current_dir: None,
+-                mirror_stdio: Some(false),
+-                startup_timeout_ms: Some(2000),
+-                binary: None,
+-                metadata: alpha_metadata.clone(),
+-            },
+-            overwrite: false,
+-        })
+-        .expect("add alpha runtime");
+-
+-    let beta_metadata = serde_json::json!({"resume_thread": "beta"});
+-    manager
+-        .add_app_runtime(AddAppRuntimeRequest {
+-            name: "beta".into(),
+-            definition: AppRuntimeDefinition {
+-                description: Some("beta runtime".into()),
+-                tags: vec!["pool".into()],
+-                env: BTreeMap::new(),
+-                code_home: None,
+-                current_dir: None,
+-                mirror_stdio: Some(false),
+-                startup_timeout_ms: Some(2000),
+-                binary: None,
+-                metadata: beta_metadata.clone(),
+-            },
+-            overwrite: false,
+-        })
+-        .expect("add beta runtime");
+-
+-    let defaults = StdioServerConfig {
+-        binary: server_path.clone(),
+-        code_home: Some(code_home.clone()),
+-        current_dir: None,
+-        env: Vec::new(),
+-        app_server_analytics_default_enabled: false,
+-        mirror_stdio: false,
+-        startup_timeout: Duration::from_secs(3),
+-    };
+-
+-    let before = fs::read_to_string(manager.config_path()).expect("read config before");
+-    let api = AppRuntimePoolApi::from_config(&manager, &defaults).expect("build pool api");
+-    let client = test_client();
+-
+-    assert!(api.running().await.is_empty());
+-
+-    let alpha = api
+-        .start("alpha", client.clone())
+-        .await
+-        .expect("start alpha runtime");
+-    let beta = api
+-        .start("beta", client.clone())
+-        .await
+-        .expect("start beta runtime");
+-
+-    assert_eq!(alpha.metadata, alpha_metadata);
+-    assert_eq!(beta.metadata, beta_metadata);
+-
+-    let mut running = api.running().await;
+-    running.sort_by(|a, b| a.name.cmp(&b.name));
+-    assert_eq!(running.len(), 2);
+-    assert_eq!(running[0].name, "alpha");
+-    assert_eq!(running[0].metadata, alpha_metadata);
+-    assert_eq!(running[1].name, "beta");
+-    assert_eq!(running[1].metadata, beta_metadata);
+-
+-    let alpha_thread = alpha
+-        .server
+-        .thread_start(ThreadStartParams {
+-            thread_id: None,
+-            metadata: serde_json::json!({"from": "alpha"}),
+-        })
+-        .await
+-        .expect("alpha thread start");
+-    let _ = time::timeout(Duration::from_secs(2), alpha_thread.response)
+-        .await
+-        .expect("alpha thread response timeout")
+-        .expect("alpha response recv")
+-        .expect("alpha ok");
+-
+-    api.stop_all().await.expect("stop all runtimes");
+-    assert!(api.running().await.is_empty());
+-
+-    let restarted_alpha = api
+-        .start("alpha", client.clone())
+-        .await
+-        .expect("restart alpha");
+-    assert!(!Arc::ptr_eq(&alpha, &restarted_alpha));
+-    assert_eq!(restarted_alpha.metadata, alpha_metadata);
+-
+-    let restarted_beta = api.start("beta", client).await.expect("restart beta");
+-    assert!(!Arc::ptr_eq(&beta, &restarted_beta));
+-    assert_eq!(restarted_beta.metadata, beta_metadata);
+-
+-    let prepared_alpha = api.prepare("alpha").expect("prepare alpha");
+-    assert_eq!(prepared_alpha.metadata, alpha_metadata);
+-    let prepared_beta = api.prepare("beta").expect("prepare beta");
+-    assert_eq!(prepared_beta.metadata, beta_metadata);
+-
+-    let after = fs::read_to_string(manager.config_path()).expect("read config after");
+-    assert_eq!(before, after);
+-}
+-
+-#[tokio::test]
+-async fn runtime_manager_starts_and_stops_stdio() {
+-    let (_dir, script) = write_env_probe_server("MCP_RUNTIME_ENV_E8");
+-    let code_home = tempfile::tempdir().expect("code_home");
+-
+-    let defaults = StdioServerConfig {
+-        binary: PathBuf::from("codex"),
+-        code_home: Some(code_home.path().to_path_buf()),
+-        current_dir: None,
+-        env: vec![(
+-            OsString::from("MCP_RUNTIME_ENV_E8"),
+-            OsString::from("manager-ok"),
+-        )],
+-        app_server_analytics_default_enabled: false,
+-        mirror_stdio: false,
+-        startup_timeout: Duration::from_secs(5),
+-    };
+-
+-    let runtime = McpRuntimeServer {
+-        name: "env-probe".into(),
+-        transport: McpRuntimeTransport::Stdio(StdioServerDefinition {
+-            command: script.to_string_lossy().to_string(),
+-            args: Vec::new(),
+-            env: BTreeMap::new(),
+-            timeout_ms: Some(1500),
+-        }),
+-        description: None,
+-        tags: vec!["local".into()],
+-        tools: Some(McpToolConfig {
+-            enabled: vec!["tool-x".into()],
+-            disabled: vec![],
+-        }),
+-    };
+-
+-    let launcher = runtime.into_launcher(&defaults);
+-    let manager = McpRuntimeManager::new(vec![launcher]);
+-
+-    let mut handle = match manager.prepare("env-probe").expect("prepare stdio") {
+-        McpRuntimeHandle::Stdio(handle) => handle,
+-        other => panic!("expected stdio handle, got {other:?}"),
+-    };
+-
+-    let mut reader = BufReader::new(handle.stdout_mut());
+-    let mut line = String::new();
+-    let _ = time::timeout(Duration::from_secs(2), reader.read_line(&mut line))
+-        .await
+-        .expect("read timeout")
+-        .expect("read env line");
+-    assert_eq!(line.trim(), "manager-ok");
+-
+-    let tools = handle.tools().expect("tool hints");
+-    assert_eq!(tools.enabled, vec!["tool-x".to_string()]);
+-
+-    handle.stop().await.expect("stop server");
+-}
+-
+-#[test]
+-fn runtime_manager_propagates_tool_hints_for_http() {
+-    let env_var = "MCP_HTTP_TOKEN_E8_HINTS";
+-    env::set_var(env_var, "token-hints");
+-
+-    let mut http = StreamableHttpDefinition {
+-        url: "https://example.test/hints".into(),
+-        headers: BTreeMap::new(),
+-        bearer_env_var: Some(env_var.to_string()),
+-        connect_timeout_ms: Some(1200),
+-        request_timeout_ms: Some(2400),
+-    };
+-    http.headers.insert("X-Test".into(), "true".into());
+-
+-    let runtime = McpRuntimeServer::from_definition(
+-        "remote-http",
+-        McpServerDefinition {
+-            transport: McpTransport::StreamableHttp(http),
+-            description: Some("http runtime".into()),
+-            tags: vec!["http".into()],
+-            tools: Some(McpToolConfig {
+-                enabled: vec!["alpha".into()],
+-                disabled: vec!["beta".into()],
+-            }),
+-        },
+-    );
+-
+-    let defaults = StdioServerConfig {
+-        binary: PathBuf::from("codex"),
+-        code_home: None,
+-        current_dir: None,
+-        env: Vec::new(),
+-        app_server_analytics_default_enabled: false,
+-        mirror_stdio: false,
+-        startup_timeout: Duration::from_secs(2),
+-    };
+-
+-    let launcher = runtime.into_launcher(&defaults);
+-    let manager = McpRuntimeManager::new(vec![launcher]);
+-
+-    let available = manager.available();
+-    assert_eq!(available.len(), 1);
+-    let summary = &available[0];
+-    assert_eq!(summary.name, "remote-http");
+-    assert_eq!(
+-        summary.transport,
+-        McpRuntimeSummaryTransport::StreamableHttp
+-    );
+-    let summary_tools = summary.tools.as_ref().expect("tool hints present");
+-    assert_eq!(summary_tools.enabled, vec!["alpha".to_string()]);
+-    assert_eq!(summary_tools.disabled, vec!["beta".to_string()]);
+-
+-    match manager.prepare("remote-http").expect("prepare http") {
+-        McpRuntimeHandle::StreamableHttp(http_handle) => {
+-            let tools = http_handle.tools.as_ref().expect("tool hints on handle");
+-            assert_eq!(tools.enabled, vec!["alpha".to_string()]);
+-            assert_eq!(tools.disabled, vec!["beta".to_string()]);
+-            assert_eq!(
+-                http_handle.connector.bearer_token.as_deref(),
+-                Some("token-hints")
+-            );
+-        }
+-        other => panic!("expected http handle, got {other:?}"),
+-    }
+-
+-    env::remove_var(env_var);
+-}
+-
+-#[test]
+-fn http_connector_retrieval_is_non_destructive() {
+-    let env_var = "MCP_HTTP_TOKEN_E8_REUSE";
+-    env::set_var(env_var, "token-reuse");
+-
+-    let runtime = McpRuntimeServer::from_definition(
+-        "remote-reuse",
+-        McpServerDefinition {
+-            transport: McpTransport::StreamableHttp(StreamableHttpDefinition {
+-                url: "https://example.test/reuse".into(),
+-                headers: BTreeMap::new(),
+-                bearer_env_var: Some(env_var.to_string()),
+-                connect_timeout_ms: Some(1500),
+-                request_timeout_ms: Some(3200),
+-            }),
+-            description: None,
+-            tags: vec!["http".into()],
+-            tools: Some(McpToolConfig {
+-                enabled: vec!["one".into()],
+-                disabled: vec![],
+-            }),
+-        },
+-    );
+-
+-    let defaults = StdioServerConfig {
+-        binary: PathBuf::from("codex"),
+-        code_home: None,
+-        current_dir: None,
+-        env: Vec::new(),
+-        app_server_analytics_default_enabled: false,
+-        mirror_stdio: false,
+-        startup_timeout: Duration::from_secs(2),
+-    };
+-
+-    let launcher = runtime.into_launcher(&defaults);
+-    let manager = McpRuntimeManager::new(vec![launcher]);
+-
+-    let first = manager.prepare("remote-reuse").expect("first prepare");
+-    let second = manager.prepare("remote-reuse").expect("second prepare");
+-
+-    let first_token = match first {
+-        McpRuntimeHandle::StreamableHttp(handle) => handle.connector.bearer_token,
+-        other => panic!("expected http handle, got {other:?}"),
+-    };
+-    let second_token = match second {
+-        McpRuntimeHandle::StreamableHttp(handle) => handle.connector.bearer_token,
+-        other => panic!("expected http handle, got {other:?}"),
+-    };
+-
+-    assert_eq!(first_token.as_deref(), Some("token-reuse"));
+-    assert_eq!(second_token.as_deref(), Some("token-reuse"));
+-
+-    let summary = manager
+-        .available()
+-        .into_iter()
+-        .find(|s| s.name == "remote-reuse")
+-        .expect("summary present");
+-    assert_eq!(
+-        summary.transport,
+-        McpRuntimeSummaryTransport::StreamableHttp
+-    );
+-    let tools = summary.tools.as_ref().expect("tool hints preserved");
+-    assert_eq!(tools.enabled, vec!["one".to_string()]);
+-
+-    env::remove_var(env_var);
+-}
++mod app_runtime_api;
++mod app_runtime_pool_api;
++mod runtime_api;
++mod runtime_manager;
+diff --git a/crates/codex/src/mcp/tests_runtime_app/app_runtime_api.rs b/crates/codex/src/mcp/tests_runtime_app/app_runtime_api.rs
+new file mode 100644
+index 0000000..2e71f15
+--- /dev/null
++++ b/crates/codex/src/mcp/tests_runtime_app/app_runtime_api.rs
+@@ -0,0 +1,258 @@
++use super::super::test_support::{prelude::*, *};
++use super::super::*;
++
++#[test]
++fn app_runtime_api_lists_and_merges_without_writes() {
++    let (dir, manager) = temp_config_manager();
++
++    let alpha_home = dir.path().join("app-home-a");
++    let alpha_cwd = dir.path().join("app-cwd-a");
++    let mut alpha_env = BTreeMap::new();
++    alpha_env.insert("APP_RUNTIME_ENV".into(), "alpha".into());
++    alpha_env.insert("OVERRIDE_ME".into(), "runtime".into());
++
++    manager
++        .add_app_runtime(AddAppRuntimeRequest {
++            name: "alpha".into(),
++            definition: AppRuntimeDefinition {
++                description: Some("local app".into()),
++                tags: vec!["local".into()],
++                env: alpha_env,
++                code_home: Some(alpha_home.clone()),
++                current_dir: Some(alpha_cwd.clone()),
++                mirror_stdio: Some(true),
++                startup_timeout_ms: Some(4200),
++                binary: Some(PathBuf::from("/bin/app-alpha")),
++                metadata: serde_json::json!({"thread": "t-alpha"}),
++            },
++            overwrite: false,
++        })
++        .expect("add alpha app runtime");
++
++    let mut beta_env = BTreeMap::new();
++    beta_env.insert("APP_RUNTIME_ENV".into(), "beta".into());
++
++    manager
++        .add_app_runtime(AddAppRuntimeRequest {
++            name: "beta".into(),
++            definition: AppRuntimeDefinition {
++                description: None,
++                tags: vec!["default".into()],
++                env: beta_env,
++                code_home: None,
++                current_dir: None,
++                mirror_stdio: None,
++                startup_timeout_ms: None,
++                binary: None,
++                metadata: serde_json::json!({"resume": true}),
++            },
++            overwrite: false,
++        })
++        .expect("add beta app runtime");
++
++    let before = fs::read_to_string(manager.config_path()).expect("read config before");
++
++    let default_home = dir.path().join("default-home");
++    let default_cwd = dir.path().join("default-cwd");
++    let defaults = StdioServerConfig {
++        binary: PathBuf::from("codex"),
++        code_home: Some(default_home.clone()),
++        current_dir: Some(default_cwd.clone()),
++        env: vec![
++            (OsString::from("DEFAULT_ONLY"), OsString::from("base")),
++            (OsString::from("OVERRIDE_ME"), OsString::from("base")),
++        ],
++        app_server_analytics_default_enabled: false,
++        mirror_stdio: false,
++        startup_timeout: Duration::from_secs(3),
++    };
++
++    let api = AppRuntimeApi::from_config(&manager, &defaults).expect("app runtime api");
++
++    let available = api.available();
++    assert_eq!(available.len(), 2);
++
++    let alpha_summary = available
++        .iter()
++        .find(|entry| entry.name == "alpha")
++        .expect("alpha summary");
++    assert_eq!(alpha_summary.description.as_deref(), Some("local app"));
++    assert_eq!(alpha_summary.tags, vec!["local".to_string()]);
++    assert_eq!(
++        alpha_summary.metadata,
++        serde_json::json!({"thread": "t-alpha"})
++    );
++
++    let alpha = api.prepare("alpha").expect("prepare alpha");
++    assert_eq!(alpha.name, "alpha");
++    assert_eq!(alpha.metadata, serde_json::json!({"thread": "t-alpha"}));
++    assert_eq!(alpha.config.binary, PathBuf::from("/bin/app-alpha"));
++    assert_eq!(
++        alpha.config.code_home.as_deref(),
++        Some(alpha_home.as_path())
++    );
++    assert_eq!(
++        alpha.config.current_dir.as_deref(),
++        Some(alpha_cwd.as_path())
++    );
++    assert!(alpha.config.mirror_stdio);
++    assert_eq!(alpha.config.startup_timeout, Duration::from_millis(4200));
++
++    let alpha_env: HashMap<OsString, OsString> = alpha.config.env.into_iter().collect();
++    assert_eq!(
++        alpha_env.get(&OsString::from("CODEX_HOME")),
++        Some(&alpha_home.as_os_str().to_os_string())
++    );
++    assert_eq!(
++        alpha_env.get(&OsString::from("DEFAULT_ONLY")),
++        Some(&OsString::from("base"))
++    );
++    assert_eq!(
++        alpha_env.get(&OsString::from("OVERRIDE_ME")),
++        Some(&OsString::from("runtime"))
++    );
++    assert_eq!(
++        alpha_env.get(&OsString::from("APP_RUNTIME_ENV")),
++        Some(&OsString::from("alpha"))
++    );
++
++    let beta = api.stdio_config("beta").expect("beta config");
++    assert_eq!(beta.binary, PathBuf::from("codex"));
++    assert_eq!(beta.code_home.as_deref(), Some(default_home.as_path()));
++    assert_eq!(beta.current_dir.as_deref(), Some(default_cwd.as_path()));
++    assert!(!beta.mirror_stdio);
++    assert_eq!(beta.startup_timeout, Duration::from_secs(3));
++
++    let beta_env: HashMap<OsString, OsString> = beta.env.into_iter().collect();
++    assert_eq!(
++        beta_env.get(&OsString::from("CODEX_HOME")),
++        Some(&default_home.as_os_str().to_os_string())
++    );
++    assert_eq!(
++        beta_env.get(&OsString::from("DEFAULT_ONLY")),
++        Some(&OsString::from("base"))
++    );
++    assert_eq!(
++        beta_env.get(&OsString::from("OVERRIDE_ME")),
++        Some(&OsString::from("base"))
++    );
++    assert_eq!(
++        beta_env.get(&OsString::from("APP_RUNTIME_ENV")),
++        Some(&OsString::from("beta"))
++    );
++
++    let beta_summary = available
++        .iter()
++        .find(|entry| entry.name == "beta")
++        .expect("beta summary");
++    assert_eq!(beta_summary.metadata, serde_json::json!({"resume": true}));
++
++    let after = fs::read_to_string(manager.config_path()).expect("read config after");
++    assert_eq!(before, after);
++}
++
++#[tokio::test]
++async fn app_runtime_lifecycle_starts_and_stops_without_mutation() {
++    let (config_dir, manager) = temp_config_manager();
++    let (_server_dir, server_path) = write_fake_app_server();
++    let code_home = config_dir.path().join("app-lifecycle-home");
++
++    let mut env_map = BTreeMap::new();
++    env_map.insert("APP_RUNTIME_LIFECYCLE".into(), "runtime-env".into());
++
++    let metadata = serde_json::json!({"resume_thread": "thread-lifecycle"});
++    manager
++        .add_app_runtime(AddAppRuntimeRequest {
++            name: "lifecycle".into(),
++            definition: AppRuntimeDefinition {
++                description: Some("app lifecycle".into()),
++                tags: vec!["app".into()],
++                env: env_map,
++                code_home: None,
++                current_dir: None,
++                mirror_stdio: Some(true),
++                startup_timeout_ms: Some(1500),
++                binary: None,
++                metadata: metadata.clone(),
++            },
++            overwrite: false,
++        })
++        .expect("add app runtime");
++
++    let defaults = StdioServerConfig {
++        binary: server_path.clone(),
++        code_home: Some(code_home.clone()),
++        current_dir: None,
++        env: vec![(
++            OsString::from("APP_RUNTIME_LIFECYCLE"),
++            OsString::from("default"),
++        )],
++        app_server_analytics_default_enabled: false,
++        mirror_stdio: false,
++        startup_timeout: Duration::from_secs(3),
++    };
++
++    let before = fs::read_to_string(manager.config_path()).expect("read config before");
++    let api = AppRuntimeApi::from_config(&manager, &defaults).expect("build api");
++    let client = test_client();
++
++    let runtime = api
++        .start("lifecycle", client.clone())
++        .await
++        .expect("start runtime");
++    assert_eq!(runtime.name, "lifecycle");
++    assert_eq!(runtime.metadata, metadata);
++
++    let env_values: HashMap<OsString, OsString> = runtime.config.env.iter().cloned().collect();
++    assert_eq!(
++        env_values.get(&OsString::from("CODEX_HOME")),
++        Some(&code_home.as_os_str().to_os_string())
++    );
++    assert_eq!(
++        env_values.get(&OsString::from("APP_RUNTIME_LIFECYCLE")),
++        Some(&OsString::from("runtime-env"))
++    );
++
++    let thread = runtime
++        .server
++        .thread_start(ThreadStartParams {
++            thread_id: None,
++            metadata: serde_json::json!({"from": "lifecycle"}),
++        })
++        .await
++        .expect("thread start");
++    let thread_response = time::timeout(Duration::from_secs(2), thread.response)
++        .await
++        .expect("thread response timeout")
++        .expect("recv thread response")
++        .expect("thread response ok");
++    let thread_id = thread_response
++        .get("thread_id")
++        .and_then(Value::as_str)
++        .unwrap_or_default()
++        .to_string();
++    assert!(!thread_id.is_empty());
++
++    runtime.stop().await.expect("shutdown runtime");
++
++    let after = fs::read_to_string(manager.config_path()).expect("read config after");
++    assert_eq!(before, after);
++
++    let prepared = api.prepare("lifecycle").expect("prepare after stop");
++    assert_eq!(prepared.metadata, metadata);
++}
++
++#[tokio::test]
++async fn app_runtime_api_not_found_errors() {
++    let api = AppRuntimeApi::new(Vec::new());
++    match api.prepare("missing") {
++        Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "missing"),
++        other => panic!("unexpected result: {other:?}"),
++    }
++
++    let client = test_client();
++    match api.start("missing", client).await {
++        Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "missing"),
++        other => panic!("unexpected start result: {other:?}"),
++    }
++}
+diff --git a/crates/codex/src/mcp/tests_runtime_app/app_runtime_pool_api.rs b/crates/codex/src/mcp/tests_runtime_app/app_runtime_pool_api.rs
+new file mode 100644
+index 0000000..c22154d
+--- /dev/null
++++ b/crates/codex/src/mcp/tests_runtime_app/app_runtime_pool_api.rs
+@@ -0,0 +1,293 @@
++use super::super::test_support::{prelude::*, *};
++use super::super::*;
++
++#[tokio::test]
++async fn app_runtime_pool_api_reuses_and_restarts_stdio() {
++    let (config_dir, manager) = temp_config_manager();
++    let (_server_dir, server_path) = write_fake_app_server();
++    let code_home = config_dir.path().join("app-pool-home");
++
++    let mut env_map = BTreeMap::new();
++    env_map.insert("APP_POOL_ENV".into(), "runtime".into());
++
++    let metadata = serde_json::json!({"resume_thread": "thread-pool"});
++    manager
++        .add_app_runtime(AddAppRuntimeRequest {
++            name: "pooled".into(),
++            definition: AppRuntimeDefinition {
++                description: Some("pooled app".into()),
++                tags: vec!["pool".into()],
++                env: env_map,
++                code_home: None,
++                current_dir: None,
++                mirror_stdio: Some(true),
++                startup_timeout_ms: Some(2000),
++                binary: None,
++                metadata: metadata.clone(),
++            },
++            overwrite: false,
++        })
++        .expect("add app runtime");
++
++    let defaults = StdioServerConfig {
++        binary: server_path.clone(),
++        code_home: Some(code_home.clone()),
++        current_dir: None,
++        env: vec![
++            (OsString::from("APP_POOL_ENV"), OsString::from("default")),
++            (OsString::from("POOL_ONLY"), OsString::from("base")),
++        ],
++        app_server_analytics_default_enabled: false,
++        mirror_stdio: false,
++        startup_timeout: Duration::from_secs(3),
++    };
++
++    let before = fs::read_to_string(manager.config_path()).expect("read config before");
++    let api = AppRuntimePoolApi::from_config(&manager, &defaults).expect("build pool api");
++    let client = test_client();
++
++    let available = api.available();
++    assert_eq!(available.len(), 1);
++    let pooled_summary = &available[0];
++    assert_eq!(pooled_summary.name, "pooled");
++    assert_eq!(pooled_summary.metadata, metadata);
++
++    let launcher = api.launcher("pooled").expect("pooled launcher");
++    assert_eq!(launcher.description.as_deref(), Some("pooled app"));
++    assert_eq!(launcher.metadata, metadata);
++
++    let launcher_config = launcher.config.clone();
++    assert_eq!(launcher_config.binary, server_path);
++    assert_eq!(
++        launcher_config.code_home.as_deref(),
++        Some(code_home.as_path())
++    );
++    assert_eq!(launcher_config.startup_timeout, Duration::from_secs(2));
++
++    let launcher_env: HashMap<OsString, OsString> = launcher_config.env.into_iter().collect();
++    assert_eq!(
++        launcher_env.get(&OsString::from("CODEX_HOME")),
++        Some(&code_home.as_os_str().to_os_string())
++    );
++    assert_eq!(
++        launcher_env.get(&OsString::from("POOL_ONLY")),
++        Some(&OsString::from("base"))
++    );
++    assert_eq!(
++        launcher_env.get(&OsString::from("APP_POOL_ENV")),
++        Some(&OsString::from("runtime"))
++    );
++
++    let stdio_config = api
++        .stdio_config("pooled")
++        .expect("pooled stdio config without starting");
++    assert_eq!(stdio_config.binary, server_path);
++    assert_eq!(stdio_config.code_home.as_deref(), Some(code_home.as_path()));
++    let stdio_env: HashMap<OsString, OsString> = stdio_config.env.into_iter().collect();
++    assert_eq!(
++        stdio_env.get(&OsString::from("POOL_ONLY")),
++        Some(&OsString::from("base"))
++    );
++    assert_eq!(
++        stdio_env.get(&OsString::from("CODEX_HOME")),
++        Some(&code_home.as_os_str().to_os_string())
++    );
++    assert_eq!(
++        stdio_env.get(&OsString::from("APP_POOL_ENV")),
++        Some(&OsString::from("runtime"))
++    );
++
++    assert!(api.running().await.is_empty());
++
++    let runtime = api
++        .start("pooled", client.clone())
++        .await
++        .expect("start pooled runtime");
++    assert_eq!(runtime.name, "pooled");
++    assert_eq!(runtime.metadata, metadata);
++
++    let env_values: HashMap<OsString, OsString> = runtime.config.env.iter().cloned().collect();
++    assert_eq!(
++        env_values.get(&OsString::from("CODEX_HOME")),
++        Some(&code_home.as_os_str().to_os_string())
++    );
++    assert_eq!(
++        env_values.get(&OsString::from("POOL_ONLY")),
++        Some(&OsString::from("base"))
++    );
++    assert_eq!(
++        env_values.get(&OsString::from("APP_POOL_ENV")),
++        Some(&OsString::from("runtime"))
++    );
++
++    let thread = runtime
++        .server
++        .thread_start(ThreadStartParams {
++            thread_id: None,
++            metadata: serde_json::json!({"from": "pool"}),
++        })
++        .await
++        .expect("thread start");
++    let response = time::timeout(Duration::from_secs(2), thread.response)
++        .await
++        .expect("thread response timeout")
++        .expect("recv thread response")
++        .expect("thread response ok");
++    let thread_id = response
++        .get("thread_id")
++        .and_then(Value::as_str)
++        .unwrap_or_default()
++        .to_string();
++    assert!(!thread_id.is_empty());
++
++    let running = api.running().await;
++    let running_summary = running
++        .iter()
++        .find(|summary| summary.name == "pooled")
++        .expect("running summary present");
++    assert_eq!(running_summary.metadata, metadata);
++
++    let reused = api
++        .start("pooled", client.clone())
++        .await
++        .expect("reuse pooled runtime");
++    assert!(Arc::ptr_eq(&runtime, &reused));
++
++    api.stop("pooled").await.expect("stop pooled runtime");
++    match api.stop("pooled").await {
++        Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "pooled"),
++        other => panic!("expected not found on second stop, got {other:?}"),
++    }
++
++    assert!(api.running().await.is_empty());
++
++    let restarted = api
++        .start("pooled", client)
++        .await
++        .expect("restart pooled runtime");
++    assert!(!Arc::ptr_eq(&runtime, &restarted));
++    assert_eq!(restarted.metadata, metadata);
++
++    let prepared = api.prepare("pooled").expect("prepare after restart");
++    assert_eq!(prepared.metadata, metadata);
++
++    let after = fs::read_to_string(manager.config_path()).expect("read config after");
++    assert_eq!(before, after);
++}
++
++#[tokio::test]
++async fn app_runtime_pool_api_stop_all_shuts_down_runtimes() {
++    let (config_dir, manager) = temp_config_manager();
++    let (_server_dir, server_path) = write_fake_app_server();
++    let code_home = config_dir.path().join("app-pool-stop-home");
++
++    let alpha_metadata = serde_json::json!({"resume_thread": "alpha"});
++    manager
++        .add_app_runtime(AddAppRuntimeRequest {
++            name: "alpha".into(),
++            definition: AppRuntimeDefinition {
++                description: Some("alpha runtime".into()),
++                tags: vec!["pool".into()],
++                env: BTreeMap::new(),
++                code_home: None,
++                current_dir: None,
++                mirror_stdio: Some(false),
++                startup_timeout_ms: Some(2000),
++                binary: None,
++                metadata: alpha_metadata.clone(),
++            },
++            overwrite: false,
++        })
++        .expect("add alpha runtime");
++
++    let beta_metadata = serde_json::json!({"resume_thread": "beta"});
++    manager
++        .add_app_runtime(AddAppRuntimeRequest {
++            name: "beta".into(),
++            definition: AppRuntimeDefinition {
++                description: Some("beta runtime".into()),
++                tags: vec!["pool".into()],
++                env: BTreeMap::new(),
++                code_home: None,
++                current_dir: None,
++                mirror_stdio: Some(false),
++                startup_timeout_ms: Some(2000),
++                binary: None,
++                metadata: beta_metadata.clone(),
++            },
++            overwrite: false,
++        })
++        .expect("add beta runtime");
++
++    let defaults = StdioServerConfig {
++        binary: server_path.clone(),
++        code_home: Some(code_home.clone()),
++        current_dir: None,
++        env: Vec::new(),
++        app_server_analytics_default_enabled: false,
++        mirror_stdio: false,
++        startup_timeout: Duration::from_secs(3),
++    };
++
++    let before = fs::read_to_string(manager.config_path()).expect("read config before");
++    let api = AppRuntimePoolApi::from_config(&manager, &defaults).expect("build pool api");
++    let client = test_client();
++
++    assert!(api.running().await.is_empty());
++
++    let alpha = api
++        .start("alpha", client.clone())
++        .await
++        .expect("start alpha runtime");
++    let beta = api
++        .start("beta", client.clone())
++        .await
++        .expect("start beta runtime");
++
++    assert_eq!(alpha.metadata, alpha_metadata);
++    assert_eq!(beta.metadata, beta_metadata);
++
++    let mut running = api.running().await;
++    running.sort_by(|a, b| a.name.cmp(&b.name));
++    assert_eq!(running.len(), 2);
++    assert_eq!(running[0].name, "alpha");
++    assert_eq!(running[0].metadata, alpha_metadata);
++    assert_eq!(running[1].name, "beta");
++    assert_eq!(running[1].metadata, beta_metadata);
++
++    let alpha_thread = alpha
++        .server
++        .thread_start(ThreadStartParams {
++            thread_id: None,
++            metadata: serde_json::json!({"from": "alpha"}),
++        })
++        .await
++        .expect("alpha thread start");
++    let _ = time::timeout(Duration::from_secs(2), alpha_thread.response)
++        .await
++        .expect("alpha thread response timeout")
++        .expect("alpha response recv")
++        .expect("alpha ok");
++
++    api.stop_all().await.expect("stop all runtimes");
++    assert!(api.running().await.is_empty());
++
++    let restarted_alpha = api
++        .start("alpha", client.clone())
++        .await
++        .expect("restart alpha");
++    assert!(!Arc::ptr_eq(&alpha, &restarted_alpha));
++    assert_eq!(restarted_alpha.metadata, alpha_metadata);
++
++    let restarted_beta = api.start("beta", client).await.expect("restart beta");
++    assert!(!Arc::ptr_eq(&beta, &restarted_beta));
++    assert_eq!(restarted_beta.metadata, beta_metadata);
++
++    let prepared_alpha = api.prepare("alpha").expect("prepare alpha");
++    assert_eq!(prepared_alpha.metadata, alpha_metadata);
++    let prepared_beta = api.prepare("beta").expect("prepare beta");
++    assert_eq!(prepared_beta.metadata, beta_metadata);
++
++    let after = fs::read_to_string(manager.config_path()).expect("read config after");
++    assert_eq!(before, after);
++}
+diff --git a/crates/codex/src/mcp/tests_runtime_app/runtime_api.rs b/crates/codex/src/mcp/tests_runtime_app/runtime_api.rs
+new file mode 100644
+index 0000000..e4a425d
+--- /dev/null
++++ b/crates/codex/src/mcp/tests_runtime_app/runtime_api.rs
+@@ -0,0 +1,241 @@
++use super::super::test_support::{prelude::*, *};
++use super::super::*;
++
++#[test]
++fn runtime_api_lists_launchers_without_changing_config() {
++    let (dir, manager) = temp_config_manager();
++    let stdio_env_key = "MCP_RUNTIME_API_STDIO_ENV";
++    let request_env_key = "MCP_RUNTIME_API_REQUEST_ENV";
++    let http_env_key = "MCP_RUNTIME_API_HTTP_ENV";
++    env::set_var(http_env_key, "token-api");
++
++    let mut stdio = stdio_definition("runtime-api-stdio");
++    stdio.description = Some("stdio runtime".into());
++    stdio.tags = vec!["local".into()];
++    stdio.tools = Some(McpToolConfig {
++        enabled: vec!["fmt".into()],
++        disabled: vec!["lint".into()],
++    });
++    if let McpTransport::Stdio(ref mut stdio_def) = stdio.transport {
++        stdio_def.args.push("--flag".into());
++        stdio_def
++            .env
++            .insert(stdio_env_key.into(), "runtime-env".into());
++        stdio_def.timeout_ms = Some(2400);
++    }
++
++    let mut env_map = BTreeMap::new();
++    env_map.insert(request_env_key.to_string(), "injected".to_string());
++
++    manager
++        .add_server(AddServerRequest {
++            name: "local-api".into(),
++            definition: stdio,
++            overwrite: false,
++            env: env_map,
++            bearer_token: None,
++        })
++        .expect("add stdio server");
++
++    let mut http = streamable_definition("https://example.test/runtime-api", http_env_key);
++    http.description = Some("http runtime".into());
++    http.tags = vec!["remote".into()];
++    http.tools = Some(McpToolConfig {
++        enabled: vec!["alpha".into()],
++        disabled: vec!["beta".into()],
++    });
++    if let McpTransport::StreamableHttp(ref mut http_def) = http.transport {
++        http_def.headers.insert("X-Req".into(), "true".into());
++        http_def.request_timeout_ms = Some(2200);
++    }
++
++    manager
++        .add_server(AddServerRequest {
++            name: "remote-api".into(),
++            definition: http,
++            overwrite: false,
++            env: BTreeMap::new(),
++            bearer_token: None,
++        })
++        .expect("add http server");
++
++    let before = fs::read_to_string(manager.config_path()).expect("read config before");
++    let cwd = dir.path().join("cwd");
++
++    let defaults = StdioServerConfig {
++        binary: PathBuf::from("codex"),
++        code_home: Some(dir.path().to_path_buf()),
++        current_dir: Some(cwd.clone()),
++        env: vec![
++            (OsString::from("DEFAULT_ONLY"), OsString::from("default")),
++            (
++                OsString::from(request_env_key),
++                OsString::from("base-default"),
++            ),
++        ],
++        app_server_analytics_default_enabled: false,
++        mirror_stdio: true,
++        startup_timeout: Duration::from_secs(3),
++    };
++
++    let api = McpRuntimeApi::from_config(&manager, &defaults).expect("runtime api");
++
++    let available = api.available();
++    assert_eq!(available.len(), 2);
++
++    let stdio_summary = available
++        .iter()
++        .find(|entry| entry.name == "local-api")
++        .expect("stdio summary");
++    assert_eq!(stdio_summary.transport, McpRuntimeSummaryTransport::Stdio);
++    let stdio_tools = stdio_summary.tools.as_ref().expect("stdio tools");
++    assert_eq!(stdio_tools.enabled, vec!["fmt".to_string()]);
++    assert_eq!(stdio_tools.disabled, vec!["lint".to_string()]);
++
++    let stdio_launcher = api.stdio_launcher("local-api").expect("stdio launcher");
++    assert_eq!(stdio_launcher.args, vec!["--flag".to_string()]);
++    assert_eq!(stdio_launcher.timeout, Duration::from_millis(2400));
++    assert!(stdio_launcher.mirror_stdio);
++    assert_eq!(stdio_launcher.current_dir.as_deref(), Some(cwd.as_path()));
++
++    let env_map: HashMap<OsString, OsString> = stdio_launcher.env.into_iter().collect();
++    assert_eq!(
++        env_map.get(&OsString::from("CODEX_HOME")),
++        Some(&dir.path().as_os_str().to_os_string())
++    );
++    assert_eq!(
++        env_map.get(&OsString::from("DEFAULT_ONLY")),
++        Some(&OsString::from("default"))
++    );
++    assert_eq!(
++        env_map.get(&OsString::from(request_env_key)),
++        Some(&OsString::from("injected"))
++    );
++    assert_eq!(
++        env_map.get(&OsString::from(stdio_env_key)),
++        Some(&OsString::from("runtime-env"))
++    );
++
++    let http_connector = api.http_connector("remote-api").expect("http connector");
++    assert_eq!(http_connector.bearer_token.as_deref(), Some("token-api"));
++    assert_eq!(
++        http_connector
++            .headers
++            .get("Authorization")
++            .map(String::as_str),
++        Some("Bearer token-api")
++    );
++    assert_eq!(
++        http_connector.headers.get("X-Req").map(String::as_str),
++        Some("true")
++    );
++    assert_eq!(
++        http_connector.request_timeout,
++        Some(Duration::from_millis(2200))
++    );
++
++    let http_tools = available
++        .iter()
++        .find(|entry| entry.name == "remote-api")
++        .and_then(|entry| entry.tools.as_ref())
++        .expect("http tools");
++    assert_eq!(http_tools.enabled, vec!["alpha".to_string()]);
++    assert_eq!(http_tools.disabled, vec!["beta".to_string()]);
++
++    match api.stdio_launcher("remote-api") {
++        Err(McpRuntimeError::UnsupportedTransport {
++            name,
++            expected,
++            actual,
++        }) => {
++            assert_eq!(name, "remote-api");
++            assert_eq!(expected, "stdio");
++            assert_eq!(actual, "streamable_http");
++        }
++        other => panic!("unexpected result: {other:?}"),
++    }
++
++    match api.http_connector("local-api") {
++        Err(McpRuntimeError::UnsupportedTransport {
++            name,
++            expected,
++            actual,
++        }) => {
++            assert_eq!(name, "local-api");
++            assert_eq!(expected, "streamable_http");
++            assert_eq!(actual, "stdio");
++        }
++        other => panic!("unexpected http result: {other:?}"),
++    }
++
++    let after = fs::read_to_string(manager.config_path()).expect("read config after");
++    assert_eq!(before, after);
++
++    env::remove_var(http_env_key);
++    env::remove_var(request_env_key);
++}
++
++#[test]
++fn runtime_api_prepare_http_is_non_destructive() {
++    let (dir, manager) = temp_config_manager();
++    let env_var = "MCP_RUNTIME_API_PREPARE";
++    env::set_var(env_var, "prepare-token");
++
++    let mut http = streamable_definition("https://example.test/prepare", env_var);
++    http.tags = vec!["prepare".into()];
++    http.tools = Some(McpToolConfig {
++        enabled: vec!["delta".into()],
++        disabled: vec![],
++    });
++
++    manager
++        .add_server(AddServerRequest {
++            name: "prepare-http".into(),
++            definition: http,
++            overwrite: false,
++            env: BTreeMap::new(),
++            bearer_token: None,
++        })
++        .expect("add http server");
++
++    let before = fs::read_to_string(manager.config_path()).expect("read config before");
++
++    let defaults = StdioServerConfig {
++        binary: PathBuf::from("codex"),
++        code_home: Some(dir.path().to_path_buf()),
++        current_dir: None,
++        env: Vec::new(),
++        app_server_analytics_default_enabled: false,
++        mirror_stdio: false,
++        startup_timeout: Duration::from_secs(2),
++    };
++
++    let api = McpRuntimeApi::from_config(&manager, &defaults).expect("runtime api");
++    let handle = api.prepare("prepare-http").expect("prepare http");
++
++    match handle {
++        McpRuntimeHandle::StreamableHttp(http_handle) => {
++            assert_eq!(http_handle.name, "prepare-http");
++            assert_eq!(
++                http_handle.connector.bearer_token.as_deref(),
++                Some("prepare-token")
++            );
++            assert_eq!(
++                http_handle
++                    .connector
++                    .headers
++                    .get("Authorization")
++                    .map(String::as_str),
++                Some("Bearer prepare-token")
++            );
++            let tools = http_handle.tools.expect("tool hints");
++            assert_eq!(tools.enabled, vec!["delta".to_string()]);
++        }
++        other => panic!("expected http handle, got {other:?}"),
++    }
++
++    let after = fs::read_to_string(manager.config_path()).expect("read config after");
++    assert_eq!(before, after);
++
++    env::remove_var(env_var);
++}
+diff --git a/crates/codex/src/mcp/tests_runtime_app/runtime_manager.rs b/crates/codex/src/mcp/tests_runtime_app/runtime_manager.rs
+new file mode 100644
+index 0000000..2278cb0
+--- /dev/null
++++ b/crates/codex/src/mcp/tests_runtime_app/runtime_manager.rs
+@@ -0,0 +1,193 @@
++use super::super::test_support::{prelude::*, *};
++use super::super::*;
++
++#[tokio::test]
++async fn runtime_manager_starts_and_stops_stdio() {
++    let (_dir, script) = write_env_probe_server("MCP_RUNTIME_ENV_E8");
++    let code_home = tempfile::tempdir().expect("code_home");
++
++    let defaults = StdioServerConfig {
++        binary: PathBuf::from("codex"),
++        code_home: Some(code_home.path().to_path_buf()),
++        current_dir: None,
++        env: vec![(
++            OsString::from("MCP_RUNTIME_ENV_E8"),
++            OsString::from("manager-ok"),
++        )],
++        app_server_analytics_default_enabled: false,
++        mirror_stdio: false,
++        startup_timeout: Duration::from_secs(5),
++    };
++
++    let runtime = McpRuntimeServer {
++        name: "env-probe".into(),
++        transport: McpRuntimeTransport::Stdio(StdioServerDefinition {
++            command: script.to_string_lossy().to_string(),
++            args: Vec::new(),
++            env: BTreeMap::new(),
++            timeout_ms: Some(1500),
++        }),
++        description: None,
++        tags: vec!["local".into()],
++        tools: Some(McpToolConfig {
++            enabled: vec!["tool-x".into()],
++            disabled: vec![],
++        }),
++    };
++
++    let launcher = runtime.into_launcher(&defaults);
++    let manager = McpRuntimeManager::new(vec![launcher]);
++
++    let mut handle = match manager.prepare("env-probe").expect("prepare stdio") {
++        McpRuntimeHandle::Stdio(handle) => handle,
++        other => panic!("expected stdio handle, got {other:?}"),
++    };
++
++    let mut reader = BufReader::new(handle.stdout_mut());
++    let mut line = String::new();
++    let _ = time::timeout(Duration::from_secs(2), reader.read_line(&mut line))
++        .await
++        .expect("read timeout")
++        .expect("read env line");
++    assert_eq!(line.trim(), "manager-ok");
++
++    let tools = handle.tools().expect("tool hints");
++    assert_eq!(tools.enabled, vec!["tool-x".to_string()]);
++
++    handle.stop().await.expect("stop server");
++}
++
++#[test]
++fn runtime_manager_propagates_tool_hints_for_http() {
++    let env_var = "MCP_HTTP_TOKEN_E8_HINTS";
++    env::set_var(env_var, "token-hints");
++
++    let mut http = StreamableHttpDefinition {
++        url: "https://example.test/hints".into(),
++        headers: BTreeMap::new(),
++        bearer_env_var: Some(env_var.to_string()),
++        connect_timeout_ms: Some(1200),
++        request_timeout_ms: Some(2400),
++    };
++    http.headers.insert("X-Test".into(), "true".into());
++
++    let runtime = McpRuntimeServer::from_definition(
++        "remote-http",
++        McpServerDefinition {
++            transport: McpTransport::StreamableHttp(http),
++            description: Some("http runtime".into()),
++            tags: vec!["http".into()],
++            tools: Some(McpToolConfig {
++                enabled: vec!["alpha".into()],
++                disabled: vec!["beta".into()],
++            }),
++        },
++    );
++
++    let defaults = StdioServerConfig {
++        binary: PathBuf::from("codex"),
++        code_home: None,
++        current_dir: None,
++        env: Vec::new(),
++        app_server_analytics_default_enabled: false,
++        mirror_stdio: false,
++        startup_timeout: Duration::from_secs(2),
++    };
++
++    let launcher = runtime.into_launcher(&defaults);
++    let manager = McpRuntimeManager::new(vec![launcher]);
++
++    let available = manager.available();
++    assert_eq!(available.len(), 1);
++    let summary = &available[0];
++    assert_eq!(summary.name, "remote-http");
++    assert_eq!(
++        summary.transport,
++        McpRuntimeSummaryTransport::StreamableHttp
++    );
++    let summary_tools = summary.tools.as_ref().expect("tool hints present");
++    assert_eq!(summary_tools.enabled, vec!["alpha".to_string()]);
++    assert_eq!(summary_tools.disabled, vec!["beta".to_string()]);
++
++    match manager.prepare("remote-http").expect("prepare http") {
++        McpRuntimeHandle::StreamableHttp(http_handle) => {
++            let tools = http_handle.tools.as_ref().expect("tool hints on handle");
++            assert_eq!(tools.enabled, vec!["alpha".to_string()]);
++            assert_eq!(tools.disabled, vec!["beta".to_string()]);
++            assert_eq!(
++                http_handle.connector.bearer_token.as_deref(),
++                Some("token-hints")
++            );
++        }
++        other => panic!("expected http handle, got {other:?}"),
++    }
++
++    env::remove_var(env_var);
++}
++
++#[test]
++fn http_connector_retrieval_is_non_destructive() {
++    let env_var = "MCP_HTTP_TOKEN_E8_REUSE";
++    env::set_var(env_var, "token-reuse");
++
++    let runtime = McpRuntimeServer::from_definition(
++        "remote-reuse",
++        McpServerDefinition {
++            transport: McpTransport::StreamableHttp(StreamableHttpDefinition {
++                url: "https://example.test/reuse".into(),
++                headers: BTreeMap::new(),
++                bearer_env_var: Some(env_var.to_string()),
++                connect_timeout_ms: Some(1500),
++                request_timeout_ms: Some(3200),
++            }),
++            description: None,
++            tags: vec!["http".into()],
++            tools: Some(McpToolConfig {
++                enabled: vec!["one".into()],
++                disabled: vec![],
++            }),
++        },
++    );
++
++    let defaults = StdioServerConfig {
++        binary: PathBuf::from("codex"),
++        code_home: None,
++        current_dir: None,
++        env: Vec::new(),
++        app_server_analytics_default_enabled: false,
++        mirror_stdio: false,
++        startup_timeout: Duration::from_secs(2),
++    };
++
++    let launcher = runtime.into_launcher(&defaults);
++    let manager = McpRuntimeManager::new(vec![launcher]);
++
++    let first = manager.prepare("remote-reuse").expect("first prepare");
++    let second = manager.prepare("remote-reuse").expect("second prepare");
++
++    let first_token = match first {
++        McpRuntimeHandle::StreamableHttp(handle) => handle.connector.bearer_token,
++        other => panic!("expected http handle, got {other:?}"),
++    };
++    let second_token = match second {
++        McpRuntimeHandle::StreamableHttp(handle) => handle.connector.bearer_token,
++        other => panic!("expected http handle, got {other:?}"),
++    };
++
++    assert_eq!(first_token.as_deref(), Some("token-reuse"));
++    assert_eq!(second_token.as_deref(), Some("token-reuse"));
++
++    let summary = manager
++        .available()
++        .into_iter()
++        .find(|s| s.name == "remote-reuse")
++        .expect("summary present");
++    assert_eq!(
++        summary.transport,
++        McpRuntimeSummaryTransport::StreamableHttp
++    );
++    let tools = summary.tools.as_ref().expect("tool hints preserved");
++    assert_eq!(tools.enabled, vec!["one".to_string()]);
++
++    env::remove_var(env_var);
++}
