@@ -1416,7 +1416,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P2.6_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P2.6_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - f955b7fdfed037340ec22f190deb050b69452ef4
 
 ### 2026-02-05 — P2.7 MCP façade: split remaining `mcp.rs` bulk into test modules (API preserved)
 
@@ -1436,7 +1436,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P2.7_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P2.7_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - d7d7efb2891251bd47e923ebca2021c1694221a8
 
 ### 2026-02-05 — P3.9 codex_validate follow-on split (below ceiling; determinism preserved)
 
@@ -1456,7 +1456,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P3.9_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P3.9_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - 164111524dfc1cf4a643b0af3d5df0e5cd1da519
 
 ### 2026-02-05 — Split `builder.rs` into `builder/*` (API preserved)
 
@@ -1477,7 +1477,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P1.7_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P1.7_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - b2df25fc4d3b6ce13475541c88531a26438acf69
 
 ### 2026-02-05 — Plan next Phase 1 seams after `builder/*`
 
@@ -1499,7 +1499,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P1.8_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P1.8_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - 8406ddfb04e7df7b6337422de3510dd42375b10b
 
 ## 9) Open Questions / Decisions (lightweight log)
 
