@@ -1,0 +1,188 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 5741fdc..ac17bab 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -72,7 +72,7 @@ These are the required provenance inputs for this program. Do not edit them; ref
+   - `audit_pack/` is the audit-time immutable snapshot.
+   - **Future execution evidence** (command outputs, diffs, notes) is stored under `evidence_runs/YYYY-MM-DD/`.
+   - `audit_pack/execution/*` is **legacy execution evidence already generated**; do not move it (keep referencing it as-is).
+-  - As of 2026-02-05, the latest post-refactor `tokei`/duplicates artifacts are stored under `audit_pack/execution/2026-02-04/` (see list below); until they are refreshed into `evidence_runs/`, treat those `audit_pack/execution/...` paths as canonical for §3.1/§3.2/§6.3.
++  - As of 2026-02-05, §3.1/§6.3 still use canonical post-refactor baseline artifacts under `audit_pack/execution/2026-02-04/` (see list below), while §3.2 top offenders are refreshed from execution evidence at `evidence_runs/2026-02-05/P4.4_*`.
+ 
+ - `audit_pack/README.md` — audit pack entry point, contents, and failure/skip summary.
+ - `audit_pack/meta/commands.log` — provenance log of what was executed (timestamp | cwd | command | exit).
+@@ -126,17 +126,17 @@ Note: These replace the audit-time thresholds from `audit_pack/metrics/loc_summa
+ 
+ ### 3.2 Top offenders (largest Rust files)
+ 
+-Latest top 10 from `evidence_runs/2026-02-05/P1.23_rust_files_sorted_by_code.txt` (Rust per-file code LOC; derived from `evidence_runs/2026-02-05/P1.23_tokei_crates.json`):
+-- `crates/codex/src/tests.rs` — 3,178 LOC (>> ceiling)
+-- `crates/xtask/src/codex_report/report.rs` — 922 LOC (> hard)
+-- `crates/codex/src/mcp/tests_core.rs` — 870 LOC (> hard)
+-- `crates/codex/src/mcp/tests_runtime_app.rs` — 861 LOC (> hard)
++Latest top 10 from `evidence_runs/2026-02-05/P4.4_rust_files_sorted_by_code.txt` (Rust per-file code LOC; derived from `evidence_runs/2026-02-05/P4.4_tokei_crates.json`):
++- `crates/codex/src/tests/capabilities.rs` — 904 LOC (> hard)
+ - `crates/xtask/src/codex_union.rs` — 799 LOC (> hard)
+ - `crates/xtask/tests/c3_spec_reports_metadata_retain.rs` — 742 LOC (> hard)
+ - `crates/xtask/src/codex_version_metadata.rs` — 721 LOC (> hard)
+ - `crates/codex/src/exec.rs` — 676 LOC (> hard)
+ - `crates/codex/tests/cli_e2e.rs` — 669 LOC (> hard)
+ - `crates/xtask/src/codex_snapshot/discovery.rs` — 607 LOC (> hard)
++- `crates/codex/src/tests/cli_commands.rs` — 586 LOC (<= hard)
++- `crates/codex/src/jsonl.rs` — 566 LOC (<= hard)
++- `crates/codex/src/mcp/config.rs` — 538 LOC (<= hard)
+ 
+ ### 3.3 Baseline quality signals (audit time)
+ 
+@@ -1002,9 +1002,9 @@ Last Updated: 2026-02-05
+ 
+ #### Phase 4 — Modularize oversized test suites and close remaining size-policy gaps
+ 
+-Phase Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Phase Status: [ ] Not Started  [x] In Progress  [ ] Done  
+ Last Updated: 2026-02-05  
+-Reason: Phases 1/2/3 are closed; the latest size evidence (`evidence_runs/2026-02-05/P1.23_tokei_crates.json`, `evidence_runs/2026-02-05/P1.23_rust_files_sorted_by_code.txt`) still shows one >ceiling offender and several >hard test/report files.
++Reason: P4.4 refreshed the measurements (`evidence_runs/2026-02-05/P4.4_tokei_crates.json`, `evidence_runs/2026-02-05/P4.4_rust_files_sorted_by_code.txt`); there are now zero >ceiling offenders, but seven files remain >hard and require follow-on splits.
+ 
+ ##### P4.0 — Reduce crates/codex/src/tests.rs below ceiling (tests modularization)
+ 
+@@ -1081,7 +1081,7 @@ Last Updated: 2026-02-05
+ 
+ ##### P4.4 — Refresh size evidence after P4.0–P4.3 and update queue/phase status (no code moves)
+ 
+-Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
+ Last Updated: 2026-02-05
+ 
+ - Goal: Re-run size measurements after Phase 4 steps, then update §3.2/§10 and Phase 4 status based on evidence only.
+@@ -1095,6 +1095,86 @@ Last Updated: 2026-02-05
+ - Risk: Low.
+ - Rollback: N/A (planning/measurement only).
+ 
++##### P4.5 — Reduce `crates/codex/src/tests/capabilities.rs` below hard threshold
++
++Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: 2026-02-05
++
++- Goal: Reduce `crates/codex/src/tests/capabilities.rs` from 904 LOC to `<= 600` LOC by splitting capability-domain tests into cohesive submodules.
++- Expected files touched:
++  - `crates/codex/src/tests/capabilities.rs`
++  - `crates/codex/src/tests/capabilities/` (new submodules as needed)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - `crates/codex/src/tests/capabilities.rs` is `<= 600` LOC (or a §9 exception is recorded with a follow-up step).
++  - Test behavior is unchanged aside from mechanical organization.
++- Risk: Medium (test fixture/import churn).
++- Rollback: Revert module split; restore original file content.
++
++##### P4.6 — Reduce `crates/xtask/src/codex_union.rs` below hard threshold
++
++Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: 2026-02-05
++
++- Goal: Reduce `crates/xtask/src/codex_union.rs` from 799 LOC to `<= 600` LOC by extracting cohesive union helpers/modules while preserving deterministic outputs.
++- Expected files touched:
++  - `crates/xtask/src/codex_union.rs`
++  - `crates/xtask/src/codex_union/` (new submodules as needed)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - `crates/xtask/src/codex_union.rs` is `<= 600` LOC (or a §9 exception is recorded with a follow-up step).
++  - Output behavior and ordering remain unchanged (existing tests stay green).
++- Risk: Medium (domain split can impact merge/ordering behavior if boundaries are wrong).
++- Rollback: Revert module split; restore original file content.
++
++##### P4.7 — Reduce `crates/xtask/tests/c3_spec_reports_metadata_retain.rs` below hard threshold
++
++Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: 2026-02-05
++
++- Goal: Reduce `crates/xtask/tests/c3_spec_reports_metadata_retain.rs` from 742 LOC to `<= 600` LOC via mechanical test modularization.
++- Expected files touched:
++  - `crates/xtask/tests/c3_spec_reports_metadata_retain.rs`
++  - `crates/xtask/tests/c3_spec_reports_metadata_retain/` (new submodules as needed)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - `crates/xtask/tests/c3_spec_reports_metadata_retain.rs` is `<= 600` LOC (or a §9 exception is recorded with a follow-up step).
++  - Assertions and expected snapshots/outputs are unchanged.
++- Risk: Medium (test module wiring/import churn).
++- Rollback: Revert module split; restore original file content.
++
++##### P4.8 — Reduce `crates/xtask/src/codex_version_metadata.rs` below hard threshold
++
++Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: 2026-02-05
++
++- Goal: Reduce `crates/xtask/src/codex_version_metadata.rs` from 721 LOC to `<= 600` LOC by extracting cohesive metadata helpers while preserving output semantics.
++- Expected files touched:
++  - `crates/xtask/src/codex_version_metadata.rs`
++  - `crates/xtask/src/codex_version_metadata/` (new submodules as needed)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - `crates/xtask/src/codex_version_metadata.rs` is `<= 600` LOC (or a §9 exception is recorded with a follow-up step).
++  - Output/formatting behavior remains unchanged.
++- Risk: Medium (domain split can alter formatting/order if not mechanical).
++- Rollback: Revert module split; restore original file content.
++
++##### P4.9 — Reduce `crates/codex/src/exec.rs` below hard threshold
++
++Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: 2026-02-05
++
++- Goal: Reduce `crates/codex/src/exec.rs` from 676 LOC to `<= 600` LOC by extracting cohesive execution helpers while preserving public behavior.
++- Expected files touched:
++  - `crates/codex/src/exec.rs`
++  - `crates/codex/src/exec/` (new submodules as needed)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - `crates/codex/src/exec.rs` is `<= 600` LOC (or a §9 exception is recorded with a follow-up step).
++  - No public API path changes or behavior changes.
++- Risk: Medium (runtime behavior regression risk if boundaries are wrong).
++- Rollback: Revert module split; restore original file content.
++
+ ---
+ 
+ ## 6) Dependency Triage (Supply Chain)
+@@ -2229,6 +2309,29 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P4.4 size evidence refresh + Phase 4 queue reconciliation (no code moves)
++
++- Scope/step: P4.4
++- Why: Re-measure Rust file sizes after P4.0–P4.3 and update §3.2/Phase 4/§10 from fresh evidence only.
++- Measurement artifacts:
++  - Base commit: `evidence_runs/2026-02-05/P4.4_BASE_STEP.txt`
++  - Raw `tokei` JSON: `evidence_runs/2026-02-05/P4.4_tokei_crates.json`
++  - Derived Rust per-file code LOC list: `evidence_runs/2026-02-05/P4.4_rust_files_sorted_by_code.txt`
++- Result:
++  - `crates/codex/src/tests.rs`, `crates/codex/src/mcp/tests_core.rs`, `crates/codex/src/mcp/tests_runtime_app.rs`, and `crates/xtask/src/codex_report/report.rs` no longer appear as >hard offenders.
++  - No Rust files are above the 1000 LOC ceiling.
++  - Seven Rust files remain above the hard threshold (top: `crates/codex/src/tests/capabilities.rs` at 904 LOC), so Phase 4 remains In Progress and §10 is re-queued to target those offenders.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.4_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P4.4_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P4.4_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P4.4_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.4_cargo_audit.txt`; reran with `--no-fetch --stale` due advisory DB fetch/lock constraints in this sandbox)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P4.4_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.4_cargo_deny_advisories.txt`; reran with writable temp `CARGO_HOME`, `--disable-fetch`, and offline mode due advisory DB lock constraints in this sandbox)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.4_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.4_cargo_fmt_check_final.txt`)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+@@ -2251,8 +2354,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ 
+ Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+ 
+-1) `P4.0` — Reduce `crates/codex/src/tests.rs` below ceiling (tests modularization)
+-2) `P4.1` — Reduce `crates/codex/src/mcp/tests_core.rs` below hard threshold
+-3) `P4.2` — Reduce `crates/codex/src/mcp/tests_runtime_app.rs` below hard threshold
+-4) `P4.3` — Reduce `crates/xtask/src/codex_report/report.rs` below hard threshold
+-5) `P4.4` — Refresh size evidence and update queue/Phase 4 status
++1) `P4.5` — Reduce `crates/codex/src/tests/capabilities.rs` below hard threshold
++2) `P4.6` — Reduce `crates/xtask/src/codex_union.rs` below hard threshold
++3) `P4.7` — Reduce `crates/xtask/tests/c3_spec_reports_metadata_retain.rs` below hard threshold
++4) `P4.8` — Reduce `crates/xtask/src/codex_version_metadata.rs` below hard threshold
++5) `P4.9` — Reduce `crates/codex/src/exec.rs` below hard threshold
