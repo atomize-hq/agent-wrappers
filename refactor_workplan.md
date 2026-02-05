@@ -594,8 +594,8 @@ Last Updated: 2026-02-04
 
 ##### P3.8 — Split xtask module: `codex_snapshot` (extract snapshot pipeline domains) with deterministic output preserved
 
-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
-Last Updated: YYYY-MM-DD
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-04
 
 - Goal: Further reduce `crates/xtask/src/codex_snapshot.rs` by extracting snapshot pipeline stages (help parsing/discovery, supplements/normalization, output layout/version probing) into `crates/xtask/src/codex_snapshot/*` without changing outputs.
 - Expected files touched:
@@ -1114,6 +1114,27 @@ Add entries as work lands. Format:
   - Workplan diff: `evidence_runs/2026-02-04/SESSION_workplan_diff_final.patch`
 - Commit:
   - `29b3880fe387e831dcb29d9eb7de035dbcf1e6cf`
+
+### 2026-02-04 — P3.8 codex_snapshot pipeline domain split
+
+- Scope/step: P3.8
+- Why this step is next:
+  - Earliest not-done item in Phase 3 queue: `Status: [ ] Not Started  [ ] In Progress  [ ] Done` (P3.8).
+- What changed:
+  - Split `crates/xtask/src/codex_snapshot.rs` into a smaller façade (`Args`, `Error`, `run`) and extracted snapshot pipeline stages into `crates/xtask/src/codex_snapshot/*` (discovery/help parsing, supplements/normalization, output layout, and probes).
+  - Preserved deterministic output semantics (stable sort order, `serde_json::to_string_pretty` + trailing newline; `SOURCE_DATE_EPOCH` support unchanged).
+- Validation results (§4.1):
+  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-04/P3.8_cargo_fmt_check_final.txt`)
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-04/P3.8_cargo_clippy.txt`)
+  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-04/P3.8_cargo_test.txt`)
+  - `cargo audit`: PASS (`evidence_runs/2026-02-04/P3.8_cargo_audit.txt`)
+  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-04/P3.8_cargo_deny_advisories.txt`)
+  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-04/P3.8_cargo_deny_licenses.txt`)
+- Evidence/patches:
+  - Code diff: `evidence_runs/2026-02-04/SESSION_code_diff_final.patch`
+  - Workplan diff: `evidence_runs/2026-02-04/SESSION_workplan_diff_final.patch`
+- Commit:
+  - `eae6b5e389669b571ac51037a158aa3e4f5dfc04`
 
 ---
 

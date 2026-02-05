@@ -1,363 +1,290 @@
-diff --git a/crates/xtask/src/codex_report.rs b/crates/xtask/src/codex_report.rs
-index 2caaabf..3541f4e 100644
---- a/crates/xtask/src/codex_report.rs
-+++ b/crates/xtask/src/codex_report.rs
-@@ -1,18 +1,15 @@
+commit 4b10b169ba81fa1758c800b0d443e562ceeb0e9e
+Author:     Spenquatch <spmcconnell.totaltele@gmail.com>
+AuthorDate: Wed Feb 4 19:59:16 2026 -0500
+Commit:     Spenquatch <spmcconnell.totaltele@gmail.com>
+CommitDate: Wed Feb 4 19:59:16 2026 -0500
+
+    refactor(P3.8): split codex_snapshot pipeline domains
+
+diff --git a/crates/xtask/src/codex_snapshot.rs b/crates/xtask/src/codex_snapshot.rs
+index 6b6a9d5..09b4bf1 100644
+--- a/crates/xtask/src/codex_snapshot.rs
++++ b/crates/xtask/src/codex_snapshot.rs
+@@ -1,19 +1,16 @@
 -use std::{
 -    collections::{BTreeMap, BTreeSet},
 -    fs, io,
 -    path::{Path, PathBuf},
+-    process::{Command, Output},
 -};
 +use std::{fs, io, path::PathBuf};
  
  use clap::Parser;
+-use regex::Regex;
 -use serde::{Deserialize, Serialize};
+-use sha2::{Digest, Sha256};
  use thiserror::Error;
--use time::{format_description::well_known::Rfc3339, OffsetDateTime};
+ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
  
- mod models;
--use models::{
--    UnionArgV2, UnionCommandV2, UnionFlagV2, UnionSnapshotV2, WrapperCoverageV1, WrapperScope,
--};
-+mod report;
-+mod rules;
++mod discovery;
++mod layout;
++mod probes;
+ mod schema;
+-use schema::SupplementV1;
++mod supplements;
 +mod util;
-+mod wrapper;
 +
-+use models::{UnionSnapshotV2, WrapperCoverageV1};
- 
- #[derive(Debug, Parser)]
- pub struct Args {
-@@ -49,110 +46,6 @@ pub enum ReportError {
-     WrapperResolution { unit: String, detail: String },
+ pub(crate) use schema::{
+     ArgSnapshot, BinaryPlatform, BinarySnapshot, CommandSnapshot, FlagSnapshot, SnapshotV1,
+ };
+@@ -81,24 +78,6 @@ pub enum Error {
+     CollectedAt(String),
  }
  
 -#[derive(Debug, Deserialize)]
 -struct RulesFile {
--    #[serde(rename = "rules_schema_version")]
--    rules_schema_version: u32,
 -    union: RulesUnion,
--    report: RulesReport,
 -    sorting: RulesSorting,
--    #[serde(default)]
--    parity_exclusions: Option<RulesParityExclusions>,
 -}
 -
 -#[derive(Debug, Deserialize)]
 -struct RulesUnion {
 -    expected_targets: Vec<String>,
--    platform_mapping: BTreeMap<String, String>,
 -}
 -
 -#[derive(Debug, Deserialize)]
 -struct RulesSorting {
--    report: RulesReportSorting,
+-    commands: String,
+-    flags: String,
+-    args: String,
 -}
 -
--#[derive(Debug, Deserialize)]
--struct RulesReportSorting {
--    missing_commands: String,
--    missing_flags: String,
--    missing_args: String,
--    excluded_commands: String,
--    excluded_flags: String,
--    excluded_args: String,
--    passthrough_candidates: String,
--    unsupported: String,
--    intentionally_unsupported: String,
--    wrapper_only_commands: String,
--    wrapper_only_flags: String,
--    wrapper_only_args: String,
--}
--
--#[derive(Debug, Deserialize)]
--struct RulesParityExclusions {
--    schema_version: u32,
--    units: Vec<ParityExclusionUnit>,
--}
--
--#[derive(Debug, Deserialize, Clone)]
--struct ParityExclusionUnit {
--    unit: String,
--    path: Vec<String>,
--    #[serde(default)]
--    key: Option<String>,
--    #[serde(default)]
--    name: Option<String>,
--    #[serde(default)]
--    #[allow(dead_code)]
--    category: Option<String>,
--    note: String,
--}
--
--#[derive(Debug, Deserialize)]
--struct RulesReport {
--    file_naming: RulesReportFileNaming,
--    filter_semantics: RulesFilterSemantics,
--}
--
--#[derive(Debug, Deserialize)]
--struct RulesReportFileNaming {
--    any: String,
--    all: String,
--    per_target: String,
--}
--
--#[derive(Debug, Deserialize)]
--struct RulesFilterSemantics {
--    when_union_incomplete: RulesWhenUnionIncomplete,
--}
--
--#[derive(Debug, Deserialize)]
--struct RulesWhenUnionIncomplete {
--    all: String,
--}
--
--#[derive(Debug, Clone)]
--struct ScopedCoverage {
--    index: usize,
--    targets: BTreeSet<String>,
--    level: String,
--    note: Option<String>,
--}
--
--#[derive(Debug, Clone)]
--struct CoverageResolution {
--    present: bool,
--    targets: BTreeSet<String>,
--    level: Option<String>,
--    note: Option<String>,
--}
--
--#[derive(Debug, Clone, Copy)]
--enum FilterMode<'a> {
--    Any,
--    All,
--    ExactTarget(&'a str),
--}
--
- pub fn run(args: Args) -> Result<(), ReportError> {
-     let root = fs::canonicalize(&args.root).unwrap_or(args.root.clone());
-     let rules_path = args
-@@ -160,13 +53,13 @@ pub fn run(args: Args) -> Result<(), ReportError> {
-         .clone()
-         .unwrap_or_else(|| root.join("RULES.json"));
+ pub fn run(args: Args) -> Result<(), Error> {
+     let codex_binary = fs::canonicalize(&args.codex_binary)
+         .map_err(|_| Error::InvalidCodexBinary(args.codex_binary.clone()))?;
+@@ -110,11 +89,11 @@ pub fn run(args: Args) -> Result<(), Error> {
+         OffsetDateTime::parse(s, &Rfc3339).map_err(|_| Error::CollectedAt(s.clone()))?;
+         s.clone()
+     } else {
+-        deterministic_rfc3339_now()
++        probes::deterministic_rfc3339_now()
+     };
  
--    let rules: RulesFile = serde_json::from_slice(&fs::read(&rules_path)?)?;
--    assert_supported_rules(&rules)?;
-+    let rules = rules::load_rules(&rules_path)?;
-+    rules::assert_supported_rules(&rules)?;
-     let parity_exclusions = rules
-         .parity_exclusions
+-    let binary_meta = BinaryMetadata::collect(&codex_binary)?;
+-    let (version_output, semantic_version, channel, commit) = probe_version(&codex_binary)?;
++    let binary_meta = probes::BinaryMetadata::collect(&codex_binary)?;
++    let (version_output, semantic_version, channel, commit) = probes::probe_version(&codex_binary)?;
+ 
+     let version_dir = match (&args.out_file, &semantic_version) {
+         (Some(_), None) => return Err(Error::MissingSemanticVersion),
+@@ -123,8 +102,8 @@ pub fn run(args: Args) -> Result<(), Error> {
+     };
+ 
+     let (snapshot_out_path, raw_help_dir, inferred_target_triple) =
+-        resolve_outputs(&args, &version_dir)?;
+-    let (features_list, features_probe_error) = probe_features(&codex_binary);
++        layout::resolve_outputs(&args, &version_dir)?;
++    let (features_list, features_probe_error) = probes::probe_features(&codex_binary);
+     let enabled_feature_names = features_list
          .as_ref()
-         .filter(|ex| ex.schema_version == 1)
--        .map(build_parity_exclusions_index);
-+        .map(report::build_parity_exclusions_index);
+         .map(|f| f.iter().map(|x| x.name.clone()).collect::<Vec<_>>())
+@@ -136,16 +115,17 @@ pub fn run(args: Args) -> Result<(), Error> {
  
-     let union_path = root
-         .join("snapshots")
-@@ -200,8 +93,8 @@ pub fn run(args: Args) -> Result<(), ReportError> {
-         ));
-     }
+     // Always snapshot the default surface. If we can probe features, do a second discovery pass
+     // with all known features enabled and merge results for maximum coverage.
+-    let default_entries = discover_commands(&codex_binary, raw_help_dir.as_deref(), false, &[])?;
++    let default_entries =
++        discovery::discover_commands(&codex_binary, raw_help_dir.as_deref(), false, &[])?;
  
--    let upstream = index_upstream(&union);
--    let wrapper_index = index_wrapper(
-+    let upstream = report::index_upstream(&union);
-+    let wrapper_index = wrapper::index_wrapper(
-         &rules.union.expected_targets,
-         &rules.union.platform_mapping,
-         &wrapper,
-@@ -210,18 +103,18 @@ pub fn run(args: Args) -> Result<(), ReportError> {
-     let reports_dir = root.join("reports").join(&args.version);
-     fs::create_dir_all(&reports_dir)?;
+     let (mut command_entries, commands_added_when_all_enabled) = if enable_args.is_empty() {
+         if args.capture_raw_help {
+             // If we can't enable features, capture raw help for the default surface.
+-            let _ = discover_commands(&codex_binary, raw_help_dir.as_deref(), true, &[]);
++            let _ = discovery::discover_commands(&codex_binary, raw_help_dir.as_deref(), true, &[]);
+         }
+         (default_entries, None)
+     } else {
+-        let enabled_entries = discover_commands(
++        let enabled_entries = discovery::discover_commands(
+             &codex_binary,
+             raw_help_dir.as_deref(),
+             args.capture_raw_help,
+@@ -157,19 +137,19 @@ pub fn run(args: Args) -> Result<(), Error> {
+             .cloned()
+             .collect::<Vec<_>>();
+         let mut merged = default_entries;
+-        merge_command_entries(&mut merged, enabled_entries);
++        discovery::merge_command_entries(&mut merged, enabled_entries);
+         (merged, Some(added))
+     };
  
--    require_source_date_epoch_if_ci()?;
--    let generated_at = deterministic_rfc3339_now();
-+    util::require_source_date_epoch_if_ci()?;
-+    let generated_at = util::deterministic_rfc3339_now();
+     let (known_omissions, supplemented) =
+-        apply_supplements(args.supplement.as_deref(), &mut command_entries)?;
++        supplements::apply_supplements(args.supplement.as_deref(), &mut command_entries)?;
  
-     // coverage.any.json (always)
-     {
--        let report = build_report(
-+        let report = report::build_report(
-             &rules,
-             parity_exclusions.as_ref(),
-             &args.version,
-             "any",
-             None,
--            FilterMode::Any,
-+            wrapper::FilterMode::Any,
-             &input_targets,
-             &upstream,
-             &wrapper,
-@@ -229,18 +122,18 @@ pub fn run(args: Args) -> Result<(), ReportError> {
-             &generated_at,
-         )?;
-         let out_path = reports_dir.join(&rules.report.file_naming.any);
--        write_json_pretty(&out_path, &serde_json::to_string_pretty(&report)?)?;
-+        util::write_json_pretty(&out_path, &serde_json::to_string_pretty(&report)?)?;
-     }
+-    normalize_command_entries(&mut command_entries);
++    supplements::normalize_command_entries(&mut command_entries);
  
-     // coverage.<target_triple>.json (one per included input target)
-     for target in &input_targets {
--        let report = build_report(
-+        let report = report::build_report(
-             &rules,
-             parity_exclusions.as_ref(),
-             &args.version,
-             "exact_target",
-             Some(target.as_str()),
--            FilterMode::ExactTarget(target),
-+            wrapper::FilterMode::ExactTarget(target),
-             std::slice::from_ref(target),
-             &upstream,
-             &wrapper,
-@@ -253,18 +146,18 @@ pub fn run(args: Args) -> Result<(), ReportError> {
-             .per_target
-             .replace("<target_triple>", target);
-         let out_path = reports_dir.join(filename);
--        write_json_pretty(&out_path, &serde_json::to_string_pretty(&report)?)?;
-+        util::write_json_pretty(&out_path, &serde_json::to_string_pretty(&report)?)?;
-     }
+     let mut commands: Vec<CommandSnapshot> = command_entries.into_values().collect();
+-    commands.sort_by(|a, b| cmp_path(&a.path, &b.path));
++    commands.sort_by(|a, b| supplements::cmp_path(&a.path, &b.path));
  
-     // coverage.all.json (only when union.complete=true)
-     if union.complete {
--        let report = build_report(
-+        let report = report::build_report(
-             &rules,
-             parity_exclusions.as_ref(),
-             &args.version,
-             "all",
-             None,
--            FilterMode::All,
-+            wrapper::FilterMode::All,
-             &union.expected_targets,
-             &upstream,
-             &wrapper,
-@@ -272,1338 +165,8 @@ pub fn run(args: Args) -> Result<(), ReportError> {
-             &generated_at,
-         )?;
-         let out_path = reports_dir.join(&rules.report.file_naming.all);
--        write_json_pretty(&out_path, &serde_json::to_string_pretty(&report)?)?;
-+        util::write_json_pretty(&out_path, &serde_json::to_string_pretty(&report)?)?;
-     }
- 
+-    let features = build_features_metadata(
++    let features = probes::build_features_metadata(
+         features_list,
+         features_probe_error,
+         enabled_feature_names,
+@@ -209,1204 +189,3 @@ pub fn run(args: Args) -> Result<(), Error> {
+     fs::write(snapshot_out_path, format!("{json}\n"))?;
      Ok(())
  }
 -
--fn assert_supported_rules(rules: &RulesFile) -> Result<(), ReportError> {
+-fn resolve_outputs(
+-    args: &Args,
+-    version_dir: &str,
+-) -> Result<(PathBuf, Option<PathBuf>, String), Error> {
+-    let snapshot_out_path = if let Some(path) = args.out_file.as_ref() {
+-        path.clone()
+-    } else {
+-        args.out_dir
+-            .as_ref()
+-            .expect("clap enforces one of out_dir/out_file")
+-            .join("current.json")
+-    };
+-
+-    let (codex_root, target_triple) = if let Some(out_file) = args.out_file.as_ref() {
+-        let version_path = out_file.parent().ok_or_else(|| {
+-            Error::InvalidOutFileLayout("could not infer snapshots/<version> directory".to_string())
+-        })?;
+-        let got_version = version_path
+-            .file_name()
+-            .and_then(|s| s.to_str())
+-            .unwrap_or("<unknown>");
+-        if got_version != version_dir {
+-            return Err(Error::InvalidOutFileLayout(format!(
+-                "expected parent dir name {version_dir}, got {got_version}"
+-            )));
+-        }
+-
+-        let snapshots_path = version_path.parent().ok_or_else(|| {
+-            Error::InvalidOutFileLayout("could not infer snapshots directory".to_string())
+-        })?;
+-        let got_snapshots = snapshots_path
+-            .file_name()
+-            .and_then(|s| s.to_str())
+-            .unwrap_or("<unknown>");
+-        if got_snapshots != "snapshots" {
+-            return Err(Error::InvalidOutFileLayout(format!(
+-                "expected snapshots/<version> layout, got .../{got_snapshots}/{got_version}"
+-            )));
+-        }
+-
+-        let inferred_from_out_file = out_file
+-            .file_name()
+-            .and_then(|s| s.to_str())
+-            .and_then(|s| s.strip_suffix(".json"))
+-            .ok_or_else(|| {
+-                Error::InvalidOutFileLayout(
+-                    "expected out-file name like <target_triple>.json".into(),
+-                )
+-            })?
+-            .to_string();
+-        let target = args
+-            .raw_help_target
+-            .as_ref()
+-            .cloned()
+-            .unwrap_or(inferred_from_out_file);
+-
+-        let expected = format!("{target}.json");
+-        let got = out_file
+-            .file_name()
+-            .and_then(|s| s.to_str())
+-            .unwrap_or("<unknown>");
+-        if got != expected {
+-            return Err(Error::InvalidOutFileLayout(format!(
+-                "expected filename {expected}, got {got}"
+-            )));
+-        }
+-
+-        let codex_root = snapshots_path
+-            .parent()
+-            .ok_or_else(|| Error::InvalidOutFileLayout("could not infer codex root".to_string()))?;
+-        (codex_root.to_path_buf(), target)
+-    } else {
+-        (
+-            args.out_dir
+-                .as_ref()
+-                .expect("clap enforces one of out_dir/out_file")
+-                .clone(),
+-            args.raw_help_target
+-                .clone()
+-                .unwrap_or_else(|| "unknown".to_string()),
+-        )
+-    };
+-
+-    let raw_help_dir = if args.capture_raw_help {
+-        let base = codex_root.join("raw_help").join(version_dir);
+-        if args.raw_help_target.is_some() || args.out_file.is_some() {
+-            if target_triple == "unknown" {
+-                return Err(Error::MissingRawHelpTarget);
+-            }
+-            Some(base.join(&target_triple))
+-        } else {
+-            Some(base)
+-        }
+-    } else {
+-        None
+-    };
+-
+-    if args.out_file.is_some() {
+-        let rules_path = codex_root.join("RULES.json");
+-        let rules: RulesFile = serde_json::from_slice(
+-            &fs::read(&rules_path)
+-                .map_err(|err| Error::RulesRead(format!("{}: {err}", rules_path.display())))?,
+-        )?;
+-        assert_supported_sorting(&rules.sorting)?;
+-
+-        if !rules
+-            .union
+-            .expected_targets
+-            .iter()
+-            .any(|t| t == &target_triple)
+-        {
+-            return Err(Error::RawHelpTargetNotExpected(target_triple));
+-        }
+-    }
+-
+-    Ok((snapshot_out_path, raw_help_dir, target_triple))
+-}
+-
+-fn assert_supported_sorting(sorting: &RulesSorting) -> Result<(), Error> {
 -    let mut unsupported = Vec::new();
 -
--    if rules.report.file_naming.any != "coverage.any.json" {
--        unsupported.push(format!(
--            "report.file_naming.any={}",
--            rules.report.file_naming.any
--        ));
+-    if sorting.commands != "lexicographic_path" {
+-        unsupported.push(format!("sorting.commands={}", sorting.commands));
 -    }
--    if rules.report.file_naming.all != "coverage.all.json" {
--        unsupported.push(format!(
--            "report.file_naming.all={}",
--            rules.report.file_naming.all
--        ));
+-    if sorting.flags != "by_key_then_long_then_short" {
+-        unsupported.push(format!("sorting.flags={}", sorting.flags));
 -    }
--    if rules.report.file_naming.per_target != "coverage.<target_triple>.json" {
--        unsupported.push(format!(
--            "report.file_naming.per_target={}",
--            rules.report.file_naming.per_target
--        ));
--    }
--
--    if rules.sorting.report.missing_commands != "by_path" {
--        unsupported.push(format!(
--            "sorting.report.missing_commands={}",
--            rules.sorting.report.missing_commands
--        ));
--    }
--    if rules.sorting.report.missing_flags != "by_path_then_key" {
--        unsupported.push(format!(
--            "sorting.report.missing_flags={}",
--            rules.sorting.report.missing_flags
--        ));
--    }
--    if rules.sorting.report.missing_args != "by_path_then_name" {
--        unsupported.push(format!(
--            "sorting.report.missing_args={}",
--            rules.sorting.report.missing_args
--        ));
--    }
--    if rules.sorting.report.excluded_commands != "by_path" {
--        unsupported.push(format!(
--            "sorting.report.excluded_commands={}",
--            rules.sorting.report.excluded_commands
--        ));
--    }
--    if rules.sorting.report.excluded_flags != "by_path_then_key" {
--        unsupported.push(format!(
--            "sorting.report.excluded_flags={}",
--            rules.sorting.report.excluded_flags
--        ));
--    }
--    if rules.sorting.report.excluded_args != "by_path_then_name" {
--        unsupported.push(format!(
--            "sorting.report.excluded_args={}",
--            rules.sorting.report.excluded_args
--        ));
--    }
--    if rules.sorting.report.passthrough_candidates != "by_path" {
--        unsupported.push(format!(
--            "sorting.report.passthrough_candidates={}",
--            rules.sorting.report.passthrough_candidates
--        ));
--    }
--    if rules.sorting.report.unsupported != "by_path" {
--        unsupported.push(format!(
--            "sorting.report.unsupported={}",
--            rules.sorting.report.unsupported
--        ));
--    }
--    if rules.sorting.report.intentionally_unsupported != "by_kind_then_path_then_key_or_name" {
--        unsupported.push(format!(
--            "sorting.report.intentionally_unsupported={}",
--            rules.sorting.report.intentionally_unsupported
--        ));
--    }
--    if rules.sorting.report.wrapper_only_commands != "by_path" {
--        unsupported.push(format!(
--            "sorting.report.wrapper_only_commands={}",
--            rules.sorting.report.wrapper_only_commands
--        ));
--    }
--    if rules.sorting.report.wrapper_only_flags != "by_path_then_key" {
--        unsupported.push(format!(
--            "sorting.report.wrapper_only_flags={}",
--            rules.sorting.report.wrapper_only_flags
--        ));
--    }
--    if rules.sorting.report.wrapper_only_args != "by_path_then_name" {
--        unsupported.push(format!(
--            "sorting.report.wrapper_only_args={}",
--            rules.sorting.report.wrapper_only_args
--        ));
--    }
--
--    if rules.report.filter_semantics.when_union_incomplete.all != "error" {
--        unsupported.push(format!(
--            "report.filter_semantics.when_union_incomplete.all={}",
--            rules.report.filter_semantics.when_union_incomplete.all
--        ));
--    }
--
--    if rules.union.expected_targets.is_empty() {
--        unsupported.push("union.expected_targets must not be empty".to_string());
+-    if sorting.args != "by_name" {
+-        unsupported.push(format!("sorting.args={}", sorting.args));
 -    }
 -
 -    if unsupported.is_empty() {
 -        Ok(())
 -    } else {
--        Err(ReportError::Rules(format!(
--            "unsupported rules: {}",
--            unsupported.join(", ")
--        )))
+-        Err(Error::RulesUnsupported(unsupported.join(", ")))
+-    }
+-}
+-
+-fn normalize_command_entries(entries: &mut BTreeMap<Vec<String>, CommandSnapshot>) {
+-    for cmd in entries.values_mut() {
+-        if let Some(args) = cmd.args.as_mut() {
+-            args.sort_by(|a, b| a.name.cmp(&b.name));
+-        }
+-        if let Some(flags) = cmd.flags.as_mut() {
+-            flags.sort_by(flag_sort_key);
+-        }
 -    }
 -}
 -
@@ -376,873 +303,939 @@ index 2caaabf..3541f4e 100644
 -        .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
 -}
 -
--fn require_source_date_epoch_if_ci() -> Result<(), ReportError> {
--    if std::env::var("CI").is_err() {
+-fn discover_commands(
+-    codex_binary: &Path,
+-    raw_help_dir: Option<&Path>,
+-    capture_raw_help: bool,
+-    global_args: &[String],
+-) -> Result<BTreeMap<Vec<String>, CommandSnapshot>, Error> {
+-    let mut out = BTreeMap::<Vec<String>, CommandSnapshot>::new();
+-    let mut visited = BTreeSet::<Vec<String>>::new();
+-
+-    let root_help = run_codex_help(codex_binary, global_args, &[])?;
+-    let root_parsed = parse_help(&root_help);
+-
+-    if capture_raw_help {
+-        if let Some(dir) = raw_help_dir {
+-            write_raw_help(dir, &[], &root_help)?;
+-        }
+-    }
+-
+-    let mut root_args = root_parsed.args;
+-    if let Some(usage) = root_parsed.usage.as_deref() {
+-        merge_inferred_args(
+-            &mut root_args,
+-            infer_args_from_usage(usage, &[], !root_parsed.subcommands.is_empty()),
+-        );
+-    }
+-    if !root_args.is_empty() {
+-        root_args.sort_by(|a, b| a.name.cmp(&b.name));
+-    }
+-
+-    let mut root_flags = root_parsed.flags;
+-    if !root_flags.is_empty() {
+-        root_flags.sort_by(flag_sort_key);
+-    }
+-
+-    out.insert(
+-        Vec::new(),
+-        CommandSnapshot {
+-            path: Vec::new(),
+-            about: root_parsed.about,
+-            usage: root_parsed.usage,
+-            stability: None,
+-            platforms: None,
+-            args: if root_args.is_empty() {
+-                None
+-            } else {
+-                Some(root_args)
+-            },
+-            flags: if root_flags.is_empty() {
+-                None
+-            } else {
+-                Some(root_flags)
+-            },
+-        },
+-    );
+-
+-    let ctx = HelpCtx {
+-        codex_binary,
+-        global_args,
+-        raw_help_dir,
+-        capture_raw_help,
+-    };
+-
+-    for token in root_parsed.subcommands {
+-        collect_command_recursive(&ctx, vec![token], &mut visited, &mut out)?;
+-    }
+-
+-    Ok(out)
+-}
+-
+-struct HelpCtx<'a> {
+-    codex_binary: &'a Path,
+-    global_args: &'a [String],
+-    raw_help_dir: Option<&'a Path>,
+-    capture_raw_help: bool,
+-}
+-
+-fn collect_command_recursive(
+-    ctx: &HelpCtx<'_>,
+-    path: Vec<String>,
+-    visited: &mut BTreeSet<Vec<String>>,
+-    out: &mut BTreeMap<Vec<String>, CommandSnapshot>,
+-) -> Result<(), Error> {
+-    if !visited.insert(path.clone()) {
 -        return Ok(());
 -    }
--    if std::env::var("SOURCE_DATE_EPOCH").is_err() {
--        return Err(ReportError::Rules(
--            "CI requires SOURCE_DATE_EPOCH for deterministic generated_at".to_string(),
--        ));
+-
+-    let help = run_codex_help(ctx.codex_binary, ctx.global_args, &path)?;
+-    let parsed = parse_help(&help);
+-
+-    if ctx.capture_raw_help {
+-        if let Some(dir) = ctx.raw_help_dir {
+-            write_raw_help(dir, &path, &help)?;
+-        }
 -    }
--    Ok(())
--}
 -
--fn write_json_pretty(path: &Path, json: &str) -> Result<(), io::Error> {
--    if let Some(parent) = path.parent() {
--        fs::create_dir_all(parent)?;
--    }
--    fs::write(path, format!("{json}\n"))?;
--    Ok(())
--}
--
--fn index_upstream(union: &UnionSnapshotV2) -> BTreeMap<Vec<String>, UnionCommandV2> {
--    let mut out = BTreeMap::new();
--    for cmd in &union.commands {
--        out.insert(cmd.path.clone(), cmd.clone());
--    }
--    out
--}
--
--#[derive(Debug, Clone)]
--struct WrapperIndex {
--    commands: BTreeMap<Vec<String>, Vec<ScopedCoverage>>,
--    flags: BTreeMap<(Vec<String>, String), Vec<ScopedCoverage>>,
--    args: BTreeMap<(Vec<String>, String), Vec<ScopedCoverage>>,
--}
--
--fn index_wrapper(
--    expected_targets: &[String],
--    platform_mapping: &BTreeMap<String, String>,
--    wrapper: &WrapperCoverageV1,
--) -> WrapperIndex {
--    let expected_set: BTreeSet<String> = expected_targets.iter().cloned().collect();
--
--    let mut commands: BTreeMap<Vec<String>, Vec<ScopedCoverage>> = BTreeMap::new();
--    let mut flags: BTreeMap<(Vec<String>, String), Vec<ScopedCoverage>> = BTreeMap::new();
--    let mut args: BTreeMap<(Vec<String>, String), Vec<ScopedCoverage>> = BTreeMap::new();
--
--    for (cmd_idx, cmd) in wrapper.coverage.iter().enumerate() {
--        let cmd_targets = scope_to_targets(
--            expected_targets,
--            platform_mapping,
--            &expected_set,
--            cmd.scope.as_ref(),
+-    let mut args = parsed.args;
+-    if let Some(usage) = parsed.usage.as_deref() {
+-        merge_inferred_args(
+-            &mut args,
+-            infer_args_from_usage(usage, &path, !parsed.subcommands.is_empty()),
 -        );
--        commands
--            .entry(cmd.path.clone())
--            .or_default()
--            .push(ScopedCoverage {
--                index: cmd_idx,
--                targets: cmd_targets.clone(),
--                level: cmd.level.clone(),
--                note: cmd.note.clone(),
--            });
+-    }
+-    if !args.is_empty() {
+-        args.sort_by(|a, b| a.name.cmp(&b.name));
+-    }
 -
--        for flag in &cmd.flags {
--            let flag_targets = scope_to_targets(
--                expected_targets,
--                platform_mapping,
--                &expected_set,
--                flag.scope.as_ref(),
--            );
--            let effective = intersect(&cmd_targets, &flag_targets);
--            flags
--                .entry((cmd.path.clone(), flag.key.clone()))
--                .or_default()
--                .push(ScopedCoverage {
--                    index: cmd_idx,
--                    targets: effective,
--                    level: flag.level.clone(),
--                    note: flag.note.clone(),
--                });
+-    let mut flags = parsed.flags;
+-    if !flags.is_empty() {
+-        flags.sort_by(flag_sort_key);
+-    }
+-
+-    let entry = CommandSnapshot {
+-        path: path.clone(),
+-        about: parsed.about,
+-        usage: parsed.usage,
+-        stability: None,
+-        platforms: None,
+-        args: if args.is_empty() { None } else { Some(args) },
+-        flags: if flags.is_empty() { None } else { Some(flags) },
+-    };
+-
+-    out.insert(path.clone(), entry);
+-
+-    for sub in parsed.subcommands {
+-        let mut next = path.clone();
+-        next.push(sub);
+-        collect_command_recursive(ctx, next, visited, out)?;
+-    }
+-
+-    Ok(())
+-}
+-
+-fn run_codex_help(
+-    codex_binary: &Path,
+-    global_args: &[String],
+-    path: &[String],
+-) -> Result<String, Error> {
+-    let mut cmd = Command::new(codex_binary);
+-    cmd.args(global_args);
+-    // Prefer `codex help <path...>` for non-root commands. Some Codex CLI versions define
+-    // subcommands with free positional args (e.g., `codex exec [PROMPT] [COMMAND]`), which can
+-    // accidentally consume the token `help` and cause `--help` to be parsed as a subcommand.
+-    //
+-    // `codex help <path...>` avoids that ambiguity and is how Codex CLI itself recommends
+-    // requesting help for a subcommand.
+-    if path.is_empty() {
+-        cmd.arg("--help");
+-    } else {
+-        cmd.arg("help");
+-        cmd.args(path);
+-    }
+-    cmd.env("NO_COLOR", "1");
+-    cmd.env("CLICOLOR", "0");
+-    cmd.env("TERM", "dumb");
+-
+-    let output = cmd.output()?;
+-    if !output.status.success() {
+-        return Err(Error::CommandFailed(command_failed_message(&cmd, &output)));
+-    }
+-    Ok(normalize_text(&output.stdout, &output.stderr))
+-}
+-
+-type VersionProbe = (String, Option<String>, Option<String>, Option<String>);
+-
+-fn probe_version(codex_binary: &Path) -> Result<VersionProbe, Error> {
+-    let mut cmd = Command::new(codex_binary);
+-    cmd.arg("--version");
+-    cmd.env("NO_COLOR", "1");
+-    cmd.env("CLICOLOR", "0");
+-    cmd.env("TERM", "dumb");
+-
+-    let output = cmd.output()?;
+-    if !output.status.success() {
+-        return Err(Error::CommandFailed(command_failed_message(&cmd, &output)));
+-    }
+-    let version_output = normalize_text(&output.stdout, &output.stderr)
+-        .trim()
+-        .to_string();
+-
+-    let re_semver = Regex::new(r"(?P<v>\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)").unwrap();
+-    let semantic_version = re_semver
+-        .captures(&version_output)
+-        .and_then(|c| c.name("v").map(|m| m.as_str().to_string()));
+-
+-    let channel = semantic_version.as_ref().map(|v| {
+-        if v.contains("nightly") {
+-            "nightly".to_string()
+-        } else if v.contains("beta") {
+-            "beta".to_string()
+-        } else {
+-            "stable".to_string()
+-        }
+-    });
+-
+-    let re_commit = Regex::new(r"(?i)\b([0-9a-f]{7,40})\b").unwrap();
+-    let commit = re_commit
+-        .captures(&version_output)
+-        .and_then(|c| c.get(1).map(|m| m.as_str().to_string()));
+-
+-    Ok((version_output, semantic_version, channel, commit))
+-}
+-
+-#[derive(Debug, Clone, Serialize)]
+-struct FeatureInfo {
+-    name: String,
+-    stage: String,
+-    effective: bool,
+-}
+-
+-fn probe_features(codex_binary: &Path) -> (Option<Vec<FeatureInfo>>, Option<String>) {
+-    let mut cmd = Command::new(codex_binary);
+-    cmd.args(["features", "list"]);
+-    cmd.env("NO_COLOR", "1");
+-    cmd.env("CLICOLOR", "0");
+-    cmd.env("TERM", "dumb");
+-
+-    let output = match cmd.output() {
+-        Ok(o) => o,
+-        Err(e) => return (None, Some(format!("spawn failed: {e}"))),
+-    };
+-    if !output.status.success() {
+-        return (
+-            None,
+-            Some(command_failed_message(&cmd, &output).trim().to_string()),
+-        );
+-    }
+-
+-    let text = normalize_text(&output.stdout, &output.stderr);
+-    let mut features = Vec::new();
+-    for line in text.lines() {
+-        let t = line.trim();
+-        if t.is_empty() {
+-            continue;
+-        }
+-        let parts = t.split_whitespace().collect::<Vec<_>>();
+-        if parts.len() < 3 {
+-            continue;
+-        }
+-        let effective = match parts[2].to_ascii_lowercase().as_str() {
+-            "true" => true,
+-            "false" => false,
+-            _ => continue,
+-        };
+-        features.push(FeatureInfo {
+-            name: parts[0].to_string(),
+-            stage: parts[1].to_string(),
+-            effective,
+-        });
+-    }
+-    features.sort_by(|a, b| a.name.cmp(&b.name));
+-    (Some(features), None)
+-}
+-
+-fn build_features_metadata(
+-    listed: Option<Vec<FeatureInfo>>,
+-    probe_error: Option<String>,
+-    enabled_feature_names: Vec<String>,
+-    commands_added: Option<Vec<Vec<String>>>,
+-) -> Option<serde_json::Value> {
+-    if listed.is_none() && probe_error.is_none() {
+-        return None;
+-    }
+-
+-    let mut obj = serde_json::Map::new();
+-    obj.insert(
+-        "mode".to_string(),
+-        serde_json::Value::String("default_plus_all_enabled".to_string()),
+-    );
+-    if let Some(err) = probe_error {
+-        obj.insert("probe_error".to_string(), serde_json::Value::String(err));
+-    }
+-    if let Some(list) = listed {
+-        obj.insert(
+-            "listed".to_string(),
+-            serde_json::to_value(list).unwrap_or(serde_json::Value::Null),
+-        );
+-    }
+-    if !enabled_feature_names.is_empty() {
+-        obj.insert(
+-            "enabled_for_snapshot".to_string(),
+-            serde_json::to_value(enabled_feature_names).unwrap_or(serde_json::Value::Null),
+-        );
+-    }
+-    if let Some(added) = commands_added {
+-        obj.insert(
+-            "commands_added_when_all_enabled".to_string(),
+-            serde_json::to_value(added).unwrap_or(serde_json::Value::Null),
+-        );
+-    }
+-
+-    Some(serde_json::Value::Object(obj))
+-}
+-
+-fn command_failed_message(cmd: &Command, output: &Output) -> String {
+-    let mut s = String::new();
+-    s.push_str(&format!(
+-        "{} (exit {})",
+-        format_command(cmd),
+-        output.status.code().unwrap_or(-1)
+-    ));
+-    let stdout = String::from_utf8_lossy(&output.stdout);
+-    let stderr = String::from_utf8_lossy(&output.stderr);
+-    if !stdout.trim().is_empty() {
+-        s.push_str(&format!("\nstdout:\n{stdout}"));
+-    }
+-    if !stderr.trim().is_empty() {
+-        s.push_str(&format!("\nstderr:\n{stderr}"));
+-    }
+-    s
+-}
+-
+-fn format_command(cmd: &Command) -> String {
+-    let program = cmd.get_program().to_string_lossy();
+-    let args = cmd
+-        .get_args()
+-        .map(|a| shell_escape(a.to_string_lossy().as_ref()))
+-        .collect::<Vec<_>>()
+-        .join(" ");
+-    if args.is_empty() {
+-        program.to_string()
+-    } else {
+-        format!("{program} {args}")
+-    }
+-}
+-
+-fn shell_escape(s: &str) -> String {
+-    if s.bytes().all(
+-        |b| matches!(b, b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'-' | b'.' | b'/' | b':'),
+-    ) {
+-        s.to_string()
+-    } else {
+-        format!("{s:?}")
+-    }
+-}
+-
+-fn normalize_text(stdout: &[u8], stderr: &[u8]) -> String {
+-    let stdout = String::from_utf8_lossy(stdout);
+-    if !stdout.trim().is_empty() {
+-        stdout.replace("\r\n", "\n")
+-    } else {
+-        String::from_utf8_lossy(stderr).replace("\r\n", "\n")
+-    }
+-}
+-
+-#[derive(Debug)]
+-struct ParsedHelp {
+-    about: Option<String>,
+-    usage: Option<String>,
+-    subcommands: Vec<String>,
+-    flags: Vec<FlagSnapshot>,
+-    args: Vec<ArgSnapshot>,
+-}
+-
+-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+-enum Section {
+-    Commands,
+-    Options,
+-    Args,
+-}
+-
+-fn parse_help(help: &str) -> ParsedHelp {
+-    let lines: Vec<&str> = help.lines().collect();
+-
+-    let mut usage: Option<String> = None;
+-    let mut usage_lines: Vec<String> = Vec::new();
+-    let mut usage_started = false;
+-    for (idx, line) in lines.iter().enumerate() {
+-        let trimmed = line.trim_start();
+-        if trimmed.to_ascii_lowercase().starts_with("usage:") {
+-            usage_started = true;
+-            let rest = trimmed["usage:".len()..].trim();
+-            if !rest.is_empty() {
+-                usage_lines.push(rest.to_string());
+-            }
+-            for cont in lines.iter().skip(idx + 1) {
+-                if cont.trim().is_empty() {
+-                    break;
+-                }
+-                if cont.starts_with(' ') || cont.starts_with('\t') {
+-                    let t = cont.trim();
+-                    if t.ends_with(':') && is_section_header(t) {
+-                        break;
+-                    }
+-                    usage_lines.push(t.to_string());
+-                } else {
+-                    break;
+-                }
+-            }
+-            break;
+-        }
+-    }
+-    if usage_started && !usage_lines.is_empty() {
+-        usage = Some(usage_lines.join("\n"));
+-    }
+-
+-    let about = {
+-        let mut nonempty_indices = lines
+-            .iter()
+-            .enumerate()
+-            .filter_map(|(i, l)| if l.trim().is_empty() { None } else { Some(i) })
+-            .collect::<Vec<_>>();
+-        if nonempty_indices.is_empty() {
+-            None
+-        } else {
+-            let title_idx = nonempty_indices.remove(0);
+-            let usage_idx = lines
+-                .iter()
+-                .position(|l| l.trim_start().to_ascii_lowercase().starts_with("usage:"))
+-                .unwrap_or(lines.len());
+-            let mut about_lines = Vec::new();
+-            for l in lines.iter().take(usage_idx).skip(title_idx + 1) {
+-                let t = l.trim();
+-                if t.is_empty() {
+-                    continue;
+-                }
+-                about_lines.push(t.to_string());
+-            }
+-            if about_lines.is_empty() {
+-                None
+-            } else {
+-                Some(about_lines.join("\n"))
+-            }
+-        }
+-    };
+-
+-    let mut subcommands = Vec::new();
+-    let mut flags = Vec::new();
+-    let mut args = Vec::new();
+-
+-    let mut section: Option<Section> = None;
+-
+-    for line in lines {
+-        let t = line.trim();
+-        if t.is_empty() {
+-            continue;
 -        }
 -
--        for arg in &cmd.args {
--            let arg_targets = scope_to_targets(
--                expected_targets,
--                platform_mapping,
--                &expected_set,
--                arg.scope.as_ref(),
--            );
--            let effective = intersect(&cmd_targets, &arg_targets);
--            args.entry((cmd.path.clone(), arg.name.clone()))
--                .or_default()
--                .push(ScopedCoverage {
--                    index: cmd_idx,
--                    targets: effective,
--                    level: arg.level.clone(),
--                    note: arg.note.clone(),
--                });
+-        if let Some(s) = parse_section_header(t) {
+-            section = Some(s);
+-            continue;
+-        }
+-
+-        match section {
+-            Some(Section::Commands) => {
+-                if let Some(token) = parse_command_token(line) {
+-                    subcommands.push(token);
+-                }
+-            }
+-            Some(Section::Options) => {
+-                if let Some(flag) = parse_flag_line(line) {
+-                    flags.push(flag);
+-                }
+-            }
+-            Some(Section::Args) => {
+-                if let Some(arg) = parse_arg_line(line) {
+-                    args.push(arg);
+-                } else if let Some(last) = args.last_mut() {
+-                    // Clap frequently wraps argument descriptions onto continuation lines with
+-                    // deeper indentation. Preserve these as part of the argument note so snapshots
+-                    // capture positional semantics with useful context.
+-                    let cont = line.trim();
+-                    if !cont.is_empty() {
+-                        match last.note.as_mut() {
+-                            Some(note) => {
+-                                note.push('\n');
+-                                note.push_str(cont);
+-                            }
+-                            None => last.note = Some(cont.to_string()),
+-                        }
+-                    }
+-                }
+-            }
+-            None => {}
 -        }
 -    }
 -
--    WrapperIndex {
--        commands,
+-    ParsedHelp {
+-        about,
+-        usage,
+-        subcommands,
 -        flags,
 -        args,
 -    }
 -}
 -
--fn scope_to_targets(
--    expected_targets: &[String],
--    platform_mapping: &BTreeMap<String, String>,
--    expected_set: &BTreeSet<String>,
--    scope: Option<&WrapperScope>,
--) -> BTreeSet<String> {
--    let Some(scope) = scope else {
--        return expected_set.clone();
+-fn is_section_header(t: &str) -> bool {
+-    matches!(
+-        t.trim_end_matches(':').to_ascii_lowercase().as_str(),
+-        "commands" | "subcommands" | "options" | "flags" | "arguments"
+-    )
+-}
+-
+-fn parse_section_header(t: &str) -> Option<Section> {
+-    let header = t.trim_end_matches(':').to_ascii_lowercase();
+-    match header.as_str() {
+-        "commands" | "subcommands" => Some(Section::Commands),
+-        "options" | "flags" => Some(Section::Options),
+-        "arguments" => Some(Section::Args),
+-        _ => None,
+-    }
+-}
+-
+-fn parse_command_token(line: &str) -> Option<String> {
+-    if !line.starts_with(' ') && !line.starts_with('\t') {
+-        return None;
+-    }
+-    let trimmed = line.trim_start();
+-    if trimmed.starts_with('-') {
+-        return None;
+-    }
+-    // Only treat "command list" entries as subcommands when the help output includes an
+-    // on-the-same-line description. Wrapped descriptions (continuation lines) should not be
+-    // interpreted as additional command tokens.
+-    let (head, desc) = split_tokens_and_desc(trimmed);
+-    let token = head.split_whitespace().next()?;
+-    if desc.is_empty() && head.trim() != token {
+-        return None;
+-    }
+-    if token
+-        .chars()
+-        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+-    {
+-        Some(token.to_string())
+-    } else {
+-        None
+-    }
+-}
+-
+-fn parse_flag_line(line: &str) -> Option<FlagSnapshot> {
+-    if !line.starts_with(' ') && !line.starts_with('\t') {
+-        return None;
+-    }
+-    let trimmed = line.trim_start();
+-    if !trimmed.starts_with('-') {
+-        return None;
+-    }
+-
+-    let (tokens_part, _) = split_tokens_and_desc(trimmed);
+-    let mut long: Option<String> = None;
+-    let mut short: Option<String> = None;
+-    let mut value_name: Option<String> = None;
+-    let mut repeatable: Option<bool> = None;
+-
+-    for tok in tokens_part.split_whitespace() {
+-        let tok = tok.trim_end_matches(',').trim();
+-        if tok.is_empty() {
+-            continue;
+-        }
+-
+-        if let Some(stripped) = tok.strip_prefix("--") {
+-            if long.is_none()
+-                && !stripped.is_empty()
+-                && stripped
+-                    .chars()
+-                    .all(|c| c.is_ascii_alphanumeric() || c == '-')
+-            {
+-                long = Some(format!("--{stripped}"));
+-            }
+-            continue;
+-        }
+-
+-        if tok.starts_with('-') && !tok.starts_with("--") {
+-            if short.is_none()
+-                && tok.len() == 2
+-                && tok
+-                    .chars()
+-                    .nth(1)
+-                    .is_some_and(|c| c.is_ascii_alphanumeric())
+-            {
+-                short = Some(tok.to_string());
+-            }
+-            continue;
+-        }
+-
+-        if value_name.is_none() {
+-            // clap formats variadic value placeholders like `<FILE>...`
+-            if tok.starts_with('<') {
+-                if let Some(end) = tok.find('>') {
+-                    if end > 1 {
+-                        value_name = Some(tok[1..end].to_string());
+-                        if tok[end + 1..].contains("...") {
+-                            repeatable = Some(true);
+-                        }
+-                        continue;
+-                    }
+-                }
+-                continue;
+-            }
+-
+-            if tok
+-                .chars()
+-                .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_' || c == '-')
+-            {
+-                value_name = Some(tok.to_string());
+-                continue;
+-            }
+-        }
+-    }
+-
+-    // Reject help text bullets/continuations like `- untrusted: ...` that are not real flags.
+-    if long.is_none() && short.is_none() {
+-        return None;
+-    }
+-
+-    let takes_value = value_name.is_some();
+-
+-    Some(FlagSnapshot {
+-        long,
+-        short,
+-        takes_value,
+-        value_name,
+-        repeatable,
+-        stability: None,
+-        platforms: None,
+-    })
+-}
+-
+-fn split_tokens_and_desc(s: &str) -> (&str, &str) {
+-    let bytes = s.as_bytes();
+-    for i in 0..bytes.len().saturating_sub(1) {
+-        if bytes[i] == b' ' && bytes[i + 1] == b' ' {
+-            let tokens = s[..i].trim_end();
+-            let desc = s[i..].trim();
+-            return (tokens, desc);
+-        }
+-    }
+-    (s.trim_end(), "")
+-}
+-
+-fn parse_arg_line(line: &str) -> Option<ArgSnapshot> {
+-    if !line.starts_with(' ') && !line.starts_with('\t') {
+-        return None;
+-    }
+-    let trimmed = line.trim_start();
+-    if trimmed.starts_with('-') {
+-        return None;
+-    }
+-    let (head, desc) = split_tokens_and_desc(trimmed);
+-    let token = head.split_whitespace().next()?;
+-
+-    let (token, token_is_variadic) = token
+-        .strip_suffix("...")
+-        .map(|t| (t, true))
+-        .unwrap_or((token, false));
+-
+-    let (required, mut name) = if token.starts_with('<') && token.ends_with('>') {
+-        (
+-            true,
+-            token
+-                .trim_start_matches('<')
+-                .trim_end_matches('>')
+-                .to_string(),
+-        )
+-    } else if token.starts_with('[') && token.ends_with(']') {
+-        (
+-            false,
+-            token
+-                .trim_start_matches('[')
+-                .trim_end_matches(']')
+-                .to_string(),
+-        )
+-    } else if token
+-        .chars()
+-        .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_' || c == '-')
+-    {
+-        // Be conservative: treat bare ALLCAPS tokens as positional args (common in some help
+-        // formats) but avoid mis-parsing wrapped description lines as arguments.
+-        (false, token.to_string())
+-    } else {
+-        return None;
 -    };
 -
--    let mut out = BTreeSet::<String>::new();
--    if let Some(tt) = scope.target_triples.as_ref() {
--        for t in tt {
--            if expected_set.contains(t) {
--                out.insert(t.clone());
+-    let mut variadic = token_is_variadic;
+-    if let Some(stripped) = name.strip_suffix("...") {
+-        variadic = true;
+-        name = stripped.to_string();
+-    }
+-
+-    if name.is_empty() {
+-        return None;
+-    }
+-
+-    Some(ArgSnapshot {
+-        name,
+-        required,
+-        variadic,
+-        note: if desc.is_empty() {
+-            None
+-        } else {
+-            Some(desc.to_string())
+-        },
+-    })
+-}
+-
+-fn merge_inferred_args(args: &mut Vec<ArgSnapshot>, inferred: Vec<ArgSnapshot>) {
+-    for inf in inferred {
+-        if let Some(existing) = args.iter_mut().find(|a| a.name == inf.name) {
+-            existing.required |= inf.required;
+-            existing.variadic |= inf.variadic;
+-            if existing.note.is_none() {
+-                existing.note = inf.note;
+-            }
+-            continue;
+-        }
+-        args.push(inf);
+-    }
+-}
+-
+-fn infer_args_from_usage(
+-    usage: &str,
+-    cmd_path: &[String],
+-    has_subcommands: bool,
+-) -> Vec<ArgSnapshot> {
+-    let mut out = Vec::new();
+-
+-    for line in usage.lines() {
+-        let tokens: Vec<&str> = line.split_whitespace().collect();
+-        if tokens.is_empty() {
+-            continue;
+-        }
+-
+-        // A clap "usage" line typically looks like: `codex <subcommands...> [OPTIONS] [ARGS...]`.
+-        // Only infer args when this usage line matches the command path we’re snapshotting.
+-        let mut idx = 0usize;
+-        if tokens.first().is_some_and(|t| *t == "codex") {
+-            idx += 1;
+-        }
+-
+-        let mut matches = true;
+-        for p in cmd_path {
+-            if tokens.get(idx).is_some_and(|t| *t == p) {
+-                idx += 1;
+-            } else {
+-                matches = false;
+-                break;
 -            }
 -        }
--    }
--    if let Some(platforms) = scope.platforms.as_ref() {
--        for target in expected_targets {
--            if let Some(platform) = platform_mapping.get(target) {
--                if platforms.iter().any(|pl| pl == platform) {
--                    out.insert(target.clone());
+-        if !matches {
+-            continue;
+-        }
+-
+-        let mut prev_was_flag = false;
+-        let mut after_double_dash = false;
+-        for tok in tokens.into_iter().skip(idx) {
+-            let tok = tok.trim_matches(|c| matches!(c, '(' | ')' | '|'));
+-            if tok.is_empty() {
+-                continue;
+-            }
+-
+-            if !after_double_dash {
+-                if tok == "--" {
+-                    after_double_dash = true;
+-                    prev_was_flag = false;
+-                    continue;
+-                }
+-
+-                // Some clap usage lines embed flags inside grouping tokens (e.g.
+-                // `<COMMAND|--url <URL>>`). Treat any token that contains a flag marker as a flag
+-                // so its value name is not mis-inferred as a positional argument.
+-                if tok.starts_with('-') || tok.contains("--") {
+-                    prev_was_flag = true;
+-                    continue;
+-                }
+-
+-                if prev_was_flag {
+-                    // Likely a value name for the previous flag (e.g., `--out <DIR>`). Don’t treat it
+-                    // as a positional argument.
+-                    prev_was_flag = false;
+-                    continue;
 -                }
 -            }
+-
+-            if tok.eq_ignore_ascii_case("[options]") || tok.eq_ignore_ascii_case("options") {
+-                continue;
+-            }
+-
+-            let (name, required, variadic) = match parse_usage_arg_token(tok) {
+-                Some(v) => v,
+-                None => continue,
+-            };
+-
+-            // Clap often represents subcommand dispatch using `[COMMAND]` and `[ARGS]` in usage lines
+-            // even when the help output includes an explicit `Commands:` section. Treat these as
+-            // implementation details, not stable positional args, and avoid inferring them.
+-            if has_subcommands && matches!(name.as_str(), "COMMAND" | "ARGS") {
+-                continue;
+-            }
+-
+-            // Avoid duplicates across multiple usage variants.
+-            if out.iter().any(|a: &ArgSnapshot| a.name == name) {
+-                continue;
+-            }
+-
+-            out.push(ArgSnapshot {
+-                name,
+-                required,
+-                variadic,
+-                note: Some("inferred from usage".to_string()),
+-            });
 -        }
 -    }
+-
 -    out
 -}
 -
--fn intersect(a: &BTreeSet<String>, b: &BTreeSet<String>) -> BTreeSet<String> {
--    a.intersection(b).cloned().collect()
--}
--
--#[allow(clippy::too_many_arguments)]
--fn build_report(
--    rules: &RulesFile,
--    parity_exclusions: Option<&ParityExclusionsIndex>,
--    version: &str,
--    platform_mode: &str,
--    target_triple: Option<&str>,
--    filter_mode: FilterMode<'_>,
--    report_targets: &[String],
--    upstream: &BTreeMap<Vec<String>, UnionCommandV2>,
--    wrapper: &WrapperCoverageV1,
--    wrapper_index: &WrapperIndex,
--    generated_at: &str,
--) -> Result<CoverageReportV1, ReportError> {
--    let report_target_set: BTreeSet<String> = report_targets.iter().cloned().collect();
--    let expected_set: BTreeSet<String> = rules.union.expected_targets.iter().cloned().collect();
--    let iu_roots = build_iu_roots(
--        wrapper,
--        wrapper_index,
--        &report_target_set,
--        &rules.union.expected_targets,
--        filter_mode,
--    )?;
--
--    if matches!(filter_mode, FilterMode::All)
--        && !expected_set.is_subset(&report_target_set)
--        && rules.report.filter_semantics.when_union_incomplete.all == "error"
--    {
--        return Err(ReportError::Rules(
--            "cannot generate platform_filter.mode=all with an incomplete union target set"
--                .to_string(),
--        ));
+-fn parse_usage_arg_token(token: &str) -> Option<(String, bool, bool)> {
+-    let token = token.trim().trim_matches(',');
+-    if token.is_empty() {
+-        return None;
 -    }
 -
--    let mut missing_commands: Vec<ReportCommandDeltaV1> = Vec::new();
--    let mut missing_flags: Vec<ReportFlagDeltaV1> = Vec::new();
--    let mut missing_args: Vec<ReportArgDeltaV1> = Vec::new();
+-    let (token, token_is_variadic) = token
+-        .strip_suffix("...")
+-        .map(|t| (t, true))
+-        .unwrap_or((token, false));
 -
--    let mut excluded_commands: Vec<ReportCommandDeltaV1> = Vec::new();
--    let mut excluded_flags: Vec<ReportFlagDeltaV1> = Vec::new();
--    let mut excluded_args: Vec<ReportArgDeltaV1> = Vec::new();
+-    if token == "[OPTIONS]" || token.eq_ignore_ascii_case("options") {
+-        return None;
+-    }
 -
--    let mut passthrough_candidates: Vec<ReportCommandDeltaV1> = Vec::new();
--    let mut unsupported: Vec<ReportCommandDeltaV1> = Vec::new();
--    let mut intentionally_unsupported: Vec<ReportIntentionallyUnsupportedDeltaV1> = Vec::new();
--    let mut wrapper_only_commands: Vec<ReportCommandDeltaV1> = Vec::new();
--    let mut wrapper_only_flags: Vec<ReportFlagDeltaV1> = Vec::new();
--    let mut wrapper_only_args: Vec<ReportArgDeltaV1> = Vec::new();
--
--    // Upstream → missing/unsupported/iu/passthrough
--    for (path, cmd) in upstream {
--        if !present_on_filter(
--            &cmd.available_on,
--            &report_target_set,
--            &rules.union.expected_targets,
--            filter_mode,
--        ) {
--            continue;
+-    if token.starts_with('<') && token.ends_with('>') {
+-        let name = token
+-            .trim_start_matches('<')
+-            .trim_end_matches('>')
+-            .to_string();
+-        if name.is_empty() {
+-            return None;
 -        }
+-        return Some((name, true, token_is_variadic));
+-    }
 -
--        if let Some(ex) = parity_exclusions.and_then(|idx| idx.commands.get(path)) {
--            let cmd_res = resolve_wrapper(
--                wrapper_index
--                    .commands
--                    .get(path)
--                    .map(Vec::as_slice)
--                    .unwrap_or(&[]),
--                &report_target_set,
--                &rules.union.expected_targets,
--                filter_mode,
--                "command",
--                &format!("path={}", format_path(path)),
--            )?;
--            excluded_commands.push(ReportCommandDeltaV1 {
--                path: path.clone(),
--                upstream_available_on: cmd.available_on.clone(),
--                wrapper_level: cmd_res.level.clone(),
--                note: Some(ex.note.clone()),
--            });
--            continue;
+-    if token.starts_with('[') && token.ends_with(']') {
+-        let name = token
+-            .trim_start_matches('[')
+-            .trim_end_matches(']')
+-            .to_string();
+-        if name.is_empty() {
+-            return None;
 -        }
+-        return Some((name, false, token_is_variadic));
+-    }
 -
--        let cmd_res = resolve_wrapper(
--            wrapper_index
--                .commands
--                .get(path)
--                .map(Vec::as_slice)
--                .unwrap_or(&[]),
--            &report_target_set,
--            &rules.union.expected_targets,
--            filter_mode,
--            "command",
--            &format!("path={}", format_path(path)),
--        )?;
+-    None
+-}
 -
--        if cmd_res.level.is_none() {
--            if let Some(root) = find_inherited_iu_root(
--                &iu_roots,
--                path,
--                &cmd.available_on,
--                &report_target_set,
--                "command",
--            )? {
--                intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Command(
--                    ReportCommandDeltaV1 {
--                        path: path.clone(),
--                        upstream_available_on: cmd.available_on.clone(),
--                        wrapper_level: Some("intentionally_unsupported".to_string()),
--                        note: Some(root.note.clone()),
--                    },
--                ));
--            } else {
--                classify_command_delta(
--                    &mut missing_commands,
--                    &mut passthrough_candidates,
--                    &mut unsupported,
--                    path,
--                    &cmd.available_on,
--                    &cmd_res,
--                );
+-fn merge_command_entries(
+-    base: &mut BTreeMap<Vec<String>, CommandSnapshot>,
+-    extra: BTreeMap<Vec<String>, CommandSnapshot>,
+-) {
+-    for (path, mut entry) in extra {
+-        match base.get_mut(&path) {
+-            None => {
+-                base.insert(path, entry);
 -            }
--        } else if cmd_res.level.as_deref() == Some("intentionally_unsupported") {
--            let note = require_non_empty_note(
--                cmd_res.note.as_deref(),
--                "command",
--                &format!("path={}", format_path(path)),
--            )?;
--            intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Command(
--                ReportCommandDeltaV1 {
--                    path: path.clone(),
--                    upstream_available_on: cmd.available_on.clone(),
--                    wrapper_level: Some("intentionally_unsupported".to_string()),
--                    note: Some(note),
--                },
--            ));
--        } else {
--            classify_command_delta(
--                &mut missing_commands,
--                &mut passthrough_candidates,
--                &mut unsupported,
--                path,
--                &cmd.available_on,
--                &cmd_res,
--            );
--        }
--
--        for flag in &cmd.flags {
--            if !present_on_filter(
--                &flag.available_on,
--                &report_target_set,
--                &rules.union.expected_targets,
--                filter_mode,
--            ) {
--                continue;
--            }
--            if let Some(ex) =
--                parity_exclusions.and_then(|idx| idx.flags.get(&(path.clone(), flag.key.clone())))
--            {
--                let key = (path.clone(), flag.key.clone());
--                let res = resolve_wrapper(
--                    wrapper_index
--                        .flags
--                        .get(&key)
--                        .map(Vec::as_slice)
--                        .unwrap_or(&[]),
--                    &report_target_set,
--                    &rules.union.expected_targets,
--                    filter_mode,
--                    "flag",
--                    &format!("path={} key={}", format_path(path), flag.key),
--                )?;
--                excluded_flags.push(ReportFlagDeltaV1 {
--                    path: path.clone(),
--                    key: flag.key.clone(),
--                    upstream_available_on: flag.available_on.clone(),
--                    wrapper_level: res.level.clone(),
--                    note: Some(ex.note.clone()),
--                });
--                continue;
--            }
--            let key = (path.clone(), flag.key.clone());
--            let res = resolve_wrapper(
--                wrapper_index
--                    .flags
--                    .get(&key)
--                    .map(Vec::as_slice)
--                    .unwrap_or(&[]),
--                &report_target_set,
--                &rules.union.expected_targets,
--                filter_mode,
--                "flag",
--                &format!("path={} key={}", format_path(path), flag.key),
--            )?;
--            if res.level.is_none() {
--                if let Some(root) = find_inherited_iu_root(
--                    &iu_roots,
--                    path,
--                    &flag.available_on,
--                    &report_target_set,
--                    "flag",
--                )? {
--                    intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Flag(
--                        ReportFlagDeltaV1 {
--                            path: path.to_vec(),
--                            key: flag.key.clone(),
--                            upstream_available_on: flag.available_on.clone(),
--                            wrapper_level: Some("intentionally_unsupported".to_string()),
--                            note: Some(root.note.clone()),
--                        },
--                    ));
--                } else {
--                    classify_flag_delta(&mut missing_flags, path, flag, &res);
+-            Some(existing) => {
+-                if existing.about.is_none() {
+-                    existing.about = entry.about.take();
 -                }
--            } else if res.level.as_deref() == Some("intentionally_unsupported") {
--                let note = require_non_empty_note(
--                    res.note.as_deref(),
--                    "flag",
--                    &format!("path={} key={}", format_path(path), flag.key),
--                )?;
--                intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Flag(
--                    ReportFlagDeltaV1 {
--                        path: path.to_vec(),
--                        key: flag.key.clone(),
--                        upstream_available_on: flag.available_on.clone(),
--                        wrapper_level: Some("intentionally_unsupported".to_string()),
--                        note: Some(note),
--                    },
--                ));
--            } else {
--                classify_flag_delta(&mut missing_flags, path, flag, &res);
--            }
--        }
--
--        for arg in &cmd.args {
--            if !present_on_filter(
--                &arg.available_on,
--                &report_target_set,
--                &rules.union.expected_targets,
--                filter_mode,
--            ) {
--                continue;
--            }
--            if let Some(ex) =
--                parity_exclusions.and_then(|idx| idx.args.get(&(path.clone(), arg.name.clone())))
--            {
--                let key = (path.clone(), arg.name.clone());
--                let res = resolve_wrapper(
--                    wrapper_index
--                        .args
--                        .get(&key)
--                        .map(Vec::as_slice)
--                        .unwrap_or(&[]),
--                    &report_target_set,
--                    &rules.union.expected_targets,
--                    filter_mode,
--                    "arg",
--                    &format!("path={} name={}", format_path(path), arg.name),
--                )?;
--                excluded_args.push(ReportArgDeltaV1 {
--                    path: path.clone(),
--                    name: arg.name.clone(),
--                    upstream_available_on: arg.available_on.clone(),
--                    wrapper_level: res.level.clone(),
--                    note: Some(ex.note.clone()),
--                });
--                continue;
--            }
--            let key = (path.clone(), arg.name.clone());
--            let res = resolve_wrapper(
--                wrapper_index
--                    .args
--                    .get(&key)
--                    .map(Vec::as_slice)
--                    .unwrap_or(&[]),
--                &report_target_set,
--                &rules.union.expected_targets,
--                filter_mode,
--                "arg",
--                &format!("path={} name={}", format_path(path), arg.name),
--            )?;
--            if res.level.is_none() {
--                if let Some(root) = find_inherited_iu_root(
--                    &iu_roots,
--                    path,
--                    &arg.available_on,
--                    &report_target_set,
--                    "arg",
--                )? {
--                    intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Arg(
--                        ReportArgDeltaV1 {
--                            path: path.to_vec(),
--                            name: arg.name.clone(),
--                            upstream_available_on: arg.available_on.clone(),
--                            wrapper_level: Some("intentionally_unsupported".to_string()),
--                            note: Some(root.note.clone()),
--                        },
--                    ));
--                } else {
--                    classify_arg_delta(&mut missing_args, path, arg, &res);
+-                if existing.usage.is_none() {
+-                    existing.usage = entry.usage.take();
 -                }
--            } else if res.level.as_deref() == Some("intentionally_unsupported") {
--                let note = require_non_empty_note(
--                    res.note.as_deref(),
--                    "arg",
--                    &format!("path={} name={}", format_path(path), arg.name),
--                )?;
--                intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Arg(
--                    ReportArgDeltaV1 {
--                        path: path.to_vec(),
--                        name: arg.name.clone(),
--                        upstream_available_on: arg.available_on.clone(),
--                        wrapper_level: Some("intentionally_unsupported".to_string()),
--                        note: Some(note),
--                    },
--                ));
--            } else {
--                classify_arg_delta(&mut missing_args, path, arg, &res);
+-
+-                if let Some(extra_args) = entry.args.take() {
+-                    let mut args = existing.args.take().unwrap_or_default();
+-                    merge_inferred_args(&mut args, extra_args);
+-                    if !args.is_empty() {
+-                        args.sort_by(|a, b| a.name.cmp(&b.name));
+-                    }
+-                    existing.args = if args.is_empty() { None } else { Some(args) };
+-                }
+-
+-                if let Some(extra_flags) = entry.flags.take() {
+-                    let mut flags = existing.flags.take().unwrap_or_default();
+-                    merge_flags(&mut flags, extra_flags);
+-                    if !flags.is_empty() {
+-                        flags.sort_by(flag_sort_key);
+-                    }
+-                    existing.flags = if flags.is_empty() { None } else { Some(flags) };
+-                }
 -            }
 -        }
 -    }
--
--    // Wrapper → wrapper-only (relative to platform filter semantics)
--    for (path, entries) in &wrapper_index.commands {
--        let res = resolve_wrapper(
--            entries,
--            &report_target_set,
--            &rules.union.expected_targets,
--            filter_mode,
--            "command",
--            &format!("path={}", format_path(path)),
--        )?;
--        if !res.present {
--            continue;
--        }
--
--        let upstream_avail = upstream
--            .get(path)
--            .map(|c| c.available_on.clone())
--            .unwrap_or_else(|| ordered_subset(&rules.union.expected_targets, &res.targets));
--        let upstream_present = upstream.get(path).is_some_and(|c| {
--            present_on_filter(
--                &c.available_on,
--                &report_target_set,
--                &rules.union.expected_targets,
--                filter_mode,
--            )
--        });
--
--        if !upstream_present {
--            wrapper_only_commands.push(ReportCommandDeltaV1 {
--                path: path.clone(),
--                upstream_available_on: upstream_avail,
--                wrapper_level: res.level.clone(),
--                note: res.note.clone(),
--            });
--        }
--    }
--
--    for ((path, key), entries) in &wrapper_index.flags {
--        let res = resolve_wrapper(
--            entries,
--            &report_target_set,
--            &rules.union.expected_targets,
--            filter_mode,
--            "flag",
--            &format!("path={} key={key}", format_path(path)),
--        )?;
--        if !res.present {
--            continue;
--        }
--        let (upstream_avail, upstream_present) = upstream_flag_availability(
--            upstream,
--            path,
--            key,
--            &res,
--            &report_target_set,
--            &rules.union.expected_targets,
--            filter_mode,
--        );
--        if !upstream_present {
--            wrapper_only_flags.push(ReportFlagDeltaV1 {
--                path: path.clone(),
--                key: key.clone(),
--                upstream_available_on: upstream_avail,
--                wrapper_level: res.level.clone(),
--                note: res.note.clone(),
--            });
--        }
--    }
--
--    for ((path, name), entries) in &wrapper_index.args {
--        let res = resolve_wrapper(
--            entries,
--            &report_target_set,
--            &rules.union.expected_targets,
--            filter_mode,
--            "arg",
--            &format!("path={} name={name}", format_path(path)),
--        )?;
--        if !res.present {
--            continue;
--        }
--        let (upstream_avail, upstream_present) = upstream_arg_availability(
--            upstream,
--            path,
--            name,
--            &res,
--            &report_target_set,
--            &rules.union.expected_targets,
--            filter_mode,
--        );
--        if !upstream_present {
--            wrapper_only_args.push(ReportArgDeltaV1 {
--                path: path.clone(),
--                name: name.clone(),
--                upstream_available_on: upstream_avail,
--                wrapper_level: res.level.clone(),
--                note: res.note.clone(),
--            });
--        }
--    }
--
--    missing_commands.sort_by(|a, b| cmp_path(&a.path, &b.path));
--    missing_flags.sort_by(|a, b| cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key)));
--    missing_args.sort_by(|a, b| cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name)));
--
--    excluded_commands.sort_by(|a, b| cmp_path(&a.path, &b.path));
--    excluded_flags.sort_by(|a, b| cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key)));
--    excluded_args.sort_by(|a, b| cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name)));
--
--    passthrough_candidates.sort_by(|a, b| cmp_path(&a.path, &b.path));
--    unsupported.sort_by(|a, b| cmp_path(&a.path, &b.path));
--    intentionally_unsupported.sort_by(cmp_iu_delta);
--
--    wrapper_only_commands.sort_by(|a, b| cmp_path(&a.path, &b.path));
--    wrapper_only_flags.sort_by(|a, b| cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key)));
--    wrapper_only_args.sort_by(|a, b| cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name)));
--
--    let deltas = ReportDeltasV1 {
--        missing_commands,
--        missing_flags,
--        missing_args,
--        excluded_commands: if excluded_commands.is_empty() {
--            None
--        } else {
--            Some(excluded_commands)
--        },
--        excluded_flags: if excluded_flags.is_empty() {
--            None
--        } else {
--            Some(excluded_flags)
--        },
--        excluded_args: if excluded_args.is_empty() {
--            None
--        } else {
--            Some(excluded_args)
--        },
--        passthrough_candidates: if passthrough_candidates.is_empty() {
--            None
--        } else {
--            Some(passthrough_candidates)
--        },
--        unsupported: if unsupported.is_empty() {
--            None
--        } else {
--            Some(unsupported)
--        },
--        intentionally_unsupported: if intentionally_unsupported.is_empty() {
--            None
--        } else {
--            Some(intentionally_unsupported)
--        },
--        wrapper_only_commands: if wrapper_only_commands.is_empty() {
--            None
--        } else {
--            Some(wrapper_only_commands)
--        },
--        wrapper_only_flags: if wrapper_only_flags.is_empty() {
--            None
--        } else {
--            Some(wrapper_only_flags)
--        },
--        wrapper_only_args: if wrapper_only_args.is_empty() {
--            None
--        } else {
--            Some(wrapper_only_args)
--        },
--    };
--
--    Ok(CoverageReportV1 {
--        schema_version: 1,
--        generated_at: generated_at.to_string(),
--        inputs: ReportInputsV1 {
--            upstream: ReportUpstreamInputsV1 {
--                semantic_version: version.to_string(),
--                mode: "union".to_string(),
--                targets: report_targets.to_vec(),
--            },
--            wrapper: ReportWrapperInputsV1 {
--                schema_version: wrapper.schema_version,
--                wrapper_version: wrapper.wrapper_version.clone(),
--            },
--            rules: ReportRulesInputsV1 {
--                rules_schema_version: rules.rules_schema_version,
--            },
--        },
--        platform_filter: PlatformFilterV1 {
--            mode: platform_mode.to_string(),
--            target_triple: target_triple.map(ToString::to_string),
--        },
--        deltas,
--    })
 -}
 -
--fn present_on_filter(
--    available_on: &[String],
--    report_targets: &BTreeSet<String>,
--    expected_targets: &[String],
--    mode: FilterMode<'_>,
--) -> bool {
--    match mode {
--        FilterMode::Any => available_on.iter().any(|t| report_targets.contains(t)),
--        FilterMode::ExactTarget(t) => available_on.iter().any(|x| x == t),
--        FilterMode::All => expected_targets
--            .iter()
--            .all(|t| available_on.iter().any(|x| x == t)),
+-fn merge_flags(dst: &mut Vec<FlagSnapshot>, src: Vec<FlagSnapshot>) {
+-    for f in src {
+-        let idx = if let Some(long) = f.long.as_deref() {
+-            dst.iter().position(|e| e.long.as_deref() == Some(long))
+-        } else if let Some(short) = f.short.as_deref() {
+-            dst.iter().position(|e| e.short.as_deref() == Some(short))
+-        } else {
+-            None
+-        };
+-
+-        match idx {
+-            Some(i) => {
+-                let e = &mut dst[i];
+-                if e.long.is_none() {
+-                    e.long = f.long;
+-                }
+-                if e.short.is_none() {
+-                    e.short = f.short;
+-                }
+-                e.takes_value |= f.takes_value;
+-                if e.value_name.is_none() {
+-                    e.value_name = f.value_name;
+-                }
+-                if e.repeatable.is_none() {
+-                    e.repeatable = f.repeatable;
+-                }
+-                if e.stability.is_none() {
+-                    e.stability = f.stability;
+-                }
+-                if e.platforms.is_none() {
+-                    e.platforms = f.platforms;
+-                }
+-            }
+-            None => dst.push(f),
+-        }
 -    }
 -}
 -
--fn resolve_wrapper(
--    entries: &[ScopedCoverage],
--    report_targets: &BTreeSet<String>,
--    expected_targets: &[String],
--    mode: FilterMode<'_>,
--    unit: &str,
--    detail: &str,
--) -> Result<CoverageResolution, ReportError> {
--    let relevant_target_set: BTreeSet<String> = match mode {
--        FilterMode::Any => report_targets.clone(),
--        FilterMode::ExactTarget(t) => BTreeSet::from([t.to_string()]),
--        FilterMode::All => expected_targets.iter().cloned().collect(),
--    };
--
--    let mut union_targets = BTreeSet::<String>::new();
--    let mut levels = BTreeSet::<String>::new();
--    let mut note_by_index: BTreeMap<usize, String> = BTreeMap::new();
--
--    for e in entries {
--        let intersection: BTreeSet<String> = e
--            .targets
--            .intersection(&relevant_target_set)
--            .cloned()
--            .collect();
--        if intersection.is_empty() {
--            continue;
--        }
--        union_targets.extend(intersection);
--        levels.insert(e.level.clone());
--        if let Some(note) = e.note.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
--            note_by_index
--                .entry(e.index)
--                .or_insert_with(|| note.to_string());
--        }
--    }
--
--    let present = match mode {
--        FilterMode::Any => !union_targets.is_empty(),
--        FilterMode::ExactTarget(t) => union_targets.contains(t),
--        FilterMode::All => expected_targets.iter().all(|t| union_targets.contains(t)),
--    };
--
--    let level = match levels.len() {
--        0 => None,
--        1 => levels.into_iter().next(),
--        _ => {
--            return Err(ReportError::WrapperResolution {
--                unit: unit.to_string(),
--                detail: format!("{detail} has multiple wrapper levels across relevant scopes"),
--            })
--        }
--    };
--
--    let note = note_by_index.into_values().next();
--
--    Ok(CoverageResolution {
--        present,
--        targets: union_targets,
--        level,
--        note,
--    })
+-fn flag_sort_key(a: &FlagSnapshot, b: &FlagSnapshot) -> std::cmp::Ordering {
+-    cmp_opt_str(&a.long, &b.long).then_with(|| cmp_opt_str(&a.short, &b.short))
 -}
 -
--fn classify_command_delta(
--    missing: &mut Vec<ReportCommandDeltaV1>,
--    passthrough_candidates: &mut Vec<ReportCommandDeltaV1>,
--    unsupported: &mut Vec<ReportCommandDeltaV1>,
--    path: &[String],
--    upstream_available_on: &[String],
--    wrapper: &CoverageResolution,
--) {
--    let entry = ReportCommandDeltaV1 {
--        path: path.to_vec(),
--        upstream_available_on: upstream_available_on.to_vec(),
--        wrapper_level: wrapper.level.clone(),
--        note: wrapper.note.clone(),
--    };
--
--    match wrapper.level.as_deref() {
--        None => missing.push(entry),
--        Some("unknown") => missing.push(entry),
--        Some("unsupported") => unsupported.push(entry),
--        Some("intentionally_unsupported") => {}
--        Some("passthrough") => passthrough_candidates.push(entry),
--        Some("explicit") => {}
--        Some(other) => missing.push(ReportCommandDeltaV1 {
--            wrapper_level: Some(other.to_string()),
--            ..entry
--        }),
+-fn cmp_opt_str(a: &Option<String>, b: &Option<String>) -> std::cmp::Ordering {
+-    match (a, b) {
+-        (Some(a), Some(b)) => a.cmp(b),
+-        (Some(_), None) => std::cmp::Ordering::Less,
+-        (None, Some(_)) => std::cmp::Ordering::Greater,
+-        (None, None) => std::cmp::Ordering::Equal,
 -    }
--}
--
--fn classify_flag_delta(
--    out: &mut Vec<ReportFlagDeltaV1>,
--    path: &[String],
--    flag: &UnionFlagV2,
--    wrapper: &CoverageResolution,
--) {
--    match wrapper.level.as_deref() {
--        None | Some("unknown") | Some("unsupported") => out.push(ReportFlagDeltaV1 {
--            path: path.to_vec(),
--            key: flag.key.clone(),
--            upstream_available_on: flag.available_on.clone(),
--            wrapper_level: wrapper.level.clone(),
--            note: wrapper.note.clone(),
--        }),
--        Some("intentionally_unsupported") => {}
--        Some("explicit") | Some("passthrough") => {}
--        Some(other) => out.push(ReportFlagDeltaV1 {
--            path: path.to_vec(),
--            key: flag.key.clone(),
--            upstream_available_on: flag.available_on.clone(),
--            wrapper_level: Some(other.to_string()),
--            note: wrapper.note.clone(),
--        }),
--    }
--}
--
--fn classify_arg_delta(
--    out: &mut Vec<ReportArgDeltaV1>,
--    path: &[String],
--    arg: &UnionArgV2,
--    wrapper: &CoverageResolution,
--) {
--    match wrapper.level.as_deref() {
--        None | Some("unknown") | Some("unsupported") => out.push(ReportArgDeltaV1 {
--            path: path.to_vec(),
--            name: arg.name.clone(),
--            upstream_available_on: arg.available_on.clone(),
--            wrapper_level: wrapper.level.clone(),
--            note: wrapper.note.clone(),
--        }),
--        Some("intentionally_unsupported") => {}
--        Some("explicit") | Some("passthrough") => {}
--        Some(other) => out.push(ReportArgDeltaV1 {
--            path: path.to_vec(),
--            name: arg.name.clone(),
--            upstream_available_on: arg.available_on.clone(),
--            wrapper_level: Some(other.to_string()),
--            note: wrapper.note.clone(),
--        }),
--    }
--}
--
--fn upstream_flag_availability(
--    upstream: &BTreeMap<Vec<String>, UnionCommandV2>,
--    path: &[String],
--    key: &str,
--    wrapper_res: &CoverageResolution,
--    report_targets: &BTreeSet<String>,
--    expected_targets: &[String],
--    mode: FilterMode<'_>,
--) -> (Vec<String>, bool) {
--    if let Some(cmd) = upstream.get(path) {
--        if let Some(flag) = cmd.flags.iter().find(|f| f.key == key) {
--            let present =
--                present_on_filter(&flag.available_on, report_targets, expected_targets, mode);
--            return (flag.available_on.clone(), present);
--        }
--        return (cmd.available_on.clone(), false);
--    }
--    (
--        ordered_subset(expected_targets, &wrapper_res.targets),
--        false,
--    )
--}
--
--fn upstream_arg_availability(
--    upstream: &BTreeMap<Vec<String>, UnionCommandV2>,
--    path: &[String],
--    name: &str,
--    wrapper_res: &CoverageResolution,
--    report_targets: &BTreeSet<String>,
--    expected_targets: &[String],
--    mode: FilterMode<'_>,
--) -> (Vec<String>, bool) {
--    if let Some(cmd) = upstream.get(path) {
--        if let Some(arg) = cmd.args.iter().find(|a| a.name == name) {
--            let present =
--                present_on_filter(&arg.available_on, report_targets, expected_targets, mode);
--            return (arg.available_on.clone(), present);
--        }
--        return (cmd.available_on.clone(), false);
--    }
--    (
--        ordered_subset(expected_targets, &wrapper_res.targets),
--        false,
--    )
--}
--
--fn ordered_subset(expected_targets: &[String], targets: &BTreeSet<String>) -> Vec<String> {
--    expected_targets
--        .iter()
--        .filter(|t| targets.contains(*t))
--        .cloned()
--        .collect()
 -}
 -
 -fn cmp_path(a: &[String], b: &[String]) -> std::cmp::Ordering {
@@ -1256,1540 +1249,1019 @@ index 2caaabf..3541f4e 100644
 -    a.len().cmp(&b.len())
 -}
 -
--fn format_path(path: &[String]) -> String {
--    if path.is_empty() {
--        "<root>".to_string()
+-fn write_raw_help(raw_help_dir: &Path, path: &[String], help: &str) -> Result<(), Error> {
+-    let rel = if path.is_empty() {
+-        PathBuf::from("help.txt")
 -    } else {
--        path.join(" ")
--    }
--}
--
--#[derive(Debug, Serialize)]
--struct CoverageReportV1 {
--    schema_version: u32,
--    generated_at: String,
--    inputs: ReportInputsV1,
--    platform_filter: PlatformFilterV1,
--    deltas: ReportDeltasV1,
--}
--
--#[derive(Debug, Serialize)]
--struct ReportInputsV1 {
--    upstream: ReportUpstreamInputsV1,
--    wrapper: ReportWrapperInputsV1,
--    rules: ReportRulesInputsV1,
--}
--
--#[derive(Debug, Serialize)]
--struct ReportUpstreamInputsV1 {
--    semantic_version: String,
--    mode: String,
--    targets: Vec<String>,
--}
--
--#[derive(Debug, Serialize)]
--struct ReportWrapperInputsV1 {
--    schema_version: u32,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    wrapper_version: Option<String>,
--}
--
--#[derive(Debug, Serialize)]
--struct ReportRulesInputsV1 {
--    rules_schema_version: u32,
--}
--
--#[derive(Debug, Serialize)]
--struct PlatformFilterV1 {
--    mode: String,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    target_triple: Option<String>,
--}
--
--#[derive(Debug, Serialize)]
--struct ReportDeltasV1 {
--    missing_commands: Vec<ReportCommandDeltaV1>,
--    missing_flags: Vec<ReportFlagDeltaV1>,
--    missing_args: Vec<ReportArgDeltaV1>,
--
--    #[serde(skip_serializing_if = "Option::is_none")]
--    excluded_commands: Option<Vec<ReportCommandDeltaV1>>,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    excluded_flags: Option<Vec<ReportFlagDeltaV1>>,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    excluded_args: Option<Vec<ReportArgDeltaV1>>,
--
--    #[serde(skip_serializing_if = "Option::is_none")]
--    passthrough_candidates: Option<Vec<ReportCommandDeltaV1>>,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    unsupported: Option<Vec<ReportCommandDeltaV1>>,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    intentionally_unsupported: Option<Vec<ReportIntentionallyUnsupportedDeltaV1>>,
--
--    #[serde(skip_serializing_if = "Option::is_none")]
--    wrapper_only_commands: Option<Vec<ReportCommandDeltaV1>>,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    wrapper_only_flags: Option<Vec<ReportFlagDeltaV1>>,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    wrapper_only_args: Option<Vec<ReportArgDeltaV1>>,
--}
--
--#[derive(Debug, Serialize)]
--struct ReportCommandDeltaV1 {
--    path: Vec<String>,
--    upstream_available_on: Vec<String>,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    wrapper_level: Option<String>,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    note: Option<String>,
--}
--
--#[derive(Debug, Serialize)]
--struct ReportFlagDeltaV1 {
--    path: Vec<String>,
--    key: String,
--    upstream_available_on: Vec<String>,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    wrapper_level: Option<String>,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    note: Option<String>,
--}
--
--#[derive(Debug, Serialize)]
--struct ReportArgDeltaV1 {
--    path: Vec<String>,
--    name: String,
--    upstream_available_on: Vec<String>,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    wrapper_level: Option<String>,
--    #[serde(skip_serializing_if = "Option::is_none")]
--    note: Option<String>,
--}
--
--#[derive(Debug, Serialize)]
--#[serde(untagged)]
--enum ReportIntentionallyUnsupportedDeltaV1 {
--    Command(ReportCommandDeltaV1),
--    Flag(ReportFlagDeltaV1),
--    Arg(ReportArgDeltaV1),
--}
--
--#[derive(Debug, Clone)]
--struct IuRoot {
--    path: Vec<String>,
--    targets: BTreeSet<String>,
--    note: String,
--}
--
--fn build_iu_roots(
--    wrapper: &WrapperCoverageV1,
--    wrapper_index: &WrapperIndex,
--    report_target_set: &BTreeSet<String>,
--    expected_targets: &[String],
--    filter_mode: FilterMode<'_>,
--) -> Result<Vec<IuRoot>, ReportError> {
--    let mut unique_paths: BTreeSet<Vec<String>> = BTreeSet::new();
--    for cmd in &wrapper.coverage {
--        if cmd.level == "intentionally_unsupported" {
--            unique_paths.insert(cmd.path.clone());
+-        let mut p = PathBuf::from("commands");
+-        for token in path {
+-            p.push(token);
 -        }
+-        p.join("help.txt")
+-    };
+-    let full = raw_help_dir.join(rel);
+-    if let Some(parent) = full.parent() {
+-        fs::create_dir_all(parent)?;
 -    }
--
--    let mut roots = Vec::new();
--    for path in unique_paths {
--        let res = resolve_wrapper(
--            wrapper_index
--                .commands
--                .get(&path)
--                .map(Vec::as_slice)
--                .unwrap_or(&[]),
--            report_target_set,
--            expected_targets,
--            filter_mode,
--            "command",
--            &format!("path={}", format_path(&path)),
--        )?;
--        if res.level.as_deref() != Some("intentionally_unsupported") {
--            continue;
--        }
--        let note = require_non_empty_note(
--            res.note.as_deref(),
--            "command",
--            &format!("path={}", format_path(&path)),
--        )?;
--        roots.push(IuRoot {
--            path,
--            targets: res.targets,
--            note,
--        });
--    }
--
--    roots.sort_by(|a, b| {
--        b.path
--            .len()
--            .cmp(&a.path.len())
--            .then_with(|| cmp_path(&a.path, &b.path))
--    });
--    Ok(roots)
--}
--
--fn find_inherited_iu_root<'a>(
--    roots: &'a [IuRoot],
--    unit_path: &[String],
--    unit_available_on: &[String],
--    report_target_set: &BTreeSet<String>,
--    unit_kind: &'static str,
--) -> Result<Option<&'a IuRoot>, ReportError> {
--    let relevant_targets: BTreeSet<String> = unit_available_on
--        .iter()
--        .filter(|t| report_target_set.contains(*t))
--        .cloned()
--        .collect();
--    if relevant_targets.is_empty() {
--        return Ok(None);
--    }
--
--    for root in roots {
--        if !is_prefix(&root.path, unit_path) {
--            continue;
--        }
--
--        let overlap: BTreeSet<String> = relevant_targets
--            .intersection(&root.targets)
--            .cloned()
--            .collect();
--        if overlap.is_empty() {
--            continue;
--        }
--        if overlap != relevant_targets {
--            return Err(ReportError::WrapperResolution {
--                unit: unit_kind.to_string(),
--                detail: format!(
--                    "IU subtree root scope mismatch: root_path={} does not cover all upstream targets for unit_path={} (root_targets={} unit_targets={})",
--                    format_path(&root.path),
--                    format_path(unit_path),
--                    root.targets.iter().cloned().collect::<Vec<_>>().join(","),
--                    relevant_targets
--                        .iter()
--                        .cloned()
--                        .collect::<Vec<_>>()
--                        .join(","),
--                ),
--            });
--        }
--
--        return Ok(Some(root));
--    }
--
--    Ok(None)
--}
--
--fn is_prefix(prefix: &[String], path: &[String]) -> bool {
--    prefix.len() <= path.len() && prefix.iter().zip(path).all(|(a, b)| a == b)
--}
--
--fn require_non_empty_note(
--    note: Option<&str>,
--    unit_kind: &'static str,
--    detail: &str,
--) -> Result<String, ReportError> {
--    match note.map(str::trim).filter(|s| !s.is_empty()) {
--        Some(v) => Ok(v.to_string()),
--        None => Err(ReportError::WrapperResolution {
--            unit: unit_kind.to_string(),
--            detail: format!("{detail} intentionally_unsupported requires non-empty note"),
--        }),
--    }
--}
--
--fn iu_kind_rank(entry: &ReportIntentionallyUnsupportedDeltaV1) -> u8 {
--    match entry {
--        ReportIntentionallyUnsupportedDeltaV1::Command(_) => 0,
--        ReportIntentionallyUnsupportedDeltaV1::Flag(_) => 1,
--        ReportIntentionallyUnsupportedDeltaV1::Arg(_) => 2,
--    }
--}
--
--fn iu_path(entry: &ReportIntentionallyUnsupportedDeltaV1) -> &[String] {
--    match entry {
--        ReportIntentionallyUnsupportedDeltaV1::Command(v) => &v.path,
--        ReportIntentionallyUnsupportedDeltaV1::Flag(v) => &v.path,
--        ReportIntentionallyUnsupportedDeltaV1::Arg(v) => &v.path,
--    }
--}
--
--fn cmp_iu_delta(
--    a: &ReportIntentionallyUnsupportedDeltaV1,
--    b: &ReportIntentionallyUnsupportedDeltaV1,
--) -> std::cmp::Ordering {
--    iu_kind_rank(a).cmp(&iu_kind_rank(b)).then_with(|| {
--        cmp_path(iu_path(a), iu_path(b)).then_with(|| match (a, b) {
--            (
--                ReportIntentionallyUnsupportedDeltaV1::Flag(a),
--                ReportIntentionallyUnsupportedDeltaV1::Flag(b),
--            ) => a.key.cmp(&b.key),
--            (
--                ReportIntentionallyUnsupportedDeltaV1::Arg(a),
--                ReportIntentionallyUnsupportedDeltaV1::Arg(b),
--            ) => a.name.cmp(&b.name),
--            _ => std::cmp::Ordering::Equal,
--        })
--    })
+-    fs::write(full, help)?;
+-    Ok(())
 -}
 -
 -#[derive(Debug)]
--struct ParityExclusionsIndex {
--    commands: BTreeMap<Vec<String>, ParityExclusionUnit>,
--    flags: BTreeMap<(Vec<String>, String), ParityExclusionUnit>,
--    args: BTreeMap<(Vec<String>, String), ParityExclusionUnit>,
+-struct BinaryMetadata {
+-    sha256: String,
+-    size_bytes: u64,
 -}
 -
--fn build_parity_exclusions_index(exclusions: &RulesParityExclusions) -> ParityExclusionsIndex {
--    let mut commands = BTreeMap::new();
--    let mut flags = BTreeMap::new();
--    let mut args = BTreeMap::new();
+-impl BinaryMetadata {
+-    fn collect(path: &Path) -> Result<Self, Error> {
+-        let bytes = fs::read(path)?;
+-        let mut hasher = Sha256::new();
+-        hasher.update(&bytes);
+-        let sha256 = hex::encode(hasher.finalize());
+-        let size_bytes = bytes.len() as u64;
+-        Ok(Self { sha256, size_bytes })
+-    }
+-}
 -
--    for unit in &exclusions.units {
--        match unit.unit.as_str() {
--            "command" => {
--                commands.insert(unit.path.clone(), unit.clone());
+-fn apply_supplements(
+-    supplement_path: Option<&Path>,
+-    commands: &mut BTreeMap<Vec<String>, CommandSnapshot>,
+-) -> Result<(Vec<String>, bool), Error> {
+-    let Some(path) = supplement_path else {
+-        return Ok((Vec::new(), false));
+-    };
+-    let text = fs::read_to_string(path)?;
+-    let supplement: SupplementV1 = serde_json::from_str(&text)?;
+-    if supplement.version != 1 {
+-        return Err(Error::SupplementVersion(supplement.version));
+-    }
+-
+-    let mut known_omissions = Vec::new();
+-    let mut any_applied = false;
+-
+-    for item in supplement.commands {
+-        let mut applied = false;
+-        let existed = commands.contains_key(&item.path);
+-        let entry = commands
+-            .entry(item.path.clone())
+-            .or_insert_with(|| CommandSnapshot {
+-                path: item.path.clone(),
+-                about: None,
+-                usage: None,
+-                stability: None,
+-                platforms: None,
+-                args: None,
+-                flags: None,
+-            });
+-
+-        if !existed {
+-            applied = true;
+-        }
+-
+-        if let Some(platforms) = item.platforms {
+-            if entry.platforms.as_ref() != Some(&platforms) {
+-                entry.platforms = Some(platforms);
+-                applied = true;
 -            }
--            "flag" => {
--                if let Some(key) = unit.key.as_ref() {
--                    flags.insert((unit.path.clone(), key.clone()), unit.clone());
--                }
--            }
--            "arg" => {
--                if let Some(name) = unit.name.as_ref() {
--                    args.insert((unit.path.clone(), name.clone()), unit.clone());
--                }
--            }
--            _ => {}
+-        }
+-
+-        if applied {
+-            any_applied = true;
+-            known_omissions.push(format!(
+-                "supplement/commands.json:v1:{}",
+-                item.path.join(" ")
+-            ));
 -        }
 -    }
 -
--    ParityExclusionsIndex {
--        commands,
--        flags,
--        args,
--    }
+-    known_omissions.sort();
+-    known_omissions.dedup();
+-    Ok((known_omissions, any_applied))
 -}
-diff --git a/crates/xtask/src/codex_report/report.rs b/crates/xtask/src/codex_report/report.rs
+diff --git a/crates/xtask/src/codex_snapshot/discovery.rs b/crates/xtask/src/codex_snapshot/discovery.rs
 new file mode 100644
-index 0000000..f4d4f73
+index 0000000..6618c95
 --- /dev/null
-+++ b/crates/xtask/src/codex_report/report.rs
-@@ -0,0 +1,987 @@
-+use std::collections::{BTreeMap, BTreeSet};
-+
-+use serde::Serialize;
-+
-+use super::{
-+    models::{UnionArgV2, UnionCommandV2, UnionFlagV2, UnionSnapshotV2, WrapperCoverageV1},
-+    rules::{ParityExclusionUnit, RulesFile, RulesParityExclusions},
-+    util,
-+    wrapper::{self, CoverageResolution, FilterMode, WrapperIndex},
-+    ReportError,
++++ b/crates/xtask/src/codex_snapshot/discovery.rs
+@@ -0,0 +1,711 @@
++use std::{
++    collections::{BTreeMap, BTreeSet},
++    path::Path,
++    process::Command,
 +};
 +
-+pub(super) fn index_upstream(union: &UnionSnapshotV2) -> BTreeMap<Vec<String>, UnionCommandV2> {
-+    let mut out = BTreeMap::new();
-+    for cmd in &union.commands {
-+        out.insert(cmd.path.clone(), cmd.clone());
-+    }
-+    out
-+}
++use super::{layout, supplements, util, ArgSnapshot, CommandSnapshot, Error, FlagSnapshot};
 +
-+#[allow(clippy::too_many_arguments)]
-+pub(super) fn build_report(
-+    rules: &RulesFile,
-+    parity_exclusions: Option<&ParityExclusionsIndex>,
-+    version: &str,
-+    platform_mode: &str,
-+    target_triple: Option<&str>,
-+    filter_mode: FilterMode<'_>,
-+    report_targets: &[String],
-+    upstream: &BTreeMap<Vec<String>, UnionCommandV2>,
-+    wrapper: &WrapperCoverageV1,
-+    wrapper_index: &WrapperIndex,
-+    generated_at: &str,
-+) -> Result<CoverageReportV1, ReportError> {
-+    let report_target_set: BTreeSet<String> = report_targets.iter().cloned().collect();
-+    let expected_set: BTreeSet<String> = rules.union.expected_targets.iter().cloned().collect();
-+    let iu_roots = build_iu_roots(
-+        wrapper,
-+        wrapper_index,
-+        &report_target_set,
-+        &rules.union.expected_targets,
-+        filter_mode,
-+    )?;
++pub(super) fn discover_commands(
++    codex_binary: &Path,
++    raw_help_dir: Option<&Path>,
++    capture_raw_help: bool,
++    global_args: &[String],
++) -> Result<BTreeMap<Vec<String>, CommandSnapshot>, Error> {
++    let mut out = BTreeMap::<Vec<String>, CommandSnapshot>::new();
++    let mut visited = BTreeSet::<Vec<String>>::new();
 +
-+    if matches!(filter_mode, FilterMode::All)
-+        && !expected_set.is_subset(&report_target_set)
-+        && rules.report.filter_semantics.when_union_incomplete.all == "error"
-+    {
-+        return Err(ReportError::Rules(
-+            "cannot generate platform_filter.mode=all with an incomplete union target set"
-+                .to_string(),
-+        ));
-+    }
++    let root_help = run_codex_help(codex_binary, global_args, &[])?;
++    let root_parsed = parse_help(&root_help);
 +
-+    let mut missing_commands: Vec<ReportCommandDeltaV1> = Vec::new();
-+    let mut missing_flags: Vec<ReportFlagDeltaV1> = Vec::new();
-+    let mut missing_args: Vec<ReportArgDeltaV1> = Vec::new();
-+
-+    let mut excluded_commands: Vec<ReportCommandDeltaV1> = Vec::new();
-+    let mut excluded_flags: Vec<ReportFlagDeltaV1> = Vec::new();
-+    let mut excluded_args: Vec<ReportArgDeltaV1> = Vec::new();
-+
-+    let mut passthrough_candidates: Vec<ReportCommandDeltaV1> = Vec::new();
-+    let mut unsupported: Vec<ReportCommandDeltaV1> = Vec::new();
-+    let mut intentionally_unsupported: Vec<ReportIntentionallyUnsupportedDeltaV1> = Vec::new();
-+    let mut wrapper_only_commands: Vec<ReportCommandDeltaV1> = Vec::new();
-+    let mut wrapper_only_flags: Vec<ReportFlagDeltaV1> = Vec::new();
-+    let mut wrapper_only_args: Vec<ReportArgDeltaV1> = Vec::new();
-+
-+    // Upstream → missing/unsupported/iu/passthrough
-+    for (path, cmd) in upstream {
-+        if !present_on_filter(
-+            &cmd.available_on,
-+            &report_target_set,
-+            &rules.union.expected_targets,
-+            filter_mode,
-+        ) {
-+            continue;
-+        }
-+
-+        if let Some(ex) = parity_exclusions.and_then(|idx| idx.commands.get(path)) {
-+            let cmd_res = wrapper::resolve_wrapper(
-+                wrapper_index
-+                    .commands
-+                    .get(path)
-+                    .map(Vec::as_slice)
-+                    .unwrap_or(&[]),
-+                &report_target_set,
-+                &rules.union.expected_targets,
-+                filter_mode,
-+                "command",
-+                &format!("path={}", util::format_path(path)),
-+            )?;
-+            excluded_commands.push(ReportCommandDeltaV1 {
-+                path: path.clone(),
-+                upstream_available_on: cmd.available_on.clone(),
-+                wrapper_level: cmd_res.level.clone(),
-+                note: Some(ex.note.clone()),
-+            });
-+            continue;
-+        }
-+
-+        let cmd_res = wrapper::resolve_wrapper(
-+            wrapper_index
-+                .commands
-+                .get(path)
-+                .map(Vec::as_slice)
-+                .unwrap_or(&[]),
-+            &report_target_set,
-+            &rules.union.expected_targets,
-+            filter_mode,
-+            "command",
-+            &format!("path={}", util::format_path(path)),
-+        )?;
-+
-+        if cmd_res.level.is_none() {
-+            if let Some(root) = find_inherited_iu_root(
-+                &iu_roots,
-+                path,
-+                &cmd.available_on,
-+                &report_target_set,
-+                "command",
-+            )? {
-+                intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Command(
-+                    ReportCommandDeltaV1 {
-+                        path: path.clone(),
-+                        upstream_available_on: cmd.available_on.clone(),
-+                        wrapper_level: Some("intentionally_unsupported".to_string()),
-+                        note: Some(root.note.clone()),
-+                    },
-+                ));
-+            } else {
-+                classify_command_delta(
-+                    &mut missing_commands,
-+                    &mut passthrough_candidates,
-+                    &mut unsupported,
-+                    path,
-+                    &cmd.available_on,
-+                    &cmd_res,
-+                );
-+            }
-+        } else if cmd_res.level.as_deref() == Some("intentionally_unsupported") {
-+            let note = require_non_empty_note(
-+                cmd_res.note.as_deref(),
-+                "command",
-+                &format!("path={}", util::format_path(path)),
-+            )?;
-+            intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Command(
-+                ReportCommandDeltaV1 {
-+                    path: path.clone(),
-+                    upstream_available_on: cmd.available_on.clone(),
-+                    wrapper_level: Some("intentionally_unsupported".to_string()),
-+                    note: Some(note),
-+                },
-+            ));
-+        } else {
-+            classify_command_delta(
-+                &mut missing_commands,
-+                &mut passthrough_candidates,
-+                &mut unsupported,
-+                path,
-+                &cmd.available_on,
-+                &cmd_res,
-+            );
-+        }
-+
-+        for flag in &cmd.flags {
-+            if !present_on_filter(
-+                &flag.available_on,
-+                &report_target_set,
-+                &rules.union.expected_targets,
-+                filter_mode,
-+            ) {
-+                continue;
-+            }
-+            if let Some(ex) =
-+                parity_exclusions.and_then(|idx| idx.flags.get(&(path.clone(), flag.key.clone())))
-+            {
-+                let key = (path.clone(), flag.key.clone());
-+                let res = wrapper::resolve_wrapper(
-+                    wrapper_index
-+                        .flags
-+                        .get(&key)
-+                        .map(Vec::as_slice)
-+                        .unwrap_or(&[]),
-+                    &report_target_set,
-+                    &rules.union.expected_targets,
-+                    filter_mode,
-+                    "flag",
-+                    &format!("path={} key={}", util::format_path(path), flag.key),
-+                )?;
-+                excluded_flags.push(ReportFlagDeltaV1 {
-+                    path: path.clone(),
-+                    key: flag.key.clone(),
-+                    upstream_available_on: flag.available_on.clone(),
-+                    wrapper_level: res.level.clone(),
-+                    note: Some(ex.note.clone()),
-+                });
-+                continue;
-+            }
-+            let key = (path.clone(), flag.key.clone());
-+            let res = wrapper::resolve_wrapper(
-+                wrapper_index
-+                    .flags
-+                    .get(&key)
-+                    .map(Vec::as_slice)
-+                    .unwrap_or(&[]),
-+                &report_target_set,
-+                &rules.union.expected_targets,
-+                filter_mode,
-+                "flag",
-+                &format!("path={} key={}", util::format_path(path), flag.key),
-+            )?;
-+            if res.level.is_none() {
-+                if let Some(root) = find_inherited_iu_root(
-+                    &iu_roots,
-+                    path,
-+                    &flag.available_on,
-+                    &report_target_set,
-+                    "flag",
-+                )? {
-+                    intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Flag(
-+                        ReportFlagDeltaV1 {
-+                            path: path.to_vec(),
-+                            key: flag.key.clone(),
-+                            upstream_available_on: flag.available_on.clone(),
-+                            wrapper_level: Some("intentionally_unsupported".to_string()),
-+                            note: Some(root.note.clone()),
-+                        },
-+                    ));
-+                } else {
-+                    classify_flag_delta(&mut missing_flags, path, flag, &res);
-+                }
-+            } else if res.level.as_deref() == Some("intentionally_unsupported") {
-+                let note = require_non_empty_note(
-+                    res.note.as_deref(),
-+                    "flag",
-+                    &format!("path={} key={}", util::format_path(path), flag.key),
-+                )?;
-+                intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Flag(
-+                    ReportFlagDeltaV1 {
-+                        path: path.to_vec(),
-+                        key: flag.key.clone(),
-+                        upstream_available_on: flag.available_on.clone(),
-+                        wrapper_level: Some("intentionally_unsupported".to_string()),
-+                        note: Some(note),
-+                    },
-+                ));
-+            } else {
-+                classify_flag_delta(&mut missing_flags, path, flag, &res);
-+            }
-+        }
-+
-+        for arg in &cmd.args {
-+            if !present_on_filter(
-+                &arg.available_on,
-+                &report_target_set,
-+                &rules.union.expected_targets,
-+                filter_mode,
-+            ) {
-+                continue;
-+            }
-+            if let Some(ex) =
-+                parity_exclusions.and_then(|idx| idx.args.get(&(path.clone(), arg.name.clone())))
-+            {
-+                let key = (path.clone(), arg.name.clone());
-+                let res = wrapper::resolve_wrapper(
-+                    wrapper_index
-+                        .args
-+                        .get(&key)
-+                        .map(Vec::as_slice)
-+                        .unwrap_or(&[]),
-+                    &report_target_set,
-+                    &rules.union.expected_targets,
-+                    filter_mode,
-+                    "arg",
-+                    &format!("path={} name={}", util::format_path(path), arg.name),
-+                )?;
-+                excluded_args.push(ReportArgDeltaV1 {
-+                    path: path.clone(),
-+                    name: arg.name.clone(),
-+                    upstream_available_on: arg.available_on.clone(),
-+                    wrapper_level: res.level.clone(),
-+                    note: Some(ex.note.clone()),
-+                });
-+                continue;
-+            }
-+            let key = (path.clone(), arg.name.clone());
-+            let res = wrapper::resolve_wrapper(
-+                wrapper_index
-+                    .args
-+                    .get(&key)
-+                    .map(Vec::as_slice)
-+                    .unwrap_or(&[]),
-+                &report_target_set,
-+                &rules.union.expected_targets,
-+                filter_mode,
-+                "arg",
-+                &format!("path={} name={}", util::format_path(path), arg.name),
-+            )?;
-+            if res.level.is_none() {
-+                if let Some(root) = find_inherited_iu_root(
-+                    &iu_roots,
-+                    path,
-+                    &arg.available_on,
-+                    &report_target_set,
-+                    "arg",
-+                )? {
-+                    intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Arg(
-+                        ReportArgDeltaV1 {
-+                            path: path.to_vec(),
-+                            name: arg.name.clone(),
-+                            upstream_available_on: arg.available_on.clone(),
-+                            wrapper_level: Some("intentionally_unsupported".to_string()),
-+                            note: Some(root.note.clone()),
-+                        },
-+                    ));
-+                } else {
-+                    classify_arg_delta(&mut missing_args, path, arg, &res);
-+                }
-+            } else if res.level.as_deref() == Some("intentionally_unsupported") {
-+                let note = require_non_empty_note(
-+                    res.note.as_deref(),
-+                    "arg",
-+                    &format!("path={} name={}", util::format_path(path), arg.name),
-+                )?;
-+                intentionally_unsupported.push(ReportIntentionallyUnsupportedDeltaV1::Arg(
-+                    ReportArgDeltaV1 {
-+                        path: path.to_vec(),
-+                        name: arg.name.clone(),
-+                        upstream_available_on: arg.available_on.clone(),
-+                        wrapper_level: Some("intentionally_unsupported".to_string()),
-+                        note: Some(note),
-+                    },
-+                ));
-+            } else {
-+                classify_arg_delta(&mut missing_args, path, arg, &res);
-+            }
++    if capture_raw_help {
++        if let Some(dir) = raw_help_dir {
++            layout::write_raw_help(dir, &[], &root_help)?;
 +        }
 +    }
 +
-+    // Wrapper → wrapper-only (relative to platform filter semantics)
-+    for (path, entries) in &wrapper_index.commands {
-+        let res = wrapper::resolve_wrapper(
-+            entries,
-+            &report_target_set,
-+            &rules.union.expected_targets,
-+            filter_mode,
-+            "command",
-+            &format!("path={}", util::format_path(path)),
-+        )?;
-+        if !res.present {
-+            continue;
-+        }
-+
-+        let upstream_avail = upstream
-+            .get(path)
-+            .map(|c| c.available_on.clone())
-+            .unwrap_or_else(|| util::ordered_subset(&rules.union.expected_targets, &res.targets));
-+        let upstream_present = upstream.get(path).is_some_and(|c| {
-+            present_on_filter(
-+                &c.available_on,
-+                &report_target_set,
-+                &rules.union.expected_targets,
-+                filter_mode,
-+            )
-+        });
-+
-+        if !upstream_present {
-+            wrapper_only_commands.push(ReportCommandDeltaV1 {
-+                path: path.clone(),
-+                upstream_available_on: upstream_avail,
-+                wrapper_level: res.level.clone(),
-+                note: res.note.clone(),
-+            });
-+        }
-+    }
-+
-+    for ((path, key), entries) in &wrapper_index.flags {
-+        let res = wrapper::resolve_wrapper(
-+            entries,
-+            &report_target_set,
-+            &rules.union.expected_targets,
-+            filter_mode,
-+            "flag",
-+            &format!("path={} key={key}", util::format_path(path)),
-+        )?;
-+        if !res.present {
-+            continue;
-+        }
-+        let (upstream_avail, upstream_present) = upstream_flag_availability(
-+            upstream,
-+            path,
-+            key,
-+            &res,
-+            &report_target_set,
-+            &rules.union.expected_targets,
-+            filter_mode,
++    let mut root_args = root_parsed.args;
++    if let Some(usage) = root_parsed.usage.as_deref() {
++        merge_inferred_args(
++            &mut root_args,
++            infer_args_from_usage(usage, &[], !root_parsed.subcommands.is_empty()),
 +        );
-+        if !upstream_present {
-+            wrapper_only_flags.push(ReportFlagDeltaV1 {
-+                path: path.clone(),
-+                key: key.clone(),
-+                upstream_available_on: upstream_avail,
-+                wrapper_level: res.level.clone(),
-+                note: res.note.clone(),
-+            });
-+        }
++    }
++    if !root_args.is_empty() {
++        root_args.sort_by(|a, b| a.name.cmp(&b.name));
 +    }
 +
-+    for ((path, name), entries) in &wrapper_index.args {
-+        let res = wrapper::resolve_wrapper(
-+            entries,
-+            &report_target_set,
-+            &rules.union.expected_targets,
-+            filter_mode,
-+            "arg",
-+            &format!("path={} name={name}", util::format_path(path)),
-+        )?;
-+        if !res.present {
-+            continue;
-+        }
-+        let (upstream_avail, upstream_present) = upstream_arg_availability(
-+            upstream,
-+            path,
-+            name,
-+            &res,
-+            &report_target_set,
-+            &rules.union.expected_targets,
-+            filter_mode,
-+        );
-+        if !upstream_present {
-+            wrapper_only_args.push(ReportArgDeltaV1 {
-+                path: path.clone(),
-+                name: name.clone(),
-+                upstream_available_on: upstream_avail,
-+                wrapper_level: res.level.clone(),
-+                note: res.note.clone(),
-+            });
-+        }
++    let mut root_flags = root_parsed.flags;
++    if !root_flags.is_empty() {
++        root_flags.sort_by(supplements::flag_sort_key);
 +    }
 +
-+    missing_commands.sort_by(|a, b| util::cmp_path(&a.path, &b.path));
-+    missing_flags.sort_by(|a, b| util::cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key)));
-+    missing_args.sort_by(|a, b| util::cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name)));
++    out.insert(
++        Vec::new(),
++        CommandSnapshot {
++            path: Vec::new(),
++            about: root_parsed.about,
++            usage: root_parsed.usage,
++            stability: None,
++            platforms: None,
++            args: if root_args.is_empty() {
++                None
++            } else {
++                Some(root_args)
++            },
++            flags: if root_flags.is_empty() {
++                None
++            } else {
++                Some(root_flags)
++            },
++        },
++    );
 +
-+    excluded_commands.sort_by(|a, b| util::cmp_path(&a.path, &b.path));
-+    excluded_flags.sort_by(|a, b| util::cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key)));
-+    excluded_args
-+        .sort_by(|a, b| util::cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name)));
-+
-+    passthrough_candidates.sort_by(|a, b| util::cmp_path(&a.path, &b.path));
-+    unsupported.sort_by(|a, b| util::cmp_path(&a.path, &b.path));
-+    intentionally_unsupported.sort_by(cmp_iu_delta);
-+
-+    wrapper_only_commands.sort_by(|a, b| util::cmp_path(&a.path, &b.path));
-+    wrapper_only_flags
-+        .sort_by(|a, b| util::cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key)));
-+    wrapper_only_args
-+        .sort_by(|a, b| util::cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name)));
-+
-+    let deltas = ReportDeltasV1 {
-+        missing_commands,
-+        missing_flags,
-+        missing_args,
-+        excluded_commands: if excluded_commands.is_empty() {
-+            None
-+        } else {
-+            Some(excluded_commands)
-+        },
-+        excluded_flags: if excluded_flags.is_empty() {
-+            None
-+        } else {
-+            Some(excluded_flags)
-+        },
-+        excluded_args: if excluded_args.is_empty() {
-+            None
-+        } else {
-+            Some(excluded_args)
-+        },
-+        passthrough_candidates: if passthrough_candidates.is_empty() {
-+            None
-+        } else {
-+            Some(passthrough_candidates)
-+        },
-+        unsupported: if unsupported.is_empty() {
-+            None
-+        } else {
-+            Some(unsupported)
-+        },
-+        intentionally_unsupported: if intentionally_unsupported.is_empty() {
-+            None
-+        } else {
-+            Some(intentionally_unsupported)
-+        },
-+        wrapper_only_commands: if wrapper_only_commands.is_empty() {
-+            None
-+        } else {
-+            Some(wrapper_only_commands)
-+        },
-+        wrapper_only_flags: if wrapper_only_flags.is_empty() {
-+            None
-+        } else {
-+            Some(wrapper_only_flags)
-+        },
-+        wrapper_only_args: if wrapper_only_args.is_empty() {
-+            None
-+        } else {
-+            Some(wrapper_only_args)
-+        },
++    let ctx = HelpCtx {
++        codex_binary,
++        global_args,
++        raw_help_dir,
++        capture_raw_help,
 +    };
 +
-+    Ok(CoverageReportV1 {
-+        schema_version: 1,
-+        generated_at: generated_at.to_string(),
-+        inputs: ReportInputsV1 {
-+            upstream: ReportUpstreamInputsV1 {
-+                semantic_version: version.to_string(),
-+                mode: "union".to_string(),
-+                targets: report_targets.to_vec(),
-+            },
-+            wrapper: ReportWrapperInputsV1 {
-+                schema_version: wrapper.schema_version,
-+                wrapper_version: wrapper.wrapper_version.clone(),
-+            },
-+            rules: ReportRulesInputsV1 {
-+                rules_schema_version: rules.rules_schema_version,
-+            },
-+        },
-+        platform_filter: PlatformFilterV1 {
-+            mode: platform_mode.to_string(),
-+            target_triple: target_triple.map(ToString::to_string),
-+        },
-+        deltas,
-+    })
++    for token in root_parsed.subcommands {
++        collect_command_recursive(&ctx, vec![token], &mut visited, &mut out)?;
++    }
++
++    Ok(out)
 +}
 +
-+fn present_on_filter(
-+    available_on: &[String],
-+    report_targets: &BTreeSet<String>,
-+    expected_targets: &[String],
-+    mode: FilterMode<'_>,
-+) -> bool {
-+    match mode {
-+        FilterMode::Any => available_on.iter().any(|t| report_targets.contains(t)),
-+        FilterMode::ExactTarget(t) => available_on.iter().any(|x| x == t),
-+        FilterMode::All => expected_targets
-+            .iter()
-+            .all(|t| available_on.iter().any(|x| x == t)),
++pub(super) fn merge_command_entries(
++    base: &mut BTreeMap<Vec<String>, CommandSnapshot>,
++    extra: BTreeMap<Vec<String>, CommandSnapshot>,
++) {
++    for (path, mut entry) in extra {
++        match base.get_mut(&path) {
++            None => {
++                base.insert(path, entry);
++            }
++            Some(existing) => {
++                if existing.about.is_none() {
++                    existing.about = entry.about.take();
++                }
++                if existing.usage.is_none() {
++                    existing.usage = entry.usage.take();
++                }
++
++                if let Some(extra_args) = entry.args.take() {
++                    let mut args = existing.args.take().unwrap_or_default();
++                    merge_inferred_args(&mut args, extra_args);
++                    if !args.is_empty() {
++                        args.sort_by(|a, b| a.name.cmp(&b.name));
++                    }
++                    existing.args = if args.is_empty() { None } else { Some(args) };
++                }
++
++                if let Some(extra_flags) = entry.flags.take() {
++                    let mut flags = existing.flags.take().unwrap_or_default();
++                    supplements::merge_flags(&mut flags, extra_flags);
++                    if !flags.is_empty() {
++                        flags.sort_by(supplements::flag_sort_key);
++                    }
++                    existing.flags = if flags.is_empty() { None } else { Some(flags) };
++                }
++            }
++        }
 +    }
 +}
 +
-+fn classify_command_delta(
-+    missing: &mut Vec<ReportCommandDeltaV1>,
-+    passthrough_candidates: &mut Vec<ReportCommandDeltaV1>,
-+    unsupported: &mut Vec<ReportCommandDeltaV1>,
-+    path: &[String],
-+    upstream_available_on: &[String],
-+    wrapper: &CoverageResolution,
-+) {
-+    let entry = ReportCommandDeltaV1 {
-+        path: path.to_vec(),
-+        upstream_available_on: upstream_available_on.to_vec(),
-+        wrapper_level: wrapper.level.clone(),
-+        note: wrapper.note.clone(),
++struct HelpCtx<'a> {
++    codex_binary: &'a Path,
++    global_args: &'a [String],
++    raw_help_dir: Option<&'a Path>,
++    capture_raw_help: bool,
++}
++
++fn collect_command_recursive(
++    ctx: &HelpCtx<'_>,
++    path: Vec<String>,
++    visited: &mut BTreeSet<Vec<String>>,
++    out: &mut BTreeMap<Vec<String>, CommandSnapshot>,
++) -> Result<(), Error> {
++    if !visited.insert(path.clone()) {
++        return Ok(());
++    }
++
++    let help = run_codex_help(ctx.codex_binary, ctx.global_args, &path)?;
++    let parsed = parse_help(&help);
++
++    if ctx.capture_raw_help {
++        if let Some(dir) = ctx.raw_help_dir {
++            layout::write_raw_help(dir, &path, &help)?;
++        }
++    }
++
++    let mut args = parsed.args;
++    if let Some(usage) = parsed.usage.as_deref() {
++        merge_inferred_args(
++            &mut args,
++            infer_args_from_usage(usage, &path, !parsed.subcommands.is_empty()),
++        );
++    }
++    if !args.is_empty() {
++        args.sort_by(|a, b| a.name.cmp(&b.name));
++    }
++
++    let mut flags = parsed.flags;
++    if !flags.is_empty() {
++        flags.sort_by(supplements::flag_sort_key);
++    }
++
++    let entry = CommandSnapshot {
++        path: path.clone(),
++        about: parsed.about,
++        usage: parsed.usage,
++        stability: None,
++        platforms: None,
++        args: if args.is_empty() { None } else { Some(args) },
++        flags: if flags.is_empty() { None } else { Some(flags) },
 +    };
 +
-+    match wrapper.level.as_deref() {
-+        None => missing.push(entry),
-+        Some("unknown") => missing.push(entry),
-+        Some("unsupported") => unsupported.push(entry),
-+        Some("intentionally_unsupported") => {}
-+        Some("passthrough") => passthrough_candidates.push(entry),
-+        Some("explicit") => {}
-+        Some(other) => missing.push(ReportCommandDeltaV1 {
-+            wrapper_level: Some(other.to_string()),
-+            ..entry
-+        }),
++    out.insert(path.clone(), entry);
++
++    for sub in parsed.subcommands {
++        let mut next = path.clone();
++        next.push(sub);
++        collect_command_recursive(ctx, next, visited, out)?;
 +    }
++
++    Ok(())
 +}
 +
-+fn classify_flag_delta(
-+    out: &mut Vec<ReportFlagDeltaV1>,
++fn run_codex_help(
++    codex_binary: &Path,
++    global_args: &[String],
 +    path: &[String],
-+    flag: &UnionFlagV2,
-+    wrapper: &CoverageResolution,
-+) {
-+    match wrapper.level.as_deref() {
-+        None | Some("unknown") | Some("unsupported") => out.push(ReportFlagDeltaV1 {
-+            path: path.to_vec(),
-+            key: flag.key.clone(),
-+            upstream_available_on: flag.available_on.clone(),
-+            wrapper_level: wrapper.level.clone(),
-+            note: wrapper.note.clone(),
-+        }),
-+        Some("intentionally_unsupported") => {}
-+        Some("explicit") | Some("passthrough") => {}
-+        Some(other) => out.push(ReportFlagDeltaV1 {
-+            path: path.to_vec(),
-+            key: flag.key.clone(),
-+            upstream_available_on: flag.available_on.clone(),
-+            wrapper_level: Some(other.to_string()),
-+            note: wrapper.note.clone(),
-+        }),
++) -> Result<String, Error> {
++    let mut cmd = Command::new(codex_binary);
++    cmd.args(global_args);
++    // Prefer `codex help <path...>` for non-root commands. Some Codex CLI versions define
++    // subcommands with free positional args (e.g., `codex exec [PROMPT] [COMMAND]`), which can
++    // accidentally consume the token `help` and cause `--help` to be parsed as a subcommand.
++    //
++    // `codex help <path...>` avoids that ambiguity and is how Codex CLI itself recommends
++    // requesting help for a subcommand.
++    if path.is_empty() {
++        cmd.arg("--help");
++    } else {
++        cmd.arg("help");
++        cmd.args(path);
 +    }
-+}
++    cmd.env("NO_COLOR", "1");
++    cmd.env("CLICOLOR", "0");
++    cmd.env("TERM", "dumb");
 +
-+fn classify_arg_delta(
-+    out: &mut Vec<ReportArgDeltaV1>,
-+    path: &[String],
-+    arg: &UnionArgV2,
-+    wrapper: &CoverageResolution,
-+) {
-+    match wrapper.level.as_deref() {
-+        None | Some("unknown") | Some("unsupported") => out.push(ReportArgDeltaV1 {
-+            path: path.to_vec(),
-+            name: arg.name.clone(),
-+            upstream_available_on: arg.available_on.clone(),
-+            wrapper_level: wrapper.level.clone(),
-+            note: wrapper.note.clone(),
-+        }),
-+        Some("intentionally_unsupported") => {}
-+        Some("explicit") | Some("passthrough") => {}
-+        Some(other) => out.push(ReportArgDeltaV1 {
-+            path: path.to_vec(),
-+            name: arg.name.clone(),
-+            upstream_available_on: arg.available_on.clone(),
-+            wrapper_level: Some(other.to_string()),
-+            note: wrapper.note.clone(),
-+        }),
++    let output = cmd.output()?;
++    if !output.status.success() {
++        return Err(Error::CommandFailed(util::command_failed_message(
++            &cmd, &output,
++        )));
 +    }
-+}
-+
-+fn upstream_flag_availability(
-+    upstream: &BTreeMap<Vec<String>, UnionCommandV2>,
-+    path: &[String],
-+    key: &str,
-+    wrapper_res: &CoverageResolution,
-+    report_targets: &BTreeSet<String>,
-+    expected_targets: &[String],
-+    mode: FilterMode<'_>,
-+) -> (Vec<String>, bool) {
-+    if let Some(cmd) = upstream.get(path) {
-+        if let Some(flag) = cmd.flags.iter().find(|f| f.key == key) {
-+            let present =
-+                present_on_filter(&flag.available_on, report_targets, expected_targets, mode);
-+            return (flag.available_on.clone(), present);
-+        }
-+        return (cmd.available_on.clone(), false);
-+    }
-+    (
-+        util::ordered_subset(expected_targets, &wrapper_res.targets),
-+        false,
-+    )
-+}
-+
-+fn upstream_arg_availability(
-+    upstream: &BTreeMap<Vec<String>, UnionCommandV2>,
-+    path: &[String],
-+    name: &str,
-+    wrapper_res: &CoverageResolution,
-+    report_targets: &BTreeSet<String>,
-+    expected_targets: &[String],
-+    mode: FilterMode<'_>,
-+) -> (Vec<String>, bool) {
-+    if let Some(cmd) = upstream.get(path) {
-+        if let Some(arg) = cmd.args.iter().find(|a| a.name == name) {
-+            let present =
-+                present_on_filter(&arg.available_on, report_targets, expected_targets, mode);
-+            return (arg.available_on.clone(), present);
-+        }
-+        return (cmd.available_on.clone(), false);
-+    }
-+    (
-+        util::ordered_subset(expected_targets, &wrapper_res.targets),
-+        false,
-+    )
-+}
-+
-+#[derive(Debug, Serialize)]
-+pub(super) struct CoverageReportV1 {
-+    schema_version: u32,
-+    generated_at: String,
-+    inputs: ReportInputsV1,
-+    platform_filter: PlatformFilterV1,
-+    deltas: ReportDeltasV1,
-+}
-+
-+#[derive(Debug, Serialize)]
-+struct ReportInputsV1 {
-+    upstream: ReportUpstreamInputsV1,
-+    wrapper: ReportWrapperInputsV1,
-+    rules: ReportRulesInputsV1,
-+}
-+
-+#[derive(Debug, Serialize)]
-+struct ReportUpstreamInputsV1 {
-+    semantic_version: String,
-+    mode: String,
-+    targets: Vec<String>,
-+}
-+
-+#[derive(Debug, Serialize)]
-+struct ReportWrapperInputsV1 {
-+    schema_version: u32,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    wrapper_version: Option<String>,
-+}
-+
-+#[derive(Debug, Serialize)]
-+struct ReportRulesInputsV1 {
-+    rules_schema_version: u32,
-+}
-+
-+#[derive(Debug, Serialize)]
-+struct PlatformFilterV1 {
-+    mode: String,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    target_triple: Option<String>,
-+}
-+
-+#[derive(Debug, Serialize)]
-+struct ReportDeltasV1 {
-+    missing_commands: Vec<ReportCommandDeltaV1>,
-+    missing_flags: Vec<ReportFlagDeltaV1>,
-+    missing_args: Vec<ReportArgDeltaV1>,
-+
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    excluded_commands: Option<Vec<ReportCommandDeltaV1>>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    excluded_flags: Option<Vec<ReportFlagDeltaV1>>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    excluded_args: Option<Vec<ReportArgDeltaV1>>,
-+
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    passthrough_candidates: Option<Vec<ReportCommandDeltaV1>>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    unsupported: Option<Vec<ReportCommandDeltaV1>>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    intentionally_unsupported: Option<Vec<ReportIntentionallyUnsupportedDeltaV1>>,
-+
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    wrapper_only_commands: Option<Vec<ReportCommandDeltaV1>>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    wrapper_only_flags: Option<Vec<ReportFlagDeltaV1>>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    wrapper_only_args: Option<Vec<ReportArgDeltaV1>>,
-+}
-+
-+#[derive(Debug, Serialize)]
-+struct ReportCommandDeltaV1 {
-+    path: Vec<String>,
-+    upstream_available_on: Vec<String>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    wrapper_level: Option<String>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    note: Option<String>,
-+}
-+
-+#[derive(Debug, Serialize)]
-+struct ReportFlagDeltaV1 {
-+    path: Vec<String>,
-+    key: String,
-+    upstream_available_on: Vec<String>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    wrapper_level: Option<String>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    note: Option<String>,
-+}
-+
-+#[derive(Debug, Serialize)]
-+struct ReportArgDeltaV1 {
-+    path: Vec<String>,
-+    name: String,
-+    upstream_available_on: Vec<String>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    wrapper_level: Option<String>,
-+    #[serde(skip_serializing_if = "Option::is_none")]
-+    note: Option<String>,
-+}
-+
-+#[derive(Debug, Serialize)]
-+#[serde(untagged)]
-+enum ReportIntentionallyUnsupportedDeltaV1 {
-+    Command(ReportCommandDeltaV1),
-+    Flag(ReportFlagDeltaV1),
-+    Arg(ReportArgDeltaV1),
-+}
-+
-+#[derive(Debug, Clone)]
-+struct IuRoot {
-+    path: Vec<String>,
-+    targets: BTreeSet<String>,
-+    note: String,
-+}
-+
-+fn build_iu_roots(
-+    wrapper: &WrapperCoverageV1,
-+    wrapper_index: &WrapperIndex,
-+    report_target_set: &BTreeSet<String>,
-+    expected_targets: &[String],
-+    filter_mode: FilterMode<'_>,
-+) -> Result<Vec<IuRoot>, ReportError> {
-+    let mut unique_paths: BTreeSet<Vec<String>> = BTreeSet::new();
-+    for cmd in &wrapper.coverage {
-+        if cmd.level == "intentionally_unsupported" {
-+            unique_paths.insert(cmd.path.clone());
-+        }
-+    }
-+
-+    let mut roots = Vec::new();
-+    for path in unique_paths {
-+        let res = wrapper::resolve_wrapper(
-+            wrapper_index
-+                .commands
-+                .get(&path)
-+                .map(Vec::as_slice)
-+                .unwrap_or(&[]),
-+            report_target_set,
-+            expected_targets,
-+            filter_mode,
-+            "command",
-+            &format!("path={}", util::format_path(&path)),
-+        )?;
-+        if res.level.as_deref() != Some("intentionally_unsupported") {
-+            continue;
-+        }
-+        let note = require_non_empty_note(
-+            res.note.as_deref(),
-+            "command",
-+            &format!("path={}", util::format_path(&path)),
-+        )?;
-+        roots.push(IuRoot {
-+            path,
-+            targets: res.targets,
-+            note,
-+        });
-+    }
-+
-+    roots.sort_by(|a, b| {
-+        b.path
-+            .len()
-+            .cmp(&a.path.len())
-+            .then_with(|| util::cmp_path(&a.path, &b.path))
-+    });
-+    Ok(roots)
-+}
-+
-+fn find_inherited_iu_root<'a>(
-+    roots: &'a [IuRoot],
-+    unit_path: &[String],
-+    unit_available_on: &[String],
-+    report_target_set: &BTreeSet<String>,
-+    unit_kind: &'static str,
-+) -> Result<Option<&'a IuRoot>, ReportError> {
-+    let relevant_targets: BTreeSet<String> = unit_available_on
-+        .iter()
-+        .filter(|t| report_target_set.contains(*t))
-+        .cloned()
-+        .collect();
-+    if relevant_targets.is_empty() {
-+        return Ok(None);
-+    }
-+
-+    for root in roots {
-+        if !util::is_prefix(&root.path, unit_path) {
-+            continue;
-+        }
-+
-+        let overlap: BTreeSet<String> = relevant_targets
-+            .intersection(&root.targets)
-+            .cloned()
-+            .collect();
-+        if overlap.is_empty() {
-+            continue;
-+        }
-+        if overlap != relevant_targets {
-+            return Err(ReportError::WrapperResolution {
-+                unit: unit_kind.to_string(),
-+                detail: format!(
-+                    "IU subtree root scope mismatch: root_path={} does not cover all upstream targets for unit_path={} (root_targets={} unit_targets={})",
-+                    util::format_path(&root.path),
-+                    util::format_path(unit_path),
-+                    root.targets.iter().cloned().collect::<Vec<_>>().join(","),
-+                    relevant_targets
-+                        .iter()
-+                        .cloned()
-+                        .collect::<Vec<_>>()
-+                        .join(","),
-+                ),
-+            });
-+        }
-+
-+        return Ok(Some(root));
-+    }
-+
-+    Ok(None)
-+}
-+
-+fn require_non_empty_note(
-+    note: Option<&str>,
-+    unit_kind: &'static str,
-+    detail: &str,
-+) -> Result<String, ReportError> {
-+    match note.map(str::trim).filter(|s| !s.is_empty()) {
-+        Some(v) => Ok(v.to_string()),
-+        None => Err(ReportError::WrapperResolution {
-+            unit: unit_kind.to_string(),
-+            detail: format!("{detail} intentionally_unsupported requires non-empty note"),
-+        }),
-+    }
-+}
-+
-+fn iu_kind_rank(entry: &ReportIntentionallyUnsupportedDeltaV1) -> u8 {
-+    match entry {
-+        ReportIntentionallyUnsupportedDeltaV1::Command(_) => 0,
-+        ReportIntentionallyUnsupportedDeltaV1::Flag(_) => 1,
-+        ReportIntentionallyUnsupportedDeltaV1::Arg(_) => 2,
-+    }
-+}
-+
-+fn iu_path(entry: &ReportIntentionallyUnsupportedDeltaV1) -> &[String] {
-+    match entry {
-+        ReportIntentionallyUnsupportedDeltaV1::Command(v) => &v.path,
-+        ReportIntentionallyUnsupportedDeltaV1::Flag(v) => &v.path,
-+        ReportIntentionallyUnsupportedDeltaV1::Arg(v) => &v.path,
-+    }
-+}
-+
-+fn cmp_iu_delta(
-+    a: &ReportIntentionallyUnsupportedDeltaV1,
-+    b: &ReportIntentionallyUnsupportedDeltaV1,
-+) -> std::cmp::Ordering {
-+    iu_kind_rank(a).cmp(&iu_kind_rank(b)).then_with(|| {
-+        util::cmp_path(iu_path(a), iu_path(b)).then_with(|| match (a, b) {
-+            (
-+                ReportIntentionallyUnsupportedDeltaV1::Flag(a),
-+                ReportIntentionallyUnsupportedDeltaV1::Flag(b),
-+            ) => a.key.cmp(&b.key),
-+            (
-+                ReportIntentionallyUnsupportedDeltaV1::Arg(a),
-+                ReportIntentionallyUnsupportedDeltaV1::Arg(b),
-+            ) => a.name.cmp(&b.name),
-+            _ => std::cmp::Ordering::Equal,
-+        })
-+    })
++    Ok(util::normalize_text(&output.stdout, &output.stderr))
 +}
 +
 +#[derive(Debug)]
-+pub(super) struct ParityExclusionsIndex {
-+    commands: BTreeMap<Vec<String>, ParityExclusionUnit>,
-+    flags: BTreeMap<(Vec<String>, String), ParityExclusionUnit>,
-+    args: BTreeMap<(Vec<String>, String), ParityExclusionUnit>,
++struct ParsedHelp {
++    about: Option<String>,
++    usage: Option<String>,
++    subcommands: Vec<String>,
++    flags: Vec<FlagSnapshot>,
++    args: Vec<ArgSnapshot>,
 +}
 +
-+pub(super) fn build_parity_exclusions_index(
-+    exclusions: &RulesParityExclusions,
-+) -> ParityExclusionsIndex {
-+    let mut commands = BTreeMap::new();
-+    let mut flags = BTreeMap::new();
-+    let mut args = BTreeMap::new();
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++enum Section {
++    Commands,
++    Options,
++    Args,
++}
 +
-+    for unit in &exclusions.units {
-+        match unit.unit.as_str() {
-+            "command" => {
-+                commands.insert(unit.path.clone(), unit.clone());
++fn parse_help(help: &str) -> ParsedHelp {
++    let lines: Vec<&str> = help.lines().collect();
++
++    let mut usage: Option<String> = None;
++    let mut usage_lines: Vec<String> = Vec::new();
++    let mut usage_started = false;
++    for (idx, line) in lines.iter().enumerate() {
++        let trimmed = line.trim_start();
++        if trimmed.to_ascii_lowercase().starts_with("usage:") {
++            usage_started = true;
++            let rest = trimmed["usage:".len()..].trim();
++            if !rest.is_empty() {
++                usage_lines.push(rest.to_string());
 +            }
-+            "flag" => {
-+                if let Some(key) = unit.key.as_ref() {
-+                    flags.insert((unit.path.clone(), key.clone()), unit.clone());
++            for cont in lines.iter().skip(idx + 1) {
++                if cont.trim().is_empty() {
++                    break;
++                }
++                if cont.starts_with(' ') || cont.starts_with('\t') {
++                    let t = cont.trim();
++                    if t.ends_with(':') && is_section_header(t) {
++                        break;
++                    }
++                    usage_lines.push(t.to_string());
++                } else {
++                    break;
 +                }
 +            }
-+            "arg" => {
-+                if let Some(name) = unit.name.as_ref() {
-+                    args.insert((unit.path.clone(), name.clone()), unit.clone());
++            break;
++        }
++    }
++    if usage_started && !usage_lines.is_empty() {
++        usage = Some(usage_lines.join("\n"));
++    }
++
++    let about = {
++        let mut nonempty_indices = lines
++            .iter()
++            .enumerate()
++            .filter_map(|(i, l)| if l.trim().is_empty() { None } else { Some(i) })
++            .collect::<Vec<_>>();
++        if nonempty_indices.is_empty() {
++            None
++        } else {
++            let title_idx = nonempty_indices.remove(0);
++            let usage_idx = lines
++                .iter()
++                .position(|l| l.trim_start().to_ascii_lowercase().starts_with("usage:"))
++                .unwrap_or(lines.len());
++            let mut about_lines = Vec::new();
++            for l in lines.iter().take(usage_idx).skip(title_idx + 1) {
++                let t = l.trim();
++                if t.is_empty() {
++                    continue;
++                }
++                about_lines.push(t.to_string());
++            }
++            if about_lines.is_empty() {
++                None
++            } else {
++                Some(about_lines.join("\n"))
++            }
++        }
++    };
++
++    let mut subcommands = Vec::new();
++    let mut flags = Vec::new();
++    let mut args = Vec::new();
++
++    let mut section: Option<Section> = None;
++
++    for line in lines {
++        let t = line.trim();
++        if t.is_empty() {
++            continue;
++        }
++
++        if let Some(s) = parse_section_header(t) {
++            section = Some(s);
++            continue;
++        }
++
++        match section {
++            Some(Section::Commands) => {
++                if let Some(token) = parse_command_token(line) {
++                    subcommands.push(token);
 +                }
 +            }
-+            _ => {}
++            Some(Section::Options) => {
++                if let Some(flag) = parse_flag_line(line) {
++                    flags.push(flag);
++                }
++            }
++            Some(Section::Args) => {
++                if let Some(arg) = parse_arg_line(line) {
++                    args.push(arg);
++                } else if let Some(last) = args.last_mut() {
++                    // Clap frequently wraps argument descriptions onto continuation lines with
++                    // deeper indentation. Preserve these as part of the argument note so snapshots
++                    // capture positional semantics with useful context.
++                    let cont = line.trim();
++                    if !cont.is_empty() {
++                        match last.note.as_mut() {
++                            Some(note) => {
++                                note.push('\n');
++                                note.push_str(cont);
++                            }
++                            None => last.note = Some(cont.to_string()),
++                        }
++                    }
++                }
++            }
++            None => {}
 +        }
 +    }
 +
-+    ParityExclusionsIndex {
-+        commands,
++    ParsedHelp {
++        about,
++        usage,
++        subcommands,
 +        flags,
 +        args,
 +    }
 +}
-diff --git a/crates/xtask/src/codex_report/rules.rs b/crates/xtask/src/codex_report/rules.rs
++
++fn is_section_header(t: &str) -> bool {
++    matches!(
++        t.trim_end_matches(':').to_ascii_lowercase().as_str(),
++        "commands" | "subcommands" | "options" | "flags" | "arguments"
++    )
++}
++
++fn parse_section_header(t: &str) -> Option<Section> {
++    let header = t.trim_end_matches(':').to_ascii_lowercase();
++    match header.as_str() {
++        "commands" | "subcommands" => Some(Section::Commands),
++        "options" | "flags" => Some(Section::Options),
++        "arguments" => Some(Section::Args),
++        _ => None,
++    }
++}
++
++fn parse_command_token(line: &str) -> Option<String> {
++    if !line.starts_with(' ') && !line.starts_with('\t') {
++        return None;
++    }
++    let trimmed = line.trim_start();
++    if trimmed.starts_with('-') {
++        return None;
++    }
++    // Only treat "command list" entries as subcommands when the help output includes an
++    // on-the-same-line description. Wrapped descriptions (continuation lines) should not be
++    // interpreted as additional command tokens.
++    let (head, desc) = split_tokens_and_desc(trimmed);
++    let token = head.split_whitespace().next()?;
++    if desc.is_empty() && head.trim() != token {
++        return None;
++    }
++    if token
++        .chars()
++        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
++    {
++        Some(token.to_string())
++    } else {
++        None
++    }
++}
++
++fn parse_flag_line(line: &str) -> Option<FlagSnapshot> {
++    if !line.starts_with(' ') && !line.starts_with('\t') {
++        return None;
++    }
++    let trimmed = line.trim_start();
++    if !trimmed.starts_with('-') {
++        return None;
++    }
++
++    let (tokens_part, _) = split_tokens_and_desc(trimmed);
++    let mut long: Option<String> = None;
++    let mut short: Option<String> = None;
++    let mut value_name: Option<String> = None;
++    let mut repeatable: Option<bool> = None;
++
++    for tok in tokens_part.split_whitespace() {
++        let tok = tok.trim_end_matches(',').trim();
++        if tok.is_empty() {
++            continue;
++        }
++
++        if let Some(stripped) = tok.strip_prefix("--") {
++            if long.is_none()
++                && !stripped.is_empty()
++                && stripped
++                    .chars()
++                    .all(|c| c.is_ascii_alphanumeric() || c == '-')
++            {
++                long = Some(format!("--{stripped}"));
++            }
++            continue;
++        }
++
++        if tok.starts_with('-') && !tok.starts_with("--") {
++            if short.is_none()
++                && tok.len() == 2
++                && tok
++                    .chars()
++                    .nth(1)
++                    .is_some_and(|c| c.is_ascii_alphanumeric())
++            {
++                short = Some(tok.to_string());
++            }
++            continue;
++        }
++
++        if value_name.is_none() {
++            // clap formats variadic value placeholders like `<FILE>...`
++            if tok.starts_with('<') {
++                if let Some(end) = tok.find('>') {
++                    if end > 1 {
++                        value_name = Some(tok[1..end].to_string());
++                        if tok[end + 1..].contains("...") {
++                            repeatable = Some(true);
++                        }
++                        continue;
++                    }
++                }
++                continue;
++            }
++
++            if tok
++                .chars()
++                .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_' || c == '-')
++            {
++                value_name = Some(tok.to_string());
++                continue;
++            }
++        }
++    }
++
++    // Reject help text bullets/continuations like `- untrusted: ...` that are not real flags.
++    if long.is_none() && short.is_none() {
++        return None;
++    }
++
++    let takes_value = value_name.is_some();
++
++    Some(FlagSnapshot {
++        long,
++        short,
++        takes_value,
++        value_name,
++        repeatable,
++        stability: None,
++        platforms: None,
++    })
++}
++
++fn split_tokens_and_desc(s: &str) -> (&str, &str) {
++    let bytes = s.as_bytes();
++    for i in 0..bytes.len().saturating_sub(1) {
++        if bytes[i] == b' ' && bytes[i + 1] == b' ' {
++            let tokens = s[..i].trim_end();
++            let desc = s[i..].trim();
++            return (tokens, desc);
++        }
++    }
++    (s.trim_end(), "")
++}
++
++fn parse_arg_line(line: &str) -> Option<ArgSnapshot> {
++    if !line.starts_with(' ') && !line.starts_with('\t') {
++        return None;
++    }
++    let trimmed = line.trim_start();
++    if trimmed.starts_with('-') {
++        return None;
++    }
++    let (head, desc) = split_tokens_and_desc(trimmed);
++    let token = head.split_whitespace().next()?;
++
++    let (token, token_is_variadic) = token
++        .strip_suffix("...")
++        .map(|t| (t, true))
++        .unwrap_or((token, false));
++
++    let (required, mut name) = if token.starts_with('<') && token.ends_with('>') {
++        (
++            true,
++            token
++                .trim_start_matches('<')
++                .trim_end_matches('>')
++                .to_string(),
++        )
++    } else if token.starts_with('[') && token.ends_with(']') {
++        (
++            false,
++            token
++                .trim_start_matches('[')
++                .trim_end_matches(']')
++                .to_string(),
++        )
++    } else if token
++        .chars()
++        .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_' || c == '-')
++    {
++        // Be conservative: treat bare ALLCAPS tokens as positional args (common in some help
++        // formats) but avoid mis-parsing wrapped description lines as arguments.
++        (false, token.to_string())
++    } else {
++        return None;
++    };
++
++    let mut variadic = token_is_variadic;
++    if let Some(stripped) = name.strip_suffix("...") {
++        variadic = true;
++        name = stripped.to_string();
++    }
++
++    if name.is_empty() {
++        return None;
++    }
++
++    Some(ArgSnapshot {
++        name,
++        required,
++        variadic,
++        note: if desc.is_empty() {
++            None
++        } else {
++            Some(desc.to_string())
++        },
++    })
++}
++
++fn merge_inferred_args(args: &mut Vec<ArgSnapshot>, inferred: Vec<ArgSnapshot>) {
++    for inf in inferred {
++        if let Some(existing) = args.iter_mut().find(|a| a.name == inf.name) {
++            existing.required |= inf.required;
++            existing.variadic |= inf.variadic;
++            if existing.note.is_none() {
++                existing.note = inf.note;
++            }
++            continue;
++        }
++        args.push(inf);
++    }
++}
++
++fn infer_args_from_usage(
++    usage: &str,
++    cmd_path: &[String],
++    has_subcommands: bool,
++) -> Vec<ArgSnapshot> {
++    let mut out = Vec::new();
++
++    for line in usage.lines() {
++        let tokens: Vec<&str> = line.split_whitespace().collect();
++        if tokens.is_empty() {
++            continue;
++        }
++
++        // A clap "usage" line typically looks like: `codex <subcommands...> [OPTIONS] [ARGS...]`.
++        // Only infer args when this usage line matches the command path we’re snapshotting.
++        let mut idx = 0usize;
++        if tokens.first().is_some_and(|t| *t == "codex") {
++            idx += 1;
++        }
++
++        let mut matches = true;
++        for p in cmd_path {
++            if tokens.get(idx).is_some_and(|t| *t == p) {
++                idx += 1;
++            } else {
++                matches = false;
++                break;
++            }
++        }
++        if !matches {
++            continue;
++        }
++
++        let mut prev_was_flag = false;
++        let mut after_double_dash = false;
++        for tok in tokens.into_iter().skip(idx) {
++            let tok = tok.trim_matches(|c| matches!(c, '(' | ')' | '|'));
++            if tok.is_empty() {
++                continue;
++            }
++
++            if !after_double_dash {
++                if tok == "--" {
++                    after_double_dash = true;
++                    prev_was_flag = false;
++                    continue;
++                }
++
++                // Some clap usage lines embed flags inside grouping tokens (e.g.
++                // `<COMMAND|--url <URL>>`). Treat any token that contains a flag marker as a flag
++                // so its value name is not mis-inferred as a positional argument.
++                if tok.starts_with('-') || tok.contains("--") {
++                    prev_was_flag = true;
++                    continue;
++                }
++
++                if prev_was_flag {
++                    // Likely a value name for the previous flag (e.g., `--out <DIR>`). Don’t treat it
++                    // as a positional argument.
++                    prev_was_flag = false;
++                    continue;
++                }
++            }
++
++            if tok.eq_ignore_ascii_case("[options]") || tok.eq_ignore_ascii_case("options") {
++                continue;
++            }
++
++            let (name, required, variadic) = match parse_usage_arg_token(tok) {
++                Some(v) => v,
++                None => continue,
++            };
++
++            // Clap often represents subcommand dispatch using `[COMMAND]` and `[ARGS]` in usage lines
++            // even when the help output includes an explicit `Commands:` section. Treat these as
++            // implementation details, not stable positional args, and avoid inferring them.
++            if has_subcommands && matches!(name.as_str(), "COMMAND" | "ARGS") {
++                continue;
++            }
++
++            // Avoid duplicates across multiple usage variants.
++            if out.iter().any(|a: &ArgSnapshot| a.name == name) {
++                continue;
++            }
++
++            out.push(ArgSnapshot {
++                name,
++                required,
++                variadic,
++                note: Some("inferred from usage".to_string()),
++            });
++        }
++    }
++
++    out
++}
++
++fn parse_usage_arg_token(token: &str) -> Option<(String, bool, bool)> {
++    let token = token.trim().trim_matches(',');
++    if token.is_empty() {
++        return None;
++    }
++
++    let (token, token_is_variadic) = token
++        .strip_suffix("...")
++        .map(|t| (t, true))
++        .unwrap_or((token, false));
++
++    if token == "[OPTIONS]" || token.eq_ignore_ascii_case("options") {
++        return None;
++    }
++
++    if token.starts_with('<') && token.ends_with('>') {
++        let name = token
++            .trim_start_matches('<')
++            .trim_end_matches('>')
++            .to_string();
++        if name.is_empty() {
++            return None;
++        }
++        return Some((name, true, token_is_variadic));
++    }
++
++    if token.starts_with('[') && token.ends_with(']') {
++        let name = token
++            .trim_start_matches('[')
++            .trim_end_matches(']')
++            .to_string();
++        if name.is_empty() {
++            return None;
++        }
++        return Some((name, false, token_is_variadic));
++    }
++
++    None
++}
+diff --git a/crates/xtask/src/codex_snapshot/layout.rs b/crates/xtask/src/codex_snapshot/layout.rs
 new file mode 100644
-index 0000000..dac232a
+index 0000000..caebfb1
 --- /dev/null
-+++ b/crates/xtask/src/codex_report/rules.rs
-@@ -0,0 +1,206 @@
-+use std::{collections::BTreeMap, fs, path::Path};
++++ b/crates/xtask/src/codex_snapshot/layout.rs
+@@ -0,0 +1,186 @@
++use std::{
++    fs,
++    path::{Path, PathBuf},
++};
 +
 +use serde::Deserialize;
 +
-+use super::ReportError;
++use super::{Args, Error};
 +
 +#[derive(Debug, Deserialize)]
-+pub(super) struct RulesFile {
-+    #[serde(rename = "rules_schema_version")]
-+    pub(super) rules_schema_version: u32,
-+    pub(super) union: RulesUnion,
-+    pub(super) report: RulesReport,
-+    pub(super) sorting: RulesSorting,
-+    #[serde(default)]
-+    pub(super) parity_exclusions: Option<RulesParityExclusions>,
++struct RulesFile {
++    union: RulesUnion,
++    sorting: RulesSorting,
 +}
 +
 +#[derive(Debug, Deserialize)]
-+pub(super) struct RulesUnion {
-+    pub(super) expected_targets: Vec<String>,
-+    pub(super) platform_mapping: BTreeMap<String, String>,
++struct RulesUnion {
++    expected_targets: Vec<String>,
 +}
 +
 +#[derive(Debug, Deserialize)]
-+pub(super) struct RulesSorting {
-+    pub(super) report: RulesReportSorting,
++struct RulesSorting {
++    commands: String,
++    flags: String,
++    args: String,
 +}
 +
-+#[derive(Debug, Deserialize)]
-+pub(super) struct RulesReportSorting {
-+    pub(super) missing_commands: String,
-+    pub(super) missing_flags: String,
-+    pub(super) missing_args: String,
-+    pub(super) excluded_commands: String,
-+    pub(super) excluded_flags: String,
-+    pub(super) excluded_args: String,
-+    pub(super) passthrough_candidates: String,
-+    pub(super) unsupported: String,
-+    pub(super) intentionally_unsupported: String,
-+    pub(super) wrapper_only_commands: String,
-+    pub(super) wrapper_only_flags: String,
-+    pub(super) wrapper_only_args: String,
++pub(super) fn resolve_outputs(
++    args: &Args,
++    version_dir: &str,
++) -> Result<(PathBuf, Option<PathBuf>, String), Error> {
++    let snapshot_out_path = if let Some(path) = args.out_file.as_ref() {
++        path.clone()
++    } else {
++        args.out_dir
++            .as_ref()
++            .expect("clap enforces one of out_dir/out_file")
++            .join("current.json")
++    };
++
++    let (codex_root, target_triple) = if let Some(out_file) = args.out_file.as_ref() {
++        let version_path = out_file.parent().ok_or_else(|| {
++            Error::InvalidOutFileLayout("could not infer snapshots/<version> directory".to_string())
++        })?;
++        let got_version = version_path
++            .file_name()
++            .and_then(|s| s.to_str())
++            .unwrap_or("<unknown>");
++        if got_version != version_dir {
++            return Err(Error::InvalidOutFileLayout(format!(
++                "expected parent dir name {version_dir}, got {got_version}"
++            )));
++        }
++
++        let snapshots_path = version_path.parent().ok_or_else(|| {
++            Error::InvalidOutFileLayout("could not infer snapshots directory".to_string())
++        })?;
++        let got_snapshots = snapshots_path
++            .file_name()
++            .and_then(|s| s.to_str())
++            .unwrap_or("<unknown>");
++        if got_snapshots != "snapshots" {
++            return Err(Error::InvalidOutFileLayout(format!(
++                "expected snapshots/<version> layout, got .../{got_snapshots}/{got_version}"
++            )));
++        }
++
++        let inferred_from_out_file = out_file
++            .file_name()
++            .and_then(|s| s.to_str())
++            .and_then(|s| s.strip_suffix(".json"))
++            .ok_or_else(|| {
++                Error::InvalidOutFileLayout(
++                    "expected out-file name like <target_triple>.json".into(),
++                )
++            })?
++            .to_string();
++        let target = args
++            .raw_help_target
++            .as_ref()
++            .cloned()
++            .unwrap_or(inferred_from_out_file);
++
++        let expected = format!("{target}.json");
++        let got = out_file
++            .file_name()
++            .and_then(|s| s.to_str())
++            .unwrap_or("<unknown>");
++        if got != expected {
++            return Err(Error::InvalidOutFileLayout(format!(
++                "expected filename {expected}, got {got}"
++            )));
++        }
++
++        let codex_root = snapshots_path
++            .parent()
++            .ok_or_else(|| Error::InvalidOutFileLayout("could not infer codex root".to_string()))?;
++        (codex_root.to_path_buf(), target)
++    } else {
++        (
++            args.out_dir
++                .as_ref()
++                .expect("clap enforces one of out_dir/out_file")
++                .clone(),
++            args.raw_help_target
++                .clone()
++                .unwrap_or_else(|| "unknown".to_string()),
++        )
++    };
++
++    let raw_help_dir = if args.capture_raw_help {
++        let base = codex_root.join("raw_help").join(version_dir);
++        if args.raw_help_target.is_some() || args.out_file.is_some() {
++            if target_triple == "unknown" {
++                return Err(Error::MissingRawHelpTarget);
++            }
++            Some(base.join(&target_triple))
++        } else {
++            Some(base)
++        }
++    } else {
++        None
++    };
++
++    if args.out_file.is_some() {
++        let rules_path = codex_root.join("RULES.json");
++        let rules: RulesFile = serde_json::from_slice(
++            &fs::read(&rules_path)
++                .map_err(|err| Error::RulesRead(format!("{}: {err}", rules_path.display())))?,
++        )?;
++        assert_supported_sorting(&rules.sorting)?;
++
++        if !rules
++            .union
++            .expected_targets
++            .iter()
++            .any(|t| t == &target_triple)
++        {
++            return Err(Error::RawHelpTargetNotExpected(target_triple));
++        }
++    }
++
++    Ok((snapshot_out_path, raw_help_dir, target_triple))
 +}
 +
-+#[derive(Debug, Deserialize)]
-+pub(super) struct RulesParityExclusions {
-+    pub(super) schema_version: u32,
-+    pub(super) units: Vec<ParityExclusionUnit>,
-+}
-+
-+#[derive(Debug, Deserialize, Clone)]
-+pub(super) struct ParityExclusionUnit {
-+    pub(super) unit: String,
-+    pub(super) path: Vec<String>,
-+    #[serde(default)]
-+    pub(super) key: Option<String>,
-+    #[serde(default)]
-+    pub(super) name: Option<String>,
-+    #[serde(default)]
-+    #[allow(dead_code)]
-+    pub(super) category: Option<String>,
-+    pub(super) note: String,
-+}
-+
-+#[derive(Debug, Deserialize)]
-+pub(super) struct RulesReport {
-+    pub(super) file_naming: RulesReportFileNaming,
-+    pub(super) filter_semantics: RulesFilterSemantics,
-+}
-+
-+#[derive(Debug, Deserialize)]
-+pub(super) struct RulesReportFileNaming {
-+    pub(super) any: String,
-+    pub(super) all: String,
-+    pub(super) per_target: String,
-+}
-+
-+#[derive(Debug, Deserialize)]
-+pub(super) struct RulesFilterSemantics {
-+    pub(super) when_union_incomplete: RulesWhenUnionIncomplete,
-+}
-+
-+#[derive(Debug, Deserialize)]
-+pub(super) struct RulesWhenUnionIncomplete {
-+    pub(super) all: String,
-+}
-+
-+pub(super) fn load_rules(rules_path: &Path) -> Result<RulesFile, ReportError> {
-+    Ok(serde_json::from_slice(&fs::read(rules_path)?)?)
-+}
-+
-+pub(super) fn assert_supported_rules(rules: &RulesFile) -> Result<(), ReportError> {
++fn assert_supported_sorting(sorting: &RulesSorting) -> Result<(), Error> {
 +    let mut unsupported = Vec::new();
 +
-+    if rules.report.file_naming.any != "coverage.any.json" {
-+        unsupported.push(format!(
-+            "report.file_naming.any={}",
-+            rules.report.file_naming.any
-+        ));
++    if sorting.commands != "lexicographic_path" {
++        unsupported.push(format!("sorting.commands={}", sorting.commands));
 +    }
-+    if rules.report.file_naming.all != "coverage.all.json" {
-+        unsupported.push(format!(
-+            "report.file_naming.all={}",
-+            rules.report.file_naming.all
-+        ));
++    if sorting.flags != "by_key_then_long_then_short" {
++        unsupported.push(format!("sorting.flags={}", sorting.flags));
 +    }
-+    if rules.report.file_naming.per_target != "coverage.<target_triple>.json" {
-+        unsupported.push(format!(
-+            "report.file_naming.per_target={}",
-+            rules.report.file_naming.per_target
-+        ));
-+    }
-+
-+    if rules.sorting.report.missing_commands != "by_path" {
-+        unsupported.push(format!(
-+            "sorting.report.missing_commands={}",
-+            rules.sorting.report.missing_commands
-+        ));
-+    }
-+    if rules.sorting.report.missing_flags != "by_path_then_key" {
-+        unsupported.push(format!(
-+            "sorting.report.missing_flags={}",
-+            rules.sorting.report.missing_flags
-+        ));
-+    }
-+    if rules.sorting.report.missing_args != "by_path_then_name" {
-+        unsupported.push(format!(
-+            "sorting.report.missing_args={}",
-+            rules.sorting.report.missing_args
-+        ));
-+    }
-+    if rules.sorting.report.excluded_commands != "by_path" {
-+        unsupported.push(format!(
-+            "sorting.report.excluded_commands={}",
-+            rules.sorting.report.excluded_commands
-+        ));
-+    }
-+    if rules.sorting.report.excluded_flags != "by_path_then_key" {
-+        unsupported.push(format!(
-+            "sorting.report.excluded_flags={}",
-+            rules.sorting.report.excluded_flags
-+        ));
-+    }
-+    if rules.sorting.report.excluded_args != "by_path_then_name" {
-+        unsupported.push(format!(
-+            "sorting.report.excluded_args={}",
-+            rules.sorting.report.excluded_args
-+        ));
-+    }
-+    if rules.sorting.report.passthrough_candidates != "by_path" {
-+        unsupported.push(format!(
-+            "sorting.report.passthrough_candidates={}",
-+            rules.sorting.report.passthrough_candidates
-+        ));
-+    }
-+    if rules.sorting.report.unsupported != "by_path" {
-+        unsupported.push(format!(
-+            "sorting.report.unsupported={}",
-+            rules.sorting.report.unsupported
-+        ));
-+    }
-+    if rules.sorting.report.intentionally_unsupported != "by_kind_then_path_then_key_or_name" {
-+        unsupported.push(format!(
-+            "sorting.report.intentionally_unsupported={}",
-+            rules.sorting.report.intentionally_unsupported
-+        ));
-+    }
-+    if rules.sorting.report.wrapper_only_commands != "by_path" {
-+        unsupported.push(format!(
-+            "sorting.report.wrapper_only_commands={}",
-+            rules.sorting.report.wrapper_only_commands
-+        ));
-+    }
-+    if rules.sorting.report.wrapper_only_flags != "by_path_then_key" {
-+        unsupported.push(format!(
-+            "sorting.report.wrapper_only_flags={}",
-+            rules.sorting.report.wrapper_only_flags
-+        ));
-+    }
-+    if rules.sorting.report.wrapper_only_args != "by_path_then_name" {
-+        unsupported.push(format!(
-+            "sorting.report.wrapper_only_args={}",
-+            rules.sorting.report.wrapper_only_args
-+        ));
-+    }
-+
-+    if rules.report.filter_semantics.when_union_incomplete.all != "error" {
-+        unsupported.push(format!(
-+            "report.filter_semantics.when_union_incomplete.all={}",
-+            rules.report.filter_semantics.when_union_incomplete.all
-+        ));
-+    }
-+
-+    if rules.union.expected_targets.is_empty() {
-+        unsupported.push("union.expected_targets must not be empty".to_string());
++    if sorting.args != "by_name" {
++        unsupported.push(format!("sorting.args={}", sorting.args));
 +    }
 +
 +    if unsupported.is_empty() {
 +        Ok(())
 +    } else {
-+        Err(ReportError::Rules(format!(
-+            "unsupported rules: {}",
-+            unsupported.join(", ")
-+        )))
++        Err(Error::RulesUnsupported(unsupported.join(", ")))
 +    }
 +}
-diff --git a/crates/xtask/src/codex_report/util.rs b/crates/xtask/src/codex_report/util.rs
-new file mode 100644
-index 0000000..a25dd0d
---- /dev/null
-+++ b/crates/xtask/src/codex_report/util.rs
-@@ -0,0 +1,78 @@
-+use std::{collections::BTreeSet, fs, io, path::Path};
 +
++pub(super) fn write_raw_help(
++    raw_help_dir: &Path,
++    path: &[String],
++    help: &str,
++) -> Result<(), Error> {
++    let rel = if path.is_empty() {
++        PathBuf::from("help.txt")
++    } else {
++        let mut p = PathBuf::from("commands");
++        for token in path {
++            p.push(token);
++        }
++        p.join("help.txt")
++    };
++    let full = raw_help_dir.join(rel);
++    if let Some(parent) = full.parent() {
++        fs::create_dir_all(parent)?;
++    }
++    fs::write(full, help)?;
++    Ok(())
++}
+diff --git a/crates/xtask/src/codex_snapshot/probes.rs b/crates/xtask/src/codex_snapshot/probes.rs
+new file mode 100644
+index 0000000..579a9a2
+--- /dev/null
++++ b/crates/xtask/src/codex_snapshot/probes.rs
+@@ -0,0 +1,176 @@
++use std::{fs, path::Path, process::Command};
++
++use regex::Regex;
++use serde::Serialize;
++use sha2::{Digest, Sha256};
 +use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 +
-+use super::ReportError;
++use super::{util, Error};
 +
 +pub(super) fn deterministic_rfc3339_now() -> String {
 +    if let Ok(v) = std::env::var("SOURCE_DATE_EPOCH") {
@@ -2806,39 +2278,228 @@ index 0000000..a25dd0d
 +        .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
 +}
 +
-+pub(super) fn require_source_date_epoch_if_ci() -> Result<(), ReportError> {
-+    if std::env::var("CI").is_err() {
-+        return Ok(());
-+    }
-+    if std::env::var("SOURCE_DATE_EPOCH").is_err() {
-+        return Err(ReportError::Rules(
-+            "CI requires SOURCE_DATE_EPOCH for deterministic generated_at".to_string(),
-+        ));
-+    }
-+    Ok(())
++pub(super) struct BinaryMetadata {
++    pub(super) sha256: String,
++    pub(super) size_bytes: u64,
 +}
 +
-+pub(super) fn write_json_pretty(path: &Path, json: &str) -> Result<(), io::Error> {
-+    if let Some(parent) = path.parent() {
-+        fs::create_dir_all(parent)?;
++impl BinaryMetadata {
++    pub(super) fn collect(path: &Path) -> Result<Self, Error> {
++        let bytes = fs::read(path)?;
++        let mut hasher = Sha256::new();
++        hasher.update(&bytes);
++        let sha256 = hex::encode(hasher.finalize());
++        let size_bytes = bytes.len() as u64;
++        Ok(Self { sha256, size_bytes })
 +    }
-+    fs::write(path, format!("{json}\n"))?;
-+    Ok(())
 +}
 +
-+pub(super) fn intersect(a: &BTreeSet<String>, b: &BTreeSet<String>) -> BTreeSet<String> {
-+    a.intersection(b).cloned().collect()
++type VersionProbe = (String, Option<String>, Option<String>, Option<String>);
++
++pub(super) fn probe_version(codex_binary: &Path) -> Result<VersionProbe, Error> {
++    let mut cmd = Command::new(codex_binary);
++    cmd.arg("--version");
++    cmd.env("NO_COLOR", "1");
++    cmd.env("CLICOLOR", "0");
++    cmd.env("TERM", "dumb");
++
++    let output = cmd.output()?;
++    if !output.status.success() {
++        return Err(Error::CommandFailed(util::command_failed_message(
++            &cmd, &output,
++        )));
++    }
++    let version_output = util::normalize_text(&output.stdout, &output.stderr)
++        .trim()
++        .to_string();
++
++    let re_semver = Regex::new(r"(?P<v>\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)").unwrap();
++    let semantic_version = re_semver
++        .captures(&version_output)
++        .and_then(|c| c.name("v").map(|m| m.as_str().to_string()));
++
++    let channel = semantic_version.as_ref().map(|v| {
++        if v.contains("nightly") {
++            "nightly".to_string()
++        } else if v.contains("beta") {
++            "beta".to_string()
++        } else {
++            "stable".to_string()
++        }
++    });
++
++    let re_commit = Regex::new(r"(?i)\b([0-9a-f]{7,40})\b").unwrap();
++    let commit = re_commit
++        .captures(&version_output)
++        .and_then(|c| c.get(1).map(|m| m.as_str().to_string()));
++
++    Ok((version_output, semantic_version, channel, commit))
 +}
 +
-+pub(super) fn ordered_subset(
-+    expected_targets: &[String],
-+    targets: &BTreeSet<String>,
-+) -> Vec<String> {
-+    expected_targets
-+        .iter()
-+        .filter(|t| targets.contains(*t))
-+        .cloned()
-+        .collect()
++#[derive(Debug, Clone, Serialize)]
++pub(super) struct FeatureInfo {
++    pub(super) name: String,
++    pub(super) stage: String,
++    pub(super) effective: bool,
++}
++
++pub(super) fn probe_features(codex_binary: &Path) -> (Option<Vec<FeatureInfo>>, Option<String>) {
++    let mut cmd = Command::new(codex_binary);
++    cmd.args(["features", "list"]);
++    cmd.env("NO_COLOR", "1");
++    cmd.env("CLICOLOR", "0");
++    cmd.env("TERM", "dumb");
++
++    let output = match cmd.output() {
++        Ok(o) => o,
++        Err(e) => return (None, Some(format!("spawn failed: {e}"))),
++    };
++    if !output.status.success() {
++        return (
++            None,
++            Some(
++                util::command_failed_message(&cmd, &output)
++                    .trim()
++                    .to_string(),
++            ),
++        );
++    }
++
++    let text = util::normalize_text(&output.stdout, &output.stderr);
++    let mut features = Vec::new();
++    for line in text.lines() {
++        let t = line.trim();
++        if t.is_empty() {
++            continue;
++        }
++        let parts = t.split_whitespace().collect::<Vec<_>>();
++        if parts.len() < 3 {
++            continue;
++        }
++        let effective = match parts[2].to_ascii_lowercase().as_str() {
++            "true" => true,
++            "false" => false,
++            _ => continue,
++        };
++        features.push(FeatureInfo {
++            name: parts[0].to_string(),
++            stage: parts[1].to_string(),
++            effective,
++        });
++    }
++    features.sort_by(|a, b| a.name.cmp(&b.name));
++    (Some(features), None)
++}
++
++pub(super) fn build_features_metadata(
++    listed: Option<Vec<FeatureInfo>>,
++    probe_error: Option<String>,
++    enabled_feature_names: Vec<String>,
++    commands_added: Option<Vec<Vec<String>>>,
++) -> Option<serde_json::Value> {
++    if listed.is_none() && probe_error.is_none() {
++        return None;
++    }
++
++    let mut obj = serde_json::Map::new();
++    obj.insert(
++        "mode".to_string(),
++        serde_json::Value::String("default_plus_all_enabled".to_string()),
++    );
++    if let Some(err) = probe_error {
++        obj.insert("probe_error".to_string(), serde_json::Value::String(err));
++    }
++    if let Some(list) = listed {
++        obj.insert(
++            "listed".to_string(),
++            serde_json::to_value(list).unwrap_or(serde_json::Value::Null),
++        );
++    }
++    if !enabled_feature_names.is_empty() {
++        obj.insert(
++            "enabled_for_snapshot".to_string(),
++            serde_json::to_value(enabled_feature_names).unwrap_or(serde_json::Value::Null),
++        );
++    }
++    if let Some(added) = commands_added {
++        obj.insert(
++            "commands_added_when_all_enabled".to_string(),
++            serde_json::to_value(added).unwrap_or(serde_json::Value::Null),
++        );
++    }
++
++    Some(serde_json::Value::Object(obj))
++}
+diff --git a/crates/xtask/src/codex_snapshot/supplements.rs b/crates/xtask/src/codex_snapshot/supplements.rs
+new file mode 100644
+index 0000000..6a1e93e
+--- /dev/null
++++ b/crates/xtask/src/codex_snapshot/supplements.rs
+@@ -0,0 +1,132 @@
++use std::{collections::BTreeMap, fs, path::Path};
++
++use super::{schema::SupplementV1, CommandSnapshot, Error, FlagSnapshot};
++
++pub(super) fn normalize_command_entries(entries: &mut BTreeMap<Vec<String>, CommandSnapshot>) {
++    for cmd in entries.values_mut() {
++        if let Some(args) = cmd.args.as_mut() {
++            args.sort_by(|a, b| a.name.cmp(&b.name));
++        }
++        if let Some(flags) = cmd.flags.as_mut() {
++            flags.sort_by(flag_sort_key);
++        }
++    }
++}
++
++pub(super) fn merge_flags(dst: &mut Vec<FlagSnapshot>, src: Vec<FlagSnapshot>) {
++    for f in src {
++        let idx = if let Some(long) = f.long.as_deref() {
++            dst.iter().position(|e| e.long.as_deref() == Some(long))
++        } else if let Some(short) = f.short.as_deref() {
++            dst.iter().position(|e| e.short.as_deref() == Some(short))
++        } else {
++            None
++        };
++
++        match idx {
++            Some(i) => {
++                let e = &mut dst[i];
++                if e.long.is_none() {
++                    e.long = f.long;
++                }
++                if e.short.is_none() {
++                    e.short = f.short;
++                }
++                e.takes_value |= f.takes_value;
++                if e.value_name.is_none() {
++                    e.value_name = f.value_name;
++                }
++                if e.repeatable.is_none() {
++                    e.repeatable = f.repeatable;
++                }
++                if e.stability.is_none() {
++                    e.stability = f.stability;
++                }
++                if e.platforms.is_none() {
++                    e.platforms = f.platforms;
++                }
++            }
++            None => dst.push(f),
++        }
++    }
++}
++
++pub(super) fn flag_sort_key(a: &FlagSnapshot, b: &FlagSnapshot) -> std::cmp::Ordering {
++    cmp_opt_str(&a.long, &b.long).then_with(|| cmp_opt_str(&a.short, &b.short))
++}
++
++fn cmp_opt_str(a: &Option<String>, b: &Option<String>) -> std::cmp::Ordering {
++    match (a, b) {
++        (Some(a), Some(b)) => a.cmp(b),
++        (Some(_), None) => std::cmp::Ordering::Less,
++        (None, Some(_)) => std::cmp::Ordering::Greater,
++        (None, None) => std::cmp::Ordering::Equal,
++    }
 +}
 +
 +pub(super) fn cmp_path(a: &[String], b: &[String]) -> std::cmp::Ordering {
@@ -2852,219 +2513,116 @@ index 0000000..a25dd0d
 +    a.len().cmp(&b.len())
 +}
 +
-+pub(super) fn format_path(path: &[String]) -> String {
-+    if path.is_empty() {
-+        "<root>".to_string()
-+    } else {
-+        path.join(" ")
++pub(super) fn apply_supplements(
++    supplement_path: Option<&Path>,
++    commands: &mut BTreeMap<Vec<String>, CommandSnapshot>,
++) -> Result<(Vec<String>, bool), Error> {
++    let Some(path) = supplement_path else {
++        return Ok((Vec::new(), false));
++    };
++    let text = fs::read_to_string(path)?;
++    let supplement: SupplementV1 = serde_json::from_str(&text)?;
++    if supplement.version != 1 {
++        return Err(Error::SupplementVersion(supplement.version));
 +    }
-+}
 +
-+pub(super) fn is_prefix(prefix: &[String], path: &[String]) -> bool {
-+    prefix.len() <= path.len() && prefix.iter().zip(path).all(|(a, b)| a == b)
-+}
-diff --git a/crates/xtask/src/codex_report/wrapper.rs b/crates/xtask/src/codex_report/wrapper.rs
-new file mode 100644
-index 0000000..c001807
---- /dev/null
-+++ b/crates/xtask/src/codex_report/wrapper.rs
-@@ -0,0 +1,199 @@
-+use std::collections::{BTreeMap, BTreeSet};
++    let mut known_omissions = Vec::new();
++    let mut any_applied = false;
 +
-+use super::{models::WrapperCoverageV1, models::WrapperScope, util, ReportError};
-+
-+#[derive(Debug, Clone, Copy)]
-+pub(super) enum FilterMode<'a> {
-+    Any,
-+    All,
-+    ExactTarget(&'a str),
-+}
-+
-+#[derive(Debug, Clone)]
-+pub(super) struct ScopedCoverage {
-+    pub(super) index: usize,
-+    pub(super) targets: BTreeSet<String>,
-+    pub(super) level: String,
-+    pub(super) note: Option<String>,
-+}
-+
-+#[derive(Debug, Clone)]
-+pub(super) struct CoverageResolution {
-+    pub(super) present: bool,
-+    pub(super) targets: BTreeSet<String>,
-+    pub(super) level: Option<String>,
-+    pub(super) note: Option<String>,
-+}
-+
-+#[derive(Debug, Clone)]
-+pub(super) struct WrapperIndex {
-+    pub(super) commands: BTreeMap<Vec<String>, Vec<ScopedCoverage>>,
-+    pub(super) flags: BTreeMap<(Vec<String>, String), Vec<ScopedCoverage>>,
-+    pub(super) args: BTreeMap<(Vec<String>, String), Vec<ScopedCoverage>>,
-+}
-+
-+pub(super) fn index_wrapper(
-+    expected_targets: &[String],
-+    platform_mapping: &BTreeMap<String, String>,
-+    wrapper: &WrapperCoverageV1,
-+) -> WrapperIndex {
-+    let expected_set: BTreeSet<String> = expected_targets.iter().cloned().collect();
-+
-+    let mut commands: BTreeMap<Vec<String>, Vec<ScopedCoverage>> = BTreeMap::new();
-+    let mut flags: BTreeMap<(Vec<String>, String), Vec<ScopedCoverage>> = BTreeMap::new();
-+    let mut args: BTreeMap<(Vec<String>, String), Vec<ScopedCoverage>> = BTreeMap::new();
-+
-+    for (cmd_idx, cmd) in wrapper.coverage.iter().enumerate() {
-+        let cmd_targets = scope_to_targets(
-+            expected_targets,
-+            platform_mapping,
-+            &expected_set,
-+            cmd.scope.as_ref(),
-+        );
-+        commands
-+            .entry(cmd.path.clone())
-+            .or_default()
-+            .push(ScopedCoverage {
-+                index: cmd_idx,
-+                targets: cmd_targets.clone(),
-+                level: cmd.level.clone(),
-+                note: cmd.note.clone(),
++    for item in supplement.commands {
++        let mut applied = false;
++        let existed = commands.contains_key(&item.path);
++        let entry = commands
++            .entry(item.path.clone())
++            .or_insert_with(|| CommandSnapshot {
++                path: item.path.clone(),
++                about: None,
++                usage: None,
++                stability: None,
++                platforms: None,
++                args: None,
++                flags: None,
 +            });
 +
-+        for flag in &cmd.flags {
-+            let flag_targets = scope_to_targets(
-+                expected_targets,
-+                platform_mapping,
-+                &expected_set,
-+                flag.scope.as_ref(),
-+            );
-+            let effective = util::intersect(&cmd_targets, &flag_targets);
-+            flags
-+                .entry((cmd.path.clone(), flag.key.clone()))
-+                .or_default()
-+                .push(ScopedCoverage {
-+                    index: cmd_idx,
-+                    targets: effective,
-+                    level: flag.level.clone(),
-+                    note: flag.note.clone(),
-+                });
++        if !existed {
++            applied = true;
 +        }
 +
-+        for arg in &cmd.args {
-+            let arg_targets = scope_to_targets(
-+                expected_targets,
-+                platform_mapping,
-+                &expected_set,
-+                arg.scope.as_ref(),
-+            );
-+            let effective = util::intersect(&cmd_targets, &arg_targets);
-+            args.entry((cmd.path.clone(), arg.name.clone()))
-+                .or_default()
-+                .push(ScopedCoverage {
-+                    index: cmd_idx,
-+                    targets: effective,
-+                    level: arg.level.clone(),
-+                    note: arg.note.clone(),
-+                });
++        if let Some(platforms) = item.platforms {
++            if entry.platforms.as_ref() != Some(&platforms) {
++                entry.platforms = Some(platforms);
++                applied = true;
++            }
++        }
++
++        if applied {
++            any_applied = true;
++            known_omissions.push(format!(
++                "supplement/commands.json:v1:{}",
++                item.path.join(" ")
++            ));
 +        }
 +    }
 +
-+    WrapperIndex {
-+        commands,
-+        flags,
-+        args,
++    known_omissions.sort();
++    known_omissions.dedup();
++    Ok((known_omissions, any_applied))
++}
+diff --git a/crates/xtask/src/codex_snapshot/util.rs b/crates/xtask/src/codex_snapshot/util.rs
+new file mode 100644
+index 0000000..eca3f02
+--- /dev/null
++++ b/crates/xtask/src/codex_snapshot/util.rs
+@@ -0,0 +1,52 @@
++use std::process::{Command, Output};
++
++pub(super) fn command_failed_message(cmd: &Command, output: &Output) -> String {
++    let mut s = String::new();
++    s.push_str(&format!(
++        "{} (exit {})",
++        format_command(cmd),
++        output.status.code().unwrap_or(-1)
++    ));
++    let stdout = String::from_utf8_lossy(&output.stdout);
++    let stderr = String::from_utf8_lossy(&output.stderr);
++    if !stdout.trim().is_empty() {
++        s.push_str(&format!("\nstdout:\n{stdout}"));
++    }
++    if !stderr.trim().is_empty() {
++        s.push_str(&format!("\nstderr:\n{stderr}"));
++    }
++    s
++}
++
++fn format_command(cmd: &Command) -> String {
++    let program = cmd.get_program().to_string_lossy();
++    let args = cmd
++        .get_args()
++        .map(|a| shell_escape(a.to_string_lossy().as_ref()))
++        .collect::<Vec<_>>()
++        .join(" ");
++    if args.is_empty() {
++        program.to_string()
++    } else {
++        format!("{program} {args}")
 +    }
 +}
 +
-+fn scope_to_targets(
-+    expected_targets: &[String],
-+    platform_mapping: &BTreeMap<String, String>,
-+    expected_set: &BTreeSet<String>,
-+    scope: Option<&WrapperScope>,
-+) -> BTreeSet<String> {
-+    let Some(scope) = scope else {
-+        return expected_set.clone();
-+    };
-+
-+    let mut out = BTreeSet::<String>::new();
-+    if let Some(tt) = scope.target_triples.as_ref() {
-+        for t in tt {
-+            if expected_set.contains(t) {
-+                out.insert(t.clone());
-+            }
-+        }
++fn shell_escape(s: &str) -> String {
++    if s.bytes().all(
++        |b| matches!(b, b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'-' | b'.' | b'/' | b':'),
++    ) {
++        s.to_string()
++    } else {
++        format!("{s:?}")
 +    }
-+    if let Some(platforms) = scope.platforms.as_ref() {
-+        for target in expected_targets {
-+            if let Some(platform) = platform_mapping.get(target) {
-+                if platforms.iter().any(|pl| pl == platform) {
-+                    out.insert(target.clone());
-+                }
-+            }
-+        }
-+    }
-+    out
 +}
 +
-+pub(super) fn resolve_wrapper(
-+    entries: &[ScopedCoverage],
-+    report_targets: &BTreeSet<String>,
-+    expected_targets: &[String],
-+    mode: FilterMode<'_>,
-+    unit: &str,
-+    detail: &str,
-+) -> Result<CoverageResolution, ReportError> {
-+    let relevant_target_set: BTreeSet<String> = match mode {
-+        FilterMode::Any => report_targets.clone(),
-+        FilterMode::ExactTarget(t) => BTreeSet::from([t.to_string()]),
-+        FilterMode::All => expected_targets.iter().cloned().collect(),
-+    };
-+
-+    let mut union_targets = BTreeSet::<String>::new();
-+    let mut levels = BTreeSet::<String>::new();
-+    let mut note_by_index: BTreeMap<usize, String> = BTreeMap::new();
-+
-+    for e in entries {
-+        let intersection: BTreeSet<String> = e
-+            .targets
-+            .intersection(&relevant_target_set)
-+            .cloned()
-+            .collect();
-+        if intersection.is_empty() {
-+            continue;
-+        }
-+        union_targets.extend(intersection);
-+        levels.insert(e.level.clone());
-+        if let Some(note) = e.note.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
-+            note_by_index
-+                .entry(e.index)
-+                .or_insert_with(|| note.to_string());
-+        }
++pub(super) fn normalize_text(stdout: &[u8], stderr: &[u8]) -> String {
++    let stdout = String::from_utf8_lossy(stdout);
++    if !stdout.trim().is_empty() {
++        stdout.replace("\r\n", "\n")
++    } else {
++        String::from_utf8_lossy(stderr).replace("\r\n", "\n")
 +    }
-+
-+    let present = match mode {
-+        FilterMode::Any => !union_targets.is_empty(),
-+        FilterMode::ExactTarget(t) => union_targets.contains(t),
-+        FilterMode::All => expected_targets.iter().all(|t| union_targets.contains(t)),
-+    };
-+
-+    let level = match levels.len() {
-+        0 => None,
-+        1 => levels.into_iter().next(),
-+        _ => {
-+            return Err(ReportError::WrapperResolution {
-+                unit: unit.to_string(),
-+                detail: format!("{detail} has multiple wrapper levels across relevant scopes"),
-+            })
-+        }
-+    };
-+
-+    let note = note_by_index.into_values().next();
-+
-+    Ok(CoverageResolution {
-+        present,
-+        targets: union_targets,
-+        level,
-+        note,
-+    })
 +}

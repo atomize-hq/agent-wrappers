@@ -1,0 +1,3 @@
+    Fetching advisory database from `https://github.com/RustSec/advisory-db.git`
+      Loaded 909 security advisories (from /tmp/cargo_home_p38_auditcfg/advisory-db)
+    Scanning Cargo.lock for vulnerabilities (190 crate dependencies)
