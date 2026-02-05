@@ -1,0 +1,5 @@
+$ cargo audit --color never --no-fetch --stale
+      Loaded 909 security advisories (from /home/dev/.cargo/advisory-db)
+warning: couldn't open crates.io index: I/O operation failed: failed to obtain lock file '/home/dev/.cargo/.package-cache'
+    Scanning Cargo.lock for vulnerabilities (190 crate dependencies)
+0

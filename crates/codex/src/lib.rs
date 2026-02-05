@@ -101,7 +101,6 @@ use std::{
     path::{Path, PathBuf},
     pin::Pin,
     process::ExitStatus,
-    task::{Context, Poll},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -117,8 +116,7 @@ use tempfile::TempDir;
 use thiserror::Error;
 use tokio::{
     fs,
-    fs::OpenOptions,
-    io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
+    io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
     process::Command,
     sync::mpsc,
     task, time,
@@ -654,13 +652,13 @@ impl CodexClient {
         let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
 
         let (tx, rx) = mpsc::channel(32);
-        let json_log = prepare_json_log(
+        let json_log = jsonl::prepare_json_log(
             json_event_log
                 .or_else(|| self.json_event_log.clone())
                 .filter(|path| !path.as_os_str().is_empty()),
         )
         .await?;
-        let stdout_task = tokio::spawn(forward_json_events(
+        let stdout_task = tokio::spawn(jsonl::forward_json_events(
             stdout,
             tx,
             self.mirror_stdout,
@@ -668,7 +666,7 @@ impl CodexClient {
         ));
         let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
 
-        let events = EventChannelStream::new(rx, idle_timeout);
+        let events = jsonl::EventChannelStream::new(rx, idle_timeout);
         let timeout = self.timeout;
         let schema_path = output_schema.clone();
         let completion = Box::pin(async move {
@@ -849,13 +847,13 @@ impl CodexClient {
         let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
 
         let (tx, rx) = mpsc::channel(32);
-        let json_log = prepare_json_log(
+        let json_log = jsonl::prepare_json_log(
             json_event_log
                 .or_else(|| self.json_event_log.clone())
                 .filter(|path| !path.as_os_str().is_empty()),
         )
         .await?;
-        let stdout_task = tokio::spawn(forward_json_events(
+        let stdout_task = tokio::spawn(jsonl::forward_json_events(
             stdout,
             tx,
             self.mirror_stdout,
@@ -863,7 +861,7 @@ impl CodexClient {
         ));
         let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
 
-        let events = EventChannelStream::new(rx, idle_timeout);
+        let events = jsonl::EventChannelStream::new(rx, idle_timeout);
         let timeout = self.timeout;
         let schema_path = output_schema.clone();
         let completion = Box::pin(async move {
@@ -4794,381 +4792,6 @@ pub enum ExecStreamError {
     ChannelClosed,
 }
 
-async fn prepare_json_log(path: Option<PathBuf>) -> Result<Option<JsonLogSink>, ExecStreamError> {
-    match path {
-        Some(path) => {
-            let sink = JsonLogSink::new(path)
-                .await
-                .map_err(|err| ExecStreamError::from(CodexError::CaptureIo(err)))?;
-            Ok(Some(sink))
-        }
-        None => Ok(None),
-    }
-}
-
-#[derive(Debug)]
-struct JsonLogSink {
-    writer: BufWriter<fs::File>,
-}
-
-impl JsonLogSink {
-    async fn new(path: PathBuf) -> Result<Self, std::io::Error> {
-        if let Some(parent) = path.parent() {
-            if !parent.as_os_str().is_empty() {
-                fs::create_dir_all(parent).await?;
-            }
-        }
-
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)
-            .await?;
-
-        Ok(Self {
-            writer: BufWriter::new(file),
-        })
-    }
-
-    async fn write_line(&mut self, line: &str) -> Result<(), std::io::Error> {
-        self.writer.write_all(line.as_bytes()).await?;
-        self.writer.write_all(b"\n").await?;
-        self.writer.flush().await
-    }
-}
-
-struct EventChannelStream {
-    rx: mpsc::Receiver<Result<ThreadEvent, ExecStreamError>>,
-    idle_timeout: Option<Duration>,
-    idle_timer: Option<Pin<Box<time::Sleep>>>,
-}
-
-impl EventChannelStream {
-    fn new(
-        rx: mpsc::Receiver<Result<ThreadEvent, ExecStreamError>>,
-        idle_timeout: Option<Duration>,
-    ) -> Self {
-        Self {
-            rx,
-            idle_timeout,
-            idle_timer: None,
-        }
-    }
-
-    fn reset_timer(&mut self) {
-        self.idle_timer = self
-            .idle_timeout
-            .map(|duration| Box::pin(time::sleep(duration)));
-    }
-}
-
-impl Stream for EventChannelStream {
-    type Item = Result<ThreadEvent, ExecStreamError>;
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = self.get_mut();
-
-        if let Some(timer) = this.idle_timer.as_mut() {
-            if let Poll::Ready(()) = timer.as_mut().poll(cx) {
-                let idle_for = this.idle_timeout.expect("idle_timer implies timeout");
-                this.idle_timer = None;
-                return Poll::Ready(Some(Err(ExecStreamError::IdleTimeout { idle_for })));
-            }
-        }
-
-        match this.rx.poll_recv(cx) {
-            Poll::Ready(Some(item)) => {
-                if this.idle_timeout.is_some() {
-                    this.reset_timer();
-                }
-                Poll::Ready(Some(item))
-            }
-            Poll::Ready(None) => Poll::Ready(None),
-            Poll::Pending => {
-                if this.idle_timer.is_none() {
-                    if let Some(duration) = this.idle_timeout {
-                        let mut sleep = Box::pin(time::sleep(duration));
-                        if let Poll::Ready(()) = sleep.as_mut().poll(cx) {
-                            return Poll::Ready(Some(Err(ExecStreamError::IdleTimeout {
-                                idle_for: duration,
-                            })));
-                        }
-                        this.idle_timer = Some(sleep);
-                    }
-                }
-                Poll::Pending
-            }
-        }
-    }
-}
-
-async fn forward_json_events<R>(
-    reader: R,
-    sender: mpsc::Sender<Result<ThreadEvent, ExecStreamError>>,
-    mirror_stdout: bool,
-    mut log: Option<JsonLogSink>,
-) -> Result<(), ExecStreamError>
-where
-    R: AsyncRead + Unpin,
-{
-    let mut lines = BufReader::new(reader).lines();
-    let mut context = StreamContext::default();
-    loop {
-        let line = match lines.next_line().await {
-            Ok(Some(line)) => line,
-            Ok(None) => break,
-            Err(err) => {
-                return Err(CodexError::CaptureIo(err).into());
-            }
-        };
-
-        if line.trim().is_empty() {
-            continue;
-        }
-
-        if let Some(sink) = log.as_mut() {
-            sink.write_line(&line)
-                .await
-                .map_err(|err| ExecStreamError::from(CodexError::CaptureIo(err)))?;
-        }
-
-        if mirror_stdout {
-            if let Err(err) = task::block_in_place(|| {
-                let mut out = stdio::stdout();
-                out.write_all(line.as_bytes())?;
-                out.write_all(b"\n")?;
-                out.flush()
-            }) {
-                return Err(CodexError::CaptureIo(err).into());
-            }
-        }
-
-        let event = normalize_thread_event(&line, &mut context);
-        if sender.send(event).await.is_err() {
-            break;
-        }
-    }
-
-    Ok(())
-}
-
-#[derive(Clone, Debug, Default)]
-struct StreamContext {
-    current_thread_id: Option<String>,
-    current_turn_id: Option<String>,
-    next_synthetic_turn: u32,
-}
-
-fn normalize_thread_event(
-    line: &str,
-    context: &mut StreamContext,
-) -> Result<ThreadEvent, ExecStreamError> {
-    let mut value: serde_json::Value =
-        serde_json::from_str(line).map_err(|source| ExecStreamError::Parse {
-            line: line.to_string(),
-            source,
-        })?;
-
-    let event_type = value
-        .get("type")
-        .and_then(|t| t.as_str())
-        .map(|s| s.to_string())
-        .ok_or_else(|| ExecStreamError::Normalize {
-            line: line.to_string(),
-            message: "event missing `type`".to_string(),
-        })?;
-
-    match event_type.as_str() {
-        "thread.started" | "thread.resumed" => {
-            let thread_id = extract_str_from_keys(&value, &["thread_id", "conversation_id", "id"])
-                .ok_or_else(|| missing(&event_type, "thread_id", line))?;
-            context.current_thread_id = Some(thread_id.to_string());
-            context.current_turn_id = None;
-        }
-        "turn.started" => {
-            let turn_id = extract_str_from_keys(&value, &["turn_id", "id"])
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| {
-                    let next = context.next_synthetic_turn.max(1);
-                    let id = format!("synthetic-turn-{next}");
-                    context.next_synthetic_turn = next.saturating_add(1);
-                    id
-                });
-            let thread_id = extract_str_from_keys(&value, &["thread_id", "conversation_id"])
-                .map(|s| s.to_string())
-                .or_else(|| context.current_thread_id.clone())
-                .ok_or_else(|| missing("turn.started", "thread_id", line))?;
-            set_str(&mut value, "turn_id", turn_id.clone());
-            set_str(&mut value, "thread_id", thread_id.clone());
-            context.current_thread_id = Some(thread_id);
-            context.current_turn_id = Some(turn_id);
-        }
-        "turn.completed" | "turn.failed" => {
-            let turn_id = extract_str_from_keys(&value, &["turn_id", "id"])
-                .map(|s| s.to_string())
-                .or_else(|| context.current_turn_id.clone())
-                .ok_or_else(|| missing(&event_type, "turn_id", line))?;
-            let thread_id = extract_str_from_keys(&value, &["thread_id", "conversation_id"])
-                .map(|s| s.to_string())
-                .or_else(|| context.current_thread_id.clone())
-                .ok_or_else(|| missing(&event_type, "thread_id", line))?;
-            set_str(&mut value, "turn_id", turn_id.clone());
-            set_str(&mut value, "thread_id", thread_id.clone());
-            context.current_turn_id = None;
-            context.current_thread_id = Some(thread_id);
-        }
-        t if t.starts_with("item.") => {
-            normalize_item_payload(&mut value);
-            if event_type == "item.delta" || event_type == "item.updated" {
-                normalize_item_delta_payload(&mut value);
-            }
-            let turn_id = extract_str(&value, "turn_id")
-                .map(|s| s.to_string())
-                .or_else(|| context.current_turn_id.clone())
-                .ok_or_else(|| missing(&event_type, "turn_id", line))?;
-            let thread_id = extract_str_from_keys(&value, &["thread_id", "conversation_id"])
-                .map(|s| s.to_string())
-                .or_else(|| context.current_thread_id.clone())
-                .ok_or_else(|| missing(&event_type, "thread_id", line))?;
-            set_str(&mut value, "turn_id", turn_id);
-            set_str(&mut value, "thread_id", thread_id);
-        }
-        _ => {}
-    }
-
-    serde_json::from_value::<ThreadEvent>(value).map_err(|source| ExecStreamError::Parse {
-        line: line.to_string(),
-        source,
-    })
-}
-
-fn extract_str<'a>(value: &'a serde_json::Value, key: &str) -> Option<&'a str> {
-    value
-        .get(key)
-        .and_then(|v| v.as_str())
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-}
-
-fn extract_str_from_keys<'a>(value: &'a serde_json::Value, keys: &[&str]) -> Option<&'a str> {
-    for key in keys {
-        if let Some(found) = extract_str(value, key) {
-            return Some(found);
-        }
-    }
-    None
-}
-
-fn set_str(value: &mut serde_json::Value, key: &str, new_value: String) {
-    if let Some(map) = value.as_object_mut() {
-        map.insert(key.to_string(), serde_json::Value::String(new_value));
-    }
-}
-
-fn normalize_item_delta_payload(value: &mut serde_json::Value) {
-    let Some(map) = value.as_object_mut() else {
-        return;
-    };
-
-    if !map.contains_key("delta") {
-        if let Some(content) = map.remove("content") {
-            map.insert("delta".to_string(), content);
-        }
-    }
-
-    let Some(item_type) = map.get("item_type").and_then(|value| value.as_str()) else {
-        return;
-    };
-
-    if !matches!(item_type, "agent_message" | "reasoning") {
-        return;
-    }
-
-    let Some(delta) = map.get_mut("delta") else {
-        return;
-    };
-
-    if let Some(text_delta) = delta.as_str() {
-        *delta = serde_json::json!({ "text_delta": text_delta });
-    }
-}
-
-fn normalize_item_payload(value: &mut serde_json::Value) {
-    let mut item_object = match value
-        .get_mut("item")
-        .and_then(|item| item.as_object_mut())
-        .map(|map| map.clone())
-    {
-        Some(map) => map,
-        None => return,
-    };
-
-    if !item_object.contains_key("item_type") {
-        if let Some(item_type) = item_object.remove("type") {
-            item_object.insert("item_type".to_string(), item_type);
-        }
-    }
-
-    if !item_object.contains_key("content") {
-        let mut content: Option<serde_json::Value> = None;
-        if let Some(text) = item_object.remove("text") {
-            if let Some(text_str) = text.as_str() {
-                content = Some(serde_json::json!({ "text": text_str }));
-            } else {
-                content = Some(text);
-            }
-        } else if let Some(command) = item_object.get("command").cloned() {
-            let mut map = serde_json::Map::new();
-            map.insert("command".to_string(), command);
-            if let Some(stdout) = item_object.remove("aggregated_output") {
-                map.insert("stdout".to_string(), stdout);
-            }
-            if let Some(exit_code) = item_object.remove("exit_code") {
-                map.insert("exit_code".to_string(), exit_code);
-            }
-            if let Some(stderr) = item_object.remove("stderr") {
-                map.insert("stderr".to_string(), stderr);
-            }
-            content = Some(serde_json::Value::Object(map));
-        }
-
-        if let Some(content_value) = content {
-            item_object.insert("content".to_string(), content_value);
-        }
-    }
-
-    let item_type = item_object
-        .get("item_type")
-        .and_then(|value| value.as_str())
-        .or_else(|| item_object.get("type").and_then(|value| value.as_str()))
-        .map(|value| value.to_string());
-
-    if matches!(item_type.as_deref(), Some("agent_message" | "reasoning")) {
-        if let Some(content) = item_object.get_mut("content") {
-            if let Some(text) = content.as_str() {
-                *content = serde_json::json!({ "text": text });
-            }
-        }
-    }
-
-    if let Some(root) = value.as_object_mut() {
-        for (mut key, mut v) in item_object {
-            if key == "type" {
-                key = "item_type".to_string();
-            }
-            root.insert(key, v.take());
-        }
-        root.remove("item");
-    }
-}
-
-fn missing(event: &str, field: &str, line: &str) -> ExecStreamError {
-    ExecStreamError::Normalize {
-        line: line.to_string(),
-        message: format!("{event} missing `{field}` and no prior context to infer it"),
-    }
-}
-
 async fn read_last_message(path: &Path) -> Option<String> {
     (fs::read_to_string(path).await).ok()
 }
@@ -5788,7 +5411,10 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
     use std::sync::OnceLock;
     use std::time::{Duration, SystemTime};
-    use tokio::{fs, io::AsyncWriteExt};
+    use tokio::{
+        fs,
+        io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    };
 
     fn env_mutex() -> &'static tokio::sync::Mutex<()> {
         static ENV_MUTEX: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
@@ -5836,7 +5462,8 @@ mod tests {
 
         let (mut writer, reader) = tokio::io::duplex(4096);
         let (tx, rx) = mpsc::channel(8);
-        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false, None));
+        let forward_handle =
+            tokio::spawn(crate::jsonl::forward_json_events(reader, tx, false, None));
 
         for line in &lines {
             writer.write_all(line.as_bytes()).await.unwrap();
@@ -5844,7 +5471,7 @@ mod tests {
         }
         writer.shutdown().await.unwrap();
 
-        let stream = EventChannelStream::new(rx, None);
+        let stream = crate::jsonl::EventChannelStream::new(rx, None);
         pin_mut!(stream);
         let events: Vec<_> = stream.collect().await;
         forward_handle.await.unwrap().unwrap();
@@ -5897,7 +5524,8 @@ mod tests {
     async fn json_stream_propagates_parse_errors() {
         let (mut writer, reader) = tokio::io::duplex(1024);
         let (tx, rx) = mpsc::channel(4);
-        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false, None));
+        let forward_handle =
+            tokio::spawn(crate::jsonl::forward_json_events(reader, tx, false, None));
 
         writer
             .write_all(br#"{"type":"thread.started","thread_id":"thread-err"}"#)
@@ -5906,7 +5534,7 @@ mod tests {
         writer.write_all(b"\nthis is not json\n").await.unwrap();
         writer.shutdown().await.unwrap();
 
-        let stream = EventChannelStream::new(rx, None);
+        let stream = crate::jsonl::EventChannelStream::new(rx, None);
         pin_mut!(stream);
         let events: Vec<_> = stream.collect().await;
         forward_handle.await.unwrap().unwrap();
@@ -5935,10 +5563,17 @@ mod tests {
 
         let (mut writer, reader) = tokio::io::duplex(2048);
         let (tx, rx) = mpsc::channel(4);
-        let log_sink = JsonLogSink::new(log_path.clone()).await.unwrap();
-        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false, Some(log_sink)));
+        let log_sink = crate::jsonl::JsonLogSink::new(log_path.clone())
+            .await
+            .unwrap();
+        let forward_handle = tokio::spawn(crate::jsonl::forward_json_events(
+            reader,
+            tx,
+            false,
+            Some(log_sink),
+        ));
 
-        let stream = EventChannelStream::new(rx, None);
+        let stream = crate::jsonl::EventChannelStream::new(rx, None);
         pin_mut!(stream);
 
         writer.write_all(lines[0].as_bytes()).await.unwrap();
@@ -6015,8 +5650,15 @@ mod tests {
 
         let (mut writer, reader) = tokio::io::duplex(4096);
         let (tx, rx) = mpsc::channel(8);
-        let log_sink = JsonLogSink::new(log_path.clone()).await.unwrap();
-        let forward_handle = tokio::spawn(forward_json_events(reader, tx, false, Some(log_sink)));
+        let log_sink = crate::jsonl::JsonLogSink::new(log_path.clone())
+            .await
+            .unwrap();
+        let forward_handle = tokio::spawn(crate::jsonl::forward_json_events(
+            reader,
+            tx,
+            false,
+            Some(log_sink),
+        ));
 
         for line in &lines {
             writer.write_all(line.as_bytes()).await.unwrap();
@@ -6024,7 +5666,7 @@ mod tests {
         }
         writer.shutdown().await.unwrap();
 
-        let stream = EventChannelStream::new(rx, None);
+        let stream = crate::jsonl::EventChannelStream::new(rx, None);
         pin_mut!(stream);
         let events: Vec<_> = stream.collect().await;
         forward_handle.await.unwrap().unwrap();
@@ -6038,7 +5680,7 @@ mod tests {
     #[tokio::test]
     async fn event_channel_stream_times_out_when_idle() {
         let (_tx, rx) = mpsc::channel(1);
-        let stream = EventChannelStream::new(rx, Some(Duration::from_millis(5)));
+        let stream = crate::jsonl::EventChannelStream::new(rx, Some(Duration::from_millis(5)));
         pin_mut!(stream);
 
         let next = stream.next().await;
@@ -7737,17 +7379,17 @@ exit 0
 
     #[test]
     fn normalize_stream_infers_missing_thread_and_turn() {
-        let mut context = StreamContext::default();
+        let mut context = crate::jsonl::StreamContext::default();
         // thread.started establishes thread context
         let thread_line = r#"{"type":"thread.started","thread_id":"thread-1"}"#;
-        let thread_event = normalize_thread_event(thread_line, &mut context).unwrap();
+        let thread_event = crate::jsonl::normalize_thread_event(thread_line, &mut context).unwrap();
         match thread_event {
             ThreadEvent::ThreadStarted(t) => assert_eq!(t.thread_id, "thread-1"),
             other => panic!("unexpected event: {other:?}"),
         }
         // turn.started without thread_id should inherit
         let turn_line = r#"{"type":"turn.started","turn_id":"turn-1"}"#;
-        let turn_event = normalize_thread_event(turn_line, &mut context).unwrap();
+        let turn_event = crate::jsonl::normalize_thread_event(turn_line, &mut context).unwrap();
         match turn_event {
             ThreadEvent::TurnStarted(t) => {
                 assert_eq!(t.thread_id, "thread-1");
@@ -7758,7 +7400,7 @@ exit 0
         // item.completed without ids should inherit both
         let item_line =
             r#"{"type":"item.completed","item":{"id":"msg-1","type":"agent_message","text":"hi"}}"#;
-        let item_event = normalize_thread_event(item_line, &mut context).unwrap();
+        let item_event = crate::jsonl::normalize_thread_event(item_line, &mut context).unwrap();
         match item_event {
             ThreadEvent::ItemCompleted(item) => {
                 assert_eq!(item.turn_id, "turn-1");
@@ -7771,9 +7413,9 @@ exit 0
 
     #[test]
     fn normalize_stream_errors_without_context() {
-        let mut context = StreamContext::default();
+        let mut context = crate::jsonl::StreamContext::default();
         let line = r#"{"type":"turn.started"}"#;
-        let err = normalize_thread_event(line, &mut context).unwrap_err();
+        let err = crate::jsonl::normalize_thread_event(line, &mut context).unwrap_err();
         match err {
             ExecStreamError::Normalize { .. } => {}
             other => panic!("unexpected error: {other:?}"),

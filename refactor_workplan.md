@@ -374,8 +374,8 @@ Last Updated: 2026-02-05
 
 ##### P1.6 — Seam extraction: JSONL streaming/framing (`jsonl.rs`) (API preserved)
 
-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
-Last Updated: YYYY-MM-DD
+Status: [ ] Not Started  [ ] In Progress  [x] Done  
+Last Updated: 2026-02-05
 
 - Goal: Extract JSONL streaming/framing + related IO helpers out of `crates/codex/src/lib.rs` into the existing `crates/codex/src/jsonl.rs` module, preserving existing public API paths via re-exports from `lib.rs`.
 - Expected files touched:
@@ -1254,6 +1254,27 @@ Add entries as work lands. Format:
   - Workplan diff: `evidence_runs/2026-02-05/SESSION_workplan_diff_final.patch`
 - Commit:
   - `420262329b90007e7b4459ebb8e3bc2418da7641`
+
+### 2026-02-05 — Extract JSONL streaming/framing seam
+
+- Scope/step: P1.6
+- Why: Reduce `crates/codex/src/lib.rs` size by extracting JSONL streaming/framing + related IO helpers into `crates/codex/src/jsonl.rs` while preserving public API paths.
+- What changed:
+  - Moved JSONL stream framing helpers (`forward_json_events`, `EventChannelStream`, `JsonLogSink`, normalization/context) from `crates/codex/src/lib.rs` into `crates/codex/src/jsonl.rs`.
+  - Kept `crates/codex/src/lib.rs` as the façade by calling into `jsonl::*` helpers; public re-exports remain stable.
+- Validation results (§4.1):
+  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.6_cargo_fmt_check.txt`)
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.6_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.6_cargo_clippy.txt`)
+  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.6_cargo_test.txt`)
+  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.6_cargo_audit_after.txt`) (initial/obsolete: `evidence_runs/2026-02-05/P1.6_cargo_audit.txt` was incomplete)
+  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.6_cargo_deny_advisories.txt`)
+  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.6_cargo_deny_licenses_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.6_cargo_deny_licenses.txt` (crates.io DNS failure))
+  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.6_cargo_fmt_check_final.txt`)
+- Evidence/patches:
+  - Code diff: `evidence_runs/2026-02-05/SESSION_code_diff_final.patch`
+  - Workplan diff: `evidence_runs/2026-02-05/SESSION_workplan_diff_final.patch`
+- Diffs/PRs:
+  - Commit: `b4da9b037f4e0fb3c03889b6e8d57853ece11826`
 
 ## 9) Open Questions / Decisions (lightweight log)
 
