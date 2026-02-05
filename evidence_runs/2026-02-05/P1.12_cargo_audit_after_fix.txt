@@ -1,0 +1,4 @@
+==== cargo audit --no-fetch --stale (CARGO_HOME=/tmp/p112_cargo_home CARGO_NET_OFFLINE=true) 2026-02-05T16:16:50Z ====
+[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /tmp/p112_cargo_home/advisory-db)
+[0m[0m[1m[32m    Scanning[0m Cargo.lock for vulnerabilities (190 crate dependencies)
+==== exit_code=0 ====

@@ -1,0 +1,133 @@
+crates/codex/src/wrapper_coverage_manifest.rs:269:            // Scenario 6: `codex features list`.
+crates/codex/src/lib.rs:41://! - [`CodexClient::list_features`] to wrap `codex features list` with optional `--json` parsing, shared config/profile overrides, and parsed feature entries (name/stage/enabled).
+crates/codex/src/lib.rs:59://! - `probe_capabilities` and the `feature_detection` example focus on `--output-schema`, `--add-dir`, `codex login --mcp`, and `codex features list` availability; other subcommand drift (like cloud-only commands) is surfaced by the parity snapshot/reports in `cli_manifests/codex/`.
+crates/codex/src/lib.rs:64://! - `probe_capabilities` captures `--version`, `features list`, and `--help` hints into a `CodexCapabilities` snapshot with `collected_at` timestamps and `BinaryFingerprint` metadata keyed by canonical binary path.
+crates/codex/src/lib.rs:134:use semver::{Prerelease, Version};
+crates/codex/src/lib.rs:460:        let (tx, rx) = mpsc::channel(32);
+crates/codex/src/lib.rs:655:        let (tx, rx) = mpsc::channel(32);
+crates/codex/src/lib.rs:810:        let combined = preferred_output_channel(&output);
+crates/codex/src/lib.rs:829:        let combined = preferred_output_channel(&output);
+crates/codex/src/lib.rs:850:        let combined = preferred_output_channel(&output);
+crates/codex/src/lib.rs:1118:    /// Lists CLI features via `codex features list`.
+crates/codex/src/lib.rs:2064:                        "codex --version exited non-zero"
+crates/codex/src/lib.rs:2075:                "codex --version probe failed"
+crates/codex/src/lib.rs:2088:                        "codex features list --json exited non-zero"
+crates/codex/src/lib.rs:2107:                "codex features list --json probe failed"
+crates/codex/src/lib.rs:2119:                            "codex features list exited non-zero"
+crates/codex/src/lib.rs:2132:                    "codex features list probe failed"
+crates/codex/src/lib.rs:2174:    /// [`CodexLatestReleases`] using their preferred update channel (npm,
+crates/codex/src/lib.rs:2178:    /// [`update_advisory_from_capabilities`].
+crates/codex/src/lib.rs:2184:        update_advisory_from_capabilities(&capabilities, latest_releases)
+crates/codex/src/lib.rs:2569:    #[error("failed to parse features list output: {reason}")]
+crates/codex/src/lib.rs:2855:fn parse_semver_from_raw(raw: &str) -> Option<Version> {
+crates/codex/src/lib.rs:2869:    let parsed_version = parse_semver_from_raw(&raw);
+crates/codex/src/lib.rs:2885:    let channel = parsed_version
+crates/codex/src/lib.rs:2887:        .map(release_channel_for_version)
+crates/codex/src/lib.rs:2888:        .unwrap_or_else(|| infer_release_channel(&raw));
+crates/codex/src/lib.rs:2894:        channel,
+crates/codex/src/lib.rs:2898:fn release_channel_for_version(version: &Version) -> CodexReleaseChannel {
+crates/codex/src/lib.rs:2913:fn infer_release_channel(raw: &str) -> CodexReleaseChannel {
+crates/codex/src/lib.rs:2924:fn codex_semver(info: &CodexVersionInfo) -> Option<Version> {
+crates/codex/src/lib.rs:2925:    if let Some(parsed) = parse_semver_from_raw(&info.raw) {
+crates/codex/src/lib.rs:2931:        match info.channel {
+crates/codex/src/lib.rs:2945:    let version = codex_semver(info)?;
+crates/codex/src/lib.rs:2947:        channel: info.channel,
+crates/codex/src/lib.rs:3025:    if lower.contains("features list") {
+crates/codex/src/lib.rs:3053:    if lower.contains("features list") {
+crates/codex/src/lib.rs:3115:        return Err("features list output was empty".to_string());
+crates/codex/src/lib.rs:3319:/// helper to avoid re-running `codex --version`. Provide a [`CodexLatestReleases`]
+crates/codex/src/lib.rs:3320:/// table sourced from your preferred distribution channel.
+crates/codex/src/lib.rs:3321:pub fn update_advisory_from_capabilities(
+crates/codex/src/lib.rs:3329:    let preferred_channel = local_release
+crates/codex/src/lib.rs:3331:        .map(|release| release.channel)
+crates/codex/src/lib.rs:3333:    let (latest_release, comparison_channel, fell_back) =
+crates/codex/src/lib.rs:3334:        latest_releases.select_for_channel(preferred_channel);
+crates/codex/src/lib.rs:3339:            "No latest {preferred_channel} release provided; comparing against {comparison_channel}."
+crates/codex/src/lib.rs:3362:                    "Local codex {local_version} is behind latest {comparison_channel} {latest_version}.",
+crates/codex/src/lib.rs:3375:                    "Local codex {local_version} is newer than provided {comparison_channel} metadata (latest table: {known}).",
+crates/codex/src/lib.rs:3383:                    "Latest known {comparison_channel} release is {latest_version}; local version could not be parsed.",
+crates/codex/src/lib.rs:3400:                    "Local codex matches latest {comparison_channel} release {latest_version}.",
+crates/codex/src/lib.rs:3410:        comparison_channel,
+crates/codex/src/lib.rs:3478:        let (tx, rx) = mpsc::channel(8);
+crates/codex/src/lib.rs:3540:        let (tx, rx) = mpsc::channel(4);
+crates/codex/src/lib.rs:3579:        let (tx, rx) = mpsc::channel(4);
+crates/codex/src/lib.rs:3666:        let (tx, rx) = mpsc::channel(8);
+crates/codex/src/lib.rs:3695:    async fn event_channel_stream_times_out_when_idle() {
+crates/codex/src/lib.rs:3696:        let (_tx, rx) = mpsc::channel(1);
+crates/codex/src/lib.rs:4836:                channel: CodexReleaseChannel::Beta,
+crates/codex/src/lib.rs:5367:        assert_eq!(parsed.channel, CodexReleaseChannel::Nightly);
+crates/codex/src/lib.rs:5382:        let advisory = update_advisory_from_capabilities(&capabilities, &latest);
+crates/codex/src/lib.rs:5446:        let advisory = update_advisory_from_capabilities(&capabilities, &latest);
+crates/codex/src/lib.rs:5462:        let advisory = update_advisory_from_capabilities(&capabilities, &latest);
+crates/codex/src/lib.rs:5468:    fn update_advisory_falls_back_when_channel_missing() {
+crates/codex/src/lib.rs:5474:        let advisory = update_advisory_from_capabilities(&capabilities, &latest);
+crates/codex/src/lib.rs:5475:        assert_eq!(advisory.comparison_channel, CodexReleaseChannel::Stable);
+crates/codex/src/lib.rs:5490:        let advisory = update_advisory_from_capabilities(&capabilities, &latest);
+crates/codex/src/lib.rs:5503:        let advisory = update_advisory_from_capabilities(&capabilities, &latest);
+crates/codex/src/lib.rs:5844:            "Usage: codex --output-schema ... add-dir ... login --mcp. See `codex features list`.";
+crates/codex/src/lib.rs:5893:            .any(|note| note.contains("features list")));
+crates/codex/src/lib.rs:5984:  echo "features list"
+crates/codex/src/lib.rs:6057:            capabilities.version.as_ref().map(|v| v.channel),
+crates/codex/src/lib.rs:6268:            first.version.as_ref().map(|v| v.channel),
+crates/codex/src/lib.rs:7046:fn preferred_output_channel(output: &CommandOutput) -> String {
+crates/codex/src/cli/features.rs:6:/// Stage labels reported by `codex features list`.
+crates/codex/src/cli/features.rs:62:/// Single feature entry reported by `codex features list`.
+crates/codex/src/cli/features.rs:84:/// Format used to parse `codex features list` output.
+crates/codex/src/cli/features.rs:91:/// Parsed output from `codex features list`.
+crates/codex/src/cli/features.rs:106:/// Request for `codex features list`.
+crates/codex/src/cli/features.rs:124:    /// Controls whether `--json` is passed to `codex features list`.
+crates/codex/src/capabilities/types.rs:1:use semver::Version;
+crates/codex/src/capabilities/types.rs:23:    /// Parsed output from `codex --version`; `None` when the command fails.
+crates/codex/src/capabilities/types.rs:33:/// Parsed version details emitted by `codex --version`.
+crates/codex/src/capabilities/types.rs:36:    /// Raw stdout from `codex --version` so we do not lose channel/build metadata.
+crates/codex/src/capabilities/types.rs:40:    /// Optional commit hash or build identifier printed by pre-release builds.
+crates/codex/src/capabilities/types.rs:42:    /// Release channel inferred from the version string suffix (e.g., `-beta`).
+crates/codex/src/capabilities/types.rs:43:    pub channel: CodexReleaseChannel,
+crates/codex/src/capabilities/types.rs:46:/// Release channel segments inferred from the Codex version string.
+crates/codex/src/capabilities/types.rs:68:/// Release metadata for a specific Codex build channel.
+crates/codex/src/capabilities/types.rs:71:    /// Release channel (stable/beta/nightly/custom).
+crates/codex/src/capabilities/types.rs:72:    pub channel: CodexReleaseChannel,
+crates/codex/src/capabilities/types.rs:80:/// with data from their preferred distribution channel (e.g. `npm view
+crates/codex/src/capabilities/types.rs:94:    /// Returns the most appropriate latest release for the given channel,
+crates/codex/src/capabilities/types.rs:95:    /// falling back to a more stable track when channel-specific data is
+crates/codex/src/capabilities/types.rs:97:    pub fn select_for_channel(
+crates/codex/src/capabilities/types.rs:99:        channel: CodexReleaseChannel,
+crates/codex/src/capabilities/types.rs:101:        if let Some(release) = self.release_for_channel(channel) {
+crates/codex/src/capabilities/types.rs:102:            return (Some(release), channel, false);
+crates/codex/src/capabilities/types.rs:109:                channel: CodexReleaseChannel::Stable,
+crates/codex/src/capabilities/types.rs:114:                    channel: CodexReleaseChannel::Beta,
+crates/codex/src/capabilities/types.rs:120:                    channel: CodexReleaseChannel::Nightly,
+crates/codex/src/capabilities/types.rs:125:        let fallback_channel = fallback
+crates/codex/src/capabilities/types.rs:127:            .map(|release| release.channel)
+crates/codex/src/capabilities/types.rs:128:            .unwrap_or(channel);
+crates/codex/src/capabilities/types.rs:129:        let fell_back = fallback_channel != channel;
+crates/codex/src/capabilities/types.rs:130:        (fallback, fallback_channel, fell_back)
+crates/codex/src/capabilities/types.rs:133:    fn release_for_channel(&self, channel: CodexReleaseChannel) -> Option<CodexRelease> {
+crates/codex/src/capabilities/types.rs:134:        match channel {
+crates/codex/src/capabilities/types.rs:136:                channel,
+crates/codex/src/capabilities/types.rs:140:                channel,
+crates/codex/src/capabilities/types.rs:144:                channel,
+crates/codex/src/capabilities/types.rs:155:    /// Local release as parsed from `codex --version`.
+crates/codex/src/capabilities/types.rs:159:    /// Channel chosen for comparison (local channel when available, otherwise stable).
+crates/codex/src/capabilities/types.rs:160:    pub comparison_channel: CodexReleaseChannel,
+crates/codex/src/capabilities/types.rs:180:    /// Local binary matches the latest known release for the comparison channel.
+crates/codex/src/capabilities/types.rs:182:    /// A newer release exists for the comparison channel.
+crates/codex/src/capabilities/types.rs:198:    /// True when `codex features list` is available.
+crates/codex/src/capabilities/types.rs:211:    /// Override for `codex features list` support; `None` defers to probes.
+crates/codex/src/mcp/jsonrpc.rs:135:        let (writer_tx, writer_rx) = mpsc::unbounded_channel();
+crates/codex/src/mcp/jsonrpc.rs:188:        let (tx, rx) = oneshot::channel();
+crates/codex/src/mcp/jsonrpc.rs:207:                let (tx, rx) = mpsc::unbounded_channel();
+crates/codex/src/mcp/jsonrpc.rs:213:                let (_tx, rx) = mpsc::unbounded_channel();
+crates/codex/src/mcp/jsonrpc.rs:222:                let (tx, rx) = mpsc::unbounded_channel();
+crates/codex/src/mcp/jsonrpc.rs:228:                let (_tx, rx) = mpsc::unbounded_channel();
+crates/codex/src/mcp/jsonrpc.rs:388:    let (tx, mapped_rx) = oneshot::channel();
+crates/codex/src/mcp/protocol.rs:20:/// Notification channel emitted by `codex mcp-server`.
+crates/codex/src/mcp/client.rs:42:    #[error("transport channel closed unexpectedly")]
+crates/codex/src/bundled_binary.rs:20:    /// Pinned Codex version directory to resolve (semantic version or channel/build id).
+crates/codex/src/capabilities/guard.rs:99:            CapabilityFeature::FeaturesList => "codex features list",
+crates/codex/src/capabilities/guard.rs:165:    /// Invoke `codex --version` to capture version/build metadata.
+crates/codex/src/capabilities/guard.rs:167:    /// Prefer `codex features list --json` when supported for structured output.
+crates/codex/src/capabilities/guard.rs:169:    /// Fallback to `codex features list` when only plain text is available.
+crates/codex/src/capabilities/guard.rs:171:    /// Parse `codex --help` to spot known flags (e.g., `--output-schema`, `add-dir`, `login --mcp`) when the features list is missing.
+crates/codex/src/capabilities/guard.rs:193:    /// Guards whether `codex features list` is supported by the probed binary.
+crates/codex/src/capabilities/guard.rs:200:    /// The guard treats missing `features list` support as `Unknown` so hosts can
