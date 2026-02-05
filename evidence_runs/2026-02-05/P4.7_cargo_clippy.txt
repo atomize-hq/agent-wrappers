@@ -1,0 +1,71 @@
+    Checking xtask v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/xtask)
+error[E0583]: file not found for module `report_filter_semantics`
+   --> crates/xtask/tests/c3_spec_reports_metadata_retain.rs:475:1
+    |
+475 | mod report_filter_semantics;
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: to create the module `report_filter_semantics`, create file "crates/xtask/tests/report_filter_semantics.rs" or "crates/xtask/tests/report_filter_semantics/mod.rs"
+    = note: if there is a `mod report_filter_semantics` elsewhere in the crate already, import it with `use crate::...` instead
+
+error[E0583]: file not found for module `report_incomplete_union`
+   --> crates/xtask/tests/c3_spec_reports_metadata_retain.rs:476:1
+    |
+476 | mod report_incomplete_union;
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: to create the module `report_incomplete_union`, create file "crates/xtask/tests/report_incomplete_union.rs" or "crates/xtask/tests/report_incomplete_union/mod.rs"
+    = note: if there is a `mod report_incomplete_union` elsewhere in the crate already, import it with `use crate::...` instead
+
+error[E0583]: file not found for module `retain_behavior`
+   --> crates/xtask/tests/c3_spec_reports_metadata_retain.rs:477:1
+    |
+477 | mod retain_behavior;
+    | ^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: to create the module `retain_behavior`, create file "crates/xtask/tests/retain_behavior.rs" or "crates/xtask/tests/retain_behavior/mod.rs"
+    = note: if there is a `mod retain_behavior` elsewhere in the crate already, import it with `use crate::...` instead
+
+error[E0583]: file not found for module `version_metadata_requirements`
+   --> crates/xtask/tests/c3_spec_reports_metadata_retain.rs:478:1
+    |
+478 | mod version_metadata_requirements;
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: to create the module `version_metadata_requirements`, create file "crates/xtask/tests/version_metadata_requirements.rs" or "crates/xtask/tests/version_metadata_requirements/mod.rs"
+    = note: if there is a `mod version_metadata_requirements` elsewhere in the crate already, import it with `use crate::...` instead
+
+error: unused import: `BTreeSet`
+ --> crates/xtask/tests/c3_spec_reports_metadata_retain.rs:1:24
+  |
+1 | use std::collections::{BTreeSet, HashMap};
+  |                        ^^^^^^^^
+  |
+  = note: `-D unused-imports` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+error: unused import: `semver::Version as SemverVersion`
+ --> crates/xtask/tests/c3_spec_reports_metadata_retain.rs:8:5
+  |
+8 | use semver::Version as SemverVersion;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: file is loaded as a module multiple times: `crates/xtask/tests/c3_spec_reports_metadata_retain.rs`
+   --> crates/xtask/tests/c3_spec_reports_metadata_retain.rs:475:1
+    |
+475 | mod report_filter_semantics;
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ first loaded here
+476 | mod report_incomplete_union;
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ loaded again here
+477 | mod retain_behavior;
+    | ^^^^^^^^^^^^^^^^^^^^ loaded again here
+478 | mod version_metadata_requirements;
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ loaded again here
+    |
+    = help: replace all but one `mod` item with `use` items
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#duplicate_mod
+    = note: `-D clippy::duplicate-mod` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::duplicate_mod)]`
+
+For more information about this error, try `rustc --explain E0583`.
+error: could not compile `xtask` (test "c3_spec_reports_metadata_retain") due to 7 previous errors

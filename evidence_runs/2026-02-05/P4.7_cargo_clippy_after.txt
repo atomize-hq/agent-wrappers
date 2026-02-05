@@ -1,0 +1,2 @@
+    Checking xtask v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.23s
