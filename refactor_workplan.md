@@ -1937,7 +1937,7 @@ Add entries as work lands. Format:
   - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.19_cargo_deny_licenses.txt`)
   - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.19_cargo_fmt_check_final.txt`)
 - Commit:
-  - TBD_POST_COMMIT
+  - 4a046c0b603e6595acd2d11ec5f3a12e73f18512
 
 ### 2026-02-05 — P1.20: extract core `CodexClient` runner helpers into `client_core.rs`
 
@@ -1958,7 +1958,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P1.20_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P1.20_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - fc07b5791576cbcf3e3e02421b0676e966b28ad2
 
 ### 2026-02-05 — P1.21: extract `CodexError` + shared defaults into modules
 
@@ -1978,7 +1978,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P1.21_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P1.21_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - e430e5e64a7d9d64d32b8592b3f4f0c3aec5a19c
 
 ### 2026-02-05 — P1.22: move remaining non-streaming `CodexClient` wrappers
 
@@ -2000,7 +2000,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P1.22_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P1.22_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - f3f09f615c858a9c8a89ccf1065660ba5656f7d1
 
 ### 2026-02-05 — P1.23 Refresh Phase 1 size evidence and close Phase 1 (no code moves)
 
@@ -2019,7 +2019,7 @@ Add entries as work lands. Format:
   - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.23_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.23_cargo_deny_advisories.txt`; workaround: writable temp `CARGO_HOME` seeded from `/home/dev/.cargo/{advisory-dbs,registry,git}` + `CARGO_NET_OFFLINE=true` + `--disable-fetch`)
   - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.23_cargo_deny_licenses.txt`)
 - Commit:
-  - TBD_POST_COMMIT
+  - 444cdf94efaa7fcad551a4fcafc0f4e664c39712
 
 ## 9) Open Questions / Decisions (lightweight log)
 
