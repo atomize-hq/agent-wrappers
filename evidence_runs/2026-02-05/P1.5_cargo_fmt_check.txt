@@ -1,0 +1,56 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/builder.rs:1:
+[31m-use std::{
+(B[m[31m-    ffi::OsString,
+(B[m[31m-    path::PathBuf,
+(B[m[31m-    time::Duration,
+(B[m[31m-};
+(B[m[32m+use std::{ffi::OsString, path::PathBuf, time::Duration};
+(B[m 
+ use tokio::process::Command;
+ 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/builder.rs:658:
+ 
+     fn append_overrides(&self, configs: &mut Vec<ConfigOverride>) {
+         if let Some(value) = self.effort {
+[31m-            configs.push(ConfigOverride::new("model_reasoning_effort", value.as_str()));
+(B[m[32m+            configs.push(ConfigOverride::new(
+(B[m[32m+                "model_reasoning_effort",
+(B[m[32m+                value.as_str(),
+(B[m[32m+            ));
+(B[m         }
+         if let Some(value) = self.summary {
+[31m-            configs.push(ConfigOverride::new("model_reasoning_summary", value.as_str()));
+(B[m[32m+            configs.push(ConfigOverride::new(
+(B[m[32m+                "model_reasoning_summary",
+(B[m[32m+                value.as_str(),
+(B[m[32m+            ));
+(B[m         }
+         if let Some(value) = self.verbosity {
+             configs.push(ConfigOverride::new("model_verbosity", value.as_str()));
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/builder.rs:881:
+             if let Some(mode) = resolved.sandbox_mode {
+                 args.push(OsString::from("--sandbox"));
+                 args.push(OsString::from(mode.as_str()));
+[31m-            } else if resolved.approval_policy.is_none() && matches!(other, SafetyOverride::FullAuto)
+(B[m[32m+            } else if resolved.approval_policy.is_none()
+(B[m[32m+                && matches!(other, SafetyOverride::FullAuto)
+(B[m             {
+                 args.push(OsString::from("--full-auto"));
+             }
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/builder.rs:918:
+         command.arg(arg);
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:105:
+     time::{Duration, SystemTime, UNIX_EPOCH},
+ };
+ 
+[31m-use futures_core::Stream;
+(B[m use builder::{apply_cli_overrides, resolve_cli_overrides};
+[32m+use futures_core::Stream;
+(B[m use home::CommandEnvironment;
+ use semver::{Prerelease, Version};
+ use serde::{Deserialize, Serialize};
+1
