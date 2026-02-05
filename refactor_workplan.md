@@ -2229,7 +2229,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P4.0_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P4.0_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - c61b4d43f1cf8807d8cc929b62f8c18d1676c599
 
 ### 2026-02-05 — P4.1 tests modularization (`crates/codex/src/mcp/tests_core.rs` below hard threshold)
 
@@ -2255,7 +2255,7 @@ Add entries as work lands. Format:
 - Evidence/patches:
   - Base commit: `evidence_runs/2026-02-05/P4.1_BASE_STEP.txt`
 - Commit:
-  - TBD_POST_COMMIT
+  - 20a40914277bfe563c39405f9bb785927bdd649f
 
 ### 2026-02-05 — P4.2 tests modularization (`crates/codex/src/mcp/tests_runtime_app.rs` below hard threshold)
 
@@ -2281,7 +2281,7 @@ Add entries as work lands. Format:
 - Evidence/patches:
   - Base commit: `evidence_runs/2026-02-05/P4.2_BASE_STEP.txt`
 - Commit:
-  - TBD_POST_COMMIT
+  - c76e8d030fbe4d6b53d1495248c3ef5d64ea1bbe
 
 ### 2026-02-05 — P4.3 report domain split (`crates/xtask/src/codex_report/report.rs` below hard threshold)
 
@@ -2307,7 +2307,7 @@ Add entries as work lands. Format:
 - Evidence/patches:
   - Base commit: `evidence_runs/2026-02-05/P4.3_BASE_STEP.txt`
 - Commit:
-  - TBD_POST_COMMIT
+  - 7e000d7579e71b194cb72d76bb506f7c7e43a52d
 
 ### 2026-02-05 — P4.4 size evidence refresh + Phase 4 queue reconciliation (no code moves)
 
@@ -2330,7 +2330,7 @@ Add entries as work lands. Format:
   - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.4_cargo_deny_licenses.txt`)
   - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.4_cargo_fmt_check_final.txt`)
 - Commit:
-  - TBD_POST_COMMIT
+  - 6568e780bf16016d7fe19dc2b28ec74f487fcc17
 
 ## 9) Open Questions / Decisions (lightweight log)
 
