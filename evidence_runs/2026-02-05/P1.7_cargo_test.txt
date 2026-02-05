@@ -1,0 +1,389 @@
+   Compiling codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)
+error[E0365]: `ResolvedCliOverrides` is private, and cannot be re-exported
+  --> crates/codex/src/builder/mod.rs:14:16
+   |
+14 | pub(super) use cli_overrides::ResolvedCliOverrides;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ re-export of private `ResolvedCliOverrides`
+   |
+   = note: consider declaring type or module `ResolvedCliOverrides` with `pub`
+
+error[E0364]: `apply_cli_overrides` is private, and cannot be re-exported
+  --> crates/codex/src/builder/mod.rs:16:5
+   |
+16 |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+   |     ^^^^^^^^^^^^^^^^^^^
+   |
+note: consider marking `apply_cli_overrides` as `pub` in the imported module
+  --> crates/codex/src/builder/mod.rs:16:5
+   |
+16 |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+   |     ^^^^^^^^^^^^^^^^^^^
+
+error[E0364]: `cli_override_args` is private, and cannot be re-exported
+  --> crates/codex/src/builder/mod.rs:16:26
+   |
+16 |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+   |                          ^^^^^^^^^^^^^^^^^
+   |
+note: consider marking `cli_override_args` as `pub` in the imported module
+  --> crates/codex/src/builder/mod.rs:16:26
+   |
+16 |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+   |                          ^^^^^^^^^^^^^^^^^
+
+error[E0364]: `reasoning_config_for` is private, and cannot be re-exported
+  --> crates/codex/src/builder/mod.rs:16:45
+   |
+16 |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+   |                                             ^^^^^^^^^^^^^^^^^^^^
+   |
+note: consider marking `reasoning_config_for` as `pub` in the imported module
+  --> crates/codex/src/builder/mod.rs:16:45
+   |
+16 |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+   |                                             ^^^^^^^^^^^^^^^^^^^^
+
+error[E0364]: `resolve_cli_overrides` is private, and cannot be re-exported
+  --> crates/codex/src/builder/mod.rs:16:67
+   |
+16 |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+   |                                                                   ^^^^^^^^^^^^^^^^^^^^^
+   |
+note: consider marking `resolve_cli_overrides` as `pub` in the imported module
+  --> crates/codex/src/builder/mod.rs:16:67
+   |
+16 |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+   |                                                                   ^^^^^^^^^^^^^^^^^^^^^
+
+error[E0364]: `DEFAULT_REASONING_CONFIG_GPT5` is private, and cannot be re-exported
+  --> crates/codex/src/builder/mod.rs:17:5
+   |
+17 |     DEFAULT_REASONING_CONFIG_GPT5, DEFAULT_REASONING_CONFIG_GPT5_1,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: consider marking `DEFAULT_REASONING_CONFIG_GPT5` as `pub` in the imported module
+  --> crates/codex/src/builder/mod.rs:17:5
+   |
+17 |     DEFAULT_REASONING_CONFIG_GPT5, DEFAULT_REASONING_CONFIG_GPT5_1,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0364]: `DEFAULT_REASONING_CONFIG_GPT5_1` is private, and cannot be re-exported
+  --> crates/codex/src/builder/mod.rs:17:36
+   |
+17 |     DEFAULT_REASONING_CONFIG_GPT5, DEFAULT_REASONING_CONFIG_GPT5_1,
+   |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: consider marking `DEFAULT_REASONING_CONFIG_GPT5_1` as `pub` in the imported module
+  --> crates/codex/src/builder/mod.rs:17:36
+   |
+17 |     DEFAULT_REASONING_CONFIG_GPT5, DEFAULT_REASONING_CONFIG_GPT5_1,
+   |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0364]: `DEFAULT_REASONING_CONFIG_GPT5_CODEX` is private, and cannot be re-exported
+  --> crates/codex/src/builder/mod.rs:18:5
+   |
+18 |     DEFAULT_REASONING_CONFIG_GPT5_CODEX,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: consider marking `DEFAULT_REASONING_CONFIG_GPT5_CODEX` as `pub` in the imported module
+  --> crates/codex/src/builder/mod.rs:18:5
+   |
+18 |     DEFAULT_REASONING_CONFIG_GPT5_CODEX,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0432]: unresolved imports `super::apply_cli_overrides`, `super::resolve_cli_overrides`
+  --> crates/codex/src/execpolicy.rs:13:5
+   |
+13 |     apply_cli_overrides, resolve_cli_overrides, spawn_with_retry, tee_stream, CliOverridesPatch,
+   |     ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^ no `resolve_cli_overrides` in the root
+   |     |
+   |     no `apply_cli_overrides` in the root
+
+error[E0603]: function import `apply_cli_overrides` is private
+   --> crates/codex/src/lib.rs:107:15
+    |
+107 | use builder::{apply_cli_overrides, resolve_cli_overrides};
+    |               ^^^^^^^^^^^^^^^^^^^ private function import
+    |
+note: the function import `apply_cli_overrides` is defined here...
+   --> crates/codex/src/builder/mod.rs:16:5
+    |
+16  |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+    |     ^^^^^^^^^^^^^^^^^^^
+note: ...and refers to the function `apply_cli_overrides` which is defined here
+   --> crates/codex/src/builder/cli_overrides.rs:196:1
+    |
+196 | / pub(super) fn apply_cli_overrides(
+197 | |     command: &mut Command,
+198 | |     resolved: &ResolvedCliOverrides,
+199 | |     include_search: bool,
+...   |
+204 | | }
+    | |_^
+
+error[E0603]: function import `resolve_cli_overrides` is private
+   --> crates/codex/src/lib.rs:107:36
+    |
+107 | use builder::{apply_cli_overrides, resolve_cli_overrides};
+    |                                    ^^^^^^^^^^^^^^^^^^^^^ private function import
+    |
+note: the function import `resolve_cli_overrides` is defined here...
+   --> crates/codex/src/builder/mod.rs:16:67
+    |
+16  |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+    |                                                                   ^^^^^^^^^^^^^^^^^^^^^
+note: ...and refers to the function `resolve_cli_overrides` which is defined here
+   --> crates/codex/src/builder/cli_overrides.rs:65:1
+    |
+65  | / pub(super) fn resolve_cli_overrides(
+66  | |     builder: &CliOverrides,
+67  | |     patch: &CliOverridesPatch,
+68  | |     model: Option<&str>,
+...   |
+127 | | }
+    | |_^
+
+warning: unused import: `cli_overrides::ResolvedCliOverrides`
+  --> crates/codex/src/builder/mod.rs:14:16
+   |
+14 | pub(super) use cli_overrides::ResolvedCliOverrides;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused imports: `DEFAULT_REASONING_CONFIG_GPT5_1`, `DEFAULT_REASONING_CONFIG_GPT5_CODEX`, `DEFAULT_REASONING_CONFIG_GPT5`, `cli_override_args`, and `reasoning_config_for`
+  --> crates/codex/src/builder/mod.rs:16:26
+   |
+16 |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+   |                          ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
+17 |     DEFAULT_REASONING_CONFIG_GPT5, DEFAULT_REASONING_CONFIG_GPT5_1,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+18 |     DEFAULT_REASONING_CONFIG_GPT5_CODEX,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function import `cli_override_args` is private
+   --> crates/codex/src/lib.rs:134:5
+    |
+134 |     cli_override_args, reasoning_config_for, DEFAULT_REASONING_CONFIG_GPT5,
+    |     ^^^^^^^^^^^^^^^^^ private function import
+    |
+note: the function import `cli_override_args` is defined here...
+   --> crates/codex/src/builder/mod.rs:16:26
+    |
+16  |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+    |                          ^^^^^^^^^^^^^^^^^
+note: ...and refers to the function `cli_override_args` which is defined here
+   --> crates/codex/src/builder/cli_overrides.rs:129:1
+    |
+129 | / pub(super) fn cli_override_args(
+130 | |     resolved: &ResolvedCliOverrides,
+131 | |     include_search: bool,
+132 | | ) -> Vec<OsString> {
+...   |
+193 | |     args
+194 | | }
+    | |_^
+
+error[E0603]: function import `reasoning_config_for` is private
+   --> crates/codex/src/lib.rs:134:24
+    |
+134 |     cli_override_args, reasoning_config_for, DEFAULT_REASONING_CONFIG_GPT5,
+    |                        ^^^^^^^^^^^^^^^^^^^^ private function import
+    |
+note: the function import `reasoning_config_for` is defined here...
+   --> crates/codex/src/builder/mod.rs:16:45
+    |
+16  |     apply_cli_overrides, cli_override_args, reasoning_config_for, resolve_cli_overrides,
+    |                                             ^^^^^^^^^^^^^^^^^^^^
+note: ...and refers to the function `reasoning_config_for` which is defined here
+   --> crates/codex/src/builder/cli_overrides.rs:48:1
+    |
+48  | / pub(super) fn reasoning_config_for(
+49  | |     model: Option<&str>,
+50  | | ) -> Option<&'static [(&'static str, &'static str)]> {
+51  | |     let name = model.map(|value| value.to_ascii_lowercase())?;
+...   |
+59  | | }
+    | |_^
+
+error[E0603]: constant import `DEFAULT_REASONING_CONFIG_GPT5` is private
+   --> crates/codex/src/lib.rs:134:46
+    |
+134 |     cli_override_args, reasoning_config_for, DEFAULT_REASONING_CONFIG_GPT5,
+    |                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ private constant import
+    |
+note: the constant import `DEFAULT_REASONING_CONFIG_GPT5` is defined here...
+   --> crates/codex/src/builder/mod.rs:17:5
+    |
+17  |     DEFAULT_REASONING_CONFIG_GPT5, DEFAULT_REASONING_CONFIG_GPT5_1,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: ...and refers to the constant `DEFAULT_REASONING_CONFIG_GPT5` which is defined here
+   --> crates/codex/src/builder/cli_overrides.rs:10:1
+    |
+10  | / pub(super) const DEFAULT_REASONING_CONFIG_GPT5: &[(&str, &str)] = &[
+11  | |     ("model_reasoning_effort", "medium"),
+12  | |     ("model_reasoning_summary", "auto"),
+13  | |     ("model_verbosity", "low"),
+14  | | ];
+    | |__^
+
+error[E0603]: constant import `DEFAULT_REASONING_CONFIG_GPT5_1` is private
+   --> crates/codex/src/lib.rs:135:5
+    |
+135 |     DEFAULT_REASONING_CONFIG_GPT5_1, DEFAULT_REASONING_CONFIG_GPT5_CODEX,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ private constant import
+    |
+note: the constant import `DEFAULT_REASONING_CONFIG_GPT5_1` is defined here...
+   --> crates/codex/src/builder/mod.rs:17:36
+    |
+17  |     DEFAULT_REASONING_CONFIG_GPT5, DEFAULT_REASONING_CONFIG_GPT5_1,
+    |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: ...and refers to the constant `DEFAULT_REASONING_CONFIG_GPT5_1` which is defined here
+   --> crates/codex/src/builder/cli_overrides.rs:22:1
+    |
+22  | / pub(super) const DEFAULT_REASONING_CONFIG_GPT5_1: &[(&str, &str)] = &[
+23  | |     ("model_reasoning_effort", "medium"),
+24  | |     ("model_reasoning_summary", "auto"),
+25  | |     ("model_verbosity", "low"),
+26  | | ];
+    | |__^
+
+error[E0603]: constant import `DEFAULT_REASONING_CONFIG_GPT5_CODEX` is private
+   --> crates/codex/src/lib.rs:135:38
+    |
+135 |     DEFAULT_REASONING_CONFIG_GPT5_1, DEFAULT_REASONING_CONFIG_GPT5_CODEX,
+    |                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ private constant import
+    |
+note: the constant import `DEFAULT_REASONING_CONFIG_GPT5_CODEX` is defined here...
+   --> crates/codex/src/builder/mod.rs:18:5
+    |
+18  |     DEFAULT_REASONING_CONFIG_GPT5_CODEX,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: ...and refers to the constant `DEFAULT_REASONING_CONFIG_GPT5_CODEX` which is defined here
+   --> crates/codex/src/builder/cli_overrides.rs:16:1
+    |
+16  | / pub(super) const DEFAULT_REASONING_CONFIG_GPT5_CODEX: &[(&str, &str)] = &[
+17  | |     ("model_reasoning_effort", "medium"),
+18  | |     ("model_reasoning_summary", "auto"),
+19  | |     ("model_verbosity", "low"),
+20  | | ];
+    | |__^
+
+error[E0603]: struct import `ResolvedCliOverrides` is private
+    --> crates/codex/src/lib.rs:5405:25
+     |
+5405 |     use crate::builder::ResolvedCliOverrides;
+     |                         ^^^^^^^^^^^^^^^^^^^^ private struct import
+     |
+note: the struct import `ResolvedCliOverrides` is defined here...
+    --> crates/codex/src/builder/mod.rs:14:16
+     |
+14   | pub(super) use cli_overrides::ResolvedCliOverrides;
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: ...and refers to the struct `ResolvedCliOverrides` which is defined here
+    --> crates/codex/src/builder/cli_overrides.rs:29:1
+     |
+29   | pub(super) struct ResolvedCliOverrides {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0624]: method `as_str` is private
+   --> crates/codex/src/lib.rs:581:34
+    |
+581 |             .arg(self.color_mode.as_str())
+    |                                  ^^^^^^ private method
+    |
+   ::: crates/codex/src/builder/types.rs:23:5
+    |
+23  |     pub(super) const fn as_str(self) -> &'static str {
+    |     ------------------------------------------------ private method defined here
+
+error[E0624]: method `as_str` is private
+   --> crates/codex/src/lib.rs:755:34
+    |
+755 |             .arg(self.color_mode.as_str())
+    |                                  ^^^^^^ private method
+    |
+   ::: crates/codex/src/builder/types.rs:23:5
+    |
+23  |     pub(super) const fn as_str(self) -> &'static str {
+    |     ------------------------------------------------ private method defined here
+
+error[E0624]: method `as_str` is private
+    --> crates/codex/src/lib.rs:2397:34
+     |
+2397 |             .arg(self.color_mode.as_str())
+     |                                  ^^^^^^ private method
+     |
+    ::: crates/codex/src/builder/types.rs:23:5
+     |
+23   |     pub(super) const fn as_str(self) -> &'static str {
+     |     ------------------------------------------------ private method defined here
+
+error[E0624]: method `has_overrides` is private
+    --> crates/codex/src/lib.rs:6884:50
+     |
+6884 |         assert!(!builder.cli_overrides.reasoning.has_overrides());
+     |                                                  ^^^^^^^^^^^^^ private method
+     |
+    ::: crates/codex/src/builder/types.rs:227:5
+     |
+227  |     pub(super) fn has_overrides(&self) -> bool {
+     |     ------------------------------------------ private method defined here
+
+error[E0599]: no method named `capability_snapshot` found for struct `CodexClientBuilder` in the current scope
+    --> crates/codex/src/lib.rs:7935:14
+     |
+7933 |           let client = CodexClient::builder()
+     |  ______________________-
+7934 | |             .binary(&binary)
+7935 | |             .capability_snapshot(snapshot)
+     | |             -^^^^^^^^^^^^^^^^^^^ method not found in `CodexClientBuilder`
+     | |_____________|
+     |
+     |
+    ::: crates/codex/src/builder/mod.rs:26:1
+     |
+26   |   pub struct CodexClientBuilder {
+     |   ----------------------------- method `capability_snapshot` not found for this struct
+
+error[E0624]: method `as_str` is private
+    --> crates/codex/src/lib.rs:8754:36
+     |
+8754 |         assert_eq!(ColorMode::Auto.as_str(), "auto");
+     |                                    ^^^^^^ private method
+     |
+    ::: crates/codex/src/builder/types.rs:23:5
+     |
+23   |     pub(super) const fn as_str(self) -> &'static str {
+     |     ------------------------------------------------ private method defined here
+
+error[E0624]: method `as_str` is private
+    --> crates/codex/src/lib.rs:8755:38
+     |
+8755 |         assert_eq!(ColorMode::Always.as_str(), "always");
+     |                                      ^^^^^^ private method
+     |
+    ::: crates/codex/src/builder/types.rs:23:5
+     |
+23   |     pub(super) const fn as_str(self) -> &'static str {
+     |     ------------------------------------------------ private method defined here
+
+error[E0624]: method `as_str` is private
+    --> crates/codex/src/lib.rs:8756:37
+     |
+8756 |         assert_eq!(ColorMode::Never.as_str(), "never");
+     |                                     ^^^^^^ private method
+     |
+    ::: crates/codex/src/builder/types.rs:23:5
+     |
+23   |     pub(super) const fn as_str(self) -> &'static str {
+     |     ------------------------------------------------ private method defined here
+
+Some errors have detailed explanations: E0364, E0365, E0432, E0603, E0624.
+For more information about an error, try `rustc --explain E0364`.
+warning: `codex` (lib) generated 2 warnings
+error: could not compile `codex` (lib) due to 14 previous errors; 2 warnings emitted
+warning: build failed, waiting for other jobs to finish...
+Some errors have detailed explanations: E0364, E0365, E0432, E0599, E0603, E0624.
+error: could not compile `codex` (lib test) due to 25 previous errors
+TEST_FAILED
