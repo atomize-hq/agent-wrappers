@@ -1,0 +1,2 @@
+[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /tmp/cargo_home/advisory-db)
+[0m[0m[1m[32m    Scanning[0m Cargo.lock for vulnerabilities (190 crate dependencies)

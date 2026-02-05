@@ -1,0 +1,542 @@
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "aggregated_output",
+        alias = "output"
+    )]
+    pub stdout: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "error_output",
+        alias = "err"
+    )]
+    pub stderr: String,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta describing a file change.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FileChangeDelta {
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "patch")]
+    pub diff: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "aggregated_output",
+        alias = "output"
+    )]
+    pub stdout: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        alias = "error_output",
+        alias = "err"
+    )]
+    pub stderr: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Type of file operation being reported.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum FileChangeKind {
+    Apply,
+    Diff,
+    #[serde(other)]
+    Unknown,
+}
+
+/// State of an MCP tool call.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct McpToolCallState {
+    #[serde(alias = "server")]
+    pub server_name: String,
+    #[serde(alias = "tool")]
+    pub tool_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub arguments: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<Value>,
+    #[serde(default)]
+    pub status: ToolCallStatus,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta for MCP tool call output.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct McpToolCallDelta {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<Value>,
+    #[serde(default)]
+    pub status: ToolCallStatus,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Lifecycle state for a tool call.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolCallStatus {
+    #[default]
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    #[serde(other)]
+    Unknown,
+}
+
+/// Details of a web search step.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct WebSearchState {
+    pub query: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub results: Option<Value>,
+    #[serde(default)]
+    pub status: WebSearchStatus,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta for search results.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct WebSearchDelta {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub results: Option<Value>,
+    #[serde(default)]
+    pub status: WebSearchStatus,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Search progress indicator.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum WebSearchStatus {
+    #[default]
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    #[serde(other)]
+    Unknown,
+}
+
+/// Checklist maintained by the agent.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TodoListState {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<TodoItem>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Streaming delta for todo list mutations.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TodoListDelta {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<TodoItem>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Single todo item.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TodoItem {
+    pub title: String,
+    #[serde(default)]
+    pub completed: bool,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Error payload shared by turn/item failures.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct EventError {
+    pub message: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Options configuring a single exec request.
+#[derive(Clone, Debug)]
+pub struct ExecRequest {
+    pub prompt: String,
+    pub overrides: CliOverridesPatch,
+}
+
+impl ExecRequest {
+    pub fn new(prompt: impl Into<String>) -> Self {
+        Self {
+            prompt: prompt.into(),
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+
+    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.overrides
+            .config_overrides
+            .push(ConfigOverride::new(key, value));
+        self
+    }
+
+    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+        self.overrides
+            .config_overrides
+            .push(ConfigOverride::from_raw(raw));
+        self
+    }
+
+    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+        let profile = profile.into();
+        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+        self
+    }
+
+    pub fn oss(mut self, enable: bool) -> Self {
+        self.overrides.oss = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+
+    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.enable.push(name.into());
+        self
+    }
+
+    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.disable.push(name.into());
+        self
+    }
+
+    pub fn search(mut self, enable: bool) -> Self {
+        self.overrides.search = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+}
+
+/// Options configuring a streaming exec invocation.
+#[derive(Clone, Debug)]
+pub struct ExecStreamRequest {
+    /// User prompt that will be forwarded to `codex exec`.
+    pub prompt: String,
+    /// Per-event idle timeout. If no JSON lines arrive before the duration elapses,
+    /// [`ExecStreamError::IdleTimeout`] is returned.
+    pub idle_timeout: Option<Duration>,
+    /// Optional file path passed through to `--output-last-message`. When unset, the wrapper
+    /// will request a temporary path and return it in [`ExecCompletion::last_message_path`].
+    pub output_last_message: Option<PathBuf>,
+    /// Optional file path passed through to `--output-schema` so clients can persist the schema
+    /// describing the item envelope structure seen during the run.
+    pub output_schema: Option<PathBuf>,
+    /// Optional file path that receives a tee of every raw JSONL event line as it streams in.
+    /// Appends to existing files, flushes each line, and creates parent directories. Overrides
+    /// [`CodexClientBuilder::json_event_log`] for this request when provided.
+    pub json_event_log: Option<PathBuf>,
+}
+
+/// Selector for `codex resume` targets.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ResumeSelector {
+    Id(String),
+    Last,
+    All,
+}
+
+/// Options configuring a streaming resume invocation.
+#[derive(Clone, Debug)]
+pub struct ResumeRequest {
+    pub selector: ResumeSelector,
+    pub prompt: Option<String>,
+    pub idle_timeout: Option<Duration>,
+    pub output_last_message: Option<PathBuf>,
+    pub output_schema: Option<PathBuf>,
+    pub json_event_log: Option<PathBuf>,
+    pub overrides: CliOverridesPatch,
+}
+
+impl ResumeRequest {
+    pub fn new(selector: ResumeSelector) -> Self {
+        Self {
+            selector,
+            prompt: None,
+            idle_timeout: None,
+            output_last_message: None,
+            output_schema: None,
+            json_event_log: None,
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    pub fn with_id(id: impl Into<String>) -> Self {
+        Self::new(ResumeSelector::Id(id.into()))
+    }
+
+    pub fn last() -> Self {
+        Self::new(ResumeSelector::Last)
+    }
+
+    pub fn all() -> Self {
+        Self::new(ResumeSelector::All)
+    }
+
+    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+        self.prompt = Some(prompt.into());
+        self
+    }
+
+    pub fn idle_timeout(mut self, idle_timeout: Duration) -> Self {
+        self.idle_timeout = Some(idle_timeout);
+        self
+    }
+
+    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.overrides
+            .config_overrides
+            .push(ConfigOverride::new(key, value));
+        self
+    }
+
+    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+        self.overrides
+            .config_overrides
+            .push(ConfigOverride::from_raw(raw));
+        self
+    }
+
+    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+        let profile = profile.into();
+        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+        self
+    }
+
+    pub fn oss(mut self, enable: bool) -> Self {
+        self.overrides.oss = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+
+    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.enable.push(name.into());
+        self
+    }
+
+    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+        self.overrides.feature_toggles.disable.push(name.into());
+        self
+    }
+
+    pub fn search(mut self, enable: bool) -> Self {
+        self.overrides.search = if enable {
+            FlagState::Enable
+        } else {
+            FlagState::Disable
+        };
+        self
+    }
+}
+
+/// Sandbox platform variant; maps to platform subcommands of `codex sandbox`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SandboxPlatform {
+    Macos,
+    Linux,
+    Windows,
+}
+
+impl SandboxPlatform {
+    fn subcommand(self) -> &'static str {
+        match self {
+            SandboxPlatform::Macos => "macos",
+            SandboxPlatform::Linux => "linux",
+            SandboxPlatform::Windows => "windows",
+        }
+    }
+}
+
+/// Request to run an arbitrary command inside a Codex-provided sandbox.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SandboxCommandRequest {
+    /// Target platform subcommand; maps to `macos` (alias `seatbelt`), `linux` (alias `landlock`), or `windows`.
+    pub platform: SandboxPlatform,
+    /// Trailing command arguments to execute. Must be non-empty to avoid the upstream CLI panic.
+    pub command: Vec<OsString>,
+    /// Request the workspace-write sandbox preset (`--full-auto`).
+    pub full_auto: bool,
+    /// Stream macOS sandbox denials after the child process exits (no-op on other platforms).
+    pub log_denials: bool,
+    /// Additional `--config key=value` overrides to pass through.
+    pub config_overrides: Vec<ConfigOverride>,
+    /// Feature toggles forwarded to `--enable`/`--disable`.
+    pub feature_toggles: FeatureToggles,
+    /// Working directory for the spawned command; falls back to the builder value, then the current process directory.
+    pub working_dir: Option<PathBuf>,
+}
+
+impl SandboxCommandRequest {
+    pub fn new<I, S>(platform: SandboxPlatform, command: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<OsString>,
+    {
+        Self {
+            platform,
+            command: command.into_iter().map(Into::into).collect(),
+            full_auto: false,
+            log_denials: false,
+            config_overrides: Vec::new(),
+            feature_toggles: FeatureToggles::default(),
+            working_dir: None,
+        }
+    }
+
+    pub fn full_auto(mut self, enable: bool) -> Self {
+        self.full_auto = enable;
+        self
+    }
+
+    pub fn log_denials(mut self, enable: bool) -> Self {
+        self.log_denials = enable;
+        self
+    }
+
+    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.config_overrides.push(ConfigOverride::new(key, value));
+        self
+    }
+
+    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+        self.config_overrides.push(ConfigOverride::from_raw(raw));
+        self
+    }
+
+    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+        self.feature_toggles.enable.push(name.into());
+        self
+    }
+
+    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+        self.feature_toggles.disable.push(name.into());
+        self
+    }
+
+    pub fn working_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+        self.working_dir = Some(dir.into());
+        self
+    }
+}
+
+/// Captured output from `codex sandbox <platform>`.
+#[derive(Clone, Debug)]
+pub struct SandboxRun {
+    /// Exit status returned by the inner command (mirrors the sandbox helper).
+    pub status: ExitStatus,
+    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
+    pub stdout: String,
+    /// Captured stderr (mirrored unless `quiet` is set).
+    pub stderr: String,
+}
+
+/// Request for `codex responses-api-proxy`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResponsesApiProxyRequest {
+    /// API key to write to stdin on startup.
+    pub api_key: String,
+    /// Optional port to bind; falls back to an OS-assigned ephemeral port when omitted.
+    pub port: Option<u16>,
+    /// Optional path passed to `--server-info` for `{port,pid}` JSON output.
+    pub server_info_path: Option<PathBuf>,
+    /// Enables the HTTP shutdown endpoint (`GET /shutdown`).
+    pub http_shutdown: bool,
+    /// Optional upstream URL passed to `--upstream-url` (defaults to `https://api.openai.com/v1/responses`).
+    pub upstream_url: Option<String>,
+}
+
+impl ResponsesApiProxyRequest {
+    /// Creates a request with the API key provided via stdin.
+    pub fn new(api_key: impl Into<String>) -> Self {
+        Self {
+            api_key: api_key.into(),
+            port: None,
+            server_info_path: None,
+            http_shutdown: false,
+            upstream_url: None,
+        }
+    }
+
+    /// Sets the listening port (`--port`).
+    pub fn port(mut self, port: u16) -> Self {
+        self.port = Some(port);
+        self
+    }
+
+    /// Writes `{port,pid}` JSON to the provided path via `--server-info`.
+    pub fn server_info(mut self, path: impl Into<PathBuf>) -> Self {
+        self.server_info_path = Some(path.into());
+        self
+    }
+
+    /// Enables the `--http-shutdown` flag (GET /shutdown).
+    pub fn http_shutdown(mut self, enable: bool) -> Self {
+        self.http_shutdown = enable;
+        self
+    }
+
+    /// Overrides the upstream responses endpoint URL.
+    pub fn upstream_url(mut self, url: impl Into<String>) -> Self {
+        let url = url.into();
+        self.upstream_url = (!url.trim().is_empty()).then_some(url);
+        self
+    }
+}
+
+/// Running responses proxy process and metadata.
+#[derive(Debug)]
+pub struct ResponsesApiProxyHandle {
+    /// Spawned `codex responses-api-proxy` child (inherits kill-on-drop).
+    pub child: tokio::process::Child,
+    /// Optional `--server-info` path that may contain `{port,pid}` JSON.
+    pub server_info_path: Option<PathBuf>,
+}
+
+impl ResponsesApiProxyHandle {
+    /// Reads and parses the `{port,pid}` JSON written by `--server-info`.
+    ///
+    /// Returns `Ok(None)` when no server info path was configured.
+    pub async fn read_server_info(&self) -> Result<Option<ResponsesApiProxyInfo>, CodexError> {
+        let Some(path) = &self.server_info_path else {
+            return Ok(None);
+        };
+
+        const MAX_ATTEMPTS: usize = 10;
+        const BACKOFF_MS: u64 = 25;
+
+        for attempt in 0..MAX_ATTEMPTS {
+            match fs::read_to_string(path).await {
+                Ok(contents) => match serde_json::from_str::<ResponsesApiProxyInfo>(&contents) {
+                    Ok(info) => return Ok(Some(info)),
+                    Err(source) => {
+541 evidence_runs/2026-02-05/P1.10_lib_rs_events_section_2.txt

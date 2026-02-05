@@ -1,0 +1,80 @@
+./refactor_workplan.md:9:- Phase 0: supply-chain triage (RustSec + cargo-deny policy) and re-validating gates.
+./refactor_workplan.md:220:##### P0.1 — Fix RustSec advisory: `bytes` RUSTSEC-2026-0007 (>= 1.11.1)
+./refactor_workplan.md:1515:  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_audit.txt`; reran offline with copied RustSec DB due to network/sandbox lock constraints)
+./evidence_runs/2026-02-05/P1.5_cargo_audit.txt:2:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-05/P1.5_cargo_audit.txt:3:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./evidence_runs/2026-02-05/P2.6_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-05/P2.6_cargo_audit.txt:2:[0m[0m[1m[31merror:[0m couldn't fetch advisory database: I/O operation failed: failed to obtain lock file '/home/dev/.cargo/advisory-db..lock'
+./evidence_runs/2026-02-05/P2.6_cargo_audit.txt:4:  -> failed to obtain lock file '/home/dev/.cargo/advisory-db..lock'
+./evidence_runs/2026-02-05/P2.6_cargo_audit_final.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-05/P2.6_cargo_audit_final.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /tmp/p26_cargo_home/advisory-db)
+./evidence_runs/2026-02-05/P1.6_cargo_audit.txt:1:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from evidence_runs/2026-02-05/advisory-db)
+./evidence_runs/2026-02-05/P3.9_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-05/P3.9_cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./evidence_runs/2026-02-05/P1.7_cargo_audit_after.txt:1:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./evidence_runs/2026-02-05/P1.9_cargo_deny_advisories_initial_fail.txt:1:2026-02-05 14:56:37 [ERROR] failed to acquire advisory database lock: failed to obtain lock file '/home/dev/.cargo/advisory-dbs/db.lock': attempted to take an exclusive lock on a read-only path
+./evidence_runs/2026-02-05/P2.6_cargo_deny_advisories_after.txt:1:2026-02-05 12:34:12 [ERROR] failed to acquire advisory database lock: failed to obtain lock file '/home/dev/.cargo/advisory-dbs/db.lock': attempted to take an exclusive lock on a read-only path
+./evidence_runs/2026-02-05/P1.8_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-05/P1.8_cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./evidence_runs/2026-02-05/P1.7_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-05/P1.7_cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./evidence_runs/2026-02-05/P2.7_cargo_audit.txt:2:    Fetching advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-05/P2.7_cargo_audit.txt:3:      Loaded 909 security advisories (from /home/dev/.cargo/advisory-db)
+./evidence_runs/2026-02-05/P1.6_cargo_audit_after.txt:2:      Loaded 909 security advisories (from /home/dev/.cargo/advisory-db)
+./evidence_runs/2026-02-05/P1.9_workplan_diff_final.patch:31:+  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_audit.txt`; reran offline with copied RustSec DB due to network/sandbox lock constraints)
+./evidence_runs/2026-02-05/P1.10_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-05/P1.10_cargo_audit.txt:2:[0m[0m[1m[31merror:[0m couldn't fetch advisory database: I/O operation failed: failed to obtain lock file '/home/dev/.cargo/advisory-db..lock'
+./evidence_runs/2026-02-05/P1.10_cargo_audit.txt:4:  -> failed to obtain lock file '/home/dev/.cargo/advisory-db..lock'
+./evidence_runs/2026-02-04/P2.5_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P2.5_cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./evidence_runs/2026-02-05/P2.6_cargo_audit_after.txt:1:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /tmp/cargo-home/advisory-db)
+./evidence_runs/2026-02-04/P3.6_cargo_audit_after.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P3.6_cargo_audit_after.txt:5:  -> error sending request for url (https://github.com/RustSec/advisory-db.git/info/refs?service=git-upload-pack)
+./evidence_runs/2026-02-05/P1.9_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-05/P1.9_cargo_audit.txt:2:[0m[0m[1m[31merror:[0m couldn't fetch advisory database: I/O operation failed: failed to obtain lock file '/home/dev/.cargo/advisory-db..lock'
+./evidence_runs/2026-02-05/P1.9_cargo_audit.txt:4:  -> failed to obtain lock file '/home/dev/.cargo/advisory-db..lock'
+./evidence_runs/2026-02-04/P3.6_cargo_deny_advisories.txt:1:2026-02-04 19:46:01 [ERROR] failed to acquire advisory database lock: failed to obtain lock file '/home/dev/.cargo/advisory-dbs/db.lock': attempted to take an exclusive lock on a read-only path
+./evidence_runs/2026-02-04/P3.6_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P3.6_cargo_audit.txt:2:[0m[0m[1m[31merror:[0m couldn't fetch advisory database: I/O operation failed: failed to obtain lock file '/home/dev/.cargo/advisory-db..lock'
+./evidence_runs/2026-02-04/P3.6_cargo_audit.txt:4:  -> failed to obtain lock file '/home/dev/.cargo/advisory-db..lock'
+./evidence_runs/2026-02-04/P1.4_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P1.4_cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./evidence_runs/2026-02-04/P3.7_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P3.7_cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./evidence_runs/2026-02-04/P3.8_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P3.8_cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./evidence_runs/2026-02-04/P3.6_cargo_deny_advisories_final2_prev_151526.txt:1:2026-02-04 20:13:24 [ERROR] failed to fetch advisory database https://github.com/RustSec/advisory-db: An IO error occurred when talking to the server: error sending request for url (https://github.com/RustSec/advisory-db/info/refs?service=git-upload-pack)
+./evidence_runs/2026-02-04/P3.6_cargo_deny_advisories_final2_prev_151526.txt:4:2026-02-04 20:13:26 [ERROR] failed to fetch advisory database https://github.com/RustSec/advisory-db: An IO error occurred when talking to the server: error sending request for url (https://github.com/RustSec/advisory-db/info/refs?service=git-upload-pack)
+./evidence_runs/2026-02-04/P3.6_cargo_deny_advisories_final2_prev_151526.txt:7:2026-02-04 20:13:29 [ERROR] failed to fetch advisory database https://github.com/RustSec/advisory-db: An IO error occurred when talking to the server: error sending request for url (https://github.com/RustSec/advisory-db/info/refs?service=git-upload-pack)
+./audit_pack/execution/2026-02-04/P3.5_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./audit_pack/execution/2026-02-04/P3.5_cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./audit_pack/execution/2026-02-04/P3.4_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./audit_pack/execution/2026-02-04/P3.4_cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./evidence_runs/2026-02-05/P1.10_cargo_audit_after.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-05/P1.10_cargo_audit_after.txt:5:  -> error sending request for url (https://github.com/RustSec/advisory-db.git/info/refs?service=git-upload-pack)
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:2:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:3:[0m[0m[1m[31merror:[0m couldn't fetch advisory database: I/O operation failed: failed to obtain lock file '/home/dev/.cargo/advisory-db..lock'
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:5:  -> failed to obtain lock file '/home/dev/.cargo/advisory-db..lock'
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:9:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:13:  -> error sending request for url (https://github.com/RustSec/advisory-db.git/info/refs?service=git-upload-pack)
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:16:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:20:  -> error sending request for url (https://github.com/RustSec/advisory-db.git/info/refs?service=git-upload-pack)
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:24:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:28:  -> error sending request for url (https://github.com/RustSec/advisory-db.git/info/refs?service=git-upload-pack)
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:30:==== cargo audit rerun using local advisory-db origin (CARGO_HOME=/tmp/cargo_home) 2026-02-04T19:57:08Z ====
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:31:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:32:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /tmp/cargo_home/advisory-db)
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:36:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:37:[0m[0m[1m[31merror:[0m couldn't fetch advisory database: I/O operation failed: failed to obtain lock file '/home/dev/.cargo/advisory-db..lock'
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:39:  -> failed to obtain lock file '/home/dev/.cargo/advisory-db..lock'
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:43:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final_prev_151250.txt:44:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /tmp/cargo_home/advisory-db)
+./evidence_runs/2026-02-04/P3.6_cargo_audit_final.txt:1:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /tmp/cargo_home/advisory-db)
+./audit_pack/execution/2026-02-04/P3.1_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./audit_pack/execution/2026-02-04/P3.1_cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./audit_pack/execution/2026-02-04/P3.3_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./audit_pack/execution/2026-02-04/P3.3_cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./audit_pack/execution/2026-02-04/P3.2_cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./audit_pack/execution/2026-02-04/P3.2_cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+./audit_pack/supply_chain/cargo_audit.txt:1:[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+./audit_pack/supply_chain/cargo_audit.txt:2:[0m[0m[1m[32m      Loaded[0m 908 security advisories (from /home/dev/.cargo/advisory-db)

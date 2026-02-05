@@ -1,0 +1,140 @@
+//! Async helper around the OpenAI Codex CLI for programmatic prompting, streaming, apply/diff helpers, and server flows.
+//!
+//! Shells out to `codex exec`, applies sane defaults (non-interactive color handling, timeouts, model hints), and surfaces single-response, streaming, apply/diff, and MCP/app-server helpers.
+//!
+//! ## Setup: binary + `CODEX_HOME`
+//! - Defaults pull `CODEX_BINARY` or `codex` on `PATH`; call [`CodexClientBuilder::binary`] (optionally fed by [`resolve_bundled_binary`]) to pin an app-bundled binary without touching user installs.
+//! - Isolate state with [`CodexClientBuilder::codex_home`] (config/auth/history/logs live under that directory) and optionally create the layout with [`CodexClientBuilder::create_home_dirs`]. [`CodexHomeLayout`] inspects `config.toml`, `auth.json`, `.credentials.json`, `history.jsonl`, `conversations/`, and `logs/`.
+//! - [`CodexHomeLayout::seed_auth_from`] copies `auth.json`/`.credentials.json` from a trusted seed home into an isolated `CODEX_HOME` without touching history/logs; use [`AuthSeedOptions`] to require files or skip missing ones.
+//! - [`AuthSessionHelper`] checks `codex login status` and can launch ChatGPT or API key login flows with an app-scoped `CODEX_HOME` without mutating the parent process env.
+//! - Wrapper defaults: temp working dir per call unless `working_dir` is set, `--skip-git-repo-check`, 120s timeout (use `Duration::ZERO` to disable), ANSI colors off, `RUST_LOG=error` if unset.
+//! - Model defaults: `gpt-5*`/`gpt-5.1*` (including codex variants) get `model_reasoning_effort="medium"`/`model_reasoning_summary="auto"`/`model_verbosity="low"` to avoid unsupported “minimal” combos.
+//!
+//! ## Bundled binary (Workstream J)
+//! - Apps can ship Codex inside an app-owned bundle rooted at e.g. `~/.myapp/codex-bin/<platform>/<version>/codex`; [`resolve_bundled_binary`] resolves that path without ever falling back to `PATH` or `CODEX_BINARY`. Hosts own downloads and version pins; missing bundles are hard errors.
+//! - Pair bundled binaries with per-project `CODEX_HOME` roots such as `~/.myapp/codex-homes/<project>/`, optionally seeding `auth.json` + `.credentials.json` from an app-owned seed home. History/logs remain per project; the wrapper still injects `CODEX_BINARY`/`CODEX_HOME` per spawn so the parent env stays untouched.
+//! - Default behavior remains unchanged until the helper is used; env/CLI defaults stay as documented above.
+//!
+//! ```rust,no_run
+//! use codex::CodexClient;
+//! # use std::time::Duration;
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! std::env::set_var("CODEX_HOME", "/tmp/my-app-codex");
+//! let client = CodexClient::builder()
+//!     .binary("/opt/myapp/bin/codex")
+//!     .model("gpt-5-codex")
+//!     .timeout(Duration::from_secs(45))
+//!     .build();
+//! let reply = client.send_prompt("Health check").await?;
+//! println!("{reply}");
+//! # Ok(()) }
+//! ```
+//!
+//! Surfaces:
+//! - [`CodexClient::send_prompt`] for a single prompt/response with optional `--json` output.
+//! - [`CodexClient::stream_exec`] for typed, real-time JSONL events from `codex exec --json`, returning an [`ExecStream`] with an event stream plus a completion future.
+//! - [`CodexClient::apply`] / [`CodexClient::diff`] to run `codex apply <TASK_ID>` and `codex cloud diff <TASK_ID>`, echo stdout/stderr according to the builder (`mirror_stdout` / `quiet`), and return captured output + exit status.
+//! - [`CodexClient::generate_app_server_bindings`] to refresh app-server protocol bindings via `codex app-server generate-ts` (optional `--prettier`) or `generate-json-schema`, returning captured stdout/stderr plus the exit status.
+//! - [`CodexClient::run_sandbox`] to wrap `codex sandbox <platform>` (macOS/Linux/Windows), pass `--full-auto`/`--log-denials`/`--config`/`--enable`/`--disable`, and return the inner command status + output. macOS is the only platform that emits denial logs; Linux depends on the bundled `codex-linux-sandbox`; Windows sandboxing is experimental and relies on the upstream helper (no capability gating—non-zero exits bubble through).
+//! - [`CodexClient::check_execpolicy`] to evaluate shell commands against Starlark execpolicy files with repeatable `--policy` flags, optional pretty JSON, and parsed decision output (allow/prompt/forbidden or noMatch).
+//! - [`CodexClient::list_features`] to wrap `codex features list` with optional `--json` parsing, shared config/profile overrides, and parsed feature entries (name/stage/enabled).
+//! - [`CodexClient::start_responses_api_proxy`] to launch the `codex responses-api-proxy` helper with an API key piped via stdin plus optional port/server-info/upstream/shutdown flags.
+//! - [`CodexClient::stdio_to_uds`] to spawn `codex stdio-to-uds <SOCKET_PATH>` with piped stdio so callers can bridge Unix domain sockets manually.
+//!
+//! ## Streaming, events, and artifacts
+//! - `.json(true)` requests JSONL streaming. Expect `thread.started`/`thread.resumed`, `turn.started`/`turn.completed`/`turn.failed`, and `item.created`/`item.updated` with `item.type` such as `agent_message`, `reasoning`, `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, or `todo_list` plus optional `status`/`content`/`input`. Errors surface as `{"type":"error","message":...}`.
+//! - Sample payloads ship with the streaming examples (`crates/codex/examples/fixtures/*`); most examples support `--sample` for offline inspection.
+//! - Disable `mirror_stdout` when parsing JSON so stdout stays under caller control; `quiet` controls stderr mirroring. `json_event_log` tees raw JSONL lines to disk before parsing; `idle_timeout`, `output_last_message`, and `output_schema` cover artifact handling.
+//! - `crates/codex/examples/stream_events.rs`, `stream_last_message.rs`, `stream_with_log.rs`, and `json_stream.rs` cover typed consumption, artifact handling, log teeing, and minimal streaming.
+//!
+//! ## Resume + apply/diff
+//! - `codex exec --json resume --last [-]` streams the same `thread/turn/item` events as `codex exec --json` but starts from an existing session (`thread.resumed`).
+//! - Apply/diff require task IDs: `codex apply <TASK_ID>` applies a diff, and `codex cloud diff <TASK_ID>` prints a cloud task diff when supported by the binary.
+//! - Convenience: [`CodexClient::apply`] / [`CodexClient::diff`] will append `<TASK_ID>` from `CODEX_TASK_ID` when set; otherwise they still spawn the command and return the non-zero exit status/output from the CLI.
+//! - `crates/codex/examples/resume_apply.rs` shows a CLI-native resume/apply flow and ships `--sample` fixtures for offline inspection.
+//!
+//! ## Servers and capability detection
+//! - Integrate the stdio servers via `codex mcp-server` / `codex app-server` (`crates/codex/examples/mcp_codex_flow.rs`, `mcp_codex_tool.rs`, `mcp_codex_reply.rs`, `app_server_turns.rs`, `app_server_thread_turn.rs`) to drive JSON-RPC flows, approvals, and shutdown.
+//! - `probe_capabilities` and the `feature_detection` example focus on `--output-schema`, `--add-dir`, `codex login --mcp`, and `codex features list` availability; other subcommand drift (like cloud-only commands) is surfaced by the parity snapshot/reports in `cli_manifests/codex/`.
+//!
+//! More end-to-end flows and CLI mappings live in `crates/codex/README.md` and `crates/codex/EXAMPLES.md`.
+//!
+//! ## Capability/versioning surfaces (Workstream F)
+//! - `probe_capabilities` captures `--version`, `features list`, and `--help` hints into a `CodexCapabilities` snapshot with `collected_at` timestamps and `BinaryFingerprint` metadata keyed by canonical binary path.
+//! - Guard helpers (`guard_output_schema`, `guard_add_dir`, `guard_mcp_login`, `guard_features_list`) keep optional flags disabled when support is unknown and return operator-facing notes for unsupported features.
+//! - Cache controls: `CapabilityCachePolicy::{PreferCache, Refresh, Bypass}` plus builder helpers steer cache reuse. Use `Refresh` for TTL/backoff windows or hot-swaps that reuse the same binary path; use `Bypass` when metadata is missing (FUSE/overlay filesystems) or when you need an isolated probe.
+//! - TTL/backoff helper: `capability_cache_ttl_decision` inspects `collected_at` to suggest when to reuse, refresh, or bypass cached snapshots and stretches the recommended policy when metadata is missing.
+//! - Overrides + persistence: `capability_snapshot`, `capability_overrides`, `write_capabilities_snapshot`, `read_capabilities_snapshot`, and `capability_snapshot_matches_binary` let hosts reuse snapshots across processes and fall back to probes when fingerprints diverge.
+
+mod apply_diff;
+mod builder;
+mod bundled_binary;
+mod execpolicy;
+mod home;
+pub mod jsonl;
+pub mod mcp;
+pub mod wrapper_coverage_manifest;
+
+pub use apply_diff::{ApplyDiffArtifacts, CloudApplyRequest, CloudDiffRequest};
+pub use builder::{
+    ApprovalPolicy, CliOverrides, CliOverridesPatch, CodexClientBuilder, ColorMode, ConfigOverride,
+    FeatureToggles, FlagState, LocalProvider, ModelVerbosity, ReasoningEffort, ReasoningOverrides,
+    ReasoningSummary, ReasoningSummaryFormat, SafetyOverride, SandboxMode,
+};
+pub use bundled_binary::{
+    default_bundled_platform_label, resolve_bundled_binary, BundledBinary, BundledBinaryError,
+    BundledBinarySpec,
+};
+pub use execpolicy::{
+    ExecPolicyCheckRequest, ExecPolicyCheckResult, ExecPolicyDecision, ExecPolicyEvaluation,
+    ExecPolicyMatch, ExecPolicyNoMatch, ExecPolicyRuleMatch,
+};
+pub use home::{AuthSeedError, AuthSeedOptions, AuthSeedOutcome, CodexHomeLayout};
+pub use jsonl::{
+    thread_event_jsonl_file, thread_event_jsonl_reader, JsonlThreadEventParser,
+    ThreadEventJsonlFileReader, ThreadEventJsonlReader, ThreadEventJsonlRecord,
+};
+
+use std::{
+    collections::{BTreeMap, HashSet},
+    env,
+    ffi::{OsStr, OsString},
+    fs as std_fs,
+    future::Future,
+    io::{self as stdio, Write},
+    path::{Path, PathBuf},
+    pin::Pin,
+    process::ExitStatus,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
+
+use builder::{apply_cli_overrides, resolve_cli_overrides};
+use futures_core::Stream;
+use home::CommandEnvironment;
+use semver::{Prerelease, Version};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use tempfile::TempDir;
+use thiserror::Error;
+use tokio::{
+    fs,
+    io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
+    process::Command,
+    sync::mpsc,
+    task, time,
+};
+use tracing::{debug, warn};
+
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(120);
+const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
+const CODEX_HOME_ENV: &str = "CODEX_HOME";
+const RUST_LOG_ENV: &str = "RUST_LOG";
+const DEFAULT_RUST_LOG: &str = "error";
+
+#[cfg(test)]
+use builder::{
+    cli_override_args, reasoning_config_for, DEFAULT_REASONING_CONFIG_GPT5,
+    DEFAULT_REASONING_CONFIG_GPT5_1, DEFAULT_REASONING_CONFIG_GPT5_CODEX,
+};
+

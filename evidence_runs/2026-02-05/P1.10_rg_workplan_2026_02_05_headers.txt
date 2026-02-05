@@ -1,0 +1,8 @@
+1360:### 2026-02-05 — Extract builder/config/flags surfaces
+1380:### 2026-02-05 — Extract JSONL streaming/framing seam
+1401:### 2026-02-05 — Move high-level MCP clients into `mcp/client.rs`
+1421:### 2026-02-05 — P2.7 MCP façade: split remaining `mcp.rs` bulk into test modules (API preserved)
+1441:### 2026-02-05 — P3.9 codex_validate follow-on split (below ceiling; determinism preserved)
+1461:### 2026-02-05 — Split `builder.rs` into `builder/*` (API preserved)
+1482:### 2026-02-05 — Plan next Phase 1 seams after `builder/*`
+1504:### 2026-02-05 — P1.9 Seam extraction: bundled binary resolver (`bundled_binary.rs`) (API preserved)

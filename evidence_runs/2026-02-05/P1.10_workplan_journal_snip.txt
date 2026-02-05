@@ -1,0 +1,40 @@
+  - Wired `crates/codex/src/lib.rs` with `mod bundled_binary;` + `pub use ...` so existing `codex::{...}` paths continue to compile; kept a test-only shim for `bundled_binary_filename` to avoid churn in existing unit tests.
+- Validation results (§4.1):
+  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_fmt_check_final.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P1.9_cargo_fmt_apply.txt`; re-check: `evidence_runs/2026-02-05/P1.9_cargo_fmt_check_after.txt`)
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_clippy.txt`)
+  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_test.txt`)
+  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_audit.txt`; reran offline with copied RustSec DB due to network/sandbox lock constraints)
+  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_deny_advisories.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_deny_advisories_initial_fail.txt`; reran with offline cargo home due to network/sandbox lock constraints)
+  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_deny_licenses.txt`)
+- Evidence/patches:
+  - Code diff: `evidence_runs/2026-02-05/P1.9_code_diff_final.patch` (post-commit)
+  - Workplan diff: `evidence_runs/2026-02-05/P1.9_workplan_diff_final.patch` (post-commit)
+- Commit:
+  - TBD_POST_COMMIT
+
+## 9) Open Questions / Decisions (lightweight log)
+
+Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+
+| Decision | Date | Status (Proposed/Accepted/Rejected) | Rationale | Notes |
+|---|---|---|---|---|
+| Confirm Phase 0 remediation state vs audit pack | 2026-02-04 | Accepted | Audit pack shows failures; baseline claims fixes | Preflight gates are green; see §8 “Phase 0 preflight…” entry. |
+| Duplicate versions policy (fix now vs defer) | 2026-02-04 | Accepted | Non-goal: dependency upgrades beyond security/compliance in Phase 0 | `cargo tree -d --target all` shows `getrandom` + `windows-sys` duplicates; `audit_pack/deps/cargo_tree_duplicates.txt` showed none (audit-time command likely ran without `--target all`). Decision: defer consolidation unless a security/compliance gate requires it. |
+| Allowlist license expressions in `deny.toml` | 2026-02-04 | Accepted | `cargo deny` defaults fail without config; policy must be explicit | `deny.toml` establishes allowlist + target scoping + confidence; `cargo deny check licenses` PASS (see §8 “Phase 0 preflight…” entry). |
+| Legacy execution evidence location (`audit_pack/execution/YYYY-MM-DD/...`) | 2026-02-04 | Accepted | Preserve provenance for already-generated evidence | Keep existing execution artifacts under `audit_pack/execution/...` as-is (do not move/delete). New execution evidence goes under `evidence_runs/...` (§8.1). |
+| Post-plan work request: “complete next 5 tasks” vs remaining checklist items | 2026-02-04 | Accepted | Workplan needed additional scope to reflect remaining seams beyond P3.5 | Added P1.4 (execpolicy seam), P2.5 (JSON-RPC transport), and P3.6–P3.8 (deeper xtask splits) as Not Started follow-ons. |
+| Legacy combined commit for multiple steps (P1.4/P2.5/P3.6) | 2026-02-05 | Accepted | These steps landed before the “one step = one commit” orchestrator rule was enforced | Commit `2d17281b8d09c7797cd555d4b2fd5951af75b328` contains P1.4 + P2.5 + P3.6 changes; journal entries cite it for provenance. Future steps must follow per-step commit policy. |
+| Execution evidence storage policy (`evidence_runs/YYYY-MM-DD/`); keep `audit_pack/execution/*` legacy | 2026-02-04 | Accepted | Provenance clarity: separate immutable audit snapshot (`audit_pack/`) from ongoing execution runs | Store new evidence under `evidence_runs/…` with stable filenames (§8.1). Do not move/delete existing `audit_pack/execution/…` evidence; continue citing it where already referenced. |
+| P1.5 size exception: `builder.rs` > 600 LOC | 2026-02-05 | Accepted | Keep builder/config/flags surfaces cohesive during seam extraction to avoid churn across call sites; follow-up split can happen once the façade boundaries stabilize | `crates/codex/src/builder.rs` is ~921 LOC (above §7.3 hard=600). Follow-up: split into `builder/overrides.rs` + `builder/types.rs` + `builder/mod.rs` once P1.6 lands, preserving re-exports. |
+
+---
+
+## 10) Next 5 Tasks (execution queue; do not start until this workplan is current)
+
+Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+
+1) P1.9 — Seam extraction: bundled binary resolver (`bundled_binary.rs`) (API preserved)
+2) P1.10 — Seam extraction: exec JSONL event models (`events.rs`) (API preserved)
+3) P1.11 — Seam extraction: CLI subcommand request/response models (`cli/*`) (API preserved)
+4) P1.12 — Seam extraction: feature/version parsing + update advisory helpers (`version.rs`) (API preserved)
+5) P1.13 — Plan remaining Phase 1 seams after P1.12 (no code moves)

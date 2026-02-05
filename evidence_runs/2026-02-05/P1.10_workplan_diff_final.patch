@@ -1,0 +1,42 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 81f5d43..f2dbb24 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -440,8 +440,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.10 — Seam extraction: exec JSONL event models (`events.rs`) (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Extract JSONL event envelope + payload models emitted by `codex exec --json` into `crates/codex/src/events.rs`, preserving existing public API paths via re-exports from `lib.rs` (e.g., `ThreadEvent`, `ItemEnvelope`, `ItemPayload`, delta/state structs, statuses).
+ - Expected files touched:
+@@ -1521,6 +1521,26 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P1.10 Seam extraction: exec JSONL event models (`events.rs`) (API preserved)
++
++- Scope/step: P1.10
++- Why: Reduce `lib.rs` bulk by extracting the JSONL event envelope + payload models emitted by `codex exec --json` into a dedicated module, while preserving crate-root public API via re-exports.
++- What changed:
++  - Moved JSONL event models (`ThreadEvent`, `ItemEnvelope`, `ItemPayload`, deltas/states/status enums, and `EventError`) from `crates/codex/src/lib.rs` into `crates/codex/src/events.rs` with identical serde shapes (mechanical move).
++  - Wired `crates/codex/src/lib.rs` with `mod events;` + `pub use events::{...};` so existing `codex::{...}` paths continue to compile.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.10_cargo_fmt_check_final.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.10_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P1.10_cargo_fmt_apply.txt`; re-check: `evidence_runs/2026-02-05/P1.10_cargo_fmt_check_after.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.10_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.10_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.10_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.10_cargo_audit.txt`; reran with `--no-fetch --stale` + writable `CARGO_HOME` due to sandbox/network constraints; see also `evidence_runs/2026-02-05/P1.10_cargo_audit_after_fetch_fail.txt`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.10_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.10_cargo_deny_advisories.txt`; reran with `--disable-fetch` due to network constraints; help: `evidence_runs/2026-02-05/P1.10_cargo_deny_advisories_help.txt`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.10_cargo_deny_licenses.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.10_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.10_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

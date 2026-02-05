@@ -1,0 +1,28 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/events.rs:412:
+     #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+     pub extra: BTreeMap<String, Value>,
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:87:
+     default_bundled_platform_label, resolve_bundled_binary, BundledBinary, BundledBinaryError,
+     BundledBinarySpec,
+ };
+[31m-pub use execpolicy::{
+(B[m[31m-    ExecPolicyCheckRequest, ExecPolicyCheckResult, ExecPolicyDecision, ExecPolicyEvaluation,
+(B[m[31m-    ExecPolicyMatch, ExecPolicyNoMatch, ExecPolicyRuleMatch,
+(B[m[31m-};
+(B[m pub use events::{
+     CommandExecutionDelta, CommandExecutionState, EventError, FileChangeDelta, FileChangeKind,
+     FileChangeState, ItemDelta, ItemDeltaPayload, ItemEnvelope, ItemFailure, ItemPayload,
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:97:
+     ItemSnapshot, ItemStatus, McpToolCallDelta, McpToolCallState, TextContent, TextDelta,
+     ThreadEvent, ThreadStarted, TodoItem, TodoListDelta, TodoListState, ToolCallStatus,
+     TurnCompleted, TurnFailed, TurnStarted, WebSearchDelta, WebSearchState, WebSearchStatus,
+[32m+};
+(B[m[32m+pub use execpolicy::{
+(B[m[32m+    ExecPolicyCheckRequest, ExecPolicyCheckResult, ExecPolicyDecision, ExecPolicyEvaluation,
+(B[m[32m+    ExecPolicyMatch, ExecPolicyNoMatch, ExecPolicyRuleMatch,
+(B[m };
+ pub use home::{AuthSeedError, AuthSeedOptions, AuthSeedOutcome, CodexHomeLayout};
+ pub use jsonl::{

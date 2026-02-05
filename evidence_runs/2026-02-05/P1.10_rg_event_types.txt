@@ -1,0 +1,31 @@
+crates/codex/src/lib.rs:2620:/// Each line on stdout maps to a [`ThreadEvent`] with lifecycle edges:
+crates/codex/src/lib.rs:2631:pub enum ThreadEvent {
+crates/codex/src/lib.rs:2641:    ItemStarted(ItemEnvelope<ItemSnapshot>),
+crates/codex/src/lib.rs:2645:    ItemCompleted(ItemEnvelope<ItemSnapshot>),
+crates/codex/src/lib.rs:2647:    ItemFailed(ItemEnvelope<ItemFailure>),
+crates/codex/src/lib.rs:2696:pub struct ItemEnvelope<T> {
+crates/codex/src/lib.rs:2713:    pub payload: ItemPayload,
+crates/codex/src/lib.rs:2748:pub enum ItemPayload {
+crates/codex/src/lib.rs:4536:/// `events` yields parsed [`ThreadEvent`] values as soon as each JSONL line arrives from the CLI.
+crates/codex/src/lib.rs:4546:    Pin<Box<dyn Stream<Item = Result<ThreadEvent, ExecStreamError>> + Send>>;
+crates/codex/src/lib.rs:5270:            Ok(ThreadEvent::ThreadStarted(event)) => {
+crates/codex/src/lib.rs:5277:            Ok(ThreadEvent::ItemStarted(envelope)) => {
+crates/codex/src/lib.rs:5281:                    ItemPayload::McpToolCall(state) => {
+crates/codex/src/lib.rs:5293:            Ok(ThreadEvent::ItemDelta(delta)) => {
+crates/codex/src/lib.rs:5333:            Ok(ThreadEvent::ThreadStarted(ThreadStarted { ref thread_id, .. }))
+crates/codex/src/lib.rs:5371:        assert!(matches!(first, ThreadEvent::ThreadStarted(_)));
+crates/codex/src/lib.rs:5381:        assert!(matches!(second, ThreadEvent::TurnStarted(_)));
+crates/codex/src/lib.rs:7175:            ThreadEvent::ThreadStarted(t) => assert_eq!(t.thread_id, "thread-1"),
+crates/codex/src/lib.rs:7182:            ThreadEvent::TurnStarted(t) => {
+crates/codex/src/lib.rs:7193:            ThreadEvent::ItemCompleted(item) => {
+crates/codex/src/jsonl.rs:18:use crate::{CodexError, ExecStreamError, ThreadEvent};
+crates/codex/src/jsonl.rs:27:/// Parses Codex `--json` JSONL logs into typed [`ThreadEvent`] values.
+crates/codex/src/jsonl.rs:49:    /// - Otherwise returns `Ok(Some(ThreadEvent))` on success.
+crates/codex/src/jsonl.rs:51:    pub fn parse_line(&mut self, line: &str) -> Result<Option<ThreadEvent>, ExecStreamError> {
+crates/codex/src/jsonl.rs:66:    pub outcome: Result<ThreadEvent, ExecStreamError>,
+crates/codex/src/jsonl.rs:324:    rx: mpsc::Receiver<Result<ThreadEvent, ExecStreamError>>,
+crates/codex/src/jsonl.rs:331:        rx: mpsc::Receiver<Result<ThreadEvent, ExecStreamError>>,
+crates/codex/src/jsonl.rs:349:    type Item = Result<ThreadEvent, ExecStreamError>;
+crates/codex/src/jsonl.rs:390:    sender: mpsc::Sender<Result<ThreadEvent, ExecStreamError>>,
+crates/codex/src/jsonl.rs:441:) -> Result<ThreadEvent, ExecStreamError> {
+crates/codex/src/jsonl.rs:515:    serde_json::from_value::<ThreadEvent>(value).map_err(|source| ExecStreamError::Parse {

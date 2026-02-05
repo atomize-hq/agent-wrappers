@@ -1,0 +1,5 @@
+?? evidence_runs/2026-02-05/P1.10_git_add.txt
+?? evidence_runs/2026-02-05/P1.10_git_add_patch_artifacts.txt
+?? evidence_runs/2026-02-05/P1.10_git_commit.txt
+?? evidence_runs/2026-02-05/P1.10_git_commit_amend.txt
+?? evidence_runs/2026-02-05/P1.10_git_status_post.txt

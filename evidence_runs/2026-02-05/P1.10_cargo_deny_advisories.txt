@@ -1,0 +1,1 @@
+2026-02-05 15:08:32 [ERROR] failed to fetch advisory database https://github.com/RustSec/advisory-db: failed to prepare fetch: An IO error occurred when talking to the server: error sending request for url (https://github.com/RustSec/advisory-db/info/refs?service=git-upload-pack)
