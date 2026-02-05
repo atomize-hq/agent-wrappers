@@ -1,0 +1,43 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index a2323bb..72f0479 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -572,8 +572,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.17 — Seam extraction: remaining client subcommand wrappers (`commands/*`) (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Extract the remaining `CodexClient` subcommand wrapper methods still implemented in `crates/codex/src/lib.rs` into a cohesive `crates/codex/src/commands/*` module tree while preserving public API paths and avoiding large cross-cutting moves.
+ - Scope (PR-sized; split by domain if needed):
+@@ -1792,6 +1792,27 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P1.17 Seam extraction: remaining client subcommand wrappers (`commands/*`) (API preserved)
++
++- Scope/step: P1.17
++- Why: Extract the remaining `CodexClient` subcommand wrappers out of `crates/codex/src/lib.rs` into a cohesive `crates/codex/src/commands/*` module tree while preserving crate-root API paths and keeping the move mechanical.
++- What changed:
++  - Added `crates/codex/src/commands/` module tree (`apply_diff`, `app_server`, `features`, `proxy`, `sandbox`) and wired `mod commands;` from `crates/codex/src/lib.rs`.
++  - Moved `CodexClient` wrapper implementations (pure move; signatures/behavior unchanged): `apply`/`apply_task`/`diff`/`cloud_diff_task` + helpers, `generate_app_server_bindings`, `list_features`, `start_responses_api_proxy`, `stdio_to_uds`, and `run_sandbox`.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.17_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.17_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.17_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.17_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.17_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.17_cargo_audit.txt`; reran with `--no-fetch --stale` due to sandbox advisory DB lock constraints)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.17_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.17_cargo_deny_advisories.txt`; workaround: writable `CARGO_HOME=/tmp/cargo_home_p1_17_deny` seeded from `/home/dev/.cargo` advisory DB + registry symlink; `--disable-fetch` + `CARGO_NET_OFFLINE=true`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.17_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.17_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.17_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.17_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
