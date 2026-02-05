@@ -1,0 +1,126 @@
+  2760	
+  2761	/// Request for `codex responses-api-proxy`.
+  2762	#[derive(Clone, Debug, Eq, PartialEq)]
+  2763	pub struct ResponsesApiProxyRequest {
+  2764	    /// API key to write to stdin on startup.
+  2765	    pub api_key: String,
+  2766	    /// Optional port to bind; falls back to an OS-assigned ephemeral port when omitted.
+  2767	    pub port: Option<u16>,
+  2768	    /// Optional path passed to `--server-info` for `{port,pid}` JSON output.
+  2769	    pub server_info_path: Option<PathBuf>,
+  2770	    /// Enables the HTTP shutdown endpoint (`GET /shutdown`).
+  2771	    pub http_shutdown: bool,
+  2772	    /// Optional upstream URL passed to `--upstream-url` (defaults to `https://api.openai.com/v1/responses`).
+  2773	    pub upstream_url: Option<String>,
+  2774	}
+  2775	
+  2776	impl ResponsesApiProxyRequest {
+  2777	    /// Creates a request with the API key provided via stdin.
+  2778	    pub fn new(api_key: impl Into<String>) -> Self {
+  2779	        Self {
+  2780	            api_key: api_key.into(),
+  2781	            port: None,
+  2782	            server_info_path: None,
+  2783	            http_shutdown: false,
+  2784	            upstream_url: None,
+  2785	        }
+  2786	    }
+  2787	
+  2788	    /// Sets the listening port (`--port`).
+  2789	    pub fn port(mut self, port: u16) -> Self {
+  2790	        self.port = Some(port);
+  2791	        self
+  2792	    }
+  2793	
+  2794	    /// Writes `{port,pid}` JSON to the provided path via `--server-info`.
+  2795	    pub fn server_info(mut self, path: impl Into<PathBuf>) -> Self {
+  2796	        self.server_info_path = Some(path.into());
+  2797	        self
+  2798	    }
+  2799	
+  2800	    /// Enables the `--http-shutdown` flag (GET /shutdown).
+  2801	    pub fn http_shutdown(mut self, enable: bool) -> Self {
+  2802	        self.http_shutdown = enable;
+  2803	        self
+  2804	    }
+  2805	
+  2806	    /// Overrides the upstream responses endpoint URL.
+  2807	    pub fn upstream_url(mut self, url: impl Into<String>) -> Self {
+  2808	        let url = url.into();
+  2809	        self.upstream_url = (!url.trim().is_empty()).then_some(url);
+  2810	        self
+  2811	    }
+  2812	}
+  2813	
+  2814	/// Running responses proxy process and metadata.
+  2815	#[derive(Debug)]
+  2816	pub struct ResponsesApiProxyHandle {
+  2817	    /// Spawned `codex responses-api-proxy` child (inherits kill-on-drop).
+  2818	    pub child: tokio::process::Child,
+  2819	    /// Optional `--server-info` path that may contain `{port,pid}` JSON.
+  2820	    pub server_info_path: Option<PathBuf>,
+  2821	}
+  2822	
+  2823	impl ResponsesApiProxyHandle {
+  2824	    /// Reads and parses the `{port,pid}` JSON written by `--server-info`.
+  2825	    ///
+  2826	    /// Returns `Ok(None)` when no server info path was configured.
+  2827	    pub async fn read_server_info(&self) -> Result<Option<ResponsesApiProxyInfo>, CodexError> {
+  2828	        let Some(path) = &self.server_info_path else {
+  2829	            return Ok(None);
+  2830	        };
+  2831	
+  2832	        const MAX_ATTEMPTS: usize = 10;
+  2833	        const BACKOFF_MS: u64 = 25;
+  2834	
+  2835	        for attempt in 0..MAX_ATTEMPTS {
+  2836	            match fs::read_to_string(path).await {
+  2837	                Ok(contents) => match serde_json::from_str::<ResponsesApiProxyInfo>(&contents) {
+  2838	                    Ok(info) => return Ok(Some(info)),
+  2839	                    Err(source) => {
+  2840	                        if attempt + 1 == MAX_ATTEMPTS {
+  2841	                            return Err(CodexError::ResponsesApiProxyInfoParse {
+  2842	                                path: path.clone(),
+  2843	                                source,
+  2844	                            });
+  2845	                        }
+  2846	                    }
+  2847	                },
+  2848	                Err(source) => {
+  2849	                    let is_missing = source.kind() == std::io::ErrorKind::NotFound;
+  2850	                    if !is_missing || attempt + 1 == MAX_ATTEMPTS {
+  2851	                        return Err(CodexError::ResponsesApiProxyInfoRead {
+  2852	                            path: path.clone(),
+  2853	                            source,
+  2854	                        });
+  2855	                    }
+  2856	                }
+  2857	            }
+  2858	
+  2859	            tokio::time::sleep(std::time::Duration::from_millis(BACKOFF_MS)).await;
+  2860	        }
+  2861	
+  2862	        unreachable!("read_server_info loop must return by MAX_ATTEMPTS")
+  2863	    }
+  2864	}
+  2865	
+  2866	/// Parsed `{port,pid}` emitted by `codex responses-api-proxy --server-info`.
+  2867	#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+  2868	pub struct ResponsesApiProxyInfo {
+  2869	    pub port: u16,
+  2870	    pub pid: u32,
+  2871	    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+  2872	    pub extra: BTreeMap<String, Value>,
+  2873	}
+  2874	
+  2875	/// Request for `codex stdio-to-uds <SOCKET_PATH>`.
+  2876	#[derive(Clone, Debug, Eq, PartialEq)]
+  2877	pub struct StdioToUdsRequest {
+  2878	    /// Path to the Unix domain socket to connect to.
+  2879	    pub socket_path: PathBuf,
+  2880	    /// Optional working directory override for the spawned process.
+  2881	    pub working_dir: Option<PathBuf>,
+  2882	}
+  2883	
+  2884	impl StdioToUdsRequest {
+  2885	    pub fn new(socket_path: impl Into<PathBuf>) -> Self {

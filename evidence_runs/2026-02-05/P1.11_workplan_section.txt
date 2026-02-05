@@ -1,0 +1,91 @@
+   430	- Goal: Extract bundled binary resolution types + helpers (`BundledBinarySpec`, `BundledBinary`, `BundledBinaryError`, `resolve_bundled_binary`, `default_bundled_platform_label`) into `crates/codex/src/bundled_binary.rs`, preserving existing public API paths via re-exports from `lib.rs`.
+   431	- Expected files touched:
+   432	  - `crates/codex/src/lib.rs` (wire `mod bundled_binary;` + `pub use ...`; remove moved items)
+   433	  - `crates/codex/src/bundled_binary.rs` (new)
+   434	- Acceptance criteria (“done when”):
+   435	  - All §4.1 gates pass.
+   436	  - No public API path changes (façade + re-exports).
+   437	  - New module meets §7.3 size policy (target ≤ 300 LOC; may exceed soft if cohesive but must stay ≤ 600).
+   438	- Risk: Low (leaf-ish extraction; minimal call site churn).
+   439	- Rollback: Revert module move + re-exports; restore original definitions in `lib.rs`.
+   440	
+   441	##### P1.10 — Seam extraction: exec JSONL event models (`events.rs`) (API preserved)
+   442	
+   443	Status: [ ] Not Started  [ ] In Progress  [x] Done  
+   444	Last Updated: 2026-02-05
+   445	
+   446	- Goal: Extract JSONL event envelope + payload models emitted by `codex exec --json` into `crates/codex/src/events.rs`, preserving existing public API paths via re-exports from `lib.rs` (e.g., `ThreadEvent`, `ItemEnvelope`, `ItemPayload`, delta/state structs, statuses).
+   447	- Expected files touched:
+   448	  - `crates/codex/src/lib.rs` (wire `mod events;` + `pub use ...`; remove moved items)
+   449	  - `crates/codex/src/events.rs` (new)
+   450	- Acceptance criteria (“done when”):
+   451	  - All §4.1 gates pass.
+   452	  - No public API path changes (façade + re-exports).
+   453	  - Serde shapes remain identical (pure move; no field/tag renames; tests pass).
+   454	  - New module meets §7.3 size policy (likely > soft; must stay ≤ 600 or be split into `events/*` if it grows).
+   455	- Risk: Medium (serialization/type visibility churn; keep move mechanical).
+   456	- Rollback: Revert module move + re-exports; restore original event model definitions in `lib.rs`.
+   457	
+   458	##### P1.11 — Seam extraction: CLI subcommand request/response models (`cli/*`) (API preserved)
+   459	
+   460	Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+   461	Last Updated: YYYY-MM-DD
+   462	
+   463	- Goal: Extract request/response model structs for non-streaming CLI subcommands into a cohesive `crates/codex/src/cli/*` module tree (e.g., features/help/review/resume/fork/cloud/app-server and `codex mcp` command request types), preserving existing public API paths via re-exports from `lib.rs`.
+   464	  - Naming note: keep this distinct from the `mcp/*` runtime module tree; this seam is about *invoking CLI subcommands*, not the internal MCP client/runtime implementation.
+   465	- Expected files touched:
+   466	  - `crates/codex/src/lib.rs` (wire `mod cli;` + `pub use ...`; remove moved items)
+   467	  - `crates/codex/src/cli/mod.rs` (new)
+   468	  - `crates/codex/src/cli/*.rs` (new; split by domain to satisfy §7.3)
+   469	- Acceptance criteria (“done when”):
+   470	  - All §4.1 gates pass.
+   471	  - No public API path changes (façade + re-exports).
+   472	  - New files meet §7.3 size policy (target ≤ 300 LOC each; must stay ≤ 600).
+   473	  - Step is “models-only” unless a small amount of wiring is necessary to keep the wrapper compiling (avoid moving execution logic in the same PR).
+   474	- Risk: Medium (large move surface; keep extraction mechanical and domain-split).
+   475	- Rollback: Revert module tree move + re-exports; restore original model structs in `lib.rs`.
+   476	
+   477	##### P1.12 — Seam extraction: feature/version parsing + update advisory helpers (`version.rs`) (API preserved)
+   478	
+   479	Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+   480	Last Updated: YYYY-MM-DD
+   481	
+   482	- Goal: Extract internal parsing/helpers around `codex --version` / `codex help` / `codex features list` probes (semver/channel parsing, commit hash extraction, feature-flag parsing, and update advisory helpers) into `crates/codex/src/version.rs`, preserving existing public API paths for any public helpers (e.g., `update_advisory_from_capabilities`) via re-exports from `lib.rs`.
+   483	- Expected files touched:
+   484	  - `crates/codex/src/lib.rs` (wire `mod version;` + `pub use ...`; remove moved items)
+   485	  - `crates/codex/src/version.rs` (new)
+   486	- Acceptance criteria (“done when”):
+   487	  - All §4.1 gates pass.
+   488	  - No public API path changes (façade + re-exports).
+   489	  - Parsing behavior remains unchanged (pure move; tests pass).
+   490	  - New module meets §7.3 size policy (target ≤ 300 LOC; may exceed soft if cohesive but must stay ≤ 600).
+   491	- Risk: Low–Medium (behavioral regression possible if parsing logic is accidentally edited; keep move mechanical).
+   492	- Rollback: Revert module move + re-exports; restore original helper functions in `lib.rs`.
+   493	
+   494	##### P1.13 — Plan remaining Phase 1 seams after P1.12 (no code moves)
+   495	
+   496	Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+   497	Last Updated: YYYY-MM-DD
+   498	
+   499	- Goal: After P1.9–P1.12 land, refresh the Phase 1 seam plan based on the then-current `crates/codex/src/lib.rs` structure and remaining top offenders, keeping extraction steps PR-sized and API-stable.
+   500	- Expected files touched:
+   501	  - `refactor_workplan.md` (this file): update §7.1 and §10 queue with the next concrete seam steps.
+   502	- Acceptance criteria (“done when”):
+   503	  - Updated seam list in §7.1 reflects the then-current module layout and identifies the next 2–4 PR-sized extractions.
+   504	  - No behavior changes (planning only).
+   505	- Risk: Low.
+   506	- Rollback: N/A (planning-only change).
+   507	
+   508	---
+   509	
+   510	#### Phase 2 — Split `crates/codex/src/mcp.rs` into `crates/codex/src/mcp/*` (API stable)
+   511	
+   512	**Phase goal:** Split `mcp.rs` into a module tree while maintaining stable public APIs via re-exports from `mcp` (and/or `lib.rs`).
+   513	
+   514	Phase Status: [ ] Not Started  [ ] In Progress  [x] Done  
+   515	Last Updated: 2026-02-05  
+   516	Reason: P2.7 completed; `crates/codex/src/mcp.rs` is now a thin façade below the program ceiling (policy: §7.3).
+   517	
+   518	##### P2.0 — Define the `mcp.rs` seam map (no code moves yet)
+   519	
+   520	Status: [ ] Not Started  [ ] In Progress  [x] Done  

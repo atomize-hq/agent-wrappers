@@ -1,0 +1,13 @@
+1:1036:            .arg(target.subcommand())
+2:1881:            .arg(platform.subcommand())
+3:1891:        if log_denials && matches!(platform, SandboxPlatform::Macos) {
+4:2830:            SandboxPlatform::Macos => "macos",
+5:2831:            SandboxPlatform::Linux => "linux",
+6:2832:            SandboxPlatform::Windows => "windows",
+7:5208:            SandboxPlatform::Linux,
+8:5263:                SandboxCommandRequest::new(SandboxPlatform::Macos, ["ls"]).log_denials(true),
+9:5298:                SandboxCommandRequest::new(SandboxPlatform::Windows, ["echo", "cwd"])
+10:5308:                SandboxPlatform::Windows,
+11:5323:                SandboxPlatform::Windows,
+12:5354:                SandboxPlatform::Linux,
+13:6150:        let request = SandboxCommandRequest::new(SandboxPlatform::Linux, Vec::<OsString>::new());

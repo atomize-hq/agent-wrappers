@@ -1,0 +1,3 @@
+458:##### P1.11 — Seam extraction: CLI subcommand request/response models (`cli/*`) (API preserved)
+868:9) CLI subcommand request/response models → `cli/*` (P1.11).
+1567:3) P1.11 — Seam extraction: CLI subcommand request/response models (`cli/*`) (API preserved)

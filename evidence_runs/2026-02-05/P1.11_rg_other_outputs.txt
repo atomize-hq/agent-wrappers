@@ -1,0 +1,2 @@
+3677:/// Output from `codex cloud list`.
+3809:/// Output from `codex mcp list`.

@@ -1,0 +1,42 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index f2dbb24..75cb948 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -457,8 +457,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.11 — Seam extraction: CLI subcommand request/response models (`cli/*`) (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Extract request/response model structs for non-streaming CLI subcommands into a cohesive `crates/codex/src/cli/*` module tree (e.g., features/help/review/resume/fork/cloud/app-server and `codex mcp` command request types), preserving existing public API paths via re-exports from `lib.rs`.
+   - Naming note: keep this distinct from the `mcp/*` runtime module tree; this seam is about *invoking CLI subcommands*, not the internal MCP client/runtime implementation.
+@@ -1541,6 +1541,26 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P1.11 Seam extraction: CLI subcommand request/response models (`cli/*`) (API preserved)
++
++- Scope/step: P1.11
++- Why: Extract CLI subcommand request/response models into a dedicated `cli/*` module tree to reduce `lib.rs` bulk while preserving crate-root public API via façade + re-exports.
++- What changed:
++  - Moved non-streaming CLI subcommand models (e.g., features/help/review/resume/fork/cloud/mcp/app-server, plus sandbox/stdio-to-uds/responses-api-proxy request/response types) from `crates/codex/src/lib.rs` into `crates/codex/src/cli/*`.
++  - Wired `crates/codex/src/lib.rs` with `mod cli;` + `pub use cli::{...};` so existing `codex::{...}` paths continue to compile; made a small visibility adjustment (`CodexFeatureStage::parse` → `pub(crate)`) to keep internal parsing helpers compiling.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.11_cargo_fmt_check_final.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.11_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P1.11_cargo_fmt_apply.txt`; re-check: `evidence_runs/2026-02-05/P1.11_cargo_fmt_check_after.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.11_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.11_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.11_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.11_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.11_cargo_audit.txt`; reran with `--no-fetch --stale` due to sandbox lock constraints)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.11_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.11_cargo_deny_advisories.txt`; reran with a writable `CARGO_HOME` seeded from `/home/dev/.cargo` + `--offline` due to sandbox lock constraints)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.11_cargo_deny_licenses.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.11_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.11_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

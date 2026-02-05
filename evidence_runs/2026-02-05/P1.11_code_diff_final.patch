@@ -1,0 +1,2944 @@
+diff --git a/crates/codex/src/cli/app_server.rs b/crates/codex/src/cli/app_server.rs
+new file mode 100644
+index 0000000..f0c2ff0
+--- /dev/null
++++ b/crates/codex/src/cli/app_server.rs
+@@ -0,0 +1,140 @@
++use crate::{CliOverridesPatch, ConfigOverride, FlagState};
++use std::{path::PathBuf, process::ExitStatus};
++
++/// Target for app-server code generation.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub enum AppServerCodegenTarget {
++    /// Emits TypeScript bindings for the app-server protocol. Optionally formats the output with Prettier.
++    TypeScript { prettier: Option<PathBuf> },
++    /// Emits a JSON schema bundle for the app-server protocol.
++    JsonSchema,
++}
++
++impl AppServerCodegenTarget {
++    pub(crate) fn subcommand(&self) -> &'static str {
++        match self {
++            AppServerCodegenTarget::TypeScript { .. } => "generate-ts",
++            AppServerCodegenTarget::JsonSchema => "generate-json-schema",
++        }
++    }
++
++    pub(crate) fn prettier(&self) -> Option<&PathBuf> {
++        match self {
++            AppServerCodegenTarget::TypeScript { prettier } => prettier.as_ref(),
++            AppServerCodegenTarget::JsonSchema => None,
++        }
++    }
++}
++
++/// Request for `codex app-server generate-ts` or `generate-json-schema`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct AppServerCodegenRequest {
++    /// Codegen target and optional Prettier path (TypeScript only).
++    pub target: AppServerCodegenTarget,
++    /// Output directory passed to `--out`; created if missing.
++    pub out_dir: PathBuf,
++    /// Per-call CLI overrides layered on top of the builder.
++    pub overrides: CliOverridesPatch,
++}
++
++impl AppServerCodegenRequest {
++    /// Generates TypeScript bindings into `out_dir`.
++    pub fn typescript(out_dir: impl Into<PathBuf>) -> Self {
++        Self {
++            target: AppServerCodegenTarget::TypeScript { prettier: None },
++            out_dir: out_dir.into(),
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    /// Generates a JSON schema bundle into `out_dir`.
++    pub fn json_schema(out_dir: impl Into<PathBuf>) -> Self {
++        Self {
++            target: AppServerCodegenTarget::JsonSchema,
++            out_dir: out_dir.into(),
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    /// Formats TypeScript output with the provided Prettier executable (no-op for JSON schema).
++    pub fn prettier(mut self, prettier: impl Into<PathBuf>) -> Self {
++        if let AppServerCodegenTarget::TypeScript { prettier: slot } = &mut self.target {
++            *slot = Some(prettier.into());
++        }
++        self
++    }
++
++    /// Replaces the default CLI overrides for this request.
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++
++    /// Adds a `--config key=value` override for this request.
++    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
++        self.overrides
++            .config_overrides
++            .push(ConfigOverride::new(key, value));
++        self
++    }
++
++    /// Adds a raw `--config key=value` override without validation.
++    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
++        self.overrides
++            .config_overrides
++            .push(ConfigOverride::from_raw(raw));
++        self
++    }
++
++    /// Sets the config profile (`--profile`) for this request.
++    pub fn profile(mut self, profile: impl Into<String>) -> Self {
++        let profile = profile.into();
++        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
++        self
++    }
++
++    /// Requests the CLI `--oss` flag for this codegen call.
++    pub fn oss(mut self, enable: bool) -> Self {
++        self.overrides.oss = if enable {
++            FlagState::Enable
++        } else {
++            FlagState::Disable
++        };
++        self
++    }
++
++    /// Adds a `--enable <feature>` toggle for this codegen call.
++    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
++        self.overrides.feature_toggles.enable.push(name.into());
++        self
++    }
++
++    /// Adds a `--disable <feature>` toggle for this codegen call.
++    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
++        self.overrides.feature_toggles.disable.push(name.into());
++        self
++    }
++
++    /// Controls whether `--search` is passed through to Codex.
++    pub fn search(mut self, enable: bool) -> Self {
++        self.overrides.search = if enable {
++            FlagState::Enable
++        } else {
++            FlagState::Disable
++        };
++        self
++    }
++}
++
++/// Captured output from app-server codegen commands.
++#[derive(Clone, Debug)]
++pub struct AppServerCodegenOutput {
++    /// Exit status returned by the subcommand.
++    pub status: ExitStatus,
++    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
++    pub stdout: String,
++    /// Captured stderr (mirrored unless `quiet` is set).
++    pub stderr: String,
++    /// Output directory passed to `--out`.
++    pub out_dir: PathBuf,
++}
+diff --git a/crates/codex/src/cli/cloud.rs b/crates/codex/src/cli/cloud.rs
+new file mode 100644
+index 0000000..cb51168
+--- /dev/null
++++ b/crates/codex/src/cli/cloud.rs
+@@ -0,0 +1,158 @@
++use crate::CliOverridesPatch;
++use serde_json::Value;
++use std::process::ExitStatus;
++
++/// Request for `codex cloud` (overview/help).
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct CloudOverviewRequest {
++    pub overrides: CliOverridesPatch,
++}
++
++impl CloudOverviewRequest {
++    pub fn new() -> Self {
++        Self {
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++impl Default for CloudOverviewRequest {
++    fn default() -> Self {
++        Self::new()
++    }
++}
++
++/// Request for `codex cloud list`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct CloudListRequest {
++    pub json: bool,
++    pub env_id: Option<String>,
++    pub limit: Option<u32>,
++    pub cursor: Option<String>,
++    pub overrides: CliOverridesPatch,
++}
++
++impl CloudListRequest {
++    pub fn new() -> Self {
++        Self {
++            json: false,
++            env_id: None,
++            limit: None,
++            cursor: None,
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn json(mut self, enable: bool) -> Self {
++        self.json = enable;
++        self
++    }
++
++    pub fn env_id(mut self, env_id: impl Into<String>) -> Self {
++        let env_id = env_id.into();
++        self.env_id = (!env_id.trim().is_empty()).then_some(env_id);
++        self
++    }
++
++    pub fn limit(mut self, limit: u32) -> Self {
++        self.limit = Some(limit);
++        self
++    }
++
++    pub fn cursor(mut self, cursor: impl Into<String>) -> Self {
++        let cursor = cursor.into();
++        self.cursor = (!cursor.trim().is_empty()).then_some(cursor);
++        self
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++impl Default for CloudListRequest {
++    fn default() -> Self {
++        Self::new()
++    }
++}
++
++/// Output from `codex cloud list`.
++#[derive(Clone, Debug, PartialEq)]
++pub struct CloudListOutput {
++    pub status: ExitStatus,
++    pub stdout: String,
++    pub stderr: String,
++    /// Parsed JSON output when `--json` was requested.
++    pub json: Option<Value>,
++}
++
++/// Request for `codex cloud status <TASK_ID>`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct CloudStatusRequest {
++    pub task_id: String,
++    pub overrides: CliOverridesPatch,
++}
++
++impl CloudStatusRequest {
++    pub fn new(task_id: impl Into<String>) -> Self {
++        Self {
++            task_id: task_id.into(),
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++/// Request for `codex cloud exec`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct CloudExecRequest {
++    pub env_id: String,
++    pub query: Option<String>,
++    pub attempts: Option<u32>,
++    pub branch: Option<String>,
++    pub overrides: CliOverridesPatch,
++}
++
++impl CloudExecRequest {
++    pub fn new(env_id: impl Into<String>) -> Self {
++        Self {
++            env_id: env_id.into(),
++            query: None,
++            attempts: None,
++            branch: None,
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn query(mut self, query: impl Into<String>) -> Self {
++        let query = query.into();
++        self.query = (!query.trim().is_empty()).then_some(query);
++        self
++    }
++
++    pub fn attempts(mut self, attempts: u32) -> Self {
++        self.attempts = Some(attempts);
++        self
++    }
++
++    pub fn branch(mut self, branch: impl Into<String>) -> Self {
++        let branch = branch.into();
++        self.branch = (!branch.trim().is_empty()).then_some(branch);
++        self
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
+diff --git a/crates/codex/src/cli/exec.rs b/crates/codex/src/cli/exec.rs
+new file mode 100644
+index 0000000..00c9049
+--- /dev/null
++++ b/crates/codex/src/cli/exec.rs
+@@ -0,0 +1,70 @@
++use crate::{CliOverridesPatch, ConfigOverride, FlagState};
++
++/// Options configuring a single exec request.
++#[derive(Clone, Debug)]
++pub struct ExecRequest {
++    pub prompt: String,
++    pub overrides: CliOverridesPatch,
++}
++
++impl ExecRequest {
++    pub fn new(prompt: impl Into<String>) -> Self {
++        Self {
++            prompt: prompt.into(),
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++
++    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
++        self.overrides
++            .config_overrides
++            .push(ConfigOverride::new(key, value));
++        self
++    }
++
++    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
++        self.overrides
++            .config_overrides
++            .push(ConfigOverride::from_raw(raw));
++        self
++    }
++
++    pub fn profile(mut self, profile: impl Into<String>) -> Self {
++        let profile = profile.into();
++        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
++        self
++    }
++
++    pub fn oss(mut self, enable: bool) -> Self {
++        self.overrides.oss = if enable {
++            FlagState::Enable
++        } else {
++            FlagState::Disable
++        };
++        self
++    }
++
++    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
++        self.overrides.feature_toggles.enable.push(name.into());
++        self
++    }
++
++    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
++        self.overrides.feature_toggles.disable.push(name.into());
++        self
++    }
++
++    pub fn search(mut self, enable: bool) -> Self {
++        self.overrides.search = if enable {
++            FlagState::Enable
++        } else {
++            FlagState::Disable
++        };
++        self
++    }
++}
+diff --git a/crates/codex/src/cli/features.rs b/crates/codex/src/cli/features.rs
+new file mode 100644
+index 0000000..fdb1a55
+--- /dev/null
++++ b/crates/codex/src/cli/features.rs
+@@ -0,0 +1,223 @@
++use crate::{CliOverridesPatch, ConfigOverride, FlagState};
++use serde::{Deserialize, Serialize};
++use serde_json::Value;
++use std::{collections::BTreeMap, process::ExitStatus};
++
++/// Stage labels reported by `codex features list`.
++#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
++#[serde(from = "String", into = "String")]
++pub enum CodexFeatureStage {
++    Experimental,
++    Beta,
++    Stable,
++    Deprecated,
++    Removed,
++    Unknown(String),
++}
++
++impl CodexFeatureStage {
++    pub(crate) fn parse(raw: &str) -> Self {
++        let normalized = raw.trim();
++        match normalized.to_ascii_lowercase().as_str() {
++            "experimental" => CodexFeatureStage::Experimental,
++            "beta" => CodexFeatureStage::Beta,
++            "stable" => CodexFeatureStage::Stable,
++            "deprecated" => CodexFeatureStage::Deprecated,
++            "removed" => CodexFeatureStage::Removed,
++            _ => CodexFeatureStage::Unknown(normalized.to_string()),
++        }
++    }
++
++    /// Returns the normalized label for this stage.
++    pub fn as_str(&self) -> &str {
++        match self {
++            CodexFeatureStage::Experimental => "experimental",
++            CodexFeatureStage::Beta => "beta",
++            CodexFeatureStage::Stable => "stable",
++            CodexFeatureStage::Deprecated => "deprecated",
++            CodexFeatureStage::Removed => "removed",
++            CodexFeatureStage::Unknown(label) => label.as_str(),
++        }
++    }
++}
++
++impl From<String> for CodexFeatureStage {
++    fn from(value: String) -> Self {
++        CodexFeatureStage::parse(&value)
++    }
++}
++
++impl From<CodexFeatureStage> for String {
++    fn from(stage: CodexFeatureStage) -> Self {
++        String::from(&stage)
++    }
++}
++
++impl From<&CodexFeatureStage> for String {
++    fn from(stage: &CodexFeatureStage) -> Self {
++        stage.as_str().to_string()
++    }
++}
++
++/// Single feature entry reported by `codex features list`.
++#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
++pub struct CodexFeature {
++    /// Feature name as reported by the CLI.
++    pub name: String,
++    /// Feature stage (experimental/beta/stable/deprecated/removed) when provided.
++    #[serde(default, skip_serializing_if = "Option::is_none")]
++    pub stage: Option<CodexFeatureStage>,
++    /// Whether the feature is enabled for the current config/profile.
++    pub enabled: bool,
++    /// Unrecognized fields from JSON output are preserved here.
++    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
++    pub extra: BTreeMap<String, Value>,
++}
++
++impl CodexFeature {
++    /// Convenience helper mirroring the `enabled` flag.
++    pub const fn is_enabled(&self) -> bool {
++        self.enabled
++    }
++}
++
++/// Format used to parse `codex features list` output.
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++pub enum FeaturesListFormat {
++    Json,
++    Text,
++}
++
++/// Parsed output from `codex features list`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct FeaturesListOutput {
++    /// Exit status returned by the subcommand.
++    pub status: ExitStatus,
++    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
++    pub stdout: String,
++    /// Captured stderr (mirrored unless `quiet` is set).
++    pub stderr: String,
++    /// Parsed feature entries.
++    pub features: Vec<CodexFeature>,
++    /// Indicates whether JSON or text parsing was used.
++    pub format: FeaturesListFormat,
++}
++
++/// Request for `codex features list`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct FeaturesListRequest {
++    /// Request JSON output via `--json` (falls back to text parsing when JSON is absent).
++    pub json: bool,
++    /// Per-call CLI overrides layered on top of the builder.
++    pub overrides: CliOverridesPatch,
++}
++
++impl FeaturesListRequest {
++    /// Creates a request with JSON disabled by default for compatibility with older binaries.
++    pub fn new() -> Self {
++        Self {
++            json: false,
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    /// Controls whether `--json` is passed to `codex features list`.
++    pub fn json(mut self, enable: bool) -> Self {
++        self.json = enable;
++        self
++    }
++
++    /// Replaces the default CLI overrides for this request.
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++
++    /// Adds a `--config key=value` override for this request.
++    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
++        self.overrides
++            .config_overrides
++            .push(ConfigOverride::new(key, value));
++        self
++    }
++
++    /// Adds a raw `--config key=value` override without validation.
++    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
++        self.overrides
++            .config_overrides
++            .push(ConfigOverride::from_raw(raw));
++        self
++    }
++
++    /// Sets the config profile (`--profile`) for this request.
++    pub fn profile(mut self, profile: impl Into<String>) -> Self {
++        let profile = profile.into();
++        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
++        self
++    }
++
++    /// Requests the CLI `--oss` flag for this call.
++    pub fn oss(mut self, enable: bool) -> Self {
++        self.overrides.oss = if enable {
++            FlagState::Enable
++        } else {
++            FlagState::Disable
++        };
++        self
++    }
++
++    /// Adds a `--enable <feature>` toggle for this call.
++    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
++        self.overrides.feature_toggles.enable.push(name.into());
++        self
++    }
++
++    /// Adds a `--disable <feature>` toggle for this call.
++    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
++        self.overrides.feature_toggles.disable.push(name.into());
++        self
++    }
++
++    /// Controls whether `--search` is passed through to Codex.
++    pub fn search(mut self, enable: bool) -> Self {
++        self.overrides.search = if enable {
++            FlagState::Enable
++        } else {
++            FlagState::Disable
++        };
++        self
++    }
++}
++
++impl Default for FeaturesListRequest {
++    fn default() -> Self {
++        Self::new()
++    }
++}
++
++/// Request for `codex features`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct FeaturesCommandRequest {
++    /// Per-call CLI overrides layered on top of the builder.
++    pub overrides: CliOverridesPatch,
++}
++
++impl FeaturesCommandRequest {
++    pub fn new() -> Self {
++        Self {
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    /// Replaces the default CLI overrides for this request.
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++impl Default for FeaturesCommandRequest {
++    fn default() -> Self {
++        Self::new()
++    }
++}
+diff --git a/crates/codex/src/cli/help.rs b/crates/codex/src/cli/help.rs
+new file mode 100644
+index 0000000..87e6f91
+--- /dev/null
++++ b/crates/codex/src/cli/help.rs
+@@ -0,0 +1,65 @@
++use crate::CliOverridesPatch;
++
++/// Selector for `codex help`-style command families.
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++pub enum HelpScope {
++    Root,
++    Exec,
++    Features,
++    Login,
++    AppServer,
++    Sandbox,
++    Cloud,
++    Mcp,
++}
++
++impl HelpScope {
++    pub(crate) fn argv_prefix(&self) -> &'static [&'static str] {
++        match self {
++            HelpScope::Root => &["help"],
++            HelpScope::Exec => &["exec", "help"],
++            HelpScope::Features => &["features", "help"],
++            HelpScope::Login => &["login", "help"],
++            HelpScope::AppServer => &["app-server", "help"],
++            HelpScope::Sandbox => &["sandbox", "help"],
++            HelpScope::Cloud => &["cloud", "help"],
++            HelpScope::Mcp => &["mcp", "help"],
++        }
++    }
++}
++
++/// Request for `codex <scope> help [COMMAND]...`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct HelpCommandRequest {
++    pub scope: HelpScope,
++    /// Optional command path components appended after `help` (variadic upstream).
++    pub command: Vec<String>,
++    /// Per-call CLI overrides layered on top of the builder.
++    pub overrides: CliOverridesPatch,
++}
++
++impl HelpCommandRequest {
++    pub fn new(scope: HelpScope) -> Self {
++        Self {
++            scope,
++            command: Vec::new(),
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    /// Appends one or more command tokens to the help invocation.
++    pub fn command<I, S>(mut self, tokens: I) -> Self
++    where
++        I: IntoIterator<Item = S>,
++        S: Into<String>,
++    {
++        self.command.extend(tokens.into_iter().map(Into::into));
++        self
++    }
++
++    /// Replaces the default CLI overrides for this request.
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
+diff --git a/crates/codex/src/cli/mcp.rs b/crates/codex/src/cli/mcp.rs
+new file mode 100644
+index 0000000..20e120a
+--- /dev/null
++++ b/crates/codex/src/cli/mcp.rs
+@@ -0,0 +1,245 @@
++use crate::CliOverridesPatch;
++use serde_json::Value;
++use std::{ffi::OsString, process::ExitStatus};
++
++/// Request for `codex mcp` (overview/help).
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct McpOverviewRequest {
++    pub overrides: CliOverridesPatch,
++}
++
++impl McpOverviewRequest {
++    pub fn new() -> Self {
++        Self {
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++impl Default for McpOverviewRequest {
++    fn default() -> Self {
++        Self::new()
++    }
++}
++
++/// Request for `codex mcp list`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct McpListRequest {
++    pub json: bool,
++    pub overrides: CliOverridesPatch,
++}
++
++impl McpListRequest {
++    pub fn new() -> Self {
++        Self {
++            json: false,
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn json(mut self, enable: bool) -> Self {
++        self.json = enable;
++        self
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++impl Default for McpListRequest {
++    fn default() -> Self {
++        Self::new()
++    }
++}
++
++/// Output from `codex mcp list`.
++#[derive(Clone, Debug, PartialEq)]
++pub struct McpListOutput {
++    pub status: ExitStatus,
++    pub stdout: String,
++    pub stderr: String,
++    pub json: Option<Value>,
++}
++
++/// Request for `codex mcp get <NAME>`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct McpGetRequest {
++    pub name: String,
++    pub json: bool,
++    pub overrides: CliOverridesPatch,
++}
++
++impl McpGetRequest {
++    pub fn new(name: impl Into<String>) -> Self {
++        Self {
++            name: name.into(),
++            json: false,
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn json(mut self, enable: bool) -> Self {
++        self.json = enable;
++        self
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++/// Transport for `codex mcp add`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub enum McpAddTransport {
++    Stdio {
++        env: Vec<(String, String)>,
++        command: Vec<OsString>,
++    },
++    StreamableHttp {
++        url: String,
++        bearer_token_env_var: Option<String>,
++    },
++}
++
++/// Request for `codex mcp add`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct McpAddRequest {
++    pub name: String,
++    pub transport: McpAddTransport,
++    pub overrides: CliOverridesPatch,
++}
++
++impl McpAddRequest {
++    pub fn stdio(name: impl Into<String>, command: Vec<OsString>) -> Self {
++        Self {
++            name: name.into(),
++            transport: McpAddTransport::Stdio {
++                env: Vec::new(),
++                command,
++            },
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn streamable_http(name: impl Into<String>, url: impl Into<String>) -> Self {
++        Self {
++            name: name.into(),
++            transport: McpAddTransport::StreamableHttp {
++                url: url.into(),
++                bearer_token_env_var: None,
++            },
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
++        if let McpAddTransport::Stdio { env, .. } = &mut self.transport {
++            env.push((key.into(), value.into()));
++        }
++        self
++    }
++
++    pub fn bearer_token_env_var(mut self, env_var: impl Into<String>) -> Self {
++        if let McpAddTransport::StreamableHttp {
++            bearer_token_env_var,
++            ..
++        } = &mut self.transport
++        {
++            let env_var = env_var.into();
++            *bearer_token_env_var = (!env_var.trim().is_empty()).then_some(env_var);
++        }
++        self
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++/// Request for `codex mcp remove <NAME>`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct McpRemoveRequest {
++    pub name: String,
++    pub overrides: CliOverridesPatch,
++}
++
++impl McpRemoveRequest {
++    pub fn new(name: impl Into<String>) -> Self {
++        Self {
++            name: name.into(),
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++/// Request for `codex mcp logout <NAME>`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct McpLogoutRequest {
++    pub name: String,
++    pub overrides: CliOverridesPatch,
++}
++
++impl McpLogoutRequest {
++    pub fn new(name: impl Into<String>) -> Self {
++        Self {
++            name: name.into(),
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++/// Request for `codex mcp login <NAME>` (OAuth).
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct McpOauthLoginRequest {
++    pub name: String,
++    pub scopes: Vec<String>,
++    pub overrides: CliOverridesPatch,
++}
++
++impl McpOauthLoginRequest {
++    pub fn new(name: impl Into<String>) -> Self {
++        Self {
++            name: name.into(),
++            scopes: Vec::new(),
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn scopes<I, S>(mut self, scopes: I) -> Self
++    where
++        I: IntoIterator<Item = S>,
++        S: Into<String>,
++    {
++        self.scopes.extend(
++            scopes
++                .into_iter()
++                .map(|s| s.into())
++                .filter(|s| !s.trim().is_empty()),
++        );
++        self
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
+diff --git a/crates/codex/src/cli/mod.rs b/crates/codex/src/cli/mod.rs
+new file mode 100644
+index 0000000..252b76d
+--- /dev/null
++++ b/crates/codex/src/cli/mod.rs
+@@ -0,0 +1,33 @@
++mod app_server;
++mod cloud;
++mod exec;
++mod features;
++mod help;
++mod mcp;
++mod responses_api_proxy;
++mod review;
++mod sandbox;
++mod session;
++mod stdio_to_uds;
++
++pub use app_server::{AppServerCodegenOutput, AppServerCodegenRequest, AppServerCodegenTarget};
++pub use cloud::{
++    CloudExecRequest, CloudListOutput, CloudListRequest, CloudOverviewRequest, CloudStatusRequest,
++};
++pub use exec::ExecRequest;
++pub use features::{
++    CodexFeature, CodexFeatureStage, FeaturesCommandRequest, FeaturesListFormat,
++    FeaturesListOutput, FeaturesListRequest,
++};
++pub use help::{HelpCommandRequest, HelpScope};
++pub use mcp::{
++    McpAddRequest, McpAddTransport, McpGetRequest, McpListOutput, McpListRequest, McpLogoutRequest,
++    McpOauthLoginRequest, McpOverviewRequest, McpRemoveRequest,
++};
++pub use responses_api_proxy::{
++    ResponsesApiProxyHandle, ResponsesApiProxyInfo, ResponsesApiProxyRequest,
++};
++pub use review::{ExecReviewCommandRequest, ReviewCommandRequest};
++pub use sandbox::{SandboxCommandRequest, SandboxPlatform, SandboxRun};
++pub use session::{ForkSessionRequest, ResumeSessionRequest};
++pub use stdio_to_uds::StdioToUdsRequest;
+diff --git a/crates/codex/src/cli/responses_api_proxy.rs b/crates/codex/src/cli/responses_api_proxy.rs
+new file mode 100644
+index 0000000..32c6d82
+--- /dev/null
++++ b/crates/codex/src/cli/responses_api_proxy.rs
+@@ -0,0 +1,119 @@
++use crate::CodexError;
++use serde::{Deserialize, Serialize};
++use serde_json::Value;
++use std::{collections::BTreeMap, path::PathBuf};
++use tokio::fs;
++
++/// Request for `codex responses-api-proxy`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct ResponsesApiProxyRequest {
++    /// API key to write to stdin on startup.
++    pub api_key: String,
++    /// Optional port to bind; falls back to an OS-assigned ephemeral port when omitted.
++    pub port: Option<u16>,
++    /// Optional path passed to `--server-info` for `{port,pid}` JSON output.
++    pub server_info_path: Option<PathBuf>,
++    /// Enables the HTTP shutdown endpoint (`GET /shutdown`).
++    pub http_shutdown: bool,
++    /// Optional upstream URL passed to `--upstream-url` (defaults to `https://api.openai.com/v1/responses`).
++    pub upstream_url: Option<String>,
++}
++
++impl ResponsesApiProxyRequest {
++    /// Creates a request with the API key provided via stdin.
++    pub fn new(api_key: impl Into<String>) -> Self {
++        Self {
++            api_key: api_key.into(),
++            port: None,
++            server_info_path: None,
++            http_shutdown: false,
++            upstream_url: None,
++        }
++    }
++
++    /// Sets the listening port (`--port`).
++    pub fn port(mut self, port: u16) -> Self {
++        self.port = Some(port);
++        self
++    }
++
++    /// Writes `{port,pid}` JSON to the provided path via `--server-info`.
++    pub fn server_info(mut self, path: impl Into<PathBuf>) -> Self {
++        self.server_info_path = Some(path.into());
++        self
++    }
++
++    /// Enables the `--http-shutdown` flag (GET /shutdown).
++    pub fn http_shutdown(mut self, enable: bool) -> Self {
++        self.http_shutdown = enable;
++        self
++    }
++
++    /// Overrides the upstream responses endpoint URL.
++    pub fn upstream_url(mut self, url: impl Into<String>) -> Self {
++        let url = url.into();
++        self.upstream_url = (!url.trim().is_empty()).then_some(url);
++        self
++    }
++}
++
++/// Running responses proxy process and metadata.
++#[derive(Debug)]
++pub struct ResponsesApiProxyHandle {
++    /// Spawned `codex responses-api-proxy` child (inherits kill-on-drop).
++    pub child: tokio::process::Child,
++    /// Optional `--server-info` path that may contain `{port,pid}` JSON.
++    pub server_info_path: Option<PathBuf>,
++}
++
++impl ResponsesApiProxyHandle {
++    /// Reads and parses the `{port,pid}` JSON written by `--server-info`.
++    ///
++    /// Returns `Ok(None)` when no server info path was configured.
++    pub async fn read_server_info(&self) -> Result<Option<ResponsesApiProxyInfo>, CodexError> {
++        let Some(path) = &self.server_info_path else {
++            return Ok(None);
++        };
++
++        const MAX_ATTEMPTS: usize = 10;
++        const BACKOFF_MS: u64 = 25;
++
++        for attempt in 0..MAX_ATTEMPTS {
++            match fs::read_to_string(path).await {
++                Ok(contents) => match serde_json::from_str::<ResponsesApiProxyInfo>(&contents) {
++                    Ok(info) => return Ok(Some(info)),
++                    Err(source) => {
++                        if attempt + 1 == MAX_ATTEMPTS {
++                            return Err(CodexError::ResponsesApiProxyInfoParse {
++                                path: path.clone(),
++                                source,
++                            });
++                        }
++                    }
++                },
++                Err(source) => {
++                    let is_missing = source.kind() == std::io::ErrorKind::NotFound;
++                    if !is_missing || attempt + 1 == MAX_ATTEMPTS {
++                        return Err(CodexError::ResponsesApiProxyInfoRead {
++                            path: path.clone(),
++                            source,
++                        });
++                    }
++                }
++            }
++
++            tokio::time::sleep(std::time::Duration::from_millis(BACKOFF_MS)).await;
++        }
++
++        unreachable!("read_server_info loop must return by MAX_ATTEMPTS")
++    }
++}
++
++/// Parsed `{port,pid}` emitted by `codex responses-api-proxy --server-info`.
++#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
++pub struct ResponsesApiProxyInfo {
++    pub port: u16,
++    pub pid: u32,
++    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
++    pub extra: BTreeMap<String, Value>,
++}
+diff --git a/crates/codex/src/cli/review.rs b/crates/codex/src/cli/review.rs
+new file mode 100644
+index 0000000..55ec539
+--- /dev/null
++++ b/crates/codex/src/cli/review.rs
+@@ -0,0 +1,145 @@
++use crate::CliOverridesPatch;
++
++/// Request for `codex review [OPTIONS] [PROMPT]`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct ReviewCommandRequest {
++    pub prompt: Option<String>,
++    pub base: Option<String>,
++    pub commit: Option<String>,
++    pub title: Option<String>,
++    pub uncommitted: bool,
++    /// Per-call CLI overrides layered on top of the builder.
++    pub overrides: CliOverridesPatch,
++}
++
++impl ReviewCommandRequest {
++    pub fn new() -> Self {
++        Self {
++            prompt: None,
++            base: None,
++            commit: None,
++            title: None,
++            uncommitted: false,
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
++        let prompt = prompt.into();
++        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
++        self
++    }
++
++    pub fn base(mut self, branch: impl Into<String>) -> Self {
++        let branch = branch.into();
++        self.base = (!branch.trim().is_empty()).then_some(branch);
++        self
++    }
++
++    pub fn commit(mut self, sha: impl Into<String>) -> Self {
++        let sha = sha.into();
++        self.commit = (!sha.trim().is_empty()).then_some(sha);
++        self
++    }
++
++    pub fn title(mut self, title: impl Into<String>) -> Self {
++        let title = title.into();
++        self.title = (!title.trim().is_empty()).then_some(title);
++        self
++    }
++
++    pub fn uncommitted(mut self, enable: bool) -> Self {
++        self.uncommitted = enable;
++        self
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++impl Default for ReviewCommandRequest {
++    fn default() -> Self {
++        Self::new()
++    }
++}
++
++/// Request for `codex exec review [OPTIONS] [PROMPT]`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct ExecReviewCommandRequest {
++    pub prompt: Option<String>,
++    pub base: Option<String>,
++    pub commit: Option<String>,
++    pub title: Option<String>,
++    pub uncommitted: bool,
++    pub json: bool,
++    pub skip_git_repo_check: bool,
++    /// Per-call CLI overrides layered on top of the builder.
++    pub overrides: CliOverridesPatch,
++}
++
++impl ExecReviewCommandRequest {
++    pub fn new() -> Self {
++        Self {
++            prompt: None,
++            base: None,
++            commit: None,
++            title: None,
++            uncommitted: false,
++            json: false,
++            skip_git_repo_check: true,
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
++        let prompt = prompt.into();
++        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
++        self
++    }
++
++    pub fn base(mut self, branch: impl Into<String>) -> Self {
++        let branch = branch.into();
++        self.base = (!branch.trim().is_empty()).then_some(branch);
++        self
++    }
++
++    pub fn commit(mut self, sha: impl Into<String>) -> Self {
++        let sha = sha.into();
++        self.commit = (!sha.trim().is_empty()).then_some(sha);
++        self
++    }
++
++    pub fn title(mut self, title: impl Into<String>) -> Self {
++        let title = title.into();
++        self.title = (!title.trim().is_empty()).then_some(title);
++        self
++    }
++
++    pub fn uncommitted(mut self, enable: bool) -> Self {
++        self.uncommitted = enable;
++        self
++    }
++
++    pub fn json(mut self, enable: bool) -> Self {
++        self.json = enable;
++        self
++    }
++
++    pub fn skip_git_repo_check(mut self, enable: bool) -> Self {
++        self.skip_git_repo_check = enable;
++        self
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++impl Default for ExecReviewCommandRequest {
++    fn default() -> Self {
++        Self::new()
++    }
++}
+diff --git a/crates/codex/src/cli/sandbox.rs b/crates/codex/src/cli/sandbox.rs
+new file mode 100644
+index 0000000..f23ab1a
+--- /dev/null
++++ b/crates/codex/src/cli/sandbox.rs
+@@ -0,0 +1,103 @@
++use crate::{ConfigOverride, FeatureToggles};
++use std::{ffi::OsString, path::PathBuf, process::ExitStatus};
++
++/// Sandbox platform variant; maps to platform subcommands of `codex sandbox`.
++#[derive(Clone, Copy, Debug, Eq, PartialEq)]
++pub enum SandboxPlatform {
++    Macos,
++    Linux,
++    Windows,
++}
++
++impl SandboxPlatform {
++    pub(crate) fn subcommand(self) -> &'static str {
++        match self {
++            SandboxPlatform::Macos => "macos",
++            SandboxPlatform::Linux => "linux",
++            SandboxPlatform::Windows => "windows",
++        }
++    }
++}
++
++/// Request to run an arbitrary command inside a Codex-provided sandbox.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct SandboxCommandRequest {
++    /// Target platform subcommand; maps to `macos` (alias `seatbelt`), `linux` (alias `landlock`), or `windows`.
++    pub platform: SandboxPlatform,
++    /// Trailing command arguments to execute. Must be non-empty to avoid the upstream CLI panic.
++    pub command: Vec<OsString>,
++    /// Request the workspace-write sandbox preset (`--full-auto`).
++    pub full_auto: bool,
++    /// Stream macOS sandbox denials after the child process exits (no-op on other platforms).
++    pub log_denials: bool,
++    /// Additional `--config key=value` overrides to pass through.
++    pub config_overrides: Vec<ConfigOverride>,
++    /// Feature toggles forwarded to `--enable`/`--disable`.
++    pub feature_toggles: FeatureToggles,
++    /// Working directory for the spawned command; falls back to the builder value, then the current process directory.
++    pub working_dir: Option<PathBuf>,
++}
++
++impl SandboxCommandRequest {
++    pub fn new<I, S>(platform: SandboxPlatform, command: I) -> Self
++    where
++        I: IntoIterator<Item = S>,
++        S: Into<OsString>,
++    {
++        Self {
++            platform,
++            command: command.into_iter().map(Into::into).collect(),
++            full_auto: false,
++            log_denials: false,
++            config_overrides: Vec::new(),
++            feature_toggles: FeatureToggles::default(),
++            working_dir: None,
++        }
++    }
++
++    pub fn full_auto(mut self, enable: bool) -> Self {
++        self.full_auto = enable;
++        self
++    }
++
++    pub fn log_denials(mut self, enable: bool) -> Self {
++        self.log_denials = enable;
++        self
++    }
++
++    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
++        self.config_overrides.push(ConfigOverride::new(key, value));
++        self
++    }
++
++    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
++        self.config_overrides.push(ConfigOverride::from_raw(raw));
++        self
++    }
++
++    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
++        self.feature_toggles.enable.push(name.into());
++        self
++    }
++
++    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
++        self.feature_toggles.disable.push(name.into());
++        self
++    }
++
++    pub fn working_dir(mut self, dir: impl Into<PathBuf>) -> Self {
++        self.working_dir = Some(dir.into());
++        self
++    }
++}
++
++/// Captured output from `codex sandbox <platform>`.
++#[derive(Clone, Debug)]
++pub struct SandboxRun {
++    /// Exit status returned by the inner command (mirrors the sandbox helper).
++    pub status: ExitStatus,
++    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
++    pub stdout: String,
++    /// Captured stderr (mirrored unless `quiet` is set).
++    pub stderr: String,
++}
+diff --git a/crates/codex/src/cli/session.rs b/crates/codex/src/cli/session.rs
+new file mode 100644
+index 0000000..fcef5e0
+--- /dev/null
++++ b/crates/codex/src/cli/session.rs
+@@ -0,0 +1,113 @@
++use crate::CliOverridesPatch;
++
++/// Request for `codex resume [OPTIONS] [SESSION_ID] [PROMPT]`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct ResumeSessionRequest {
++    pub session_id: Option<String>,
++    pub prompt: Option<String>,
++    pub all: bool,
++    pub last: bool,
++    /// Per-call CLI overrides layered on top of the builder.
++    pub overrides: CliOverridesPatch,
++}
++
++impl ResumeSessionRequest {
++    pub fn new() -> Self {
++        Self {
++            session_id: None,
++            prompt: None,
++            all: false,
++            last: false,
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn session_id(mut self, session_id: impl Into<String>) -> Self {
++        let session_id = session_id.into();
++        self.session_id = (!session_id.trim().is_empty()).then_some(session_id);
++        self
++    }
++
++    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
++        let prompt = prompt.into();
++        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
++        self
++    }
++
++    pub fn all(mut self, enable: bool) -> Self {
++        self.all = enable;
++        self
++    }
++
++    pub fn last(mut self, enable: bool) -> Self {
++        self.last = enable;
++        self
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++impl Default for ResumeSessionRequest {
++    fn default() -> Self {
++        Self::new()
++    }
++}
++
++/// Request for `codex fork [OPTIONS] [SESSION_ID] [PROMPT]`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct ForkSessionRequest {
++    pub session_id: Option<String>,
++    pub prompt: Option<String>,
++    pub all: bool,
++    pub last: bool,
++    /// Per-call CLI overrides layered on top of the builder.
++    pub overrides: CliOverridesPatch,
++}
++
++impl ForkSessionRequest {
++    pub fn new() -> Self {
++        Self {
++            session_id: None,
++            prompt: None,
++            all: false,
++            last: false,
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn session_id(mut self, session_id: impl Into<String>) -> Self {
++        let session_id = session_id.into();
++        self.session_id = (!session_id.trim().is_empty()).then_some(session_id);
++        self
++    }
++
++    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
++        let prompt = prompt.into();
++        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
++        self
++    }
++
++    pub fn all(mut self, enable: bool) -> Self {
++        self.all = enable;
++        self
++    }
++
++    pub fn last(mut self, enable: bool) -> Self {
++        self.last = enable;
++        self
++    }
++
++    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
++        self.overrides = overrides;
++        self
++    }
++}
++
++impl Default for ForkSessionRequest {
++    fn default() -> Self {
++        Self::new()
++    }
++}
+diff --git a/crates/codex/src/cli/stdio_to_uds.rs b/crates/codex/src/cli/stdio_to_uds.rs
+new file mode 100644
+index 0000000..31c9b84
+--- /dev/null
++++ b/crates/codex/src/cli/stdio_to_uds.rs
+@@ -0,0 +1,25 @@
++use std::path::PathBuf;
++
++/// Request for `codex stdio-to-uds <SOCKET_PATH>`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct StdioToUdsRequest {
++    /// Path to the Unix domain socket to connect to.
++    pub socket_path: PathBuf,
++    /// Optional working directory override for the spawned process.
++    pub working_dir: Option<PathBuf>,
++}
++
++impl StdioToUdsRequest {
++    pub fn new(socket_path: impl Into<PathBuf>) -> Self {
++        Self {
++            socket_path: socket_path.into(),
++            working_dir: None,
++        }
++    }
++
++    /// Sets the working directory used to resolve the socket path.
++    pub fn working_dir(mut self, dir: impl Into<PathBuf>) -> Self {
++        self.working_dir = Some(dir.into());
++        self
++    }
++}
+diff --git a/crates/codex/src/lib.rs b/crates/codex/src/lib.rs
+index 9db9b2c..f5fb622 100644
+--- a/crates/codex/src/lib.rs
++++ b/crates/codex/src/lib.rs
+@@ -70,6 +70,7 @@
+ mod apply_diff;
+ mod builder;
+ mod bundled_binary;
++mod cli;
+ mod events;
+ mod execpolicy;
+ mod home;
+@@ -87,6 +88,16 @@ pub use bundled_binary::{
+     default_bundled_platform_label, resolve_bundled_binary, BundledBinary, BundledBinaryError,
+     BundledBinarySpec,
+ };
++pub use cli::{
++    AppServerCodegenOutput, AppServerCodegenRequest, AppServerCodegenTarget, CloudExecRequest,
++    CloudListOutput, CloudListRequest, CloudOverviewRequest, CloudStatusRequest, CodexFeature,
++    CodexFeatureStage, ExecRequest, ExecReviewCommandRequest, FeaturesCommandRequest,
++    FeaturesListFormat, FeaturesListOutput, FeaturesListRequest, ForkSessionRequest,
++    HelpCommandRequest, HelpScope, McpAddRequest, McpAddTransport, McpGetRequest, McpListOutput,
++    McpListRequest, McpLogoutRequest, McpOauthLoginRequest, McpOverviewRequest, McpRemoveRequest,
++    ResponsesApiProxyHandle, ResponsesApiProxyInfo, ResponsesApiProxyRequest, ResumeSessionRequest,
++    ReviewCommandRequest, SandboxCommandRequest, SandboxPlatform, SandboxRun, StdioToUdsRequest,
++};
+ pub use events::{
+     CommandExecutionDelta, CommandExecutionState, EventError, FileChangeDelta, FileChangeKind,
+     FileChangeState, ItemDelta, ItemDeltaPayload, ItemEnvelope, ItemFailure, ItemPayload,
+@@ -121,7 +132,6 @@ use builder::{apply_cli_overrides, resolve_cli_overrides};
+ use futures_core::Stream;
+ use home::CommandEnvironment;
+ use semver::{Prerelease, Version};
+-use serde::{Deserialize, Serialize};
+ use serde_json::Value;
+ use tempfile::TempDir;
+ use thiserror::Error;
+@@ -2623,75 +2633,6 @@ pub enum CodexError {
+     Join(#[from] tokio::task::JoinError),
+ }
+ 
+-/// Options configuring a single exec request.
+-#[derive(Clone, Debug)]
+-pub struct ExecRequest {
+-    pub prompt: String,
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl ExecRequest {
+-    pub fn new(prompt: impl Into<String>) -> Self {
+-        Self {
+-            prompt: prompt.into(),
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-
+-    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+-        self.overrides
+-            .config_overrides
+-            .push(ConfigOverride::new(key, value));
+-        self
+-    }
+-
+-    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+-        self.overrides
+-            .config_overrides
+-            .push(ConfigOverride::from_raw(raw));
+-        self
+-    }
+-
+-    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+-        let profile = profile.into();
+-        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+-        self
+-    }
+-
+-    pub fn oss(mut self, enable: bool) -> Self {
+-        self.overrides.oss = if enable {
+-            FlagState::Enable
+-        } else {
+-            FlagState::Disable
+-        };
+-        self
+-    }
+-
+-    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+-        self.overrides.feature_toggles.enable.push(name.into());
+-        self
+-    }
+-
+-    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+-        self.overrides.feature_toggles.disable.push(name.into());
+-        self
+-    }
+-
+-    pub fn search(mut self, enable: bool) -> Self {
+-        self.overrides.search = if enable {
+-            FlagState::Enable
+-        } else {
+-            FlagState::Disable
+-        };
+-        self
+-    }
+-}
+-
+ /// Options configuring a streaming exec invocation.
+ #[derive(Clone, Debug)]
+ pub struct ExecStreamRequest {
+@@ -2816,1319 +2757,6 @@ impl ResumeRequest {
+     }
+ }
+ 
+-/// Sandbox platform variant; maps to platform subcommands of `codex sandbox`.
+-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+-pub enum SandboxPlatform {
+-    Macos,
+-    Linux,
+-    Windows,
+-}
+-
+-impl SandboxPlatform {
+-    fn subcommand(self) -> &'static str {
+-        match self {
+-            SandboxPlatform::Macos => "macos",
+-            SandboxPlatform::Linux => "linux",
+-            SandboxPlatform::Windows => "windows",
+-        }
+-    }
+-}
+-
+-/// Request to run an arbitrary command inside a Codex-provided sandbox.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct SandboxCommandRequest {
+-    /// Target platform subcommand; maps to `macos` (alias `seatbelt`), `linux` (alias `landlock`), or `windows`.
+-    pub platform: SandboxPlatform,
+-    /// Trailing command arguments to execute. Must be non-empty to avoid the upstream CLI panic.
+-    pub command: Vec<OsString>,
+-    /// Request the workspace-write sandbox preset (`--full-auto`).
+-    pub full_auto: bool,
+-    /// Stream macOS sandbox denials after the child process exits (no-op on other platforms).
+-    pub log_denials: bool,
+-    /// Additional `--config key=value` overrides to pass through.
+-    pub config_overrides: Vec<ConfigOverride>,
+-    /// Feature toggles forwarded to `--enable`/`--disable`.
+-    pub feature_toggles: FeatureToggles,
+-    /// Working directory for the spawned command; falls back to the builder value, then the current process directory.
+-    pub working_dir: Option<PathBuf>,
+-}
+-
+-impl SandboxCommandRequest {
+-    pub fn new<I, S>(platform: SandboxPlatform, command: I) -> Self
+-    where
+-        I: IntoIterator<Item = S>,
+-        S: Into<OsString>,
+-    {
+-        Self {
+-            platform,
+-            command: command.into_iter().map(Into::into).collect(),
+-            full_auto: false,
+-            log_denials: false,
+-            config_overrides: Vec::new(),
+-            feature_toggles: FeatureToggles::default(),
+-            working_dir: None,
+-        }
+-    }
+-
+-    pub fn full_auto(mut self, enable: bool) -> Self {
+-        self.full_auto = enable;
+-        self
+-    }
+-
+-    pub fn log_denials(mut self, enable: bool) -> Self {
+-        self.log_denials = enable;
+-        self
+-    }
+-
+-    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+-        self.config_overrides.push(ConfigOverride::new(key, value));
+-        self
+-    }
+-
+-    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+-        self.config_overrides.push(ConfigOverride::from_raw(raw));
+-        self
+-    }
+-
+-    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+-        self.feature_toggles.enable.push(name.into());
+-        self
+-    }
+-
+-    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+-        self.feature_toggles.disable.push(name.into());
+-        self
+-    }
+-
+-    pub fn working_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+-        self.working_dir = Some(dir.into());
+-        self
+-    }
+-}
+-
+-/// Captured output from `codex sandbox <platform>`.
+-#[derive(Clone, Debug)]
+-pub struct SandboxRun {
+-    /// Exit status returned by the inner command (mirrors the sandbox helper).
+-    pub status: ExitStatus,
+-    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
+-    pub stdout: String,
+-    /// Captured stderr (mirrored unless `quiet` is set).
+-    pub stderr: String,
+-}
+-
+-/// Request for `codex responses-api-proxy`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct ResponsesApiProxyRequest {
+-    /// API key to write to stdin on startup.
+-    pub api_key: String,
+-    /// Optional port to bind; falls back to an OS-assigned ephemeral port when omitted.
+-    pub port: Option<u16>,
+-    /// Optional path passed to `--server-info` for `{port,pid}` JSON output.
+-    pub server_info_path: Option<PathBuf>,
+-    /// Enables the HTTP shutdown endpoint (`GET /shutdown`).
+-    pub http_shutdown: bool,
+-    /// Optional upstream URL passed to `--upstream-url` (defaults to `https://api.openai.com/v1/responses`).
+-    pub upstream_url: Option<String>,
+-}
+-
+-impl ResponsesApiProxyRequest {
+-    /// Creates a request with the API key provided via stdin.
+-    pub fn new(api_key: impl Into<String>) -> Self {
+-        Self {
+-            api_key: api_key.into(),
+-            port: None,
+-            server_info_path: None,
+-            http_shutdown: false,
+-            upstream_url: None,
+-        }
+-    }
+-
+-    /// Sets the listening port (`--port`).
+-    pub fn port(mut self, port: u16) -> Self {
+-        self.port = Some(port);
+-        self
+-    }
+-
+-    /// Writes `{port,pid}` JSON to the provided path via `--server-info`.
+-    pub fn server_info(mut self, path: impl Into<PathBuf>) -> Self {
+-        self.server_info_path = Some(path.into());
+-        self
+-    }
+-
+-    /// Enables the `--http-shutdown` flag (GET /shutdown).
+-    pub fn http_shutdown(mut self, enable: bool) -> Self {
+-        self.http_shutdown = enable;
+-        self
+-    }
+-
+-    /// Overrides the upstream responses endpoint URL.
+-    pub fn upstream_url(mut self, url: impl Into<String>) -> Self {
+-        let url = url.into();
+-        self.upstream_url = (!url.trim().is_empty()).then_some(url);
+-        self
+-    }
+-}
+-
+-/// Running responses proxy process and metadata.
+-#[derive(Debug)]
+-pub struct ResponsesApiProxyHandle {
+-    /// Spawned `codex responses-api-proxy` child (inherits kill-on-drop).
+-    pub child: tokio::process::Child,
+-    /// Optional `--server-info` path that may contain `{port,pid}` JSON.
+-    pub server_info_path: Option<PathBuf>,
+-}
+-
+-impl ResponsesApiProxyHandle {
+-    /// Reads and parses the `{port,pid}` JSON written by `--server-info`.
+-    ///
+-    /// Returns `Ok(None)` when no server info path was configured.
+-    pub async fn read_server_info(&self) -> Result<Option<ResponsesApiProxyInfo>, CodexError> {
+-        let Some(path) = &self.server_info_path else {
+-            return Ok(None);
+-        };
+-
+-        const MAX_ATTEMPTS: usize = 10;
+-        const BACKOFF_MS: u64 = 25;
+-
+-        for attempt in 0..MAX_ATTEMPTS {
+-            match fs::read_to_string(path).await {
+-                Ok(contents) => match serde_json::from_str::<ResponsesApiProxyInfo>(&contents) {
+-                    Ok(info) => return Ok(Some(info)),
+-                    Err(source) => {
+-                        if attempt + 1 == MAX_ATTEMPTS {
+-                            return Err(CodexError::ResponsesApiProxyInfoParse {
+-                                path: path.clone(),
+-                                source,
+-                            });
+-                        }
+-                    }
+-                },
+-                Err(source) => {
+-                    let is_missing = source.kind() == std::io::ErrorKind::NotFound;
+-                    if !is_missing || attempt + 1 == MAX_ATTEMPTS {
+-                        return Err(CodexError::ResponsesApiProxyInfoRead {
+-                            path: path.clone(),
+-                            source,
+-                        });
+-                    }
+-                }
+-            }
+-
+-            tokio::time::sleep(std::time::Duration::from_millis(BACKOFF_MS)).await;
+-        }
+-
+-        unreachable!("read_server_info loop must return by MAX_ATTEMPTS")
+-    }
+-}
+-
+-/// Parsed `{port,pid}` emitted by `codex responses-api-proxy --server-info`.
+-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+-pub struct ResponsesApiProxyInfo {
+-    pub port: u16,
+-    pub pid: u32,
+-    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+-    pub extra: BTreeMap<String, Value>,
+-}
+-
+-/// Request for `codex stdio-to-uds <SOCKET_PATH>`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct StdioToUdsRequest {
+-    /// Path to the Unix domain socket to connect to.
+-    pub socket_path: PathBuf,
+-    /// Optional working directory override for the spawned process.
+-    pub working_dir: Option<PathBuf>,
+-}
+-
+-impl StdioToUdsRequest {
+-    pub fn new(socket_path: impl Into<PathBuf>) -> Self {
+-        Self {
+-            socket_path: socket_path.into(),
+-            working_dir: None,
+-        }
+-    }
+-
+-    /// Sets the working directory used to resolve the socket path.
+-    pub fn working_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+-        self.working_dir = Some(dir.into());
+-        self
+-    }
+-}
+-
+-/// Stage labels reported by `codex features list`.
+-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+-#[serde(from = "String", into = "String")]
+-pub enum CodexFeatureStage {
+-    Experimental,
+-    Beta,
+-    Stable,
+-    Deprecated,
+-    Removed,
+-    Unknown(String),
+-}
+-
+-impl CodexFeatureStage {
+-    fn parse(raw: &str) -> Self {
+-        let normalized = raw.trim();
+-        match normalized.to_ascii_lowercase().as_str() {
+-            "experimental" => CodexFeatureStage::Experimental,
+-            "beta" => CodexFeatureStage::Beta,
+-            "stable" => CodexFeatureStage::Stable,
+-            "deprecated" => CodexFeatureStage::Deprecated,
+-            "removed" => CodexFeatureStage::Removed,
+-            _ => CodexFeatureStage::Unknown(normalized.to_string()),
+-        }
+-    }
+-
+-    /// Returns the normalized label for this stage.
+-    pub fn as_str(&self) -> &str {
+-        match self {
+-            CodexFeatureStage::Experimental => "experimental",
+-            CodexFeatureStage::Beta => "beta",
+-            CodexFeatureStage::Stable => "stable",
+-            CodexFeatureStage::Deprecated => "deprecated",
+-            CodexFeatureStage::Removed => "removed",
+-            CodexFeatureStage::Unknown(label) => label.as_str(),
+-        }
+-    }
+-}
+-
+-impl From<String> for CodexFeatureStage {
+-    fn from(value: String) -> Self {
+-        CodexFeatureStage::parse(&value)
+-    }
+-}
+-
+-impl From<CodexFeatureStage> for String {
+-    fn from(stage: CodexFeatureStage) -> Self {
+-        String::from(&stage)
+-    }
+-}
+-
+-impl From<&CodexFeatureStage> for String {
+-    fn from(stage: &CodexFeatureStage) -> Self {
+-        stage.as_str().to_string()
+-    }
+-}
+-
+-/// Single feature entry reported by `codex features list`.
+-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+-pub struct CodexFeature {
+-    /// Feature name as reported by the CLI.
+-    pub name: String,
+-    /// Feature stage (experimental/beta/stable/deprecated/removed) when provided.
+-    #[serde(default, skip_serializing_if = "Option::is_none")]
+-    pub stage: Option<CodexFeatureStage>,
+-    /// Whether the feature is enabled for the current config/profile.
+-    pub enabled: bool,
+-    /// Unrecognized fields from JSON output are preserved here.
+-    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+-    pub extra: BTreeMap<String, Value>,
+-}
+-
+-impl CodexFeature {
+-    /// Convenience helper mirroring the `enabled` flag.
+-    pub const fn is_enabled(&self) -> bool {
+-        self.enabled
+-    }
+-}
+-
+-/// Format used to parse `codex features list` output.
+-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+-pub enum FeaturesListFormat {
+-    Json,
+-    Text,
+-}
+-
+-/// Parsed output from `codex features list`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct FeaturesListOutput {
+-    /// Exit status returned by the subcommand.
+-    pub status: ExitStatus,
+-    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
+-    pub stdout: String,
+-    /// Captured stderr (mirrored unless `quiet` is set).
+-    pub stderr: String,
+-    /// Parsed feature entries.
+-    pub features: Vec<CodexFeature>,
+-    /// Indicates whether JSON or text parsing was used.
+-    pub format: FeaturesListFormat,
+-}
+-
+-/// Request for `codex features list`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct FeaturesListRequest {
+-    /// Request JSON output via `--json` (falls back to text parsing when JSON is absent).
+-    pub json: bool,
+-    /// Per-call CLI overrides layered on top of the builder.
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl FeaturesListRequest {
+-    /// Creates a request with JSON disabled by default for compatibility with older binaries.
+-    pub fn new() -> Self {
+-        Self {
+-            json: false,
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    /// Controls whether `--json` is passed to `codex features list`.
+-    pub fn json(mut self, enable: bool) -> Self {
+-        self.json = enable;
+-        self
+-    }
+-
+-    /// Replaces the default CLI overrides for this request.
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-
+-    /// Adds a `--config key=value` override for this request.
+-    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+-        self.overrides
+-            .config_overrides
+-            .push(ConfigOverride::new(key, value));
+-        self
+-    }
+-
+-    /// Adds a raw `--config key=value` override without validation.
+-    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+-        self.overrides
+-            .config_overrides
+-            .push(ConfigOverride::from_raw(raw));
+-        self
+-    }
+-
+-    /// Sets the config profile (`--profile`) for this request.
+-    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+-        let profile = profile.into();
+-        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+-        self
+-    }
+-
+-    /// Requests the CLI `--oss` flag for this call.
+-    pub fn oss(mut self, enable: bool) -> Self {
+-        self.overrides.oss = if enable {
+-            FlagState::Enable
+-        } else {
+-            FlagState::Disable
+-        };
+-        self
+-    }
+-
+-    /// Adds a `--enable <feature>` toggle for this call.
+-    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+-        self.overrides.feature_toggles.enable.push(name.into());
+-        self
+-    }
+-
+-    /// Adds a `--disable <feature>` toggle for this call.
+-    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+-        self.overrides.feature_toggles.disable.push(name.into());
+-        self
+-    }
+-
+-    /// Controls whether `--search` is passed through to Codex.
+-    pub fn search(mut self, enable: bool) -> Self {
+-        self.overrides.search = if enable {
+-            FlagState::Enable
+-        } else {
+-            FlagState::Disable
+-        };
+-        self
+-    }
+-}
+-
+-impl Default for FeaturesListRequest {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-/// Request for `codex features`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct FeaturesCommandRequest {
+-    /// Per-call CLI overrides layered on top of the builder.
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl FeaturesCommandRequest {
+-    pub fn new() -> Self {
+-        Self {
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    /// Replaces the default CLI overrides for this request.
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-impl Default for FeaturesCommandRequest {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-/// Selector for `codex help`-style command families.
+-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+-pub enum HelpScope {
+-    Root,
+-    Exec,
+-    Features,
+-    Login,
+-    AppServer,
+-    Sandbox,
+-    Cloud,
+-    Mcp,
+-}
+-
+-impl HelpScope {
+-    fn argv_prefix(&self) -> &'static [&'static str] {
+-        match self {
+-            HelpScope::Root => &["help"],
+-            HelpScope::Exec => &["exec", "help"],
+-            HelpScope::Features => &["features", "help"],
+-            HelpScope::Login => &["login", "help"],
+-            HelpScope::AppServer => &["app-server", "help"],
+-            HelpScope::Sandbox => &["sandbox", "help"],
+-            HelpScope::Cloud => &["cloud", "help"],
+-            HelpScope::Mcp => &["mcp", "help"],
+-        }
+-    }
+-}
+-
+-/// Request for `codex <scope> help [COMMAND]...`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct HelpCommandRequest {
+-    pub scope: HelpScope,
+-    /// Optional command path components appended after `help` (variadic upstream).
+-    pub command: Vec<String>,
+-    /// Per-call CLI overrides layered on top of the builder.
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl HelpCommandRequest {
+-    pub fn new(scope: HelpScope) -> Self {
+-        Self {
+-            scope,
+-            command: Vec::new(),
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    /// Appends one or more command tokens to the help invocation.
+-    pub fn command<I, S>(mut self, tokens: I) -> Self
+-    where
+-        I: IntoIterator<Item = S>,
+-        S: Into<String>,
+-    {
+-        self.command.extend(tokens.into_iter().map(Into::into));
+-        self
+-    }
+-
+-    /// Replaces the default CLI overrides for this request.
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-/// Request for `codex review [OPTIONS] [PROMPT]`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct ReviewCommandRequest {
+-    pub prompt: Option<String>,
+-    pub base: Option<String>,
+-    pub commit: Option<String>,
+-    pub title: Option<String>,
+-    pub uncommitted: bool,
+-    /// Per-call CLI overrides layered on top of the builder.
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl ReviewCommandRequest {
+-    pub fn new() -> Self {
+-        Self {
+-            prompt: None,
+-            base: None,
+-            commit: None,
+-            title: None,
+-            uncommitted: false,
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+-        let prompt = prompt.into();
+-        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
+-        self
+-    }
+-
+-    pub fn base(mut self, branch: impl Into<String>) -> Self {
+-        let branch = branch.into();
+-        self.base = (!branch.trim().is_empty()).then_some(branch);
+-        self
+-    }
+-
+-    pub fn commit(mut self, sha: impl Into<String>) -> Self {
+-        let sha = sha.into();
+-        self.commit = (!sha.trim().is_empty()).then_some(sha);
+-        self
+-    }
+-
+-    pub fn title(mut self, title: impl Into<String>) -> Self {
+-        let title = title.into();
+-        self.title = (!title.trim().is_empty()).then_some(title);
+-        self
+-    }
+-
+-    pub fn uncommitted(mut self, enable: bool) -> Self {
+-        self.uncommitted = enable;
+-        self
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-impl Default for ReviewCommandRequest {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-/// Request for `codex exec review [OPTIONS] [PROMPT]`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct ExecReviewCommandRequest {
+-    pub prompt: Option<String>,
+-    pub base: Option<String>,
+-    pub commit: Option<String>,
+-    pub title: Option<String>,
+-    pub uncommitted: bool,
+-    pub json: bool,
+-    pub skip_git_repo_check: bool,
+-    /// Per-call CLI overrides layered on top of the builder.
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl ExecReviewCommandRequest {
+-    pub fn new() -> Self {
+-        Self {
+-            prompt: None,
+-            base: None,
+-            commit: None,
+-            title: None,
+-            uncommitted: false,
+-            json: false,
+-            skip_git_repo_check: true,
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+-        let prompt = prompt.into();
+-        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
+-        self
+-    }
+-
+-    pub fn base(mut self, branch: impl Into<String>) -> Self {
+-        let branch = branch.into();
+-        self.base = (!branch.trim().is_empty()).then_some(branch);
+-        self
+-    }
+-
+-    pub fn commit(mut self, sha: impl Into<String>) -> Self {
+-        let sha = sha.into();
+-        self.commit = (!sha.trim().is_empty()).then_some(sha);
+-        self
+-    }
+-
+-    pub fn title(mut self, title: impl Into<String>) -> Self {
+-        let title = title.into();
+-        self.title = (!title.trim().is_empty()).then_some(title);
+-        self
+-    }
+-
+-    pub fn uncommitted(mut self, enable: bool) -> Self {
+-        self.uncommitted = enable;
+-        self
+-    }
+-
+-    pub fn json(mut self, enable: bool) -> Self {
+-        self.json = enable;
+-        self
+-    }
+-
+-    pub fn skip_git_repo_check(mut self, enable: bool) -> Self {
+-        self.skip_git_repo_check = enable;
+-        self
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-impl Default for ExecReviewCommandRequest {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-/// Request for `codex resume [OPTIONS] [SESSION_ID] [PROMPT]`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct ResumeSessionRequest {
+-    pub session_id: Option<String>,
+-    pub prompt: Option<String>,
+-    pub all: bool,
+-    pub last: bool,
+-    /// Per-call CLI overrides layered on top of the builder.
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl ResumeSessionRequest {
+-    pub fn new() -> Self {
+-        Self {
+-            session_id: None,
+-            prompt: None,
+-            all: false,
+-            last: false,
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn session_id(mut self, session_id: impl Into<String>) -> Self {
+-        let session_id = session_id.into();
+-        self.session_id = (!session_id.trim().is_empty()).then_some(session_id);
+-        self
+-    }
+-
+-    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+-        let prompt = prompt.into();
+-        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
+-        self
+-    }
+-
+-    pub fn all(mut self, enable: bool) -> Self {
+-        self.all = enable;
+-        self
+-    }
+-
+-    pub fn last(mut self, enable: bool) -> Self {
+-        self.last = enable;
+-        self
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-impl Default for ResumeSessionRequest {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-/// Request for `codex fork [OPTIONS] [SESSION_ID] [PROMPT]`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct ForkSessionRequest {
+-    pub session_id: Option<String>,
+-    pub prompt: Option<String>,
+-    pub all: bool,
+-    pub last: bool,
+-    /// Per-call CLI overrides layered on top of the builder.
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl ForkSessionRequest {
+-    pub fn new() -> Self {
+-        Self {
+-            session_id: None,
+-            prompt: None,
+-            all: false,
+-            last: false,
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn session_id(mut self, session_id: impl Into<String>) -> Self {
+-        let session_id = session_id.into();
+-        self.session_id = (!session_id.trim().is_empty()).then_some(session_id);
+-        self
+-    }
+-
+-    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+-        let prompt = prompt.into();
+-        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
+-        self
+-    }
+-
+-    pub fn all(mut self, enable: bool) -> Self {
+-        self.all = enable;
+-        self
+-    }
+-
+-    pub fn last(mut self, enable: bool) -> Self {
+-        self.last = enable;
+-        self
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-impl Default for ForkSessionRequest {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-/// Request for `codex cloud` (overview/help).
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct CloudOverviewRequest {
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl CloudOverviewRequest {
+-    pub fn new() -> Self {
+-        Self {
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-impl Default for CloudOverviewRequest {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-/// Request for `codex cloud list`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct CloudListRequest {
+-    pub json: bool,
+-    pub env_id: Option<String>,
+-    pub limit: Option<u32>,
+-    pub cursor: Option<String>,
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl CloudListRequest {
+-    pub fn new() -> Self {
+-        Self {
+-            json: false,
+-            env_id: None,
+-            limit: None,
+-            cursor: None,
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn json(mut self, enable: bool) -> Self {
+-        self.json = enable;
+-        self
+-    }
+-
+-    pub fn env_id(mut self, env_id: impl Into<String>) -> Self {
+-        let env_id = env_id.into();
+-        self.env_id = (!env_id.trim().is_empty()).then_some(env_id);
+-        self
+-    }
+-
+-    pub fn limit(mut self, limit: u32) -> Self {
+-        self.limit = Some(limit);
+-        self
+-    }
+-
+-    pub fn cursor(mut self, cursor: impl Into<String>) -> Self {
+-        let cursor = cursor.into();
+-        self.cursor = (!cursor.trim().is_empty()).then_some(cursor);
+-        self
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-impl Default for CloudListRequest {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-/// Output from `codex cloud list`.
+-#[derive(Clone, Debug, PartialEq)]
+-pub struct CloudListOutput {
+-    pub status: ExitStatus,
+-    pub stdout: String,
+-    pub stderr: String,
+-    /// Parsed JSON output when `--json` was requested.
+-    pub json: Option<Value>,
+-}
+-
+-/// Request for `codex cloud status <TASK_ID>`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct CloudStatusRequest {
+-    pub task_id: String,
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl CloudStatusRequest {
+-    pub fn new(task_id: impl Into<String>) -> Self {
+-        Self {
+-            task_id: task_id.into(),
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-/// Request for `codex cloud exec`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct CloudExecRequest {
+-    pub env_id: String,
+-    pub query: Option<String>,
+-    pub attempts: Option<u32>,
+-    pub branch: Option<String>,
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl CloudExecRequest {
+-    pub fn new(env_id: impl Into<String>) -> Self {
+-        Self {
+-            env_id: env_id.into(),
+-            query: None,
+-            attempts: None,
+-            branch: None,
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn query(mut self, query: impl Into<String>) -> Self {
+-        let query = query.into();
+-        self.query = (!query.trim().is_empty()).then_some(query);
+-        self
+-    }
+-
+-    pub fn attempts(mut self, attempts: u32) -> Self {
+-        self.attempts = Some(attempts);
+-        self
+-    }
+-
+-    pub fn branch(mut self, branch: impl Into<String>) -> Self {
+-        let branch = branch.into();
+-        self.branch = (!branch.trim().is_empty()).then_some(branch);
+-        self
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-/// Request for `codex mcp` (overview/help).
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct McpOverviewRequest {
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl McpOverviewRequest {
+-    pub fn new() -> Self {
+-        Self {
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-impl Default for McpOverviewRequest {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-/// Request for `codex mcp list`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct McpListRequest {
+-    pub json: bool,
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl McpListRequest {
+-    pub fn new() -> Self {
+-        Self {
+-            json: false,
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn json(mut self, enable: bool) -> Self {
+-        self.json = enable;
+-        self
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-impl Default for McpListRequest {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-/// Output from `codex mcp list`.
+-#[derive(Clone, Debug, PartialEq)]
+-pub struct McpListOutput {
+-    pub status: ExitStatus,
+-    pub stdout: String,
+-    pub stderr: String,
+-    pub json: Option<Value>,
+-}
+-
+-/// Request for `codex mcp get <NAME>`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct McpGetRequest {
+-    pub name: String,
+-    pub json: bool,
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl McpGetRequest {
+-    pub fn new(name: impl Into<String>) -> Self {
+-        Self {
+-            name: name.into(),
+-            json: false,
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn json(mut self, enable: bool) -> Self {
+-        self.json = enable;
+-        self
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-/// Transport for `codex mcp add`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub enum McpAddTransport {
+-    Stdio {
+-        env: Vec<(String, String)>,
+-        command: Vec<OsString>,
+-    },
+-    StreamableHttp {
+-        url: String,
+-        bearer_token_env_var: Option<String>,
+-    },
+-}
+-
+-/// Request for `codex mcp add`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct McpAddRequest {
+-    pub name: String,
+-    pub transport: McpAddTransport,
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl McpAddRequest {
+-    pub fn stdio(name: impl Into<String>, command: Vec<OsString>) -> Self {
+-        Self {
+-            name: name.into(),
+-            transport: McpAddTransport::Stdio {
+-                env: Vec::new(),
+-                command,
+-            },
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn streamable_http(name: impl Into<String>, url: impl Into<String>) -> Self {
+-        Self {
+-            name: name.into(),
+-            transport: McpAddTransport::StreamableHttp {
+-                url: url.into(),
+-                bearer_token_env_var: None,
+-            },
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+-        if let McpAddTransport::Stdio { env, .. } = &mut self.transport {
+-            env.push((key.into(), value.into()));
+-        }
+-        self
+-    }
+-
+-    pub fn bearer_token_env_var(mut self, env_var: impl Into<String>) -> Self {
+-        if let McpAddTransport::StreamableHttp {
+-            bearer_token_env_var,
+-            ..
+-        } = &mut self.transport
+-        {
+-            let env_var = env_var.into();
+-            *bearer_token_env_var = (!env_var.trim().is_empty()).then_some(env_var);
+-        }
+-        self
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-/// Request for `codex mcp remove <NAME>`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct McpRemoveRequest {
+-    pub name: String,
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl McpRemoveRequest {
+-    pub fn new(name: impl Into<String>) -> Self {
+-        Self {
+-            name: name.into(),
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-/// Request for `codex mcp logout <NAME>`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct McpLogoutRequest {
+-    pub name: String,
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl McpLogoutRequest {
+-    pub fn new(name: impl Into<String>) -> Self {
+-        Self {
+-            name: name.into(),
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-/// Request for `codex mcp login <NAME>` (OAuth).
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct McpOauthLoginRequest {
+-    pub name: String,
+-    pub scopes: Vec<String>,
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl McpOauthLoginRequest {
+-    pub fn new(name: impl Into<String>) -> Self {
+-        Self {
+-            name: name.into(),
+-            scopes: Vec::new(),
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn scopes<I, S>(mut self, scopes: I) -> Self
+-    where
+-        I: IntoIterator<Item = S>,
+-        S: Into<String>,
+-    {
+-        self.scopes.extend(
+-            scopes
+-                .into_iter()
+-                .map(|s| s.into())
+-                .filter(|s| !s.trim().is_empty()),
+-        );
+-        self
+-    }
+-
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-}
+-
+-/// Target for app-server code generation.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub enum AppServerCodegenTarget {
+-    /// Emits TypeScript bindings for the app-server protocol. Optionally formats the output with Prettier.
+-    TypeScript { prettier: Option<PathBuf> },
+-    /// Emits a JSON schema bundle for the app-server protocol.
+-    JsonSchema,
+-}
+-
+-impl AppServerCodegenTarget {
+-    fn subcommand(&self) -> &'static str {
+-        match self {
+-            AppServerCodegenTarget::TypeScript { .. } => "generate-ts",
+-            AppServerCodegenTarget::JsonSchema => "generate-json-schema",
+-        }
+-    }
+-
+-    fn prettier(&self) -> Option<&PathBuf> {
+-        match self {
+-            AppServerCodegenTarget::TypeScript { prettier } => prettier.as_ref(),
+-            AppServerCodegenTarget::JsonSchema => None,
+-        }
+-    }
+-}
+-
+-/// Request for `codex app-server generate-ts` or `generate-json-schema`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct AppServerCodegenRequest {
+-    /// Codegen target and optional Prettier path (TypeScript only).
+-    pub target: AppServerCodegenTarget,
+-    /// Output directory passed to `--out`; created if missing.
+-    pub out_dir: PathBuf,
+-    /// Per-call CLI overrides layered on top of the builder.
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl AppServerCodegenRequest {
+-    /// Generates TypeScript bindings into `out_dir`.
+-    pub fn typescript(out_dir: impl Into<PathBuf>) -> Self {
+-        Self {
+-            target: AppServerCodegenTarget::TypeScript { prettier: None },
+-            out_dir: out_dir.into(),
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    /// Generates a JSON schema bundle into `out_dir`.
+-    pub fn json_schema(out_dir: impl Into<PathBuf>) -> Self {
+-        Self {
+-            target: AppServerCodegenTarget::JsonSchema,
+-            out_dir: out_dir.into(),
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    /// Formats TypeScript output with the provided Prettier executable (no-op for JSON schema).
+-    pub fn prettier(mut self, prettier: impl Into<PathBuf>) -> Self {
+-        if let AppServerCodegenTarget::TypeScript { prettier: slot } = &mut self.target {
+-            *slot = Some(prettier.into());
+-        }
+-        self
+-    }
+-
+-    /// Replaces the default CLI overrides for this request.
+-    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+-        self.overrides = overrides;
+-        self
+-    }
+-
+-    /// Adds a `--config key=value` override for this request.
+-    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+-        self.overrides
+-            .config_overrides
+-            .push(ConfigOverride::new(key, value));
+-        self
+-    }
+-
+-    /// Adds a raw `--config key=value` override without validation.
+-    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+-        self.overrides
+-            .config_overrides
+-            .push(ConfigOverride::from_raw(raw));
+-        self
+-    }
+-
+-    /// Sets the config profile (`--profile`) for this request.
+-    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+-        let profile = profile.into();
+-        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+-        self
+-    }
+-
+-    /// Requests the CLI `--oss` flag for this codegen call.
+-    pub fn oss(mut self, enable: bool) -> Self {
+-        self.overrides.oss = if enable {
+-            FlagState::Enable
+-        } else {
+-            FlagState::Disable
+-        };
+-        self
+-    }
+-
+-    /// Adds a `--enable <feature>` toggle for this codegen call.
+-    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+-        self.overrides.feature_toggles.enable.push(name.into());
+-        self
+-    }
+-
+-    /// Adds a `--disable <feature>` toggle for this codegen call.
+-    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+-        self.overrides.feature_toggles.disable.push(name.into());
+-        self
+-    }
+-
+-    /// Controls whether `--search` is passed through to Codex.
+-    pub fn search(mut self, enable: bool) -> Self {
+-        self.overrides.search = if enable {
+-            FlagState::Enable
+-        } else {
+-            FlagState::Disable
+-        };
+-        self
+-    }
+-}
+-
+-/// Captured output from app-server codegen commands.
+-#[derive(Clone, Debug)]
+-pub struct AppServerCodegenOutput {
+-    /// Exit status returned by the subcommand.
+-    pub status: ExitStatus,
+-    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
+-    pub stdout: String,
+-    /// Captured stderr (mirrored unless `quiet` is set).
+-    pub stderr: String,
+-    /// Output directory passed to `--out`.
+-    pub out_dir: PathBuf,
+-}
+-
+ /// Ergonomic container for the streaming surface; produced by `stream_exec` (implemented in D2).
+ ///
+ /// `events` yields parsed [`ThreadEvent`] values as soon as each JSONL line arrives from the CLI.

@@ -1,0 +1,14 @@
+total 304
+drwxr-xr-x  6 dev dev   4096 Feb  5 09:11 .
+drwxr-x--- 59 dev dev   4096 Feb  5 07:18 ..
+-rw-r--r--  1 dev dev    466 Feb  4 07:44 .crates.toml
+-rw-r--r--  1 dev dev   2270 Feb  4 07:44 .crates2.json
+-rw-r--r--  1 dev dev 270336 Feb  5 09:11 .global-cache
+-rw-r--r--  1 dev dev      0 Oct 17 11:31 .package-cache
+-rw-r--r--  1 dev dev      0 Oct 17 11:32 .package-cache-mutate
+drwxr-xr-x  7 dev dev   4096 Feb  4 07:45 advisory-db
+-rw-r--r--  1 dev dev      0 Feb  4 07:45 advisory-db..lock
+drwxr-xr-x  3 dev dev   4096 Feb  4 07:45 advisory-dbs
+drwxr-xr-x  2 dev dev   4096 Feb  4 07:44 bin
+-rw-r--r--  1 dev dev    300 Apr 18  2025 env
+drwxr-xr-x  5 dev dev   4096 Oct 17 11:31 registry

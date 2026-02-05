@@ -1,0 +1,266 @@
+  2810	        self.overrides.search = if enable {
+  2811	            FlagState::Enable
+  2812	        } else {
+  2813	            FlagState::Disable
+  2814	        };
+  2815	        self
+  2816	    }
+  2817	}
+  2818	
+  2819	/// Sandbox platform variant; maps to platform subcommands of `codex sandbox`.
+  2820	#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+  2821	pub enum SandboxPlatform {
+  2822	    Macos,
+  2823	    Linux,
+  2824	    Windows,
+  2825	}
+  2826	
+  2827	impl SandboxPlatform {
+  2828	    fn subcommand(self) -> &'static str {
+  2829	        match self {
+  2830	            SandboxPlatform::Macos => "macos",
+  2831	            SandboxPlatform::Linux => "linux",
+  2832	            SandboxPlatform::Windows => "windows",
+  2833	        }
+  2834	    }
+  2835	}
+  2836	
+  2837	/// Request to run an arbitrary command inside a Codex-provided sandbox.
+  2838	#[derive(Clone, Debug, Eq, PartialEq)]
+  2839	pub struct SandboxCommandRequest {
+  2840	    /// Target platform subcommand; maps to `macos` (alias `seatbelt`), `linux` (alias `landlock`), or `windows`.
+  2841	    pub platform: SandboxPlatform,
+  2842	    /// Trailing command arguments to execute. Must be non-empty to avoid the upstream CLI panic.
+  2843	    pub command: Vec<OsString>,
+  2844	    /// Request the workspace-write sandbox preset (`--full-auto`).
+  2845	    pub full_auto: bool,
+  2846	    /// Stream macOS sandbox denials after the child process exits (no-op on other platforms).
+  2847	    pub log_denials: bool,
+  2848	    /// Additional `--config key=value` overrides to pass through.
+  2849	    pub config_overrides: Vec<ConfigOverride>,
+  2850	    /// Feature toggles forwarded to `--enable`/`--disable`.
+  2851	    pub feature_toggles: FeatureToggles,
+  2852	    /// Working directory for the spawned command; falls back to the builder value, then the current process directory.
+  2853	    pub working_dir: Option<PathBuf>,
+  2854	}
+  2855	
+  2856	impl SandboxCommandRequest {
+  2857	    pub fn new<I, S>(platform: SandboxPlatform, command: I) -> Self
+  2858	    where
+  2859	        I: IntoIterator<Item = S>,
+  2860	        S: Into<OsString>,
+  2861	    {
+  2862	        Self {
+  2863	            platform,
+  2864	            command: command.into_iter().map(Into::into).collect(),
+  2865	            full_auto: false,
+  2866	            log_denials: false,
+  2867	            config_overrides: Vec::new(),
+  2868	            feature_toggles: FeatureToggles::default(),
+  2869	            working_dir: None,
+  2870	        }
+  2871	    }
+  2872	
+  2873	    pub fn full_auto(mut self, enable: bool) -> Self {
+  2874	        self.full_auto = enable;
+  2875	        self
+  2876	    }
+  2877	
+  2878	    pub fn log_denials(mut self, enable: bool) -> Self {
+  2879	        self.log_denials = enable;
+  2880	        self
+  2881	    }
+  2882	
+  2883	    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+  2884	        self.config_overrides.push(ConfigOverride::new(key, value));
+  2885	        self
+  2886	    }
+  2887	
+  2888	    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+  2889	        self.config_overrides.push(ConfigOverride::from_raw(raw));
+  2890	        self
+  2891	    }
+  2892	
+  2893	    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+  2894	        self.feature_toggles.enable.push(name.into());
+  2895	        self
+  2896	    }
+  2897	
+  2898	    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+  2899	        self.feature_toggles.disable.push(name.into());
+  2900	        self
+  2901	    }
+  2902	
+  2903	    pub fn working_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+  2904	        self.working_dir = Some(dir.into());
+  2905	        self
+  2906	    }
+  2907	}
+  2908	
+  2909	/// Captured output from `codex sandbox <platform>`.
+  2910	#[derive(Clone, Debug)]
+  2911	pub struct SandboxRun {
+  2912	    /// Exit status returned by the inner command (mirrors the sandbox helper).
+  2913	    pub status: ExitStatus,
+  2914	    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
+  2915	    pub stdout: String,
+  2916	    /// Captured stderr (mirrored unless `quiet` is set).
+  2917	    pub stderr: String,
+  2918	}
+  2919	
+  2920	/// Request for `codex responses-api-proxy`.
+  2921	#[derive(Clone, Debug, Eq, PartialEq)]
+  2922	pub struct ResponsesApiProxyRequest {
+  2923	    /// API key to write to stdin on startup.
+  2924	    pub api_key: String,
+  2925	    /// Optional port to bind; falls back to an OS-assigned ephemeral port when omitted.
+  2926	    pub port: Option<u16>,
+  2927	    /// Optional path passed to `--server-info` for `{port,pid}` JSON output.
+  2928	    pub server_info_path: Option<PathBuf>,
+  2929	    /// Enables the HTTP shutdown endpoint (`GET /shutdown`).
+  2930	    pub http_shutdown: bool,
+  2931	    /// Optional upstream URL passed to `--upstream-url` (defaults to `https://api.openai.com/v1/responses`).
+  2932	    pub upstream_url: Option<String>,
+  2933	}
+  2934	
+  2935	impl ResponsesApiProxyRequest {
+  2936	    /// Creates a request with the API key provided via stdin.
+  2937	    pub fn new(api_key: impl Into<String>) -> Self {
+  2938	        Self {
+  2939	            api_key: api_key.into(),
+  2940	            port: None,
+  2941	            server_info_path: None,
+  2942	            http_shutdown: false,
+  2943	            upstream_url: None,
+  2944	        }
+  2945	    }
+  2946	
+  2947	    /// Sets the listening port (`--port`).
+  2948	    pub fn port(mut self, port: u16) -> Self {
+  2949	        self.port = Some(port);
+  2950	        self
+  2951	    }
+  2952	
+  2953	    /// Writes `{port,pid}` JSON to the provided path via `--server-info`.
+  2954	    pub fn server_info(mut self, path: impl Into<PathBuf>) -> Self {
+  2955	        self.server_info_path = Some(path.into());
+  2956	        self
+  2957	    }
+  2958	
+  2959	    /// Enables the `--http-shutdown` flag (GET /shutdown).
+  2960	    pub fn http_shutdown(mut self, enable: bool) -> Self {
+  2961	        self.http_shutdown = enable;
+  2962	        self
+  2963	    }
+  2964	
+  2965	    /// Overrides the upstream responses endpoint URL.
+  2966	    pub fn upstream_url(mut self, url: impl Into<String>) -> Self {
+  2967	        let url = url.into();
+  2968	        self.upstream_url = (!url.trim().is_empty()).then_some(url);
+  2969	        self
+  2970	    }
+  2971	}
+  2972	
+  2973	/// Running responses proxy process and metadata.
+  2974	#[derive(Debug)]
+  2975	pub struct ResponsesApiProxyHandle {
+  2976	    /// Spawned `codex responses-api-proxy` child (inherits kill-on-drop).
+  2977	    pub child: tokio::process::Child,
+  2978	    /// Optional `--server-info` path that may contain `{port,pid}` JSON.
+  2979	    pub server_info_path: Option<PathBuf>,
+  2980	}
+  2981	
+  2982	impl ResponsesApiProxyHandle {
+  2983	    /// Reads and parses the `{port,pid}` JSON written by `--server-info`.
+  2984	    ///
+  2985	    /// Returns `Ok(None)` when no server info path was configured.
+  2986	    pub async fn read_server_info(&self) -> Result<Option<ResponsesApiProxyInfo>, CodexError> {
+  2987	        let Some(path) = &self.server_info_path else {
+  2988	            return Ok(None);
+  2989	        };
+  2990	
+  2991	        const MAX_ATTEMPTS: usize = 10;
+  2992	        const BACKOFF_MS: u64 = 25;
+  2993	
+  2994	        for attempt in 0..MAX_ATTEMPTS {
+  2995	            match fs::read_to_string(path).await {
+  2996	                Ok(contents) => match serde_json::from_str::<ResponsesApiProxyInfo>(&contents) {
+  2997	                    Ok(info) => return Ok(Some(info)),
+  2998	                    Err(source) => {
+  2999	                        if attempt + 1 == MAX_ATTEMPTS {
+  3000	                            return Err(CodexError::ResponsesApiProxyInfoParse {
+  3001	                                path: path.clone(),
+  3002	                                source,
+  3003	                            });
+  3004	                        }
+  3005	                    }
+  3006	                },
+  3007	                Err(source) => {
+  3008	                    let is_missing = source.kind() == std::io::ErrorKind::NotFound;
+  3009	                    if !is_missing || attempt + 1 == MAX_ATTEMPTS {
+  3010	                        return Err(CodexError::ResponsesApiProxyInfoRead {
+  3011	                            path: path.clone(),
+  3012	                            source,
+  3013	                        });
+  3014	                    }
+  3015	                }
+  3016	            }
+  3017	
+  3018	            tokio::time::sleep(std::time::Duration::from_millis(BACKOFF_MS)).await;
+  3019	        }
+  3020	
+  3021	        unreachable!("read_server_info loop must return by MAX_ATTEMPTS")
+  3022	    }
+  3023	}
+  3024	
+  3025	/// Parsed `{port,pid}` emitted by `codex responses-api-proxy --server-info`.
+  3026	#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+  3027	pub struct ResponsesApiProxyInfo {
+  3028	    pub port: u16,
+  3029	    pub pid: u32,
+  3030	    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+  3031	    pub extra: BTreeMap<String, Value>,
+  3032	}
+  3033	
+  3034	/// Request for `codex stdio-to-uds <SOCKET_PATH>`.
+  3035	#[derive(Clone, Debug, Eq, PartialEq)]
+  3036	pub struct StdioToUdsRequest {
+  3037	    /// Path to the Unix domain socket to connect to.
+  3038	    pub socket_path: PathBuf,
+  3039	    /// Optional working directory override for the spawned process.
+  3040	    pub working_dir: Option<PathBuf>,
+  3041	}
+  3042	
+  3043	impl StdioToUdsRequest {
+  3044	    pub fn new(socket_path: impl Into<PathBuf>) -> Self {
+  3045	        Self {
+  3046	            socket_path: socket_path.into(),
+  3047	            working_dir: None,
+  3048	        }
+  3049	    }
+  3050	
+  3051	    /// Sets the working directory used to resolve the socket path.
+  3052	    pub fn working_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+  3053	        self.working_dir = Some(dir.into());
+  3054	        self
+  3055	    }
+  3056	}
+  3057	
+  3058	/// Stage labels reported by `codex features list`.
+  3059	#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+  3060	#[serde(from = "String", into = "String")]
+  3061	pub enum CodexFeatureStage {
+  3062	    Experimental,
+  3063	    Beta,
+  3064	    Stable,
+  3065	    Deprecated,
+  3066	    Removed,
+  3067	    Unknown(String),
+  3068	}
+  3069	
+  3070	impl CodexFeatureStage {
+  3071	    fn parse(raw: &str) -> Self {
+  3072	        let normalized = raw.trim();
+  3073	        match normalized.to_ascii_lowercase().as_str() {
+  3074	            "experimental" => CodexFeatureStage::Experimental,
+  3075	            "beta" => CodexFeatureStage::Beta,

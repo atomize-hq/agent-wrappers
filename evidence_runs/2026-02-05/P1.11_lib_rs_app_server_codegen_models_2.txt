@@ -1,0 +1,81 @@
+  4095	
+  4096	    /// Adds a `--enable <feature>` toggle for this codegen call.
+  4097	    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+  4098	        self.overrides.feature_toggles.enable.push(name.into());
+  4099	        self
+  4100	    }
+  4101	
+  4102	    /// Adds a `--disable <feature>` toggle for this codegen call.
+  4103	    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+  4104	        self.overrides.feature_toggles.disable.push(name.into());
+  4105	        self
+  4106	    }
+  4107	
+  4108	    /// Controls whether `--search` is passed through to Codex.
+  4109	    pub fn search(mut self, enable: bool) -> Self {
+  4110	        self.overrides.search = if enable {
+  4111	            FlagState::Enable
+  4112	        } else {
+  4113	            FlagState::Disable
+  4114	        };
+  4115	        self
+  4116	    }
+  4117	}
+  4118	
+  4119	/// Captured output from app-server codegen commands.
+  4120	#[derive(Clone, Debug)]
+  4121	pub struct AppServerCodegenOutput {
+  4122	    /// Exit status returned by the subcommand.
+  4123	    pub status: ExitStatus,
+  4124	    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
+  4125	    pub stdout: String,
+  4126	    /// Captured stderr (mirrored unless `quiet` is set).
+  4127	    pub stderr: String,
+  4128	    /// Output directory passed to `--out`.
+  4129	    pub out_dir: PathBuf,
+  4130	}
+  4131	
+  4132	/// Ergonomic container for the streaming surface; produced by `stream_exec` (implemented in D2).
+  4133	///
+  4134	/// `events` yields parsed [`ThreadEvent`] values as soon as each JSONL line arrives from the CLI.
+  4135	/// `completion` resolves once the Codex process exits and is the place to surface `--output-last-message`
+  4136	/// and `--output-schema` paths after streaming finishes.
+  4137	pub struct ExecStream {
+  4138	    pub events: DynThreadEventStream,
+  4139	    pub completion: DynExecCompletion,
+  4140	}
+  4141	
+  4142	/// Type-erased stream of events from the Codex CLI.
+  4143	pub type DynThreadEventStream =
+  4144	    Pin<Box<dyn Stream<Item = Result<ThreadEvent, ExecStreamError>> + Send>>;
+  4145	
+  4146	/// Type-erased completion future that resolves when streaming stops.
+  4147	pub type DynExecCompletion =
+  4148	    Pin<Box<dyn Future<Output = Result<ExecCompletion, ExecStreamError>> + Send>>;
+  4149	
+  4150	/// Summary returned when the codex child process exits.
+  4151	#[derive(Clone, Debug)]
+  4152	pub struct ExecCompletion {
+  4153	    pub status: ExitStatus,
+  4154	    /// Path that codex wrote when `--output-last-message` was enabled. The wrapper may eagerly
+  4155	    /// read the file and populate `last_message` when feasible.
+  4156	    pub last_message_path: Option<PathBuf>,
+  4157	    pub last_message: Option<String>,
+  4158	    /// Path to the JSON schema requested via `--output-schema`, if provided by the caller.
+  4159	    pub schema_path: Option<PathBuf>,
+  4160	}
+  4161	
+  4162	/// Errors that may occur while consuming the JSONL stream.
+  4163	#[derive(Debug, Error)]
+  4164	pub enum ExecStreamError {
+  4165	    #[error(transparent)]
+  4166	    Codex(#[from] CodexError),
+  4167	    #[error("failed to parse codex JSONL event: {source}: `{line}`")]
+  4168	    Parse {
+  4169	        line: String,
+  4170	        #[source]
+  4171	        source: serde_json::Error,
+  4172	    },
+  4173	    #[error("codex JSONL event missing required context: {message}: `{line}`")]
+  4174	    Normalize { line: String, message: String },
+  4175	    #[error("codex JSON stream idle for {idle_for:?}")]

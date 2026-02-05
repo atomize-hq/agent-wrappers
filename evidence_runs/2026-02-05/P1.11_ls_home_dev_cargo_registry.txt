@@ -1,0 +1,7 @@
+total 24
+drwxr-xr-x 5 dev dev 4096 Oct 17 11:31 .
+drwxr-xr-x 6 dev dev 4096 Feb  5 09:11 ..
+-rw-r--r-- 1 dev dev  177 Oct 17 11:31 CACHEDIR.TAG
+drwxr-xr-x 3 dev dev 4096 Oct 17 11:31 cache
+drwxr-xr-x 3 dev dev 4096 Oct 17 11:31 index
+drwxr-xr-x 3 dev dev 4096 Oct 17 11:31 src

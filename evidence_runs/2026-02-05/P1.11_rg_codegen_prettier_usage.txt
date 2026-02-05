@@ -1,0 +1,1 @@
+1046:        if let Some(prettier) = target.prettier() {
