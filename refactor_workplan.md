@@ -1838,7 +1838,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P1.14_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P1.14_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - 4cd39c37e99ce1db642e43f1a38897c784b9d701
 
 ### 2026-02-05 — P1.15 Seam extraction: exec streaming + resume types + helpers (`exec/*`) (API preserved)
 
@@ -1859,7 +1859,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P1.15_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P1.15_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - 6672185270d9d2e57d63fc30aa339b70295f6b41
 
 ### 2026-02-05 — P1.16 Seam extraction: auth/login helpers (`auth.rs`) (API preserved)
 
@@ -1879,7 +1879,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P1.16_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P1.16_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - f0dc296e9ef05ab1a9ccec061f98798d5a4b228f
 
 ### 2026-02-05 — P1.17 Seam extraction: remaining client subcommand wrappers (`commands/*`) (API preserved)
 
@@ -1900,7 +1900,7 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P1.17_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P1.17_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - TBD_POST_COMMIT
+  - b424abaab517aa41f7d9b178c898676fb00e2d36
 
 ### 2026-02-05 — P1.18 Plan next Phase 1 seams after P1.17 (no code moves)
 
@@ -1919,7 +1919,7 @@ Add entries as work lands. Format:
   - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.18_cargo_deny_licenses.txt`)
   - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.18_cargo_fmt_check_final.txt`)
 - Commit:
-  - TBD_POST_COMMIT
+  - c310cfda06ce336410e6c99728c7c983c1f561b5
 
 ## 9) Open Questions / Decisions (lightweight log)
 
