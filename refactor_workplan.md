@@ -998,6 +998,105 @@ Last Updated: 2026-02-05
 
 ---
 
+### Workstream D — Test Suite Modularization + Remaining File-Size Violations
+
+#### Phase 4 — Modularize oversized test suites and close remaining size-policy gaps
+
+Phase Status: [x] Not Started  [ ] In Progress  [ ] Done  
+Last Updated: 2026-02-05  
+Reason: Phases 1/2/3 are closed; the latest size evidence (`evidence_runs/2026-02-05/P1.23_tokei_crates.json`, `evidence_runs/2026-02-05/P1.23_rust_files_sorted_by_code.txt`) still shows one >ceiling offender and several >hard test/report files.
+
+##### P4.0 — Reduce crates/codex/src/tests.rs below ceiling (tests modularization)
+
+Status: [x] Not Started  [ ] In Progress  [ ] Done  
+Last Updated: 2026-02-05
+
+- Goal: Reduce `crates/codex/src/tests.rs` from 3,178 LOC to `<= 1000` LOC while preserving test behavior.
+- Suggested approach:
+  - Convert `crates/codex/src/tests.rs` into `crates/codex/src/tests/mod.rs`.
+  - Split tests into domain-focused submodules under `crates/codex/src/tests/` (for example: auth, commands, jsonl, process, mcp-related helpers as applicable).
+- Expected files touched:
+  - `crates/codex/src/tests.rs` (delete/replace with module-tree entrypoint)
+  - `crates/codex/src/tests/mod.rs` (new)
+  - `crates/codex/src/tests/*.rs` (new domain submodules)
+  - `crates/codex/src/lib.rs` (only if test-module wiring requires it)
+- Acceptance criteria (“done when”):
+  - All §4.1 gates pass.
+  - `crates/codex/src/tests.rs` no longer exists as a monolith; `crates/codex/src/tests/mod.rs` + submodules compile and tests pass.
+  - No public API changes.
+  - Evidence is written to `evidence_runs/YYYY-MM-DD/` (validation outputs + updated size artifacts).
+- Risk: Medium–High (large test-file move can introduce import/path churn).
+- Rollback: Revert module split and restore original `crates/codex/src/tests.rs`.
+
+##### P4.1 — Reduce `crates/codex/src/mcp/tests_core.rs` below hard threshold (test modularization)
+
+Status: [x] Not Started  [ ] In Progress  [ ] Done  
+Last Updated: 2026-02-05
+
+- Goal: Reduce `crates/codex/src/mcp/tests_core.rs` from 870 LOC to `<= 600` LOC by extracting cohesive test domains into submodules.
+- Expected files touched:
+  - `crates/codex/src/mcp/tests_core.rs`
+  - `crates/codex/src/mcp/tests_core/` (new submodules as needed)
+- Acceptance criteria (“done when”):
+  - All §4.1 gates pass.
+  - `crates/codex/src/mcp/tests_core.rs` is `<= 600` LOC (or a §9 exception is explicitly recorded with a follow-up step).
+  - Behavior preserved (test expectations unchanged aside from mechanical reorganization).
+  - Evidence is written to `evidence_runs/YYYY-MM-DD/`.
+- Risk: Medium (test fixture/import churn).
+- Rollback: Revert module split; restore original file content.
+
+##### P4.2 — Reduce `crates/codex/src/mcp/tests_runtime_app.rs` below hard threshold (test modularization)
+
+Status: [x] Not Started  [ ] In Progress  [ ] Done  
+Last Updated: 2026-02-05
+
+- Goal: Reduce `crates/codex/src/mcp/tests_runtime_app.rs` from 861 LOC to `<= 600` LOC by extracting runtime/app test domains into submodules.
+- Expected files touched:
+  - `crates/codex/src/mcp/tests_runtime_app.rs`
+  - `crates/codex/src/mcp/tests_runtime_app/` (new submodules as needed)
+- Acceptance criteria (“done when”):
+  - All §4.1 gates pass.
+  - `crates/codex/src/mcp/tests_runtime_app.rs` is `<= 600` LOC (or a §9 exception is explicitly recorded with a follow-up step).
+  - Behavior preserved (test expectations unchanged aside from mechanical reorganization).
+  - Evidence is written to `evidence_runs/YYYY-MM-DD/`.
+- Risk: Medium (test fixture/import churn).
+- Rollback: Revert module split; restore original file content.
+
+##### P4.3 — Reduce `crates/xtask/src/codex_report/report.rs` below hard threshold (domain split with deterministic output preserved)
+
+Status: [x] Not Started  [ ] In Progress  [ ] Done  
+Last Updated: 2026-02-05
+
+- Goal: Reduce `crates/xtask/src/codex_report/report.rs` from 922 LOC to `<= 600` LOC by extracting cohesive report domains while preserving deterministic outputs.
+- Expected files touched:
+  - `crates/xtask/src/codex_report/report.rs`
+  - `crates/xtask/src/codex_report/` (new/expanded domain modules)
+- Acceptance criteria (“done when”):
+  - All §4.1 gates pass.
+  - `crates/xtask/src/codex_report/report.rs` is `<= 600` LOC (or a §9 exception is explicitly recorded with a follow-up step).
+  - Output determinism preserved (existing xtask tests remain green; no golden/snapshot changes unless explicitly approved).
+  - Evidence is written to `evidence_runs/YYYY-MM-DD/`.
+- Risk: Medium (report ordering/formatting regressions if boundaries are wrong).
+- Rollback: Revert module split; restore original file content.
+
+##### P4.4 — Refresh size evidence after P4.0–P4.3 and update queue/phase status (no code moves)
+
+Status: [x] Not Started  [ ] In Progress  [ ] Done  
+Last Updated: 2026-02-05
+
+- Goal: Re-run size measurements after Phase 4 steps, then update §3.2/§10 and Phase 4 status based on evidence only.
+- Expected files touched:
+  - `refactor_workplan.md`
+  - `evidence_runs/YYYY-MM-DD/` (new tokei + sorted Rust LOC outputs and gate artifacts)
+- Acceptance criteria (“done when”):
+  - Measurement evidence is captured and cited via exact paths.
+  - §3.2 top offenders and §10 queue are updated to match latest evidence.
+  - Phase 4 status is updated only if evidence supports it.
+- Risk: Low.
+- Rollback: N/A (planning/measurement only).
+
+---
+
 ## 6) Dependency Triage (Supply Chain)
 
 ### 6.1 Advisory tracking table (fill as resolved)
@@ -2035,6 +2134,7 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
 | Legacy combined commit for multiple steps (P1.4/P2.5/P3.6) | 2026-02-05 | Accepted | These steps landed before the “one step = one commit” orchestrator rule was enforced | Commit `2d17281b8d09c7797cd555d4b2fd5951af75b328` contains P1.4 + P2.5 + P3.6 changes; journal entries cite it for provenance. Future steps must follow per-step commit policy. |
 | Execution evidence storage policy (`evidence_runs/YYYY-MM-DD/`); keep `audit_pack/execution/*` legacy | 2026-02-04 | Accepted | Provenance clarity: separate immutable audit snapshot (`audit_pack/`) from ongoing execution runs | Store new evidence under `evidence_runs/…` with stable filenames (§8.1). Do not move/delete existing `audit_pack/execution/…` evidence; continue citing it where already referenced. |
 | P1.5 size exception: `builder.rs` > 600 LOC | 2026-02-05 | Accepted | Keep builder/config/flags surfaces cohesive during seam extraction to avoid churn across call sites; follow-up split can happen once the façade boundaries stabilize | `crates/codex/src/builder.rs` is ~921 LOC (above §7.3 hard=600). Follow-up: split into `builder/overrides.rs` + `builder/types.rs` + `builder/mod.rs` once P1.6 lands, preserving re-exports. |
+| Builder size exception resolved / superseded | 2026-02-05 | Accepted | `builder` is now split into module files and no longer requires a single-file size exception | Supersedes “P1.5 size exception: `builder.rs` > 600 LOC”; current structure uses `crates/codex/src/builder/mod.rs`, `crates/codex/src/builder/types.rs`, and related module files. |
 
 ---
 
@@ -2042,8 +2142,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
 
 Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
 
-1) P1.20 — Seam extraction: core `CodexClient` command runner helpers into `client_core.rs` (API preserved)
-2) P1.21 — Seam extraction: `CodexError` and shared “defaults” helpers into dedicated modules (API preserved)
-3) P1.22 — Seam extraction: remaining `CodexClient` non-streaming wrapper methods into `commands/*` follow-ups (API preserved)
-4) P1.23 — Refresh Phase 1 size evidence and (if eligible) close Phase 1 (no code moves)
-5) P2.0 — Define the `mcp.rs` seam map (no code moves yet)
+1) `P4.0` — Reduce `crates/codex/src/tests.rs` below ceiling (tests modularization)
+2) `P4.1` — Reduce `crates/codex/src/mcp/tests_core.rs` below hard threshold
+3) `P4.2` — Reduce `crates/codex/src/mcp/tests_runtime_app.rs` below hard threshold
+4) `P4.3` — Reduce `crates/xtask/src/codex_report/report.rs` below hard threshold
+5) `P4.4` — Refresh size evidence and update queue/Phase 4 status
