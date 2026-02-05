@@ -1,0 +1,43 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_validate/versions.rs:119:
+                 &version_path,
+                 "VERSION_METADATA_SCHEMA_INVALID",
+             );
+[31m-            validate_version_metadata_validation_sets(ctx, violations, version, &value, &version_path);
+(B[m[32m+            validate_version_metadata_validation_sets(
+(B[m[32m+                ctx,
+(B[m[32m+                violations,
+(B[m[32m+                version,
+(B[m[32m+                &value,
+(B[m[32m+                &version_path,
+(B[m[32m+            );
+(B[m             version_metadata.insert(version.to_string(), value);
+         }
+         None => {
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_validate.rs:11:
+ use serde_json::{json, Value};
+ use thiserror::Error;
+ 
+[31m-mod models;
+(B[m mod current;
+ mod fix_mode;
+[31m-mod pointers;
+(B[m[32m+mod models;
+(B[m mod pointer_consistency;
+[32m+mod pointers;
+(B[m mod report_invariants;
+ mod schema;
+ mod versions;
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_validate.rs:234:
+     // 3) Per-version required files (+ schemas).
+     let mut version_metadata = BTreeMap::<String, Value>::new();
+     for version in &versions_to_validate {
+[31m-        versions::validate_version_bundle(&mut ctx, &mut violations, version, &mut version_metadata);
+(B[m[32m+        versions::validate_version_bundle(
+(B[m[32m+            &mut ctx,
+(B[m[32m+            &mut violations,
+(B[m[32m+            version,
+(B[m[32m+            &mut version_metadata,
+(B[m[32m+        );
+(B[m     }
+ 
+     // 4) current.json invariants.

@@ -1,0 +1,68 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 9dade27..edae91c 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -535,9 +535,9 @@ Last Updated: 2026-02-05
+ 
+ #### Phase 3 — Split xtask “rule engine” files by domain sections; keep determinism
+ 
+-Phase Status: [ ] Not Started  [x] In Progress  [ ] Done  
++Phase Status: [ ] Not Started  [ ] In Progress  [x] Done  
+ Last Updated: 2026-02-05  
+-Reason: `crates/xtask/src/codex_validate.rs` remains above the program ceiling per §3.2 (evidence: `audit_pack/execution/2026-02-04/post_refactor_tokei_files_sorted_updated.txt`).
++Reason: Phase 3 checklist complete; `crates/xtask/src/codex_validate.rs` is now below the ceiling (P3.9).
+ 
+ ##### P3.0 — Identify xtask domain boundaries and deterministic contracts
+ 
+@@ -682,8 +682,8 @@ Last Updated: 2026-02-04
+ 
+ ##### P3.9 — Reduce `codex_validate.rs` below ceiling (follow-on split) with deterministic output preserved
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Further reduce `crates/xtask/src/codex_validate.rs` below the program ceiling by extracting remaining cohesive validation orchestration/formatting/IO helpers into `crates/xtask/src/codex_validate/*` without changing outputs.
+ - Expected files touched:
+@@ -1316,6 +1316,26 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P3.9 codex_validate follow-on split (below ceiling; determinism preserved)
++
++- Scope/step: P3.9
++- Why: Bring `crates/xtask/src/codex_validate.rs` below the program ceiling per §3.2 while preserving deterministic validation output.
++- What changed:
++  - Split remaining validation orchestration helpers out of `crates/xtask/src/codex_validate.rs` into `crates/xtask/src/codex_validate/{fix_mode.rs,current.rs,versions.rs,pointer_consistency.rs}`.
++  - Kept ordering/formatting semantics unchanged; `crates/xtask/src/codex_validate.rs` is now ~533 LOC.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P3.9_cargo_fmt_check_final.txt`) (initial FAIL: `evidence_runs/2026-02-05/P3.9_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P3.9_cargo_fmt_apply.txt`; re-check: `evidence_runs/2026-02-05/P3.9_cargo_fmt_check_after.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P3.9_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P3.9_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P3.9_cargo_audit.txt`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P3.9_cargo_deny_advisories.txt`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P3.9_cargo_deny_licenses.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P3.9_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P3.9_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+@@ -1337,8 +1357,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ 
+ Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+ 
+-1) P3.9 — Reduce `codex_validate.rs` below ceiling (follow-on split) with deterministic output preserved
+-2) (TBD) Next Phase 1 seam extraction after P1.6
+-3) (TBD) Next Phase 2 follow-on after P2.7
+-4) (TBD) Next Phase 3 follow-on after P3.9
+-5) (TBD) Next cross-phase follow-on
++1) (TBD) Next Phase 1 seam extraction after P1.6
++2) (TBD) Next Phase 2 follow-on after P2.7
++3) (TBD) Next Phase 3 follow-on after P3.9
++4) (TBD) Next cross-phase follow-on
++5) (TBD) Next execution item
