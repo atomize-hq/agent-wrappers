@@ -1,3 +1,288 @@
+diff --git a/crates/codex/src/auth.rs b/crates/codex/src/auth.rs
+new file mode 100644
+index 0000000..1aa284c
+--- /dev/null
++++ b/crates/codex/src/auth.rs
+@@ -0,0 +1,279 @@
++use std::path::PathBuf;
++
++use tokio::process::Command;
++
++use crate::{
++    capabilities::{guard_is_supported, log_guard_skip},
++    process::{preferred_output_channel, spawn_with_retry},
++    CodexClient, CodexError,
++};
++
++/// Current authentication state reported by `codex login status`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub enum CodexAuthStatus {
++    /// The CLI reports an active session.
++    LoggedIn(CodexAuthMethod),
++    /// No credentials stored locally.
++    LoggedOut,
++}
++
++/// Authentication mechanism used to sign in.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub enum CodexAuthMethod {
++    ChatGpt,
++    ApiKey {
++        masked_key: Option<String>,
++    },
++    /// CLI reported a logged-in state but the auth method could not be parsed (e.g., new wording).
++    Unknown {
++        raw: String,
++    },
++}
++
++/// Result of invoking `codex logout`.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub enum CodexLogoutStatus {
++    LoggedOut,
++    AlreadyLoggedOut,
++}
++
++/// Helper for checking Codex auth state and triggering login flows with an app-scoped `CODEX_HOME`.
++///
++/// All commands run with per-process env overrides; the parent process env is never mutated.
++#[derive(Clone, Debug)]
++pub struct AuthSessionHelper {
++    client: CodexClient,
++}
++
++impl AuthSessionHelper {
++    /// Creates a helper that pins `CODEX_HOME` to `app_codex_home` for every login call.
++    pub fn new(app_codex_home: impl Into<PathBuf>) -> Self {
++        let client = CodexClient::builder()
++            .codex_home(app_codex_home)
++            .create_home_dirs(true)
++            .build();
++        Self { client }
++    }
++
++    /// Wraps an existing `CodexClient` (useful when you already configured the binary path).
++    pub fn with_client(client: CodexClient) -> Self {
++        Self { client }
++    }
++
++    /// Returns the underlying `CodexClient`.
++    pub fn client(&self) -> CodexClient {
++        self.client.clone()
++    }
++
++    /// Reports the current login status under the configured `CODEX_HOME`.
++    pub async fn status(&self) -> Result<CodexAuthStatus, CodexError> {
++        self.client.login_status().await
++    }
++
++    /// Logs in with an API key when logged out; otherwise returns the current status.
++    pub async fn ensure_api_key_login(
++        &self,
++        api_key: impl AsRef<str>,
++    ) -> Result<CodexAuthStatus, CodexError> {
++        match self.status().await? {
++            logged @ CodexAuthStatus::LoggedIn(_) => Ok(logged),
++            CodexAuthStatus::LoggedOut => self.client.login_with_api_key(api_key).await,
++        }
++    }
++
++    /// Starts the ChatGPT OAuth login flow when no credentials are present.
++    ///
++    /// Returns `Ok(None)` when already logged in; otherwise returns the spawned login child so the
++    /// caller can surface output/URLs. Dropping the child kills the login helper.
++    pub async fn ensure_chatgpt_login(&self) -> Result<Option<tokio::process::Child>, CodexError> {
++        match self.status().await? {
++            CodexAuthStatus::LoggedIn(_) => Ok(None),
++            CodexAuthStatus::LoggedOut => self.client.spawn_login_process().map(Some),
++        }
++    }
++
++    /// Directly spawns the ChatGPT login process.
++    pub fn spawn_chatgpt_login(&self) -> Result<tokio::process::Child, CodexError> {
++        self.client.spawn_login_process()
++    }
++
++    /// Directly logs in with an API key without checking prior state.
++    pub async fn login_with_api_key(
++        &self,
++        api_key: impl AsRef<str>,
++    ) -> Result<CodexAuthStatus, CodexError> {
++        self.client.login_with_api_key(api_key).await
++    }
++}
++
++impl CodexClient {
++    /// Spawns a `codex login` session using the default ChatGPT OAuth flow.
++    ///
++    /// The returned child inherits `kill_on_drop` so abandoning the handle cleans up the login helper.
++    pub fn spawn_login_process(&self) -> Result<tokio::process::Child, CodexError> {
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("login")
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true);
++
++        self.command_env.apply(&mut command)?;
++
++        spawn_with_retry(&mut command, self.command_env.binary_path())
++    }
++
++    /// Spawns a `codex login --device-auth` session.
++    ///
++    /// The returned child inherits `kill_on_drop` so abandoning the handle cleans up the login helper.
++    pub fn spawn_device_auth_login_process(&self) -> Result<tokio::process::Child, CodexError> {
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("login")
++            .arg("--device-auth")
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true);
++
++        self.command_env.apply(&mut command)?;
++
++        spawn_with_retry(&mut command, self.command_env.binary_path())
++    }
++
++    /// Spawns a `codex login --with-api-key` session (interactive API-key flow).
++    ///
++    /// The returned child inherits `kill_on_drop` so abandoning the handle cleans up the login helper.
++    pub fn spawn_with_api_key_login_process(&self) -> Result<tokio::process::Child, CodexError> {
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("login")
++            .arg("--with-api-key")
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true);
++
++        self.command_env.apply(&mut command)?;
++
++        spawn_with_retry(&mut command, self.command_env.binary_path())
++    }
++
++    /// Spawns `codex login --mcp` when the probed binary advertises support.
++    ///
++    /// Returns `Ok(None)` when the capability is unknown or unsupported so
++    /// callers can degrade gracefully without attempting the flag.
++    pub async fn spawn_mcp_login_process(
++        &self,
++    ) -> Result<Option<tokio::process::Child>, CodexError> {
++        let capabilities = self.probe_capabilities().await;
++        let guard = capabilities.guard_mcp_login();
++        if !guard_is_supported(&guard) {
++            log_guard_skip(&guard);
++            return Ok(None);
++        }
++
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("login")
++            .arg("--mcp")
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true);
++
++        self.command_env.apply(&mut command)?;
++
++        let child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
++
++        Ok(Some(child))
++    }
++
++    /// Logs in with a provided API key by invoking `codex login --api-key <key>`.
++    pub async fn login_with_api_key(
++        &self,
++        api_key: impl AsRef<str>,
++    ) -> Result<CodexAuthStatus, CodexError> {
++        let api_key = api_key.as_ref().trim();
++        if api_key.is_empty() {
++            return Err(CodexError::EmptyApiKey);
++        }
++
++        let output = self
++            .run_basic_command(["login", "--api-key", api_key])
++            .await?;
++        let combined = preferred_output_channel(&output);
++
++        if output.status.success() {
++            Ok(parse_login_success(&combined).unwrap_or_else(|| {
++                CodexAuthStatus::LoggedIn(CodexAuthMethod::Unknown {
++                    raw: combined.clone(),
++                })
++            }))
++        } else {
++            Err(CodexError::NonZeroExit {
++                status: output.status,
++                stderr: combined,
++            })
++        }
++    }
++
++    /// Returns the current Codex authentication state by invoking `codex login status`.
++    pub async fn login_status(&self) -> Result<CodexAuthStatus, CodexError> {
++        let output = self.run_basic_command(["login", "status"]).await?;
++        let combined = preferred_output_channel(&output);
++
++        if output.status.success() {
++            Ok(parse_login_success(&combined).unwrap_or_else(|| {
++                CodexAuthStatus::LoggedIn(CodexAuthMethod::Unknown {
++                    raw: combined.clone(),
++                })
++            }))
++        } else if combined.to_lowercase().contains("not logged in") {
++            Ok(CodexAuthStatus::LoggedOut)
++        } else {
++            Err(CodexError::NonZeroExit {
++                status: output.status,
++                stderr: combined,
++            })
++        }
++    }
++
++    /// Removes cached credentials via `codex logout`.
++    pub async fn logout(&self) -> Result<CodexLogoutStatus, CodexError> {
++        let output = self.run_basic_command(["logout"]).await?;
++        let combined = preferred_output_channel(&output);
++
++        if !output.status.success() {
++            return Err(CodexError::NonZeroExit {
++                status: output.status,
++                stderr: combined,
++            });
++        }
++
++        let normalized = combined.to_lowercase();
++        if normalized.contains("successfully logged out") {
++            Ok(CodexLogoutStatus::LoggedOut)
++        } else if normalized.contains("not logged in") {
++            Ok(CodexLogoutStatus::AlreadyLoggedOut)
++        } else {
++            Ok(CodexLogoutStatus::LoggedOut)
++        }
++    }
++}
++
++pub(crate) fn parse_login_success(output: &str) -> Option<CodexAuthStatus> {
++    let lower = output.to_lowercase();
++    if lower.contains("chatgpt") {
++        return Some(CodexAuthStatus::LoggedIn(CodexAuthMethod::ChatGpt));
++    }
++    if lower.contains("api key") || lower.contains("apikey") {
++        // Prefer everything after the first " - " so we do not chop the key itself.
++        let masked = output
++            .split_once(" - ")
++            .map(|(_, value)| value.trim().to_string())
++            .filter(|value| !value.is_empty())
++            .or_else(|| output.split_whitespace().last().map(|v| v.to_string()));
++        return Some(CodexAuthStatus::LoggedIn(CodexAuthMethod::ApiKey {
++            masked_key: masked,
++        }));
++    }
++    None
++}
 diff --git a/crates/codex/src/builder/cli_overrides.rs b/crates/codex/src/builder/cli_overrides.rs
 new file mode 100644
 index 0000000..f1604c6
@@ -4109,12 +4394,14 @@ index 0000000..bf520c0
 +    path
 +}
 diff --git a/crates/codex/src/lib.rs b/crates/codex/src/lib.rs
-index 08e80ed..66fee60 100644
+index 08e80ed..aba6d68 100644
 --- a/crates/codex/src/lib.rs
 +++ b/crates/codex/src/lib.rs
-@@ -69,10 +69,15 @@
+@@ -68,19 +68,51 @@
+ //! - Overrides + persistence: `capability_snapshot`, `capability_overrides`, `write_capabilities_snapshot`, `read_capabilities_snapshot`, and `capability_snapshot_matches_binary` let hosts reuse snapshots across processes and fall back to probes when fingerprints diverge.
  
  mod apply_diff;
++mod auth;
  mod builder;
 +mod bundled_binary;
 +mod cli;
@@ -4128,7 +4415,9 @@ index 08e80ed..66fee60 100644
  pub mod wrapper_coverage_manifest;
  
  pub use apply_diff::{ApplyDiffArtifacts, CloudApplyRequest, CloudDiffRequest};
-@@ -81,6 +86,31 @@ pub use builder::{
++pub use auth::{AuthSessionHelper, CodexAuthMethod, CodexAuthStatus, CodexLogoutStatus};
+ pub use builder::{
+     ApprovalPolicy, CliOverrides, CliOverridesPatch, CodexClientBuilder, ColorMode, ConfigOverride,
      FeatureToggles, FlagState, LocalProvider, ModelVerbosity, ReasoningEffort, ReasoningOverrides,
      ReasoningSummary, ReasoningSummaryFormat, SafetyOverride, SandboxMode,
  };
@@ -4160,7 +4449,7 @@ index 08e80ed..66fee60 100644
  pub use execpolicy::{
      ExecPolicyCheckRequest, ExecPolicyCheckResult, ExecPolicyDecision, ExecPolicyEvaluation,
      ExecPolicyMatch, ExecPolicyNoMatch, ExecPolicyRuleMatch,
-@@ -92,36 +122,27 @@ pub use jsonl::{
+@@ -92,36 +124,24 @@ pub use jsonl::{
  };
  
  use std::{
@@ -4185,10 +4474,7 @@ index 08e80ed..66fee60 100644
 -use serde_json::Value;
 -#[cfg(unix)]
 -use std::os::unix::fs::PermissionsExt;
-+use process::{
-+    command_output_text, preferred_output_channel, spawn_with_retry, tee_stream, CommandOutput,
-+    ConsoleTarget,
-+};
++use process::{command_output_text, spawn_with_retry, tee_stream, CommandOutput, ConsoleTarget};
  use tempfile::TempDir;
  use thiserror::Error;
 -use tokio::{
@@ -4207,7 +4493,7 @@ index 08e80ed..66fee60 100644
  
  const DEFAULT_TIMEOUT: Duration = Duration::from_secs(120);
  const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
-@@ -135,233 +156,20 @@ use builder::{
+@@ -135,233 +155,20 @@ use builder::{
      DEFAULT_REASONING_CONFIG_GPT5_1, DEFAULT_REASONING_CONFIG_GPT5_CODEX,
  };
  
@@ -4448,18 +4734,127 @@ index 08e80ed..66fee60 100644
  
  /// High-level client for interacting with `codex exec`.
  ///
-@@ -499,416 +307,6 @@ impl CodexClient {
+@@ -388,104 +195,6 @@ pub struct CodexClient {
+     capability_cache_policy: CapabilityCachePolicy,
+ }
+ 
+-/// Current authentication state reported by `codex login status`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub enum CodexAuthStatus {
+-    /// The CLI reports an active session.
+-    LoggedIn(CodexAuthMethod),
+-    /// No credentials stored locally.
+-    LoggedOut,
+-}
+-
+-/// Authentication mechanism used to sign in.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub enum CodexAuthMethod {
+-    ChatGpt,
+-    ApiKey {
+-        masked_key: Option<String>,
+-    },
+-    /// CLI reported a logged-in state but the auth method could not be parsed (e.g., new wording).
+-    Unknown {
+-        raw: String,
+-    },
+-}
+-
+-/// Result of invoking `codex logout`.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub enum CodexLogoutStatus {
+-    LoggedOut,
+-    AlreadyLoggedOut,
+-}
+-
+-/// Helper for checking Codex auth state and triggering login flows with an app-scoped `CODEX_HOME`.
+-///
+-/// All commands run with per-process env overrides; the parent process env is never mutated.
+-#[derive(Clone, Debug)]
+-pub struct AuthSessionHelper {
+-    client: CodexClient,
+-}
+-
+-impl AuthSessionHelper {
+-    /// Creates a helper that pins `CODEX_HOME` to `app_codex_home` for every login call.
+-    pub fn new(app_codex_home: impl Into<PathBuf>) -> Self {
+-        let client = CodexClient::builder()
+-            .codex_home(app_codex_home)
+-            .create_home_dirs(true)
+-            .build();
+-        Self { client }
+-    }
+-
+-    /// Wraps an existing `CodexClient` (useful when you already configured the binary path).
+-    pub fn with_client(client: CodexClient) -> Self {
+-        Self { client }
+-    }
+-
+-    /// Returns the underlying `CodexClient`.
+-    pub fn client(&self) -> CodexClient {
+-        self.client.clone()
+-    }
+-
+-    /// Reports the current login status under the configured `CODEX_HOME`.
+-    pub async fn status(&self) -> Result<CodexAuthStatus, CodexError> {
+-        self.client.login_status().await
+-    }
+-
+-    /// Logs in with an API key when logged out; otherwise returns the current status.
+-    pub async fn ensure_api_key_login(
+-        &self,
+-        api_key: impl AsRef<str>,
+-    ) -> Result<CodexAuthStatus, CodexError> {
+-        match self.status().await? {
+-            logged @ CodexAuthStatus::LoggedIn(_) => Ok(logged),
+-            CodexAuthStatus::LoggedOut => self.client.login_with_api_key(api_key).await,
+-        }
+-    }
+-
+-    /// Starts the ChatGPT OAuth login flow when no credentials are present.
+-    ///
+-    /// Returns `Ok(None)` when already logged in; otherwise returns the spawned login child so the
+-    /// caller can surface output/URLs. Dropping the child kills the login helper.
+-    pub async fn ensure_chatgpt_login(&self) -> Result<Option<tokio::process::Child>, CodexError> {
+-        match self.status().await? {
+-            CodexAuthStatus::LoggedIn(_) => Ok(None),
+-            CodexAuthStatus::LoggedOut => self.client.spawn_login_process().map(Some),
+-        }
+-    }
+-
+-    /// Directly spawns the ChatGPT login process.
+-    pub fn spawn_chatgpt_login(&self) -> Result<tokio::process::Child, CodexError> {
+-        self.client.spawn_login_process()
+-    }
+-
+-    /// Directly logs in with an API key without checking prior state.
+-    pub async fn login_with_api_key(
+-        &self,
+-        api_key: impl AsRef<str>,
+-    ) -> Result<CodexAuthStatus, CodexError> {
+-        self.client.login_with_api_key(api_key).await
+-    }
+-}
+-
+ impl CodexClient {
+     /// Returns a [`CodexClientBuilder`] preloaded with safe defaults.
+     pub fn builder() -> CodexClientBuilder {
+@@ -499,4911 +208,1588 @@ impl CodexClient {
          self.command_env.codex_home_layout()
      }
  
 -    /// Sends `prompt` to `codex exec` and returns its stdout (the final agent message) on success.
--    ///
++    /// Applies a Codex diff by invoking `codex apply <TASK_ID>`.
+     ///
 -    /// When `.json(true)` is enabled the CLI emits JSONL events (`thread.started` or
 -    /// `thread.resumed`, `turn.started`/`turn.completed`/`turn.failed`,
 -    /// `item.created`/`item.updated`, or `error`). The stream is mirrored to stdout unless
 -    /// `.mirror_stdout(false)`; the returned string contains the buffered lines for offline
 -    /// parsing. For per-event handling, see `crates/codex/examples/stream_events.rs`.
--    ///
++    /// Stdout mirrors to the console when `mirror_stdout` is enabled; stderr mirrors unless `quiet`
++    /// is set. Output and exit status are always captured and returned, and `RUST_LOG=error` is
++    /// injected for the child process when the environment variable is unset.
+     ///
 -    /// ```rust,no_run
 -    /// use codex::CodexClient;
 -    /// # #[tokio::main]
@@ -4472,40 +4867,87 @@ index 08e80ed..66fee60 100644
 -    pub async fn send_prompt(&self, prompt: impl AsRef<str>) -> Result<String, CodexError> {
 -        self.send_prompt_with(ExecRequest::new(prompt.as_ref()))
 -            .await
--    }
--
++    /// Convenience behavior: if `CODEX_TASK_ID` is set, it is appended as `<TASK_ID>`. When the
++    /// environment variable is missing, the subprocess is still spawned and will typically exit
++    /// non-zero with a "missing TASK_ID" error from the CLI.
++    pub async fn apply(&self) -> Result<ApplyDiffArtifacts, CodexError> {
++        let task_id = env::var_os("CODEX_TASK_ID")
++            .and_then(|v| normalize_non_empty(&v.to_string_lossy()).map(OsString::from));
++        self.apply_task_inner(task_id).await
+     }
+ 
 -    /// Sends an exec request with per-call CLI overrides.
 -    pub async fn send_prompt_with(&self, request: ExecRequest) -> Result<String, CodexError> {
 -        if request.prompt.trim().is_empty() {
 -            return Err(CodexError::EmptyPrompt);
--        }
++    /// Applies a Codex diff by task id via `codex apply <TASK_ID>`.
++    pub async fn apply_task(
++        &self,
++        task_id: impl AsRef<str>,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let task_id = task_id.as_ref().trim();
++        if task_id.is_empty() {
++            return Err(CodexError::EmptyTaskId);
+         }
 -
 -        self.invoke_codex_exec(request).await
--    }
--
++        self.apply_task_inner(Some(OsString::from(task_id))).await
+     }
+ 
 -    /// Streams structured JSONL events from `codex exec --json`.
--    ///
++    /// Shows a Codex Cloud task diff by invoking `codex cloud diff <TASK_ID>`.
++    ///
++    /// Mirrors stdout/stderr using the same `mirror_stdout`/`quiet` defaults as `apply`, but always
++    /// returns the captured output alongside the child exit status. Applies the same `RUST_LOG`
++    /// defaulting behavior when the variable is unset.
+     ///
 -    /// Respects `mirror_stdout` (raw JSON echoing) and tees raw lines to `json_event_log` when
 -    /// configured on the builder or request. Returns an [`ExecStream`] with both the parsed event
 -    /// stream and a completion future that reports `--output-last-message`/schema paths.
 -    pub async fn stream_exec(
--        &self,
++    /// Convenience behavior: if `CODEX_TASK_ID` is set, it is appended as `<TASK_ID>`. When the
++    /// environment variable is missing, the subprocess is still spawned and will typically exit
++    /// non-zero with a "missing TASK_ID" error from the CLI.
++    pub async fn diff(&self) -> Result<ApplyDiffArtifacts, CodexError> {
++        let task_id = env::var_os("CODEX_TASK_ID")
++            .and_then(|v| normalize_non_empty(&v.to_string_lossy()).map(OsString::from));
++        self.cloud_diff_task_inner(task_id).await
++    }
++
++    /// Shows a Codex Cloud task diff by task id via `codex cloud diff <TASK_ID>`.
++    pub async fn cloud_diff_task(
+         &self,
 -        request: ExecStreamRequest,
 -    ) -> Result<ExecStream, ExecStreamError> {
 -        self.stream_exec_with_overrides(request, CliOverridesPatch::default())
--            .await
--    }
--
++        task_id: impl AsRef<str>,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let task_id = task_id.as_ref().trim();
++        if task_id.is_empty() {
++            return Err(CodexError::EmptyTaskId);
++        }
++        self.cloud_diff_task_inner(Some(OsString::from(task_id)))
+             .await
+     }
+ 
 -    /// Streams JSONL events with per-request CLI overrides.
 -    pub async fn stream_exec_with_overrides(
--        &self,
++    async fn apply_task_inner(
+         &self,
 -        request: ExecStreamRequest,
 -        overrides: CliOverridesPatch,
 -    ) -> Result<ExecStream, ExecStreamError> {
 -        if request.prompt.trim().is_empty() {
 -            return Err(CodexError::EmptyPrompt.into());
--        }
--
++        task_id: Option<OsString>,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let mut args = vec![OsString::from("apply")];
++        if let Some(task_id) = task_id {
++            args.push(task_id);
+         }
++        self.capture_codex_command(args, false).await
++    }
+ 
 -        let ExecStreamRequest {
 -            prompt,
 -            idle_timeout,
@@ -4513,8 +4955,23 @@ index 08e80ed..66fee60 100644
 -            output_schema,
 -            json_event_log,
 -        } = request;
--
--        let dir_ctx = self.directory_context()?;
++    async fn cloud_diff_task_inner(
++        &self,
++        task_id: Option<OsString>,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let mut args = vec![OsString::from("cloud"), OsString::from("diff")];
++        if let Some(task_id) = task_id {
++            args.push(task_id);
++        }
++        self.capture_codex_command(args, false).await
++    }
+ 
++    async fn capture_codex_command(
++        &self,
++        args: Vec<OsString>,
++        include_search: bool,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
+         let dir_ctx = self.directory_context()?;
 -        let dir_path = dir_ctx.path().to_path_buf();
 -        let last_message_path =
 -            output_last_message.unwrap_or_else(|| unique_temp_path("codex_last_message_", "txt"));
@@ -4526,18 +4983,24 @@ index 08e80ed..66fee60 100644
 -        };
 -        let resolved_overrides =
 -            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
--
--        let mut command = Command::new(self.command_env.binary_path());
--        command
++        let resolved_overrides = resolve_cli_overrides(
++            &self.cli_overrides,
++            &CliOverridesPatch::default(),
++            self.model.as_deref(),
++        );
+ 
+         let mut command = Command::new(self.command_env.binary_path());
+         command
 -            .arg("exec")
 -            .arg("--color")
 -            .arg(self.color_mode.as_str())
 -            .arg("--skip-git-repo-check")
 -            .arg("--json")
--            .stdout(std::process::Stdio::piped())
--            .stderr(std::process::Stdio::piped())
++            .args(&args)
+             .stdout(std::process::Stdio::piped())
+             .stderr(std::process::Stdio::piped())
 -            .stdin(std::process::Stdio::piped())
--            .kill_on_drop(true)
+             .kill_on_drop(true)
 -            .current_dir(&dir_path);
 -
 -        apply_cli_overrides(&mut command, &resolved_overrides, true);
@@ -4577,11 +5040,13 @@ index 08e80ed..66fee60 100644
 -                command.arg("--output-schema").arg(schema_path);
 -            }
 -        }
--
--        self.command_env.apply(&mut command)?;
--
--        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
--
++            .current_dir(dir_ctx.path());
+ 
++        apply_cli_overrides(&mut command, &resolved_overrides, include_search);
+         self.command_env.apply(&mut command)?;
+ 
+         let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+ 
 -        {
 -            let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
 -            if let Err(source) = stdin.write_all(prompt.as_bytes()).await {
@@ -4601,9 +5066,9 @@ index 08e80ed..66fee60 100644
 -            }
 -        }
 -
--        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
--        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
--
+         let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+         let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+ 
 -        let (tx, rx) = mpsc::channel(32);
 -        let json_log = jsonl::prepare_json_log(
 -            json_event_log
@@ -4612,13 +5077,15 @@ index 08e80ed..66fee60 100644
 -        )
 -        .await?;
 -        let stdout_task = tokio::spawn(jsonl::forward_json_events(
--            stdout,
++        let stdout_task = tokio::spawn(tee_stream(
+             stdout,
 -            tx,
--            self.mirror_stdout,
++            ConsoleTarget::Stdout,
+             self.mirror_stdout,
 -            json_log,
--        ));
--        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
--
+         ));
+         let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+ 
 -        let events = jsonl::EventChannelStream::new(rx, idle_timeout);
 -        let timeout = self.timeout;
 -        let schema_path = output_schema.clone();
@@ -4657,19 +5124,57 @@ index 08e80ed..66fee60 100644
 -                match time::timeout(timeout, wait_task).await {
 -                    Ok(result) => result,
 -                    Err(_) => Err(CodexError::Timeout { timeout }.into()),
--                }
--            }
++        let wait_task = async move {
++            let status = child
++                .wait()
++                .await
++                .map_err(|source| CodexError::Wait { source })?;
++            let stdout_bytes = stdout_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            let stderr_bytes = stderr_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
++        };
++
++        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
++            wait_task.await?
++        } else {
++            match time::timeout(self.timeout, wait_task).await {
++                Ok(result) => result?,
++                Err(_) => {
++                    return Err(CodexError::Timeout {
++                        timeout: self.timeout,
++                    });
+                 }
+             }
 -        });
--
++        };
+ 
 -        Ok(ExecStream {
 -            events: Box::pin(events),
 -            completion,
--        })
--    }
--
++        Ok(ApplyDiffArtifacts {
++            status,
++            stdout: String::from_utf8(stdout_bytes)?,
++            stderr: String::from_utf8(stderr_bytes)?,
+         })
+     }
+ 
 -    /// Streams structured events from `codex exec --json resume ...`.
 -    pub async fn stream_resume(
--        &self,
++    /// Generates app-server bindings via `codex app-server generate-ts` or `generate-json-schema`.
++    ///
++    /// Ensures the output directory exists, mirrors stdout/stderr according to the builder
++    /// (`mirror_stdout` / `quiet`), and returns captured output plus the exit status. Non-zero
++    /// exits bubble up as [`CodexError::NonZeroExit`] with stderr attached. Use
++    /// [`AppServerCodegenRequest::prettier`] to format TypeScript output with a specific
++    /// Prettier binary and request-level overrides for config/profile toggles.
++    pub async fn generate_app_server_bindings(
+         &self,
 -        request: ResumeRequest,
 -    ) -> Result<ExecStream, ExecStreamError> {
 -        if let Some(prompt) = &request.prompt {
@@ -4685,10 +5190,20 @@ index 08e80ed..66fee60 100644
 -            output_last_message,
 -            output_schema,
 -            json_event_log,
--            overrides,
--        } = request;
--
--        let dir_ctx = self.directory_context()?;
++        request: AppServerCodegenRequest,
++    ) -> Result<AppServerCodegenOutput, CodexError> {
++        let AppServerCodegenRequest {
++            target,
++            out_dir,
+             overrides,
+         } = request;
+ 
++        std_fs::create_dir_all(&out_dir).map_err(|source| CodexError::PrepareOutputDirectory {
++            path: out_dir.clone(),
++            source,
++        })?;
++
+         let dir_ctx = self.directory_context()?;
 -        let dir_path = dir_ctx.path().to_path_buf();
 -        let last_message_path =
 -            output_last_message.unwrap_or_else(|| unique_temp_path("codex_last_message_", "txt"));
@@ -4698,24 +5213,29 @@ index 08e80ed..66fee60 100644
 -        } else {
 -            None
 -        };
--        let resolved_overrides =
--            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
--
--        let mut command = Command::new(self.command_env.binary_path());
--        command
+         let resolved_overrides =
+             resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+ 
+         let mut command = Command::new(self.command_env.binary_path());
+         command
 -            .arg("exec")
 -            .arg("--color")
 -            .arg(self.color_mode.as_str())
 -            .arg("--skip-git-repo-check")
 -            .arg("--json")
--            .stdout(std::process::Stdio::piped())
--            .stderr(std::process::Stdio::piped())
++            .arg("app-server")
++            .arg(target.subcommand())
++            .arg("--out")
++            .arg(&out_dir)
+             .stdout(std::process::Stdio::piped())
+             .stderr(std::process::Stdio::piped())
 -            .stdin(std::process::Stdio::piped())
--            .kill_on_drop(true)
+             .kill_on_drop(true)
 -            .current_dir(&dir_path);
--
--        apply_cli_overrides(&mut command, &resolved_overrides, true);
--
++            .current_dir(dir_ctx.path());
+ 
+         apply_cli_overrides(&mut command, &resolved_overrides, true);
+ 
 -        if let Some(model) = &self.model {
 -            command.arg("--model").arg(model);
 -        }
@@ -4769,12 +5289,14 @@ index 08e80ed..66fee60 100644
 -        if prompt.is_some() {
 -            // `codex exec resume` reads the follow-up prompt from stdin when `-` is supplied.
 -            command.arg("-");
--        }
--
--        self.command_env.apply(&mut command)?;
--
--        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
--
++        if let Some(prettier) = target.prettier() {
++            command.arg("--prettier").arg(prettier);
+         }
+ 
+         self.command_env.apply(&mut command)?;
+ 
+         let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+ 
 -        if let Some(prompt) = &prompt {
 -            let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
 -            if let Err(source) = stdin.write_all(prompt.as_bytes()).await {
@@ -4796,9 +5318,9 @@ index 08e80ed..66fee60 100644
 -            let _ = child.stdin.take();
 -        }
 -
--        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
--        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
--
+         let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+         let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+ 
 -        let (tx, rx) = mpsc::channel(32);
 -        let json_log = jsonl::prepare_json_log(
 -            json_event_log
@@ -4807,13 +5329,15 @@ index 08e80ed..66fee60 100644
 -        )
 -        .await?;
 -        let stdout_task = tokio::spawn(jsonl::forward_json_events(
--            stdout,
++        let stdout_task = tokio::spawn(tee_stream(
+             stdout,
 -            tx,
--            self.mirror_stdout,
++            ConsoleTarget::Stdout,
+             self.mirror_stdout,
 -            json_log,
--        ));
--        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
--
+         ));
+         let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+ 
 -        let events = jsonl::EventChannelStream::new(rx, idle_timeout);
 -        let timeout = self.timeout;
 -        let schema_path = output_schema.clone();
@@ -4852,8 +5376,33 @@ index 08e80ed..66fee60 100644
 -                match time::timeout(timeout, wait_task).await {
 -                    Ok(result) => result,
 -                    Err(_) => Err(CodexError::Timeout { timeout }.into()),
--                }
--            }
++        let wait_task = async move {
++            let status = child
++                .wait()
++                .await
++                .map_err(|source| CodexError::Wait { source })?;
++            let stdout_bytes = stdout_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            let stderr_bytes = stderr_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
++        };
++
++        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
++            wait_task.await?
++        } else {
++            match time::timeout(self.timeout, wait_task).await {
++                Ok(result) => result?,
++                Err(_) => {
++                    return Err(CodexError::Timeout {
++                        timeout: self.timeout,
++                    });
+                 }
+             }
 -        });
 -
 -        Ok(ExecStream {
@@ -4862,48 +5411,762 @@ index 08e80ed..66fee60 100644
 -        })
 -    }
 -
-     /// Spawns a `codex login` session using the default ChatGPT OAuth flow.
+-    /// Spawns a `codex login` session using the default ChatGPT OAuth flow.
+-    ///
+-    /// The returned child inherits `kill_on_drop` so abandoning the handle cleans up the login helper.
+-    pub fn spawn_login_process(&self) -> Result<tokio::process::Child, CodexError> {
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("login")
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true);
++        };
+ 
+-        self.command_env.apply(&mut command)?;
++        if !status.success() {
++            return Err(CodexError::NonZeroExit {
++                status,
++                stderr: String::from_utf8(stderr_bytes)?,
++            });
++        }
+ 
+-        spawn_with_retry(&mut command, self.command_env.binary_path())
++        Ok(AppServerCodegenOutput {
++            status,
++            stdout: String::from_utf8(stdout_bytes)?,
++            stderr: String::from_utf8(stderr_bytes)?,
++            out_dir,
++        })
+     }
+ 
+-    /// Spawns a `codex login --device-auth` session.
++    /// Lists CLI features via `codex features list`.
      ///
-     /// The returned child inherits `kill_on_drop` so abandoning the handle cleans up the login helper.
-@@ -1393,7 +791,7 @@ impl CodexClient {
-         let stdout_string = String::from_utf8(stdout_bytes)?;
-         let stderr_string = String::from_utf8(stderr_bytes)?;
-         let (features, format) =
--            parse_feature_list_output(&stdout_string, json).map_err(|reason| {
+-    /// The returned child inherits `kill_on_drop` so abandoning the handle cleans up the login helper.
+-    pub fn spawn_device_auth_login_process(&self) -> Result<tokio::process::Child, CodexError> {
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("login")
+-            .arg("--device-auth")
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true);
+-
+-        self.command_env.apply(&mut command)?;
++    /// Requests JSON output when `json(true)` is set and falls back to parsing the text table when
++    /// JSON is unavailable. Shared config/profile/search/approval overrides flow through via the
++    /// request/builder, stdout/stderr are mirrored according to the builder, and non-zero exits
++    /// surface as [`CodexError::NonZeroExit`].
++    pub async fn list_features(
++        &self,
++        request: FeaturesListRequest,
++    ) -> Result<FeaturesListOutput, CodexError> {
++        let FeaturesListRequest { json, overrides } = request;
+ 
+-        spawn_with_retry(&mut command, self.command_env.binary_path())
+-    }
++        let dir_ctx = self.directory_context()?;
++        let resolved_overrides =
++            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+ 
+-    /// Spawns a `codex login --with-api-key` session (interactive API-key flow).
+-    ///
+-    /// The returned child inherits `kill_on_drop` so abandoning the handle cleans up the login helper.
+-    pub fn spawn_with_api_key_login_process(&self) -> Result<tokio::process::Child, CodexError> {
+         let mut command = Command::new(self.command_env.binary_path());
+         command
+-            .arg("login")
+-            .arg("--with-api-key")
++            .arg("features")
++            .arg("list")
+             .stdout(std::process::Stdio::piped())
+             .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true);
+-
+-        self.command_env.apply(&mut command)?;
++            .kill_on_drop(true)
++            .current_dir(dir_ctx.path());
+ 
+-        spawn_with_retry(&mut command, self.command_env.binary_path())
+-    }
++        apply_cli_overrides(&mut command, &resolved_overrides, true);
+ 
+-    /// Spawns `codex login --mcp` when the probed binary advertises support.
+-    ///
+-    /// Returns `Ok(None)` when the capability is unknown or unsupported so
+-    /// callers can degrade gracefully without attempting the flag.
+-    pub async fn spawn_mcp_login_process(
+-        &self,
+-    ) -> Result<Option<tokio::process::Child>, CodexError> {
+-        let capabilities = self.probe_capabilities().await;
+-        let guard = capabilities.guard_mcp_login();
+-        if !guard_is_supported(&guard) {
+-            log_guard_skip(&guard);
+-            return Ok(None);
++        if json {
++            command.arg("--json");
+         }
+ 
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("login")
+-            .arg("--mcp")
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true);
+-
+         self.command_env.apply(&mut command)?;
+ 
+-        let child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        Ok(Some(child))
+-    }
+-
+-    /// Logs in with a provided API key by invoking `codex login --api-key <key>`.
+-    pub async fn login_with_api_key(
+-        &self,
+-        api_key: impl AsRef<str>,
+-    ) -> Result<CodexAuthStatus, CodexError> {
+-        let api_key = api_key.as_ref().trim();
+-        if api_key.is_empty() {
+-            return Err(CodexError::EmptyApiKey);
+-        }
++        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+ 
+-        let output = self
+-            .run_basic_command(["login", "--api-key", api_key])
+-            .await?;
+-        let combined = preferred_output_channel(&output);
++        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
++        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+ 
+-        if output.status.success() {
+-            Ok(parse_login_success(&combined).unwrap_or_else(|| {
+-                CodexAuthStatus::LoggedIn(CodexAuthMethod::Unknown {
+-                    raw: combined.clone(),
+-                })
+-            }))
+-        } else {
+-            Err(CodexError::NonZeroExit {
+-                status: output.status,
+-                stderr: combined,
+-            })
+-        }
+-    }
++        let stdout_task = tokio::spawn(tee_stream(
++            stdout,
++            ConsoleTarget::Stdout,
++            self.mirror_stdout,
++        ));
++        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+ 
+-    /// Returns the current Codex authentication state by invoking `codex login status`.
+-    pub async fn login_status(&self) -> Result<CodexAuthStatus, CodexError> {
+-        let output = self.run_basic_command(["login", "status"]).await?;
+-        let combined = preferred_output_channel(&output);
++        let wait_task = async move {
++            let status = child
++                .wait()
++                .await
++                .map_err(|source| CodexError::Wait { source })?;
++            let stdout_bytes = stdout_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            let stderr_bytes = stderr_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
++        };
+ 
+-        if output.status.success() {
+-            Ok(parse_login_success(&combined).unwrap_or_else(|| {
+-                CodexAuthStatus::LoggedIn(CodexAuthMethod::Unknown {
+-                    raw: combined.clone(),
+-                })
+-            }))
+-        } else if combined.to_lowercase().contains("not logged in") {
+-            Ok(CodexAuthStatus::LoggedOut)
++        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
++            wait_task.await?
+         } else {
+-            Err(CodexError::NonZeroExit {
+-                status: output.status,
+-                stderr: combined,
+-            })
+-        }
+-    }
+-
+-    /// Removes cached credentials via `codex logout`.
+-    pub async fn logout(&self) -> Result<CodexLogoutStatus, CodexError> {
+-        let output = self.run_basic_command(["logout"]).await?;
+-        let combined = preferred_output_channel(&output);
++            match time::timeout(self.timeout, wait_task).await {
++                Ok(result) => result?,
++                Err(_) => {
++                    return Err(CodexError::Timeout {
++                        timeout: self.timeout,
++                    });
++                }
++            }
++        };
+ 
+-        if !output.status.success() {
++        if !status.success() {
+             return Err(CodexError::NonZeroExit {
+-                status: output.status,
+-                stderr: combined,
++                status,
++                stderr: String::from_utf8(stderr_bytes)?,
+             });
+         }
+ 
+-        let normalized = combined.to_lowercase();
+-        if normalized.contains("successfully logged out") {
+-            Ok(CodexLogoutStatus::LoggedOut)
+-        } else if normalized.contains("not logged in") {
+-            Ok(CodexLogoutStatus::AlreadyLoggedOut)
+-        } else {
+-            Ok(CodexLogoutStatus::LoggedOut)
+-        }
++        let stdout_string = String::from_utf8(stdout_bytes)?;
++        let stderr_string = String::from_utf8(stderr_bytes)?;
++        let (features, format) =
 +            version::parse_feature_list_output(&stdout_string, json).map_err(|reason| {
-                 CodexError::FeatureListParse {
-                     reason,
-                     stdout: stdout_string.clone(),
-@@ -1522,16 +920,16 @@ impl CodexClient {
++                CodexError::FeatureListParse {
++                    reason,
++                    stdout: stdout_string.clone(),
++                }
++            })?;
++
++        Ok(FeaturesListOutput {
++            status,
++            stdout: stdout_string,
++            stderr: stderr_string,
++            features,
++            format,
++        })
+     }
+ 
+-    /// Applies a Codex diff by invoking `codex apply <TASK_ID>`.
+-    ///
+-    /// Stdout mirrors to the console when `mirror_stdout` is enabled; stderr mirrors unless `quiet`
+-    /// is set. Output and exit status are always captured and returned, and `RUST_LOG=error` is
+-    /// injected for the child process when the environment variable is unset.
+-    ///
+-    /// Convenience behavior: if `CODEX_TASK_ID` is set, it is appended as `<TASK_ID>`. When the
+-    /// environment variable is missing, the subprocess is still spawned and will typically exit
+-    /// non-zero with a "missing TASK_ID" error from the CLI.
+-    pub async fn apply(&self) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let task_id = env::var_os("CODEX_TASK_ID")
+-            .and_then(|v| normalize_non_empty(&v.to_string_lossy()).map(OsString::from));
+-        self.apply_task_inner(task_id).await
+-    }
+-
+-    /// Applies a Codex diff by task id via `codex apply <TASK_ID>`.
+-    pub async fn apply_task(
+-        &self,
+-        task_id: impl AsRef<str>,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let task_id = task_id.as_ref().trim();
+-        if task_id.is_empty() {
+-            return Err(CodexError::EmptyTaskId);
+-        }
+-        self.apply_task_inner(Some(OsString::from(task_id))).await
+-    }
+-
+-    /// Shows a Codex Cloud task diff by invoking `codex cloud diff <TASK_ID>`.
+-    ///
+-    /// Mirrors stdout/stderr using the same `mirror_stdout`/`quiet` defaults as `apply`, but always
+-    /// returns the captured output alongside the child exit status. Applies the same `RUST_LOG`
+-    /// defaulting behavior when the variable is unset.
+-    ///
+-    /// Convenience behavior: if `CODEX_TASK_ID` is set, it is appended as `<TASK_ID>`. When the
+-    /// environment variable is missing, the subprocess is still spawned and will typically exit
+-    /// non-zero with a "missing TASK_ID" error from the CLI.
+-    pub async fn diff(&self) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let task_id = env::var_os("CODEX_TASK_ID")
+-            .and_then(|v| normalize_non_empty(&v.to_string_lossy()).map(OsString::from));
+-        self.cloud_diff_task_inner(task_id).await
+-    }
+-
+-    /// Shows a Codex Cloud task diff by task id via `codex cloud diff <TASK_ID>`.
+-    pub async fn cloud_diff_task(
++    /// Runs `codex features` and returns captured output.
++    pub async fn features(
+         &self,
+-        task_id: impl AsRef<str>,
++        request: FeaturesCommandRequest,
+     ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let task_id = task_id.as_ref().trim();
+-        if task_id.is_empty() {
+-            return Err(CodexError::EmptyTaskId);
+-        }
+-        self.cloud_diff_task_inner(Some(OsString::from(task_id)))
++        self.run_simple_command_with_overrides(vec![OsString::from("features")], request.overrides)
              .await
      }
  
+-    async fn apply_task_inner(
+-        &self,
+-        task_id: Option<OsString>,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let mut args = vec![OsString::from("apply")];
+-        if let Some(task_id) = task_id {
+-            args.push(task_id);
+-        }
+-        self.capture_codex_command(args, false).await
+-    }
+-
+-    async fn cloud_diff_task_inner(
++    /// Runs `codex <scope> help [COMMAND]...` and returns captured output.
++    pub async fn help(
+         &self,
+-        task_id: Option<OsString>,
++        request: HelpCommandRequest,
+     ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let mut args = vec![OsString::from("cloud"), OsString::from("diff")];
+-        if let Some(task_id) = task_id {
+-            args.push(task_id);
+-        }
+-        self.capture_codex_command(args, false).await
++        let mut args: Vec<OsString> = request
++            .scope
++            .argv_prefix()
++            .iter()
++            .map(|value| OsString::from(*value))
++            .collect();
++        args.extend(request.command.into_iter().map(OsString::from));
++        self.run_simple_command_with_overrides(args, request.overrides)
++            .await
+     }
+ 
+-    async fn capture_codex_command(
++    /// Runs `codex review [OPTIONS] [PROMPT]` and returns captured output.
++    pub async fn review(
+         &self,
+-        args: Vec<OsString>,
+-        include_search: bool,
++        request: ReviewCommandRequest,
+     ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let dir_ctx = self.directory_context()?;
+-        let resolved_overrides = resolve_cli_overrides(
+-            &self.cli_overrides,
+-            &CliOverridesPatch::default(),
+-            self.model.as_deref(),
+-        );
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .args(&args)
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(dir_ctx.path());
+-
+-        apply_cli_overrides(&mut command, &resolved_overrides, include_search);
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let stdout_task = tokio::spawn(tee_stream(
+-            stdout,
+-            ConsoleTarget::Stdout,
+-            self.mirror_stdout,
+-        ));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+-
+-        let wait_task = async move {
+-            let status = child
+-                .wait()
+-                .await
+-                .map_err(|source| CodexError::Wait { source })?;
+-            let stdout_bytes = stdout_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            let stderr_bytes = stderr_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+-        };
+-
+-        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+-            wait_task.await?
+-        } else {
+-            match time::timeout(self.timeout, wait_task).await {
+-                Ok(result) => result?,
+-                Err(_) => {
+-                    return Err(CodexError::Timeout {
+-                        timeout: self.timeout,
+-                    });
+-                }
+-            }
+-        };
+-
+-        Ok(ApplyDiffArtifacts {
+-            status,
+-            stdout: String::from_utf8(stdout_bytes)?,
+-            stderr: String::from_utf8(stderr_bytes)?,
+-        })
+-    }
+-
+-    /// Generates app-server bindings via `codex app-server generate-ts` or `generate-json-schema`.
+-    ///
+-    /// Ensures the output directory exists, mirrors stdout/stderr according to the builder
+-    /// (`mirror_stdout` / `quiet`), and returns captured output plus the exit status. Non-zero
+-    /// exits bubble up as [`CodexError::NonZeroExit`] with stderr attached. Use
+-    /// [`AppServerCodegenRequest::prettier`] to format TypeScript output with a specific
+-    /// Prettier binary and request-level overrides for config/profile toggles.
+-    pub async fn generate_app_server_bindings(
+-        &self,
+-        request: AppServerCodegenRequest,
+-    ) -> Result<AppServerCodegenOutput, CodexError> {
+-        let AppServerCodegenRequest {
+-            target,
+-            out_dir,
+-            overrides,
+-        } = request;
+-
+-        std_fs::create_dir_all(&out_dir).map_err(|source| CodexError::PrepareOutputDirectory {
+-            path: out_dir.clone(),
+-            source,
+-        })?;
+-
+-        let dir_ctx = self.directory_context()?;
+-        let resolved_overrides =
+-            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("app-server")
+-            .arg(target.subcommand())
+-            .arg("--out")
+-            .arg(&out_dir)
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(dir_ctx.path());
+-
+-        apply_cli_overrides(&mut command, &resolved_overrides, true);
+-
+-        if let Some(prettier) = target.prettier() {
+-            command.arg("--prettier").arg(prettier);
+-        }
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let stdout_task = tokio::spawn(tee_stream(
+-            stdout,
+-            ConsoleTarget::Stdout,
+-            self.mirror_stdout,
+-        ));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+-
+-        let wait_task = async move {
+-            let status = child
+-                .wait()
+-                .await
+-                .map_err(|source| CodexError::Wait { source })?;
+-            let stdout_bytes = stdout_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            let stderr_bytes = stderr_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+-        };
+-
+-        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+-            wait_task.await?
+-        } else {
+-            match time::timeout(self.timeout, wait_task).await {
+-                Ok(result) => result?,
+-                Err(_) => {
+-                    return Err(CodexError::Timeout {
+-                        timeout: self.timeout,
+-                    });
+-                }
+-            }
+-        };
+-
+-        if !status.success() {
+-            return Err(CodexError::NonZeroExit {
+-                status,
+-                stderr: String::from_utf8(stderr_bytes)?,
+-            });
++        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
++            return Err(CodexError::EmptyPrompt);
+         }
+ 
+-        Ok(AppServerCodegenOutput {
+-            status,
+-            stdout: String::from_utf8(stdout_bytes)?,
+-            stderr: String::from_utf8(stderr_bytes)?,
+-            out_dir,
+-        })
+-    }
+-
+-    /// Lists CLI features via `codex features list`.
+-    ///
+-    /// Requests JSON output when `json(true)` is set and falls back to parsing the text table when
+-    /// JSON is unavailable. Shared config/profile/search/approval overrides flow through via the
+-    /// request/builder, stdout/stderr are mirrored according to the builder, and non-zero exits
+-    /// surface as [`CodexError::NonZeroExit`].
+-    pub async fn list_features(
+-        &self,
+-        request: FeaturesListRequest,
+-    ) -> Result<FeaturesListOutput, CodexError> {
+-        let FeaturesListRequest { json, overrides } = request;
+-
+-        let dir_ctx = self.directory_context()?;
+-        let resolved_overrides =
+-            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("features")
+-            .arg("list")
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(dir_ctx.path());
+-
+-        apply_cli_overrides(&mut command, &resolved_overrides, true);
+-
+-        if json {
+-            command.arg("--json");
+-        }
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let stdout_task = tokio::spawn(tee_stream(
+-            stdout,
+-            ConsoleTarget::Stdout,
+-            self.mirror_stdout,
+-        ));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+-
+-        let wait_task = async move {
+-            let status = child
+-                .wait()
+-                .await
+-                .map_err(|source| CodexError::Wait { source })?;
+-            let stdout_bytes = stdout_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            let stderr_bytes = stderr_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+-        };
+-
+-        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+-            wait_task.await?
+-        } else {
+-            match time::timeout(self.timeout, wait_task).await {
+-                Ok(result) => result?,
+-                Err(_) => {
+-                    return Err(CodexError::Timeout {
+-                        timeout: self.timeout,
+-                    });
+-                }
+-            }
+-        };
+-
+-        if !status.success() {
+-            return Err(CodexError::NonZeroExit {
+-                status,
+-                stderr: String::from_utf8(stderr_bytes)?,
+-            });
+-        }
+-
+-        let stdout_string = String::from_utf8(stdout_bytes)?;
+-        let stderr_string = String::from_utf8(stderr_bytes)?;
+-        let (features, format) =
+-            parse_feature_list_output(&stdout_string, json).map_err(|reason| {
+-                CodexError::FeatureListParse {
+-                    reason,
+-                    stdout: stdout_string.clone(),
+-                }
+-            })?;
+-
+-        Ok(FeaturesListOutput {
+-            status,
+-            stdout: stdout_string,
+-            stderr: stderr_string,
+-            features,
+-            format,
+-        })
+-    }
+-
+-    /// Runs `codex features` and returns captured output.
+-    pub async fn features(
+-        &self,
+-        request: FeaturesCommandRequest,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        self.run_simple_command_with_overrides(vec![OsString::from("features")], request.overrides)
+-            .await
+-    }
+-
+-    /// Runs `codex <scope> help [COMMAND]...` and returns captured output.
+-    pub async fn help(
+-        &self,
+-        request: HelpCommandRequest,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let mut args: Vec<OsString> = request
+-            .scope
+-            .argv_prefix()
+-            .iter()
+-            .map(|value| OsString::from(*value))
+-            .collect();
+-        args.extend(request.command.into_iter().map(OsString::from));
+-        self.run_simple_command_with_overrides(args, request.overrides)
+-            .await
+-    }
+-
+-    /// Runs `codex review [OPTIONS] [PROMPT]` and returns captured output.
+-    pub async fn review(
+-        &self,
+-        request: ReviewCommandRequest,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
+-            return Err(CodexError::EmptyPrompt);
+-        }
+-
+-        let mut args = vec![OsString::from("review")];
+-        if let Some(base) = request.base {
+-            if !base.trim().is_empty() {
+-                args.push(OsString::from("--base"));
+-                args.push(OsString::from(base));
+-            }
+-        }
+-        if let Some(commit) = request.commit {
+-            if !commit.trim().is_empty() {
+-                args.push(OsString::from("--commit"));
+-                args.push(OsString::from(commit));
+-            }
+-        }
+-        if let Some(title) = request.title {
+-            if !title.trim().is_empty() {
+-                args.push(OsString::from("--title"));
+-                args.push(OsString::from(title));
+-            }
+-        }
+-        if request.uncommitted {
+-            args.push(OsString::from("--uncommitted"));
+-        }
+-        if let Some(prompt) = request.prompt {
+-            if !prompt.trim().is_empty() {
+-                args.push(OsString::from(prompt));
+-            }
+-        }
+-
+-        self.run_simple_command_with_overrides(args, request.overrides)
+-            .await
+-    }
+-
+-    /// Runs `codex exec review [OPTIONS] [PROMPT]` and returns captured output.
+-    pub async fn exec_review(
+-        &self,
+-        request: ExecReviewCommandRequest,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
+-            return Err(CodexError::EmptyPrompt);
+-        }
+-
+-        let mut args = vec![OsString::from("exec"), OsString::from("review")];
+-        if let Some(base) = request.base {
+-            if !base.trim().is_empty() {
+-                args.push(OsString::from("--base"));
+-                args.push(OsString::from(base));
+-            }
+-        }
+-        if let Some(commit) = request.commit {
+-            if !commit.trim().is_empty() {
+-                args.push(OsString::from("--commit"));
+-                args.push(OsString::from(commit));
+-            }
+-        }
+-        if request.json {
+-            args.push(OsString::from("--json"));
+-        }
+-        if request.skip_git_repo_check {
+-            args.push(OsString::from("--skip-git-repo-check"));
+-        }
+-        if let Some(title) = request.title {
+-            if !title.trim().is_empty() {
+-                args.push(OsString::from("--title"));
+-                args.push(OsString::from(title));
+-            }
+-        }
+-        if request.uncommitted {
+-            args.push(OsString::from("--uncommitted"));
+-        }
+-        if let Some(prompt) = request.prompt {
+-            if !prompt.trim().is_empty() {
+-                args.push(OsString::from(prompt));
+-            }
+-        }
+-
+-        self.run_simple_command_with_overrides(args, request.overrides)
+-            .await
+-    }
+-
 -    /// Runs `codex resume [OPTIONS] [SESSION_ID] [PROMPT]` and returns captured output.
 -    pub async fn resume_session(
-+    /// Runs `codex fork [OPTIONS] [SESSION_ID] [PROMPT]` and returns captured output.
-+    pub async fn fork_session(
-         &self,
+-        &self,
 -        request: ResumeSessionRequest,
-+        request: ForkSessionRequest,
-     ) -> Result<ApplyDiffArtifacts, CodexError> {
-         if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
-             return Err(CodexError::EmptyPrompt);
-         }
- 
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
+-            return Err(CodexError::EmptyPrompt);
+-        }
+-
 -        let mut args = vec![OsString::from("resume")];
-+        let mut args = vec![OsString::from("fork")];
-         if request.all {
-             args.push(OsString::from("--all"));
-         }
-@@ -1553,41 +951,10 @@ impl CodexClient {
-             .await
-     }
- 
+-        if request.all {
+-            args.push(OsString::from("--all"));
+-        }
+-        if request.last {
+-            args.push(OsString::from("--last"));
+-        }
+-        if let Some(session_id) = request.session_id {
+-            if !session_id.trim().is_empty() {
+-                args.push(OsString::from(session_id));
+-            }
+-        }
+-        if let Some(prompt) = request.prompt {
+-            if !prompt.trim().is_empty() {
+-                args.push(OsString::from(prompt));
+-            }
+-        }
+-
+-        self.run_simple_command_with_overrides(args, request.overrides)
+-            .await
+-    }
+-
 -    /// Runs `codex fork [OPTIONS] [SESSION_ID] [PROMPT]` and returns captured output.
 -    pub async fn fork_session(
-+    /// Runs `codex cloud --help` and returns captured output.
-+    pub async fn cloud_overview(
-         &self,
+-        &self,
 -        request: ForkSessionRequest,
 -    ) -> Result<ApplyDiffArtifacts, CodexError> {
 -        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
@@ -4936,74 +6199,796 @@ index 08e80ed..66fee60 100644
 -    pub async fn cloud_overview(
 -        &self,
 -        request: CloudOverviewRequest,
-+        request: CloudOverviewRequest,
-     ) -> Result<ApplyDiffArtifacts, CodexError> {
-         self.run_simple_command_with_overrides(
-             vec![OsString::from("cloud"), OsString::from("--help")],
-@@ -2260,7 +1627,7 @@ impl CodexClient {
-                 }
-                 let text = command_output_text(&output);
-                 if !text.trim().is_empty() {
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        self.run_simple_command_with_overrides(
+-            vec![OsString::from("cloud"), OsString::from("--help")],
+-            request.overrides,
+-        )
+-        .await
+-    }
+-
+-    /// Lists Codex Cloud tasks via `codex cloud list`.
+-    pub async fn cloud_list(
+-        &self,
+-        request: CloudListRequest,
+-    ) -> Result<CloudListOutput, CodexError> {
+-        let CloudListRequest {
+-            json,
+-            env_id,
+-            limit,
+-            cursor,
+-            overrides,
+-        } = request;
+-
+-        let mut args = vec![OsString::from("cloud"), OsString::from("list")];
+-        if let Some(env_id) = env_id {
+-            args.push(OsString::from("--env"));
+-            args.push(OsString::from(env_id));
+-        }
+-        if let Some(limit) = limit {
+-            args.push(OsString::from("--limit"));
+-            args.push(OsString::from(limit.to_string()));
+-        }
+-        if let Some(cursor) = cursor {
+-            args.push(OsString::from("--cursor"));
+-            args.push(OsString::from(cursor));
+-        }
+-        if json {
+-            args.push(OsString::from("--json"));
+-        }
+-
+-        let artifacts = self
+-            .run_simple_command_with_overrides(args, overrides)
+-            .await?;
+-        let parsed = if json {
+-            Some(serde_json::from_str(&artifacts.stdout).map_err(|source| {
+-                CodexError::JsonParse {
+-                    context: "cloud list",
+-                    stdout: artifacts.stdout.clone(),
+-                    source,
+-                }
+-            })?)
+-        } else {
+-            None
+-        };
+-
+-        Ok(CloudListOutput {
+-            status: artifacts.status,
+-            stdout: artifacts.stdout,
+-            stderr: artifacts.stderr,
+-            json: parsed,
+-        })
+-    }
+-
+-    /// Shows the status of a Codex Cloud task via `codex cloud status <TASK_ID>`.
+-    pub async fn cloud_status(
+-        &self,
+-        request: CloudStatusRequest,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let task_id = request.task_id.trim();
+-        if task_id.is_empty() {
+-            return Err(CodexError::EmptyTaskId);
+-        }
+-
+-        self.run_simple_command_with_overrides(
+-            vec![
+-                OsString::from("cloud"),
+-                OsString::from("status"),
+-                OsString::from(task_id),
+-            ],
+-            request.overrides,
+-        )
+-        .await
+-    }
+-
+-    /// Shows the unified diff for a Codex Cloud task via `codex cloud diff [--attempt N] <TASK_ID>`.
+-    pub async fn cloud_diff(
+-        &self,
+-        request: CloudDiffRequest,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let task_id = request.task_id.trim();
+-        if task_id.is_empty() {
+-            return Err(CodexError::EmptyTaskId);
+-        }
+-
+-        let mut args = vec![OsString::from("cloud"), OsString::from("diff")];
+-        if let Some(attempt) = request.attempt {
+-            args.push(OsString::from("--attempt"));
+-            args.push(OsString::from(attempt.to_string()));
+-        }
+-        args.push(OsString::from(task_id));
+-        self.run_simple_command_with_overrides(args, request.overrides)
+-            .await
+-    }
+-
+-    /// Applies the diff for a Codex Cloud task locally via `codex cloud apply [--attempt N] <TASK_ID>`.
+-    pub async fn cloud_apply(
+-        &self,
+-        request: CloudApplyRequest,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let task_id = request.task_id.trim();
+-        if task_id.is_empty() {
+-            return Err(CodexError::EmptyTaskId);
+-        }
+-
+-        let mut args = vec![OsString::from("cloud"), OsString::from("apply")];
+-        if let Some(attempt) = request.attempt {
+-            args.push(OsString::from("--attempt"));
+-            args.push(OsString::from(attempt.to_string()));
+-        }
+-        args.push(OsString::from(task_id));
+-        self.run_simple_command_with_overrides(args, request.overrides)
+-            .await
+-    }
+-
+-    /// Submits a new Codex Cloud task via `codex cloud exec`.
+-    pub async fn cloud_exec(
+-        &self,
+-        request: CloudExecRequest,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let env_id = request.env_id.trim();
+-        if env_id.is_empty() {
+-            return Err(CodexError::EmptyEnvId);
+-        }
+-
+-        let mut args = vec![OsString::from("cloud"), OsString::from("exec")];
+-        args.push(OsString::from("--env"));
+-        args.push(OsString::from(env_id));
+-        if let Some(attempts) = request.attempts {
+-            args.push(OsString::from("--attempts"));
+-            args.push(OsString::from(attempts.to_string()));
+-        }
+-        if let Some(branch) = request.branch {
+-            args.push(OsString::from("--branch"));
+-            args.push(OsString::from(branch));
+-        }
+-        if let Some(query) = request.query {
+-            args.push(OsString::from(query));
+-        }
+-
+-        self.run_simple_command_with_overrides(args, request.overrides)
+-            .await
+-    }
+-
+-    /// Runs `codex mcp --help` and returns captured output.
+-    pub async fn mcp_overview(
+-        &self,
+-        request: McpOverviewRequest,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        self.run_simple_command_with_overrides(
+-            vec![OsString::from("mcp"), OsString::from("--help")],
+-            request.overrides,
+-        )
+-        .await
+-    }
+-
+-    /// Lists configured MCP servers via `codex mcp list`.
+-    pub async fn mcp_list(&self, request: McpListRequest) -> Result<McpListOutput, CodexError> {
+-        let McpListRequest { json, overrides } = request;
+-        let mut args = vec![OsString::from("mcp"), OsString::from("list")];
+-        if json {
+-            args.push(OsString::from("--json"));
+-        }
+-
+-        let artifacts = self
+-            .run_simple_command_with_overrides(args, overrides)
+-            .await?;
+-        let parsed = if json {
+-            Some(serde_json::from_str(&artifacts.stdout).map_err(|source| {
+-                CodexError::JsonParse {
+-                    context: "mcp list",
+-                    stdout: artifacts.stdout.clone(),
+-                    source,
+-                }
+-            })?)
+-        } else {
+-            None
+-        };
+-
+-        Ok(McpListOutput {
+-            status: artifacts.status,
+-            stdout: artifacts.stdout,
+-            stderr: artifacts.stderr,
+-            json: parsed,
+-        })
+-    }
+-
+-    /// Gets a configured MCP server entry via `codex mcp get <NAME>`.
+-    pub async fn mcp_get(&self, request: McpGetRequest) -> Result<McpListOutput, CodexError> {
+-        let name = request.name.trim();
+-        if name.is_empty() {
+-            return Err(CodexError::EmptyMcpServerName);
+-        }
+-
+-        let mut args = vec![OsString::from("mcp"), OsString::from("get")];
+-        if request.json {
+-            args.push(OsString::from("--json"));
+-        }
+-        args.push(OsString::from(name));
+-
+-        let artifacts = self
+-            .run_simple_command_with_overrides(args, request.overrides)
+-            .await?;
+-        let parsed = if request.json {
+-            Some(serde_json::from_str(&artifacts.stdout).map_err(|source| {
+-                CodexError::JsonParse {
+-                    context: "mcp get",
+-                    stdout: artifacts.stdout.clone(),
+-                    source,
+-                }
+-            })?)
+-        } else {
+-            None
+-        };
+-
+-        Ok(McpListOutput {
+-            status: artifacts.status,
+-            stdout: artifacts.stdout,
+-            stderr: artifacts.stderr,
+-            json: parsed,
+-        })
+-    }
+-
+-    /// Adds an MCP server configuration entry via `codex mcp add`.
+-    pub async fn mcp_add(&self, request: McpAddRequest) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let name = request.name.trim();
+-        if name.is_empty() {
+-            return Err(CodexError::EmptyMcpServerName);
+-        }
+-
+-        let mut args = vec![
+-            OsString::from("mcp"),
+-            OsString::from("add"),
+-            OsString::from(name),
+-        ];
+-        match request.transport {
+-            McpAddTransport::StreamableHttp {
+-                url,
+-                bearer_token_env_var,
+-            } => {
+-                let url = url.trim();
+-                if url.is_empty() {
+-                    return Err(CodexError::EmptyMcpUrl);
+-                }
+-                args.push(OsString::from("--url"));
+-                args.push(OsString::from(url));
+-                if let Some(env_var) = bearer_token_env_var {
+-                    if !env_var.trim().is_empty() {
+-                        args.push(OsString::from("--bearer-token-env-var"));
+-                        args.push(OsString::from(env_var));
+-                    }
+-                }
+-            }
+-            McpAddTransport::Stdio { env, command } => {
+-                if command.is_empty() {
+-                    return Err(CodexError::EmptyMcpCommand);
+-                }
+-                for (key, value) in env {
+-                    let key = key.trim();
+-                    if key.is_empty() {
+-                        continue;
+-                    }
+-                    args.push(OsString::from("--env"));
+-                    args.push(OsString::from(format!("{key}={value}")));
+-                }
+-                args.push(OsString::from("--"));
+-                args.extend(command);
+-            }
+-        }
+-
+-        self.run_simple_command_with_overrides(args, request.overrides)
+-            .await
+-    }
+-
+-    /// Removes an MCP server configuration entry via `codex mcp remove <NAME>`.
+-    pub async fn mcp_remove(
+-        &self,
+-        request: McpRemoveRequest,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let name = request.name.trim();
+-        if name.is_empty() {
+-            return Err(CodexError::EmptyMcpServerName);
+-        }
+-
+-        self.run_simple_command_with_overrides(
+-            vec![
+-                OsString::from("mcp"),
+-                OsString::from("remove"),
+-                OsString::from(name),
+-            ],
+-            request.overrides,
+-        )
+-        .await
+-    }
+-
+-    /// Deauthenticates from an MCP server via `codex mcp logout <NAME>`.
+-    pub async fn mcp_logout(
+-        &self,
+-        request: McpLogoutRequest,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let name = request.name.trim();
+-        if name.is_empty() {
+-            return Err(CodexError::EmptyMcpServerName);
+-        }
+-
+-        self.run_simple_command_with_overrides(
+-            vec![
+-                OsString::from("mcp"),
+-                OsString::from("logout"),
+-                OsString::from(name),
+-            ],
+-            request.overrides,
+-        )
+-        .await
+-    }
+-
+-    /// Spawns `codex mcp login <NAME> [--scopes ...]`.
+-    pub fn spawn_mcp_oauth_login_process(
+-        &self,
+-        request: McpOauthLoginRequest,
+-    ) -> Result<tokio::process::Child, CodexError> {
+-        let name = request.name.trim();
+-        if name.is_empty() {
+-            return Err(CodexError::EmptyMcpServerName);
+-        }
+-
+-        let resolved_overrides = resolve_cli_overrides(
+-            &self.cli_overrides,
+-            &request.overrides,
+-            self.model.as_deref(),
+-        );
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("mcp")
+-            .arg("login")
+-            .arg(name)
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true);
+-
+-        if !request.scopes.is_empty() {
+-            command.arg("--scopes").arg(request.scopes.join(","));
+-        }
+-
+-        apply_cli_overrides(&mut command, &resolved_overrides, true);
+-        self.command_env.apply(&mut command)?;
+-
+-        spawn_with_retry(&mut command, self.command_env.binary_path())
+-    }
+-
+-    /// Starts the `codex responses-api-proxy` helper with a supplied API key.
+-    ///
+-    /// Forwards optional `--port`, `--server-info`, `--http-shutdown`, and `--upstream-url` flags.
+-    /// The API key is written to stdin immediately after spawn, stdout/stderr remain piped for callers
+-    /// to drain, and the returned handle owns the child process plus any `--server-info` path used.
+-    pub async fn start_responses_api_proxy(
+-        &self,
+-        request: ResponsesApiProxyRequest,
+-    ) -> Result<ResponsesApiProxyHandle, CodexError> {
+-        let ResponsesApiProxyRequest {
+-            api_key,
+-            port,
+-            server_info_path,
+-            http_shutdown,
+-            upstream_url,
+-        } = request;
+-
+-        let api_key = api_key.trim().to_string();
+-        if api_key.is_empty() {
+-            return Err(CodexError::EmptyApiKey);
+-        }
+-
+-        let working_dir = self.sandbox_working_dir(None)?;
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("responses-api-proxy")
+-            .stdin(std::process::Stdio::piped())
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(&working_dir);
+-
+-        if let Some(port) = port {
+-            command.arg("--port").arg(port.to_string());
+-        }
+-
+-        if let Some(path) = server_info_path.as_ref() {
+-            command.arg("--server-info").arg(path);
+-        }
+-
+-        if http_shutdown {
+-            command.arg("--http-shutdown");
+-        }
+-
+-        if let Some(url) = upstream_url.as_ref() {
+-            if !url.trim().is_empty() {
+-                command.arg("--upstream-url").arg(url);
+-            }
+-        }
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
+-        stdin
+-            .write_all(api_key.as_bytes())
+-            .await
+-            .map_err(CodexError::StdinWrite)?;
+-        stdin
+-            .write_all(b"\n")
+-            .await
+-            .map_err(CodexError::StdinWrite)?;
+-        stdin.shutdown().await.map_err(CodexError::StdinWrite)?;
+-
+-        Ok(ResponsesApiProxyHandle {
+-            child,
+-            server_info_path,
+-        })
+-    }
+-
+-    /// Spawns `codex stdio-to-uds <SOCKET_PATH>` with piped stdio for manual relays.
+-    ///
+-    /// Returns the child process so callers can write to stdin/read from stdout (e.g., to bridge a
+-    /// JSON-RPC transport over a Unix domain socket). Fails fast on empty socket paths and inherits
+-    /// the builder working directory when none is provided on the request.
+-    pub fn stdio_to_uds(
+-        &self,
+-        request: StdioToUdsRequest,
+-    ) -> Result<tokio::process::Child, CodexError> {
+-        let StdioToUdsRequest {
+-            socket_path,
+-            working_dir,
+-        } = request;
+-
+-        if socket_path.as_os_str().is_empty() {
+-            return Err(CodexError::EmptySocketPath);
+-        }
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("stdio-to-uds")
+-            .arg(&socket_path)
+-            .stdin(std::process::Stdio::piped())
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(self.sandbox_working_dir(working_dir)?);
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        spawn_with_retry(&mut command, self.command_env.binary_path())
+-    }
+-
+-    /// Runs `codex sandbox <platform> [--full-auto|--log-denials] [--config/--enable/--disable] -- <COMMAND...>`.
+-    ///
+-    /// Captures stdout/stderr and mirrors them according to the builder (`mirror_stdout` / `quiet`). Unlike
+-    /// `apply`/`diff`, non-zero exit codes are returned in [`SandboxRun::status`] without being wrapped in
+-    /// [`CodexError::NonZeroExit`]. macOS denial logging is enabled via [`SandboxCommandRequest::log_denials`]
+-    /// and ignored on other platforms. Linux uses the bundled `codex-linux-sandbox` helper; Windows sandboxing
+-    /// is experimental and relies on the upstream helper. The wrapper does not gate availability—unsupported
+-    /// installs will surface as non-zero statuses.
+-    pub async fn run_sandbox(
+-        &self,
+-        request: SandboxCommandRequest,
+-    ) -> Result<SandboxRun, CodexError> {
+-        if request.command.is_empty() {
+-            return Err(CodexError::EmptySandboxCommand);
+-        }
+-
+-        let SandboxCommandRequest {
+-            platform,
+-            command,
+-            full_auto,
+-            log_denials,
+-            config_overrides,
+-            feature_toggles,
+-            working_dir,
+-        } = request;
+-
+-        let working_dir = self.sandbox_working_dir(working_dir)?;
+-
+-        let mut process = Command::new(self.command_env.binary_path());
+-        process
+-            .arg("sandbox")
+-            .arg(platform.subcommand())
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(&working_dir);
+-
+-        if full_auto {
+-            process.arg("--full-auto");
+-        }
+-
+-        if log_denials && matches!(platform, SandboxPlatform::Macos) {
+-            process.arg("--log-denials");
+-        }
+-
+-        for override_ in config_overrides {
+-            process.arg("--config");
+-            process.arg(format!("{}={}", override_.key, override_.value));
+-        }
+-
+-        for feature in feature_toggles.enable {
+-            process.arg("--enable");
+-            process.arg(feature);
+-        }
+-
+-        for feature in feature_toggles.disable {
+-            process.arg("--disable");
+-            process.arg(feature);
+-        }
+-
+-        process.arg("--");
+-        process.args(&command);
+-
+-        self.command_env.apply(&mut process)?;
+-
+-        let mut child = spawn_with_retry(&mut process, self.command_env.binary_path())?;
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let stdout_task = tokio::spawn(tee_stream(
+-            stdout,
+-            ConsoleTarget::Stdout,
+-            self.mirror_stdout,
+-        ));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+-
+-        let wait_task = async move {
+-            let status = child
+-                .wait()
+-                .await
+-                .map_err(|source| CodexError::Wait { source })?;
+-            let stdout_bytes = stdout_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            let stderr_bytes = stderr_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+-        };
+-
+-        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+-            wait_task.await?
+-        } else {
+-            match time::timeout(self.timeout, wait_task).await {
+-                Ok(result) => result?,
+-                Err(_) => {
+-                    return Err(CodexError::Timeout {
+-                        timeout: self.timeout,
+-                    });
+-                }
+-            }
+-        };
+-
+-        Ok(SandboxRun {
+-            status,
+-            stdout: String::from_utf8(stdout_bytes)?,
+-            stderr: String::from_utf8(stderr_bytes)?,
+-        })
+-    }
+-
+-    /// Probes the configured binary for version/build metadata and supported feature flags.
+-    ///
+-    /// Results are cached per canonical binary path and invalidated when file metadata changes.
+-    /// Caller-supplied overrides (see [`CodexClientBuilder::capability_overrides`]) can
+-    /// short-circuit probes or layer hints; snapshots are still cached against the current
+-    /// binary fingerprint so changes on disk trigger revalidation. Missing fingerprints skip
+-    /// cache reuse to force a re-probe. Cache interaction follows the policy configured on
+-    /// the builder (see [`CodexClientBuilder::capability_cache_policy`]).
+-    /// Failures are logged and return conservative defaults so callers can gate optional flags.
+-    pub async fn probe_capabilities(&self) -> CodexCapabilities {
+-        self.probe_capabilities_with_policy(self.capability_cache_policy)
+-            .await
+-    }
+-
+-    /// Probes capabilities with an explicit cache policy.
+-    pub async fn probe_capabilities_with_policy(
+-        &self,
+-        cache_policy: CapabilityCachePolicy,
+-    ) -> CodexCapabilities {
+-        let cache_key = capability_cache_key(self.command_env.binary_path());
+-        let fingerprint = current_fingerprint(&cache_key);
+-        let overrides = &self.capability_overrides;
+-
+-        let cache_reads_enabled = matches!(cache_policy, CapabilityCachePolicy::PreferCache)
+-            && has_fingerprint_metadata(&fingerprint);
+-        let cache_writes_enabled = !matches!(cache_policy, CapabilityCachePolicy::Bypass)
+-            && has_fingerprint_metadata(&fingerprint);
+-
+-        if let Some(snapshot) = overrides.snapshot.clone() {
+-            let capabilities = finalize_capabilities_with_overrides(
+-                snapshot,
+-                overrides,
+-                cache_key.clone(),
+-                fingerprint.clone(),
+-                true,
+-            );
+-            if cache_writes_enabled {
+-                update_capability_cache(capabilities.clone());
+-            }
+-            return capabilities;
+-        }
+-
+-        if cache_reads_enabled {
+-            if let Some(cached) = cached_capabilities(&cache_key, &fingerprint) {
+-                if overrides.is_empty() {
+-                    return cached;
+-                }
+-                let merged = finalize_capabilities_with_overrides(
+-                    cached,
+-                    overrides,
+-                    cache_key.clone(),
+-                    fingerprint.clone(),
+-                    false,
+-                );
+-                if cache_writes_enabled {
+-                    update_capability_cache(merged.clone());
+-                }
+-                return merged;
+-            }
+-        }
+-
+-        let probed = self
+-            .probe_capabilities_uncached(&cache_key, fingerprint.clone())
+-            .await;
+-
+-        let capabilities =
+-            finalize_capabilities_with_overrides(probed, overrides, cache_key, fingerprint, false);
+-
+-        if cache_writes_enabled {
+-            update_capability_cache(capabilities.clone());
+-        }
+-
+-        capabilities
+-    }
+-
+-    async fn probe_capabilities_uncached(
+-        &self,
+-        cache_key: &CapabilityCacheKey,
+-        fingerprint: Option<BinaryFingerprint>,
+-    ) -> CodexCapabilities {
+-        let mut plan = CapabilityProbePlan::default();
+-        let mut features = CodexFeatureFlags::default();
+-        let mut version = None;
+-
+-        plan.steps.push(CapabilityProbeStep::VersionFlag);
+-        match self.run_basic_command(["--version"]).await {
+-            Ok(output) => {
+-                if !output.status.success() {
+-                    warn!(
+-                        status = ?output.status,
+-                        binary = ?cache_key.binary_path,
+-                        "codex --version exited non-zero"
+-                    );
+-                }
+-                let text = command_output_text(&output);
+-                if !text.trim().is_empty() {
 -                    version = Some(parse_version_output(&text));
-+                    version = Some(version::parse_version_output(&text));
-                 }
-             }
-             Err(error) => warn!(
-@@ -2286,13 +1653,13 @@ impl CodexClient {
-                     features.supports_features_list = true;
-                 }
-                 let text = command_output_text(&output);
+-                }
+-            }
+-            Err(error) => warn!(
+-                ?error,
+-                binary = ?cache_key.binary_path,
+-                "codex --version probe failed"
+-            ),
+-        }
+-
+-        let mut parsed_features = false;
+-
+-        plan.steps.push(CapabilityProbeStep::FeaturesListJson);
+-        match self.run_basic_command(["features", "list", "--json"]).await {
+-            Ok(output) => {
+-                if !output.status.success() {
+-                    warn!(
+-                        status = ?output.status,
+-                        binary = ?cache_key.binary_path,
+-                        "codex features list --json exited non-zero"
+-                    );
+-                }
+-                if output.status.success() {
+-                    features.supports_features_list = true;
+-                }
+-                let text = command_output_text(&output);
 -                if let Some(parsed) = parse_features_from_json(&text) {
 -                    merge_feature_flags(&mut features, parsed);
 -                    parsed_features = detected_feature_flags(&features);
-+                if let Some(parsed) = version::parse_features_from_json(&text) {
-+                    version::merge_feature_flags(&mut features, parsed);
-+                    parsed_features = version::detected_feature_flags(&features);
-                 } else if !text.is_empty() {
+-                } else if !text.is_empty() {
 -                    let parsed = parse_features_from_text(&text);
 -                    merge_feature_flags(&mut features, parsed);
 -                    parsed_features = detected_feature_flags(&features);
-+                    let parsed = version::parse_features_from_text(&text);
-+                    version::merge_feature_flags(&mut features, parsed);
-+                    parsed_features = version::detected_feature_flags(&features);
-                 }
-             }
-             Err(error) => warn!(
-@@ -2317,8 +1684,8 @@ impl CodexClient {
-                         features.supports_features_list = true;
-                     }
-                     let text = command_output_text(&output);
+-                }
+-            }
+-            Err(error) => warn!(
+-                ?error,
+-                binary = ?cache_key.binary_path,
+-                "codex features list --json probe failed"
+-            ),
+-        }
+-
+-        if !parsed_features {
+-            plan.steps.push(CapabilityProbeStep::FeaturesListText);
+-            match self.run_basic_command(["features", "list"]).await {
+-                Ok(output) => {
+-                    if !output.status.success() {
+-                        warn!(
+-                            status = ?output.status,
+-                            binary = ?cache_key.binary_path,
+-                            "codex features list exited non-zero"
+-                        );
+-                    }
+-                    if output.status.success() {
+-                        features.supports_features_list = true;
+-                    }
+-                    let text = command_output_text(&output);
 -                    let parsed = parse_features_from_text(&text);
 -                    merge_feature_flags(&mut features, parsed);
-+                    let parsed = version::parse_features_from_text(&text);
-+                    version::merge_feature_flags(&mut features, parsed);
-                 }
-                 Err(error) => warn!(
-                     ?error,
-@@ -2328,7 +1695,7 @@ impl CodexClient {
-             }
-         }
- 
+-                }
+-                Err(error) => warn!(
+-                    ?error,
+-                    binary = ?cache_key.binary_path,
+-                    "codex features list probe failed"
+-                ),
+-            }
+-        }
+-
 -        if should_run_help_fallback(&features) {
-+        if version::should_run_help_fallback(&features) {
-             plan.steps.push(CapabilityProbeStep::HelpFallback);
-             match self.run_basic_command(["--help"]).await {
-                 Ok(output) => {
-@@ -2340,8 +1707,8 @@ impl CodexClient {
-                         );
-                     }
-                     let text = command_output_text(&output);
+-            plan.steps.push(CapabilityProbeStep::HelpFallback);
+-            match self.run_basic_command(["--help"]).await {
+-                Ok(output) => {
+-                    if !output.status.success() {
+-                        warn!(
+-                            status = ?output.status,
+-                            binary = ?cache_key.binary_path,
+-                            "codex --help exited non-zero"
+-                        );
+-                    }
+-                    let text = command_output_text(&output);
 -                    let parsed = parse_help_output(&text);
 -                    merge_feature_flags(&mut features, parsed);
-+                    let parsed = version::parse_help_output(&text);
-+                    version::merge_feature_flags(&mut features, parsed);
-                 }
-                 Err(error) => warn!(
-                     ?error,
-@@ -2378,166 +1745,6 @@ impl CodexClient {
-         update_advisory_from_capabilities(&capabilities, latest_releases)
-     }
- 
+-                }
+-                Err(error) => warn!(
+-                    ?error,
+-                    binary = ?cache_key.binary_path,
+-                    "codex --help probe failed"
+-                ),
+-            }
+-        }
+-
+-        CodexCapabilities {
+-            cache_key: cache_key.clone(),
+-            fingerprint,
+-            version,
+-            features,
+-            probe_plan: plan,
+-            collected_at: SystemTime::now(),
+-        }
+-    }
+-
+-    /// Computes an update advisory by comparing the probed Codex version against
+-    /// caller-supplied latest releases.
+-    ///
+-    /// The crate does not fetch release metadata itself; hosts should populate
+-    /// [`CodexLatestReleases`] using their preferred update channel (npm,
+-    /// Homebrew, GitHub releases) and then call this helper. Results leverage
+-    /// the capability probe cache; callers with an existing
+-    /// [`CodexCapabilities`] snapshot can skip the probe by invoking
+-    /// [`update_advisory_from_capabilities`].
+-    pub async fn update_advisory(
+-        &self,
+-        latest_releases: &CodexLatestReleases,
+-    ) -> CodexUpdateAdvisory {
+-        let capabilities = self.probe_capabilities().await;
+-        update_advisory_from_capabilities(&capabilities, latest_releases)
+-    }
+-
 -    async fn invoke_codex_exec(&self, request: ExecRequest) -> Result<String, CodexError> {
 -        let ExecRequest { prompt, overrides } = request;
 -        let dir_ctx = self.directory_context()?;
@@ -5164,13 +7149,168 @@ index 08e80ed..66fee60 100644
 -        Ok(trimmed)
 -    }
 -
-     fn directory_context(&self) -> Result<DirectoryContext, CodexError> {
-         if let Some(dir) = &self.working_dir {
-             return Ok(DirectoryContext::Fixed(dir.clone()));
-@@ -2700,33 +1907,6 @@ impl Default for CodexClient {
-     }
- }
- 
+-    fn directory_context(&self) -> Result<DirectoryContext, CodexError> {
+-        if let Some(dir) = &self.working_dir {
+-            return Ok(DirectoryContext::Fixed(dir.clone()));
+-        }
+-
+-        let temp = tempfile::tempdir().map_err(CodexError::TempDir)?;
+-        Ok(DirectoryContext::Ephemeral(temp))
+-    }
+-
+-    fn sandbox_working_dir(&self, request_dir: Option<PathBuf>) -> Result<PathBuf, CodexError> {
+-        if let Some(dir) = request_dir {
+-            return Ok(dir);
+-        }
+-
+-        if let Some(dir) = &self.working_dir {
+-            return Ok(dir.clone());
+-        }
+-
+-        env::current_dir().map_err(|source| CodexError::WorkingDirectory { source })
+-    }
+-
+-    async fn run_simple_command_with_overrides(
+-        &self,
+-        args: Vec<OsString>,
+-        overrides: CliOverridesPatch,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let dir_ctx = self.directory_context()?;
+-        let resolved_overrides =
+-            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .args(args)
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(dir_ctx.path());
+-
+-        apply_cli_overrides(&mut command, &resolved_overrides, true);
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let stdout_task = tokio::spawn(tee_stream(
+-            stdout,
+-            ConsoleTarget::Stdout,
+-            self.mirror_stdout,
+-        ));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+-
+-        let timeout = self.timeout;
+-        let wait_task = async move {
+-            let _dir_ctx = dir_ctx;
+-            let status = child
+-                .wait()
+-                .await
+-                .map_err(|source| CodexError::Wait { source })?;
+-            let stdout_bytes = stdout_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            let stderr_bytes = stderr_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+-        };
+-
+-        let (status, stdout_bytes, stderr_bytes) = if timeout.is_zero() {
+-            wait_task.await?
+-        } else {
+-            match time::timeout(timeout, wait_task).await {
+-                Ok(result) => result?,
+-                Err(_) => {
+-                    return Err(CodexError::Timeout { timeout });
+-                }
+-            }
+-        };
+-
+-        if !status.success() {
+-            return Err(CodexError::NonZeroExit {
+-                status,
+-                stderr: String::from_utf8(stderr_bytes)?,
+-            });
+-        }
+-
+-        Ok(ApplyDiffArtifacts {
+-            status,
+-            stdout: String::from_utf8(stdout_bytes)?,
+-            stderr: String::from_utf8(stderr_bytes)?,
+-        })
+-    }
+-
+-    async fn run_basic_command<S, I>(&self, args: I) -> Result<CommandOutput, CodexError>
+-    where
+-        S: AsRef<OsStr>,
+-        I: IntoIterator<Item = S>,
+-    {
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .args(args)
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true);
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let stdout_task = tokio::spawn(tee_stream(stdout, ConsoleTarget::Stdout, false));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, false));
+-
+-        let wait_task = async move {
+-            let status = child
+-                .wait()
+-                .await
+-                .map_err(|source| CodexError::Wait { source })?;
+-            let stdout_bytes = stdout_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            let stderr_bytes = stderr_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+-        };
+-
+-        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+-            wait_task.await?
+-        } else {
+-            match time::timeout(self.timeout, wait_task).await {
+-                Ok(result) => result?,
+-                Err(_) => {
+-                    return Err(CodexError::Timeout {
+-                        timeout: self.timeout,
+-                    });
+-                }
+-            }
+-        };
+-
+-        Ok(CommandOutput {
+-            status,
+-            stdout: stdout_bytes,
+-            stderr: stderr_bytes,
+-        })
+-    }
+-}
+-
+-impl Default for CodexClient {
+-    fn default() -> Self {
+-        CodexClient::builder().build()
+-    }
+-}
+-
 -fn spawn_with_retry(
 -    command: &mut Command,
 -    binary: &Path,
@@ -5198,13 +7338,75 @@ index 08e80ed..66fee60 100644
 -    unreachable!("spawn_with_retry should return before exhausting retries")
 -}
 -
- /// Errors that may occur while invoking the Codex CLI.
- #[derive(Debug, Error)]
- pub enum CodexError {
-@@ -2796,2018 +1976,35 @@ pub enum CodexError {
-     EmptySocketPath,
-     #[error("failed to create temporary working directory: {0}")]
-     TempDir(#[source] std::io::Error),
+-/// Errors that may occur while invoking the Codex CLI.
+-#[derive(Debug, Error)]
+-pub enum CodexError {
+-    #[error("codex binary `{binary}` could not be spawned: {source}")]
+-    Spawn {
+-        binary: PathBuf,
+-        #[source]
+-        source: std::io::Error,
+-    },
+-    #[error("failed to wait for codex process: {source}")]
+-    Wait {
+-        #[source]
+-        source: std::io::Error,
+-    },
+-    #[error("codex exceeded timeout of {timeout:?}")]
+-    Timeout { timeout: Duration },
+-    #[error("codex exited with {status:?}: {stderr}")]
+-    NonZeroExit { status: ExitStatus, stderr: String },
+-    #[error("codex output was not valid UTF-8: {0}")]
+-    InvalidUtf8(#[from] std::string::FromUtf8Error),
+-    #[error("failed to parse {context} JSON output: {source}")]
+-    JsonParse {
+-        context: &'static str,
+-        stdout: String,
+-        #[source]
+-        source: serde_json::Error,
+-    },
+-    #[error("failed to parse execpolicy JSON output: {source}")]
+-    ExecPolicyParse {
+-        stdout: String,
+-        #[source]
+-        source: serde_json::Error,
+-    },
+-    #[error("failed to parse features list output: {reason}")]
+-    FeatureListParse { reason: String, stdout: String },
+-    #[error("failed to read responses-api-proxy server info from `{path}`: {source}")]
+-    ResponsesApiProxyInfoRead {
+-        path: PathBuf,
+-        #[source]
+-        source: std::io::Error,
+-    },
+-    #[error("failed to parse responses-api-proxy server info from `{path}`: {source}")]
+-    ResponsesApiProxyInfoParse {
+-        path: PathBuf,
+-        #[source]
+-        source: serde_json::Error,
+-    },
+-    #[error("prompt must not be empty")]
+-    EmptyPrompt,
+-    #[error("sandbox command must not be empty")]
+-    EmptySandboxCommand,
+-    #[error("execpolicy command must not be empty")]
+-    EmptyExecPolicyCommand,
+-    #[error("API key must not be empty")]
+-    EmptyApiKey,
+-    #[error("task id must not be empty")]
+-    EmptyTaskId,
+-    #[error("environment id must not be empty")]
+-    EmptyEnvId,
+-    #[error("MCP server name must not be empty")]
+-    EmptyMcpServerName,
+-    #[error("MCP server command must not be empty")]
+-    EmptyMcpCommand,
+-    #[error("MCP server URL must not be empty")]
+-    EmptyMcpUrl,
+-    #[error("socket path must not be empty")]
+-    EmptySocketPath,
+-    #[error("failed to create temporary working directory: {0}")]
+-    TempDir(#[source] std::io::Error),
 -    #[error("failed to resolve working directory: {source}")]
 -    WorkingDirectory {
 -        #[source]
@@ -6498,11 +8700,40 @@ index 08e80ed..66fee60 100644
 -        self
 -    }
 -}
--
++        let mut args = vec![OsString::from("review")];
++        if let Some(base) = request.base {
++            if !base.trim().is_empty() {
++                args.push(OsString::from("--base"));
++                args.push(OsString::from(base));
++            }
++        }
++        if let Some(commit) = request.commit {
++            if !commit.trim().is_empty() {
++                args.push(OsString::from("--commit"));
++                args.push(OsString::from(commit));
++            }
++        }
++        if let Some(title) = request.title {
++            if !title.trim().is_empty() {
++                args.push(OsString::from("--title"));
++                args.push(OsString::from(title));
++            }
++        }
++        if request.uncommitted {
++            args.push(OsString::from("--uncommitted"));
++        }
++        if let Some(prompt) = request.prompt {
++            if !prompt.trim().is_empty() {
++                args.push(OsString::from(prompt));
++            }
++        }
+ 
 -impl Default for ExecReviewCommandRequest {
 -    fn default() -> Self {
 -        Self::new()
--    }
++        self.run_simple_command_with_overrides(args, request.overrides)
++            .await
+     }
 -}
 -
 -/// Request for `codex resume [OPTIONS] [SESSION_ID] [PROMPT]`.
@@ -6515,7 +8746,7 @@ index 08e80ed..66fee60 100644
 -    /// Per-call CLI overrides layered on top of the builder.
 -    pub overrides: CliOverridesPatch,
 -}
--
+ 
 -impl ResumeSessionRequest {
 -    pub fn new() -> Self {
 -        Self {
@@ -6524,43 +8755,122 @@ index 08e80ed..66fee60 100644
 -            all: false,
 -            last: false,
 -            overrides: CliOverridesPatch::default(),
--        }
++    /// Runs `codex exec review [OPTIONS] [PROMPT]` and returns captured output.
++    pub async fn exec_review(
++        &self,
++        request: ExecReviewCommandRequest,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
++            return Err(CodexError::EmptyPrompt);
+         }
 -    }
--
+ 
 -    pub fn session_id(mut self, session_id: impl Into<String>) -> Self {
 -        let session_id = session_id.into();
 -        self.session_id = (!session_id.trim().is_empty()).then_some(session_id);
 -        self
 -    }
--
++        let mut args = vec![OsString::from("exec"), OsString::from("review")];
++        if let Some(base) = request.base {
++            if !base.trim().is_empty() {
++                args.push(OsString::from("--base"));
++                args.push(OsString::from(base));
++            }
++        }
++        if let Some(commit) = request.commit {
++            if !commit.trim().is_empty() {
++                args.push(OsString::from("--commit"));
++                args.push(OsString::from(commit));
++            }
++        }
++        if request.json {
++            args.push(OsString::from("--json"));
++        }
++        if request.skip_git_repo_check {
++            args.push(OsString::from("--skip-git-repo-check"));
++        }
++        if let Some(title) = request.title {
++            if !title.trim().is_empty() {
++                args.push(OsString::from("--title"));
++                args.push(OsString::from(title));
++            }
++        }
++        if request.uncommitted {
++            args.push(OsString::from("--uncommitted"));
++        }
++        if let Some(prompt) = request.prompt {
++            if !prompt.trim().is_empty() {
++                args.push(OsString::from(prompt));
++            }
++        }
+ 
 -    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
 -        let prompt = prompt.into();
 -        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
 -        self
--    }
--
++        self.run_simple_command_with_overrides(args, request.overrides)
++            .await
+     }
+ 
 -    pub fn all(mut self, enable: bool) -> Self {
 -        self.all = enable;
 -        self
 -    }
--
++    /// Runs `codex fork [OPTIONS] [SESSION_ID] [PROMPT]` and returns captured output.
++    pub async fn fork_session(
++        &self,
++        request: ForkSessionRequest,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
++            return Err(CodexError::EmptyPrompt);
++        }
+ 
 -    pub fn last(mut self, enable: bool) -> Self {
 -        self.last = enable;
 -        self
 -    }
--
++        let mut args = vec![OsString::from("fork")];
++        if request.all {
++            args.push(OsString::from("--all"));
++        }
++        if request.last {
++            args.push(OsString::from("--last"));
++        }
++        if let Some(session_id) = request.session_id {
++            if !session_id.trim().is_empty() {
++                args.push(OsString::from(session_id));
++            }
++        }
++        if let Some(prompt) = request.prompt {
++            if !prompt.trim().is_empty() {
++                args.push(OsString::from(prompt));
++            }
++        }
+ 
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
--    }
++        self.run_simple_command_with_overrides(args, request.overrides)
++            .await
+     }
 -}
--
+ 
 -impl Default for ResumeSessionRequest {
 -    fn default() -> Self {
 -        Self::new()
--    }
++    /// Runs `codex cloud --help` and returns captured output.
++    pub async fn cloud_overview(
++        &self,
++        request: CloudOverviewRequest,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        self.run_simple_command_with_overrides(
++            vec![OsString::from("cloud"), OsString::from("--help")],
++            request.overrides,
++        )
++        .await
+     }
 -}
--
+ 
 -/// Request for `codex fork [OPTIONS] [SESSION_ID] [PROMPT]`.
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub struct ForkSessionRequest {
@@ -6571,7 +8881,19 @@ index 08e80ed..66fee60 100644
 -    /// Per-call CLI overrides layered on top of the builder.
 -    pub overrides: CliOverridesPatch,
 -}
--
++    /// Lists Codex Cloud tasks via `codex cloud list`.
++    pub async fn cloud_list(
++        &self,
++        request: CloudListRequest,
++    ) -> Result<CloudListOutput, CodexError> {
++        let CloudListRequest {
++            json,
++            env_id,
++            limit,
++            cursor,
++            overrides,
++        } = request;
+ 
 -impl ForkSessionRequest {
 -    pub fn new() -> Self {
 -        Self {
@@ -6580,7 +8902,22 @@ index 08e80ed..66fee60 100644
 -            all: false,
 -            last: false,
 -            overrides: CliOverridesPatch::default(),
--        }
++        let mut args = vec![OsString::from("cloud"), OsString::from("list")];
++        if let Some(env_id) = env_id {
++            args.push(OsString::from("--env"));
++            args.push(OsString::from(env_id));
++        }
++        if let Some(limit) = limit {
++            args.push(OsString::from("--limit"));
++            args.push(OsString::from(limit.to_string()));
++        }
++        if let Some(cursor) = cursor {
++            args.push(OsString::from("--cursor"));
++            args.push(OsString::from(cursor));
++        }
++        if json {
++            args.push(OsString::from("--json"));
+         }
 -    }
 -
 -    pub fn session_id(mut self, session_id: impl Into<String>) -> Self {
@@ -6594,54 +8931,125 @@ index 08e80ed..66fee60 100644
 -        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
 -        self
 -    }
--
+ 
 -    pub fn all(mut self, enable: bool) -> Self {
 -        self.all = enable;
 -        self
 -    }
--
++        let artifacts = self
++            .run_simple_command_with_overrides(args, overrides)
++            .await?;
++        let parsed = if json {
++            Some(serde_json::from_str(&artifacts.stdout).map_err(|source| {
++                CodexError::JsonParse {
++                    context: "cloud list",
++                    stdout: artifacts.stdout.clone(),
++                    source,
++                }
++            })?)
++        } else {
++            None
++        };
+ 
 -    pub fn last(mut self, enable: bool) -> Self {
 -        self.last = enable;
 -        self
--    }
--
++        Ok(CloudListOutput {
++            status: artifacts.status,
++            stdout: artifacts.stdout,
++            stderr: artifacts.stderr,
++            json: parsed,
++        })
+     }
+ 
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
 -    }
 -}
--
++    /// Shows the status of a Codex Cloud task via `codex cloud status <TASK_ID>`.
++    pub async fn cloud_status(
++        &self,
++        request: CloudStatusRequest,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let task_id = request.task_id.trim();
++        if task_id.is_empty() {
++            return Err(CodexError::EmptyTaskId);
++        }
+ 
 -impl Default for ForkSessionRequest {
 -    fn default() -> Self {
 -        Self::new()
--    }
++        self.run_simple_command_with_overrides(
++            vec![
++                OsString::from("cloud"),
++                OsString::from("status"),
++                OsString::from(task_id),
++            ],
++            request.overrides,
++        )
++        .await
+     }
 -}
--
+ 
 -/// Request for `codex cloud` (overview/help).
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub struct CloudOverviewRequest {
 -    pub overrides: CliOverridesPatch,
 -}
--
++    /// Shows the unified diff for a Codex Cloud task via `codex cloud diff [--attempt N] <TASK_ID>`.
++    pub async fn cloud_diff(
++        &self,
++        request: CloudDiffRequest,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let task_id = request.task_id.trim();
++        if task_id.is_empty() {
++            return Err(CodexError::EmptyTaskId);
++        }
+ 
 -impl CloudOverviewRequest {
 -    pub fn new() -> Self {
 -        Self {
 -            overrides: CliOverridesPatch::default(),
--        }
--    }
--
++        let mut args = vec![OsString::from("cloud"), OsString::from("diff")];
++        if let Some(attempt) = request.attempt {
++            args.push(OsString::from("--attempt"));
++            args.push(OsString::from(attempt.to_string()));
+         }
++        args.push(OsString::from(task_id));
++        self.run_simple_command_with_overrides(args, request.overrides)
++            .await
+     }
+ 
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
 -    }
 -}
--
++    /// Applies the diff for a Codex Cloud task locally via `codex cloud apply [--attempt N] <TASK_ID>`.
++    pub async fn cloud_apply(
++        &self,
++        request: CloudApplyRequest,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let task_id = request.task_id.trim();
++        if task_id.is_empty() {
++            return Err(CodexError::EmptyTaskId);
++        }
+ 
 -impl Default for CloudOverviewRequest {
 -    fn default() -> Self {
 -        Self::new()
--    }
++        let mut args = vec![OsString::from("cloud"), OsString::from("apply")];
++        if let Some(attempt) = request.attempt {
++            args.push(OsString::from("--attempt"));
++            args.push(OsString::from(attempt.to_string()));
++        }
++        args.push(OsString::from(task_id));
++        self.run_simple_command_with_overrides(args, request.overrides)
++            .await
+     }
 -}
--
+ 
 -/// Request for `codex cloud list`.
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub struct CloudListRequest {
@@ -6651,7 +9059,16 @@ index 08e80ed..66fee60 100644
 -    pub cursor: Option<String>,
 -    pub overrides: CliOverridesPatch,
 -}
--
++    /// Submits a new Codex Cloud task via `codex cloud exec`.
++    pub async fn cloud_exec(
++        &self,
++        request: CloudExecRequest,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let env_id = request.env_id.trim();
++        if env_id.is_empty() {
++            return Err(CodexError::EmptyEnvId);
++        }
+ 
 -impl CloudListRequest {
 -    pub fn new() -> Self {
 -        Self {
@@ -6660,41 +9077,93 @@ index 08e80ed..66fee60 100644
 -            limit: None,
 -            cursor: None,
 -            overrides: CliOverridesPatch::default(),
--        }
++        let mut args = vec![OsString::from("cloud"), OsString::from("exec")];
++        args.push(OsString::from("--env"));
++        args.push(OsString::from(env_id));
++        if let Some(attempts) = request.attempts {
++            args.push(OsString::from("--attempts"));
++            args.push(OsString::from(attempts.to_string()));
++        }
++        if let Some(branch) = request.branch {
++            args.push(OsString::from("--branch"));
++            args.push(OsString::from(branch));
++        }
++        if let Some(query) = request.query {
++            args.push(OsString::from(query));
+         }
 -    }
 -
 -    pub fn json(mut self, enable: bool) -> Self {
 -        self.json = enable;
 -        self
 -    }
--
+ 
 -    pub fn env_id(mut self, env_id: impl Into<String>) -> Self {
 -        let env_id = env_id.into();
 -        self.env_id = (!env_id.trim().is_empty()).then_some(env_id);
 -        self
--    }
--
++        self.run_simple_command_with_overrides(args, request.overrides)
++            .await
+     }
+ 
 -    pub fn limit(mut self, limit: u32) -> Self {
 -        self.limit = Some(limit);
 -        self
--    }
--
++    /// Runs `codex mcp --help` and returns captured output.
++    pub async fn mcp_overview(
++        &self,
++        request: McpOverviewRequest,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        self.run_simple_command_with_overrides(
++            vec![OsString::from("mcp"), OsString::from("--help")],
++            request.overrides,
++        )
++        .await
+     }
+ 
 -    pub fn cursor(mut self, cursor: impl Into<String>) -> Self {
 -        let cursor = cursor.into();
 -        self.cursor = (!cursor.trim().is_empty()).then_some(cursor);
 -        self
 -    }
--
++    /// Lists configured MCP servers via `codex mcp list`.
++    pub async fn mcp_list(&self, request: McpListRequest) -> Result<McpListOutput, CodexError> {
++        let McpListRequest { json, overrides } = request;
++        let mut args = vec![OsString::from("mcp"), OsString::from("list")];
++        if json {
++            args.push(OsString::from("--json"));
++        }
+ 
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
 -    }
 -}
--
++        let artifacts = self
++            .run_simple_command_with_overrides(args, overrides)
++            .await?;
++        let parsed = if json {
++            Some(serde_json::from_str(&artifacts.stdout).map_err(|source| {
++                CodexError::JsonParse {
++                    context: "mcp list",
++                    stdout: artifacts.stdout.clone(),
++                    source,
++                }
++            })?)
++        } else {
++            None
++        };
+ 
 -impl Default for CloudListRequest {
 -    fn default() -> Self {
 -        Self::new()
--    }
++        Ok(McpListOutput {
++            status: artifacts.status,
++            stdout: artifacts.stdout,
++            stderr: artifacts.stderr,
++            json: parsed,
++        })
+     }
 -}
 -
 -/// Output from `codex cloud list`.
@@ -6706,28 +9175,52 @@ index 08e80ed..66fee60 100644
 -    /// Parsed JSON output when `--json` was requested.
 -    pub json: Option<Value>,
 -}
--
+ 
 -/// Request for `codex cloud status <TASK_ID>`.
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub struct CloudStatusRequest {
 -    pub task_id: String,
 -    pub overrides: CliOverridesPatch,
 -}
--
++    /// Gets a configured MCP server entry via `codex mcp get <NAME>`.
++    pub async fn mcp_get(&self, request: McpGetRequest) -> Result<McpListOutput, CodexError> {
++        let name = request.name.trim();
++        if name.is_empty() {
++            return Err(CodexError::EmptyMcpServerName);
++        }
+ 
 -impl CloudStatusRequest {
 -    pub fn new(task_id: impl Into<String>) -> Self {
 -        Self {
 -            task_id: task_id.into(),
 -            overrides: CliOverridesPatch::default(),
--        }
++        let mut args = vec![OsString::from("mcp"), OsString::from("get")];
++        if request.json {
++            args.push(OsString::from("--json"));
+         }
 -    }
--
++        args.push(OsString::from(name));
+ 
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
 -    }
 -}
--
++        let artifacts = self
++            .run_simple_command_with_overrides(args, request.overrides)
++            .await?;
++        let parsed = if request.json {
++            Some(serde_json::from_str(&artifacts.stdout).map_err(|source| {
++                CodexError::JsonParse {
++                    context: "mcp get",
++                    stdout: artifacts.stdout.clone(),
++                    source,
++                }
++            })?)
++        } else {
++            None
++        };
+ 
 -/// Request for `codex cloud exec`.
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub struct CloudExecRequest {
@@ -6737,7 +9230,14 @@ index 08e80ed..66fee60 100644
 -    pub branch: Option<String>,
 -    pub overrides: CliOverridesPatch,
 -}
--
++        Ok(McpListOutput {
++            status: artifacts.status,
++            stdout: artifacts.stdout,
++            stderr: artifacts.stderr,
++            json: parsed,
++        })
++    }
+ 
 -impl CloudExecRequest {
 -    pub fn new(env_id: impl Into<String>) -> Self {
 -        Self {
@@ -6746,30 +9246,94 @@ index 08e80ed..66fee60 100644
 -            attempts: None,
 -            branch: None,
 -            overrides: CliOverridesPatch::default(),
--        }
++    /// Adds an MCP server configuration entry via `codex mcp add`.
++    pub async fn mcp_add(&self, request: McpAddRequest) -> Result<ApplyDiffArtifacts, CodexError> {
++        let name = request.name.trim();
++        if name.is_empty() {
++            return Err(CodexError::EmptyMcpServerName);
+         }
 -    }
--
+ 
 -    pub fn query(mut self, query: impl Into<String>) -> Self {
 -        let query = query.into();
 -        self.query = (!query.trim().is_empty()).then_some(query);
 -        self
 -    }
--
++        let mut args = vec![
++            OsString::from("mcp"),
++            OsString::from("add"),
++            OsString::from(name),
++        ];
++        match request.transport {
++            McpAddTransport::StreamableHttp {
++                url,
++                bearer_token_env_var,
++            } => {
++                let url = url.trim();
++                if url.is_empty() {
++                    return Err(CodexError::EmptyMcpUrl);
++                }
++                args.push(OsString::from("--url"));
++                args.push(OsString::from(url));
++                if let Some(env_var) = bearer_token_env_var {
++                    if !env_var.trim().is_empty() {
++                        args.push(OsString::from("--bearer-token-env-var"));
++                        args.push(OsString::from(env_var));
++                    }
++                }
++            }
++            McpAddTransport::Stdio { env, command } => {
++                if command.is_empty() {
++                    return Err(CodexError::EmptyMcpCommand);
++                }
++                for (key, value) in env {
++                    let key = key.trim();
++                    if key.is_empty() {
++                        continue;
++                    }
++                    args.push(OsString::from("--env"));
++                    args.push(OsString::from(format!("{key}={value}")));
++                }
++                args.push(OsString::from("--"));
++                args.extend(command);
++            }
++        }
+ 
 -    pub fn attempts(mut self, attempts: u32) -> Self {
 -        self.attempts = Some(attempts);
 -        self
--    }
--
++        self.run_simple_command_with_overrides(args, request.overrides)
++            .await
+     }
+ 
 -    pub fn branch(mut self, branch: impl Into<String>) -> Self {
 -        let branch = branch.into();
 -        self.branch = (!branch.trim().is_empty()).then_some(branch);
 -        self
 -    }
--
++    /// Removes an MCP server configuration entry via `codex mcp remove <NAME>`.
++    pub async fn mcp_remove(
++        &self,
++        request: McpRemoveRequest,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let name = request.name.trim();
++        if name.is_empty() {
++            return Err(CodexError::EmptyMcpServerName);
++        }
+ 
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
--    }
++        self.run_simple_command_with_overrides(
++            vec![
++                OsString::from("mcp"),
++                OsString::from("remove"),
++                OsString::from(name),
++            ],
++            request.overrides,
++        )
++        .await
+     }
 -}
 -
 -/// Request for `codex mcp` (overview/help).
@@ -6777,12 +9341,20 @@ index 08e80ed..66fee60 100644
 -pub struct McpOverviewRequest {
 -    pub overrides: CliOverridesPatch,
 -}
--
+ 
 -impl McpOverviewRequest {
 -    pub fn new() -> Self {
 -        Self {
 -            overrides: CliOverridesPatch::default(),
--        }
++    /// Deauthenticates from an MCP server via `codex mcp logout <NAME>`.
++    pub async fn mcp_logout(
++        &self,
++        request: McpLogoutRequest,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let name = request.name.trim();
++        if name.is_empty() {
++            return Err(CodexError::EmptyMcpServerName);
+         }
 -    }
 -
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
@@ -6790,13 +9362,22 @@ index 08e80ed..66fee60 100644
 -        self
 -    }
 -}
--
+ 
 -impl Default for McpOverviewRequest {
 -    fn default() -> Self {
 -        Self::new()
--    }
++        self.run_simple_command_with_overrides(
++            vec![
++                OsString::from("mcp"),
++                OsString::from("logout"),
++                OsString::from(name),
++            ],
++            request.overrides,
++        )
++        .await
+     }
 -}
--
+ 
 -/// Request for `codex mcp list`.
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub struct McpListRequest {
@@ -6809,26 +9390,47 @@ index 08e80ed..66fee60 100644
 -        Self {
 -            json: false,
 -            overrides: CliOverridesPatch::default(),
--        }
++    /// Spawns `codex mcp login <NAME> [--scopes ...]`.
++    pub fn spawn_mcp_oauth_login_process(
++        &self,
++        request: McpOauthLoginRequest,
++    ) -> Result<tokio::process::Child, CodexError> {
++        let name = request.name.trim();
++        if name.is_empty() {
++            return Err(CodexError::EmptyMcpServerName);
+         }
 -    }
 -
 -    pub fn json(mut self, enable: bool) -> Self {
 -        self.json = enable;
 -        self
 -    }
--
+ 
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
 -    }
 -}
--
++        let resolved_overrides = resolve_cli_overrides(
++            &self.cli_overrides,
++            &request.overrides,
++            self.model.as_deref(),
++        );
+ 
 -impl Default for McpListRequest {
 -    fn default() -> Self {
 -        Self::new()
 -    }
 -}
--
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("mcp")
++            .arg("login")
++            .arg(name)
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true);
+ 
 -/// Output from `codex mcp list`.
 -#[derive(Clone, Debug, PartialEq)]
 -pub struct McpListOutput {
@@ -6837,7 +9439,10 @@ index 08e80ed..66fee60 100644
 -    pub stderr: String,
 -    pub json: Option<Value>,
 -}
--
++        if !request.scopes.is_empty() {
++            command.arg("--scopes").arg(request.scopes.join(","));
++        }
+ 
 -/// Request for `codex mcp get <NAME>`.
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub struct McpGetRequest {
@@ -6845,7 +9450,9 @@ index 08e80ed..66fee60 100644
 -    pub json: bool,
 -    pub overrides: CliOverridesPatch,
 -}
--
++        apply_cli_overrides(&mut command, &resolved_overrides, true);
++        self.command_env.apply(&mut command)?;
+ 
 -impl McpGetRequest {
 -    pub fn new(name: impl Into<String>) -> Self {
 -        Self {
@@ -6853,19 +9460,40 @@ index 08e80ed..66fee60 100644
 -            json: false,
 -            overrides: CliOverridesPatch::default(),
 -        }
--    }
--
++        spawn_with_retry(&mut command, self.command_env.binary_path())
+     }
+ 
 -    pub fn json(mut self, enable: bool) -> Self {
 -        self.json = enable;
 -        self
 -    }
--
++    /// Starts the `codex responses-api-proxy` helper with a supplied API key.
++    ///
++    /// Forwards optional `--port`, `--server-info`, `--http-shutdown`, and `--upstream-url` flags.
++    /// The API key is written to stdin immediately after spawn, stdout/stderr remain piped for callers
++    /// to drain, and the returned handle owns the child process plus any `--server-info` path used.
++    pub async fn start_responses_api_proxy(
++        &self,
++        request: ResponsesApiProxyRequest,
++    ) -> Result<ResponsesApiProxyHandle, CodexError> {
++        let ResponsesApiProxyRequest {
++            api_key,
++            port,
++            server_info_path,
++            http_shutdown,
++            upstream_url,
++        } = request;
+ 
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
 -    }
 -}
--
++        let api_key = api_key.trim().to_string();
++        if api_key.is_empty() {
++            return Err(CodexError::EmptyApiKey);
++        }
+ 
 -/// Transport for `codex mcp add`.
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub enum McpAddTransport {
@@ -6878,7 +9506,8 @@ index 08e80ed..66fee60 100644
 -        bearer_token_env_var: Option<String>,
 -    },
 -}
--
++        let working_dir = self.sandbox_working_dir(None)?;
+ 
 -/// Request for `codex mcp add`.
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub struct McpAddRequest {
@@ -6886,7 +9515,15 @@ index 08e80ed..66fee60 100644
 -    pub transport: McpAddTransport,
 -    pub overrides: CliOverridesPatch,
 -}
--
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("responses-api-proxy")
++            .stdin(std::process::Stdio::piped())
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(&working_dir);
+ 
 -impl McpAddRequest {
 -    pub fn stdio(name: impl Into<String>, command: Vec<OsString>) -> Self {
 -        Self {
@@ -6896,9 +9533,11 @@ index 08e80ed..66fee60 100644
 -                command,
 -            },
 -            overrides: CliOverridesPatch::default(),
--        }
++        if let Some(port) = port {
++            command.arg("--port").arg(port.to_string());
+         }
 -    }
--
+ 
 -    pub fn streamable_http(name: impl Into<String>, url: impl Into<String>) -> Self {
 -        Self {
 -            name: name.into(),
@@ -6907,16 +9546,20 @@ index 08e80ed..66fee60 100644
 -                bearer_token_env_var: None,
 -            },
 -            overrides: CliOverridesPatch::default(),
--        }
++        if let Some(path) = server_info_path.as_ref() {
++            command.arg("--server-info").arg(path);
+         }
 -    }
--
+ 
 -    pub fn env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
 -        if let McpAddTransport::Stdio { env, .. } = &mut self.transport {
 -            env.push((key.into(), value.into()));
--        }
++        if http_shutdown {
++            command.arg("--http-shutdown");
+         }
 -        self
 -    }
--
+ 
 -    pub fn bearer_token_env_var(mut self, env_var: impl Into<String>) -> Self {
 -        if let McpAddTransport::StreamableHttp {
 -            bearer_token_env_var,
@@ -6925,23 +9568,29 @@ index 08e80ed..66fee60 100644
 -        {
 -            let env_var = env_var.into();
 -            *bearer_token_env_var = (!env_var.trim().is_empty()).then_some(env_var);
--        }
++        if let Some(url) = upstream_url.as_ref() {
++            if !url.trim().is_empty() {
++                command.arg("--upstream-url").arg(url);
++            }
+         }
 -        self
 -    }
--
+ 
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
 -    }
 -}
--
++        self.command_env.apply(&mut command)?;
+ 
 -/// Request for `codex mcp remove <NAME>`.
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub struct McpRemoveRequest {
 -    pub name: String,
 -    pub overrides: CliOverridesPatch,
 -}
--
++        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+ 
 -impl McpRemoveRequest {
 -    pub fn new(name: impl Into<String>) -> Self {
 -        Self {
@@ -6949,34 +9598,72 @@ index 08e80ed..66fee60 100644
 -            overrides: CliOverridesPatch::default(),
 -        }
 -    }
--
++        let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
++        stdin
++            .write_all(api_key.as_bytes())
++            .await
++            .map_err(CodexError::StdinWrite)?;
++        stdin
++            .write_all(b"\n")
++            .await
++            .map_err(CodexError::StdinWrite)?;
++        stdin.shutdown().await.map_err(CodexError::StdinWrite)?;
+ 
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
--    }
++        Ok(ResponsesApiProxyHandle {
++            child,
++            server_info_path,
++        })
+     }
 -}
--
+ 
 -/// Request for `codex mcp logout <NAME>`.
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub struct McpLogoutRequest {
 -    pub name: String,
 -    pub overrides: CliOverridesPatch,
 -}
--
++    /// Spawns `codex stdio-to-uds <SOCKET_PATH>` with piped stdio for manual relays.
++    ///
++    /// Returns the child process so callers can write to stdin/read from stdout (e.g., to bridge a
++    /// JSON-RPC transport over a Unix domain socket). Fails fast on empty socket paths and inherits
++    /// the builder working directory when none is provided on the request.
++    pub fn stdio_to_uds(
++        &self,
++        request: StdioToUdsRequest,
++    ) -> Result<tokio::process::Child, CodexError> {
++        let StdioToUdsRequest {
++            socket_path,
++            working_dir,
++        } = request;
+ 
 -impl McpLogoutRequest {
 -    pub fn new(name: impl Into<String>) -> Self {
 -        Self {
 -            name: name.into(),
 -            overrides: CliOverridesPatch::default(),
--        }
++        if socket_path.as_os_str().is_empty() {
++            return Err(CodexError::EmptySocketPath);
+         }
 -    }
--
+ 
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
 -    }
 -}
--
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("stdio-to-uds")
++            .arg(&socket_path)
++            .stdin(std::process::Stdio::piped())
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(self.sandbox_working_dir(working_dir)?);
+ 
 -/// Request for `codex mcp login <NAME>` (OAuth).
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub struct McpOauthLoginRequest {
@@ -6984,7 +9671,8 @@ index 08e80ed..66fee60 100644
 -    pub scopes: Vec<String>,
 -    pub overrides: CliOverridesPatch,
 -}
--
++        self.command_env.apply(&mut command)?;
+ 
 -impl McpOauthLoginRequest {
 -    pub fn new(name: impl Into<String>) -> Self {
 -        Self {
@@ -6992,8 +9680,9 @@ index 08e80ed..66fee60 100644
 -            scopes: Vec::new(),
 -            overrides: CliOverridesPatch::default(),
 -        }
--    }
--
++        spawn_with_retry(&mut command, self.command_env.binary_path())
+     }
+ 
 -    pub fn scopes<I, S>(mut self, scopes: I) -> Self
 -    where
 -        I: IntoIterator<Item = S>,
@@ -7007,13 +9696,37 @@ index 08e80ed..66fee60 100644
 -        );
 -        self
 -    }
--
++    /// Runs `codex sandbox <platform> [--full-auto|--log-denials] [--config/--enable/--disable] -- <COMMAND...>`.
++    ///
++    /// Captures stdout/stderr and mirrors them according to the builder (`mirror_stdout` / `quiet`). Unlike
++    /// `apply`/`diff`, non-zero exit codes are returned in [`SandboxRun::status`] without being wrapped in
++    /// [`CodexError::NonZeroExit`]. macOS denial logging is enabled via [`SandboxCommandRequest::log_denials`]
++    /// and ignored on other platforms. Linux uses the bundled `codex-linux-sandbox` helper; Windows sandboxing
++    /// is experimental and relies on the upstream helper. The wrapper does not gate availability—unsupported
++    /// installs will surface as non-zero statuses.
++    pub async fn run_sandbox(
++        &self,
++        request: SandboxCommandRequest,
++    ) -> Result<SandboxRun, CodexError> {
++        if request.command.is_empty() {
++            return Err(CodexError::EmptySandboxCommand);
++        }
+ 
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
 -    }
 -}
--
++        let SandboxCommandRequest {
++            platform,
++            command,
++            full_auto,
++            log_denials,
++            config_overrides,
++            feature_toggles,
++            working_dir,
++        } = request;
+ 
 -/// Target for app-server code generation.
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub enum AppServerCodegenTarget {
@@ -7022,7 +9735,8 @@ index 08e80ed..66fee60 100644
 -    /// Emits a JSON schema bundle for the app-server protocol.
 -    JsonSchema,
 -}
--
++        let working_dir = self.sandbox_working_dir(working_dir)?;
+ 
 -impl AppServerCodegenTarget {
 -    fn subcommand(&self) -> &'static str {
 -        match self {
@@ -7030,15 +9744,25 @@ index 08e80ed..66fee60 100644
 -            AppServerCodegenTarget::JsonSchema => "generate-json-schema",
 -        }
 -    }
--
++        let mut process = Command::new(self.command_env.binary_path());
++        process
++            .arg("sandbox")
++            .arg(platform.subcommand())
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(&working_dir);
+ 
 -    fn prettier(&self) -> Option<&PathBuf> {
 -        match self {
 -            AppServerCodegenTarget::TypeScript { prettier } => prettier.as_ref(),
 -            AppServerCodegenTarget::JsonSchema => None,
--        }
++        if full_auto {
++            process.arg("--full-auto");
+         }
 -    }
 -}
--
+ 
 -/// Request for `codex app-server generate-ts` or `generate-json-schema`.
 -#[derive(Clone, Debug, Eq, PartialEq)]
 -pub struct AppServerCodegenRequest {
@@ -7057,32 +9781,44 @@ index 08e80ed..66fee60 100644
 -            target: AppServerCodegenTarget::TypeScript { prettier: None },
 -            out_dir: out_dir.into(),
 -            overrides: CliOverridesPatch::default(),
--        }
++        if log_denials && matches!(platform, SandboxPlatform::Macos) {
++            process.arg("--log-denials");
+         }
 -    }
--
+ 
 -    /// Generates a JSON schema bundle into `out_dir`.
 -    pub fn json_schema(out_dir: impl Into<PathBuf>) -> Self {
 -        Self {
 -            target: AppServerCodegenTarget::JsonSchema,
 -            out_dir: out_dir.into(),
 -            overrides: CliOverridesPatch::default(),
--        }
++        for override_ in config_overrides {
++            process.arg("--config");
++            process.arg(format!("{}={}", override_.key, override_.value));
+         }
 -    }
--
+ 
 -    /// Formats TypeScript output with the provided Prettier executable (no-op for JSON schema).
 -    pub fn prettier(mut self, prettier: impl Into<PathBuf>) -> Self {
 -        if let AppServerCodegenTarget::TypeScript { prettier: slot } = &mut self.target {
 -            *slot = Some(prettier.into());
--        }
++        for feature in feature_toggles.enable {
++            process.arg("--enable");
++            process.arg(feature);
+         }
 -        self
 -    }
--
+ 
 -    /// Replaces the default CLI overrides for this request.
 -    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
 -        self.overrides = overrides;
 -        self
 -    }
--
++        for feature in feature_toggles.disable {
++            process.arg("--disable");
++            process.arg(feature);
++        }
+ 
 -    /// Adds a `--config key=value` override for this request.
 -    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
 -        self.overrides
@@ -7090,7 +9826,9 @@ index 08e80ed..66fee60 100644
 -            .push(ConfigOverride::new(key, value));
 -        self
 -    }
--
++        process.arg("--");
++        process.args(&command);
+ 
 -    /// Adds a raw `--config key=value` override without validation.
 -    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
 -        self.overrides
@@ -7098,14 +9836,16 @@ index 08e80ed..66fee60 100644
 -            .push(ConfigOverride::from_raw(raw));
 -        self
 -    }
--
++        self.command_env.apply(&mut process)?;
+ 
 -    /// Sets the config profile (`--profile`) for this request.
 -    pub fn profile(mut self, profile: impl Into<String>) -> Self {
 -        let profile = profile.into();
 -        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
 -        self
 -    }
--
++        let mut child = spawn_with_retry(&mut process, self.command_env.binary_path())?;
+ 
 -    /// Requests the CLI `--oss` flag for this codegen call.
 -    pub fn oss(mut self, enable: bool) -> Self {
 -        self.overrides.oss = if enable {
@@ -7115,26 +9855,59 @@ index 08e80ed..66fee60 100644
 -        };
 -        self
 -    }
--
++        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
++        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+ 
 -    /// Adds a `--enable <feature>` toggle for this codegen call.
 -    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
 -        self.overrides.feature_toggles.enable.push(name.into());
 -        self
 -    }
--
++        let stdout_task = tokio::spawn(tee_stream(
++            stdout,
++            ConsoleTarget::Stdout,
++            self.mirror_stdout,
++        ));
++        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+ 
 -    /// Adds a `--disable <feature>` toggle for this codegen call.
 -    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
 -        self.overrides.feature_toggles.disable.push(name.into());
 -        self
 -    }
--
++        let wait_task = async move {
++            let status = child
++                .wait()
++                .await
++                .map_err(|source| CodexError::Wait { source })?;
++            let stdout_bytes = stdout_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            let stderr_bytes = stderr_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
++        };
+ 
 -    /// Controls whether `--search` is passed through to Codex.
 -    pub fn search(mut self, enable: bool) -> Self {
 -        self.overrides.search = if enable {
 -            FlagState::Enable
--        } else {
++        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
++            wait_task.await?
+         } else {
 -            FlagState::Disable
--        };
++            match time::timeout(self.timeout, wait_task).await {
++                Ok(result) => result?,
++                Err(_) => {
++                    return Err(CodexError::Timeout {
++                        timeout: self.timeout,
++                    });
++                }
++            }
+         };
 -        self
 -    }
 -}
@@ -7151,7 +9924,7 @@ index 08e80ed..66fee60 100644
 -    /// Output directory passed to `--out`.
 -    pub out_dir: PathBuf,
 -}
--
+ 
 -/// Ergonomic container for the streaming surface; produced by `stream_exec` (implemented in D2).
 -///
 -/// `events` yields parsed [`ThreadEvent`] values as soon as each JSONL line arrives from the CLI.
@@ -7161,15 +9934,42 @@ index 08e80ed..66fee60 100644
 -    pub events: DynThreadEventStream,
 -    pub completion: DynExecCompletion,
 -}
--
++        Ok(SandboxRun {
++            status,
++            stdout: String::from_utf8(stdout_bytes)?,
++            stderr: String::from_utf8(stderr_bytes)?,
++        })
++    }
+ 
 -/// Type-erased stream of events from the Codex CLI.
 -pub type DynThreadEventStream =
 -    Pin<Box<dyn Stream<Item = Result<ThreadEvent, ExecStreamError>> + Send>>;
--
++    /// Probes the configured binary for version/build metadata and supported feature flags.
++    ///
++    /// Results are cached per canonical binary path and invalidated when file metadata changes.
++    /// Caller-supplied overrides (see [`CodexClientBuilder::capability_overrides`]) can
++    /// short-circuit probes or layer hints; snapshots are still cached against the current
++    /// binary fingerprint so changes on disk trigger revalidation. Missing fingerprints skip
++    /// cache reuse to force a re-probe. Cache interaction follows the policy configured on
++    /// the builder (see [`CodexClientBuilder::capability_cache_policy`]).
++    /// Failures are logged and return conservative defaults so callers can gate optional flags.
++    pub async fn probe_capabilities(&self) -> CodexCapabilities {
++        self.probe_capabilities_with_policy(self.capability_cache_policy)
++            .await
++    }
+ 
 -/// Type-erased completion future that resolves when streaming stops.
 -pub type DynExecCompletion =
 -    Pin<Box<dyn Future<Output = Result<ExecCompletion, ExecStreamError>> + Send>>;
--
++    /// Probes capabilities with an explicit cache policy.
++    pub async fn probe_capabilities_with_policy(
++        &self,
++        cache_policy: CapabilityCachePolicy,
++    ) -> CodexCapabilities {
++        let cache_key = capability_cache_key(self.command_env.binary_path());
++        let fingerprint = current_fingerprint(&cache_key);
++        let overrides = &self.capability_overrides;
+ 
 -/// Summary returned when the codex child process exits.
 -#[derive(Clone, Debug)]
 -pub struct ExecCompletion {
@@ -7181,7 +9981,11 @@ index 08e80ed..66fee60 100644
 -    /// Path to the JSON schema requested via `--output-schema`, if provided by the caller.
 -    pub schema_path: Option<PathBuf>,
 -}
--
++        let cache_reads_enabled = matches!(cache_policy, CapabilityCachePolicy::PreferCache)
++            && has_fingerprint_metadata(&fingerprint);
++        let cache_writes_enabled = !matches!(cache_policy, CapabilityCachePolicy::Bypass)
++            && has_fingerprint_metadata(&fingerprint);
+ 
 -/// Errors that may occur while consuming the JSONL stream.
 -#[derive(Debug, Error)]
 -pub enum ExecStreamError {
@@ -7190,12 +9994,9 @@ index 08e80ed..66fee60 100644
 -    #[error("failed to parse codex JSONL event: {source}: `{line}`")]
 -    Parse {
 -        line: String,
-+    #[error("failed to resolve working directory: {source}")]
-+    WorkingDirectory {
-         #[source]
+-        #[source]
 -        source: serde_json::Error,
-+        source: std::io::Error,
-     },
+-    },
 -    #[error("codex JSONL event missing required context: {message}: `{line}`")]
 -    Normalize { line: String, message: String },
 -    #[error("codex JSON stream idle for {idle_for:?}")]
@@ -7203,11 +10004,42 @@ index 08e80ed..66fee60 100644
 -    #[error("codex JSON stream closed unexpectedly")]
 -    ChannelClosed,
 -}
--
++        if let Some(snapshot) = overrides.snapshot.clone() {
++            let capabilities = finalize_capabilities_with_overrides(
++                snapshot,
++                overrides,
++                cache_key.clone(),
++                fingerprint.clone(),
++                true,
++            );
++            if cache_writes_enabled {
++                update_capability_cache(capabilities.clone());
++            }
++            return capabilities;
++        }
+ 
 -async fn read_last_message(path: &Path) -> Option<String> {
 -    (fs::read_to_string(path).await).ok()
 -}
--
++        if cache_reads_enabled {
++            if let Some(cached) = cached_capabilities(&cache_key, &fingerprint) {
++                if overrides.is_empty() {
++                    return cached;
++                }
++                let merged = finalize_capabilities_with_overrides(
++                    cached,
++                    overrides,
++                    cache_key.clone(),
++                    fingerprint.clone(),
++                    false,
++                );
++                if cache_writes_enabled {
++                    update_capability_cache(merged.clone());
++                }
++                return merged;
++            }
++        }
+ 
 -fn unique_temp_path(prefix: &str, extension: &str) -> PathBuf {
 -    let mut path = env::temp_dir();
 -    let timestamp = SystemTime::now()
@@ -7220,36 +10052,28 @@ index 08e80ed..66fee60 100644
 -        extension
 -    ));
 -    path
-+    #[error("failed to prepare app-server output directory `{path}`: {source}")]
-+    PrepareOutputDirectory {
-+        path: PathBuf,
-+        #[source]
-+        source: std::io::Error,
-+    },
-+    #[error("failed to prepare CODEX_HOME at `{path}`: {source}")]
-+    PrepareCodexHome {
-+        path: PathBuf,
-+        #[source]
-+        source: std::io::Error,
-+    },
-+    #[error("codex stdout unavailable")]
-+    StdoutUnavailable,
-+    #[error("codex stderr unavailable")]
-+    StderrUnavailable,
-+    #[error("codex stdin unavailable")]
-+    StdinUnavailable,
-+    #[error("failed to capture codex output: {0}")]
-+    CaptureIo(#[from] std::io::Error),
-+    #[error("failed to write prompt to codex stdin: {0}")]
-+    StdinWrite(#[source] std::io::Error),
-+    #[error("failed to join codex output task: {0}")]
-+    Join(#[from] tokio::task::JoinError),
- }
+-}
++        let probed = self
++            .probe_capabilities_uncached(&cache_key, fingerprint.clone())
++            .await;
  
- enum DirectoryContext {
-@@ -4824,586 +2021,43 @@ impl DirectoryContext {
-     }
- }
+-enum DirectoryContext {
+-    Fixed(PathBuf),
+-    Ephemeral(TempDir),
+-}
++        let capabilities =
++            finalize_capabilities_with_overrides(probed, overrides, cache_key, fingerprint, false);
+ 
+-impl DirectoryContext {
+-    fn path(&self) -> &Path {
+-        match self {
+-            DirectoryContext::Fixed(path) => path.as_path(),
+-            DirectoryContext::Ephemeral(dir) => dir.path(),
++        if cache_writes_enabled {
++            update_capability_cache(capabilities.clone());
+         }
+-    }
+-}
  
 -fn command_output_text(output: &CommandOutput) -> String {
 -    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
@@ -7262,9 +10086,10 @@ index 08e80ed..66fee60 100644
 -        stdout.to_string()
 -    } else {
 -        format!("{stdout}\n{stderr}")
--    }
++        capabilities
+     }
 -}
--
+ 
 -fn parse_semver_from_raw(raw: &str) -> Option<Version> {
 -    for token in raw.split_whitespace() {
 -        let candidate = token
@@ -7276,7 +10101,15 @@ index 08e80ed..66fee60 100644
 -    }
 -    None
 -}
--
++    async fn probe_capabilities_uncached(
++        &self,
++        cache_key: &CapabilityCacheKey,
++        fingerprint: Option<BinaryFingerprint>,
++    ) -> CodexCapabilities {
++        let mut plan = CapabilityProbePlan::default();
++        let mut features = CodexFeatureFlags::default();
++        let mut version = None;
+ 
 -fn parse_version_output(output: &str) -> CodexVersionInfo {
 -    let raw = output.trim().to_string();
 -    let parsed_version = parse_semver_from_raw(&raw);
@@ -7292,14 +10125,33 @@ index 08e80ed..66fee60 100644
 -            if let Some(cleaned) = cleaned_hex(candidate) {
 -                commit = Some(cleaned);
 -                break;
--            }
--        }
++        plan.steps.push(CapabilityProbeStep::VersionFlag);
++        match self.run_basic_command(["--version"]).await {
++            Ok(output) => {
++                if !output.status.success() {
++                    warn!(
++                        status = ?output.status,
++                        binary = ?cache_key.binary_path,
++                        "codex --version exited non-zero"
++                    );
++                }
++                let text = command_output_text(&output);
++                if !text.trim().is_empty() {
++                    version = Some(version::parse_version_output(&text));
++                }
+             }
++            Err(error) => warn!(
++                ?error,
++                binary = ?cache_key.binary_path,
++                "codex --version probe failed"
++            ),
+         }
 -    }
 -    let channel = parsed_version
 -        .as_ref()
 -        .map(release_channel_for_version)
 -        .unwrap_or_else(|| infer_release_channel(&raw));
--
+ 
 -    CodexVersionInfo {
 -        raw,
 -        semantic,
@@ -7307,7 +10159,8 @@ index 08e80ed..66fee60 100644
 -        channel,
 -    }
 -}
--
++        let mut parsed_features = false;
+ 
 -fn release_channel_for_version(version: &Version) -> CodexReleaseChannel {
 -    if version.pre.is_empty() {
 -        CodexReleaseChannel::Stable
@@ -7319,7 +10172,35 @@ index 08e80ed..66fee60 100644
 -            CodexReleaseChannel::Nightly
 -        } else {
 -            CodexReleaseChannel::Custom
--        }
++        plan.steps.push(CapabilityProbeStep::FeaturesListJson);
++        match self.run_basic_command(["features", "list", "--json"]).await {
++            Ok(output) => {
++                if !output.status.success() {
++                    warn!(
++                        status = ?output.status,
++                        binary = ?cache_key.binary_path,
++                        "codex features list --json exited non-zero"
++                    );
++                }
++                if output.status.success() {
++                    features.supports_features_list = true;
++                }
++                let text = command_output_text(&output);
++                if let Some(parsed) = version::parse_features_from_json(&text) {
++                    version::merge_feature_flags(&mut features, parsed);
++                    parsed_features = version::detected_feature_flags(&features);
++                } else if !text.is_empty() {
++                    let parsed = version::parse_features_from_text(&text);
++                    version::merge_feature_flags(&mut features, parsed);
++                    parsed_features = version::detected_feature_flags(&features);
++                }
++            }
++            Err(error) => warn!(
++                ?error,
++                binary = ?cache_key.binary_path,
++                "codex features list --json probe failed"
++            ),
+         }
 -    }
 -}
 -
@@ -7333,7 +10214,7 @@ index 08e80ed..66fee60 100644
 -        CodexReleaseChannel::Custom
 -    }
 -}
--
+ 
 -fn codex_semver(info: &CodexVersionInfo) -> Option<Version> {
 -    if let Some(parsed) = parse_semver_from_raw(&info.raw) {
 -        return Some(parsed);
@@ -7347,28 +10228,43 @@ index 08e80ed..66fee60 100644
 -            }
 -            CodexReleaseChannel::Nightly => {
 -                version.pre = Prerelease::new("nightly").ok()?;
--            }
++        if !parsed_features {
++            plan.steps.push(CapabilityProbeStep::FeaturesListText);
++            match self.run_basic_command(["features", "list"]).await {
++                Ok(output) => {
++                    if !output.status.success() {
++                        warn!(
++                            status = ?output.status,
++                            binary = ?cache_key.binary_path,
++                            "codex features list exited non-zero"
++                        );
++                    }
++                    if output.status.success() {
++                        features.supports_features_list = true;
++                    }
++                    let text = command_output_text(&output);
++                    let parsed = version::parse_features_from_text(&text);
++                    version::merge_feature_flags(&mut features, parsed);
++                }
++                Err(error) => warn!(
++                    ?error,
++                    binary = ?cache_key.binary_path,
++                    "codex features list probe failed"
++                ),
+             }
 -            CodexReleaseChannel::Stable | CodexReleaseChannel::Custom => {}
--        }
+         }
 -    }
 -    Some(version)
-+fn default_rust_log_value() -> Option<&'static str> {
-+    env::var_os(RUST_LOG_ENV)
-+        .is_none()
-+        .then_some(DEFAULT_RUST_LOG)
- }
- 
+-}
+-
 -fn codex_release_from_info(info: &CodexVersionInfo) -> Option<CodexRelease> {
 -    let version = codex_semver(info)?;
 -    Some(CodexRelease {
 -        channel: info.channel,
 -        version,
 -    })
-+fn default_binary_path() -> PathBuf {
-+    env::var_os(CODEX_BINARY_ENV)
-+        .map(PathBuf::from)
-+        .unwrap_or_else(|| PathBuf::from("codex"))
- }
+-}
  
 -fn extract_commit_hash(raw: &str) -> Option<String> {
 -    let tokens: Vec<&str> = raw.split_whitespace().collect();
@@ -7376,31 +10272,44 @@ index 08e80ed..66fee60 100644
 -        if window[0].eq_ignore_ascii_case("commit") {
 -            if let Some(cleaned) = cleaned_hex(window[1]) {
 -                return Some(cleaned);
--            }
--        }
-+fn parse_login_success(output: &str) -> Option<CodexAuthStatus> {
-+    let lower = output.to_lowercase();
-+    if lower.contains("chatgpt") {
-+        return Some(CodexAuthStatus::LoggedIn(CodexAuthMethod::ChatGpt));
-     }
--
++        if version::should_run_help_fallback(&features) {
++            plan.steps.push(CapabilityProbeStep::HelpFallback);
++            match self.run_basic_command(["--help"]).await {
++                Ok(output) => {
++                    if !output.status.success() {
++                        warn!(
++                            status = ?output.status,
++                            binary = ?cache_key.binary_path,
++                            "codex --help exited non-zero"
++                        );
++                    }
++                    let text = command_output_text(&output);
++                    let parsed = version::parse_help_output(&text);
++                    version::merge_feature_flags(&mut features, parsed);
++                }
++                Err(error) => warn!(
++                    ?error,
++                    binary = ?cache_key.binary_path,
++                    "codex --help probe failed"
++                ),
+             }
+         }
+-    }
+ 
 -    for token in tokens {
 -        if let Some(cleaned) = cleaned_hex(token) {
 -            return Some(cleaned);
--        }
-+    if lower.contains("api key") || lower.contains("apikey") {
-+        // Prefer everything after the first " - " so we do not chop the key itself.
-+        let masked = output
-+            .split_once(" - ")
-+            .map(|(_, value)| value.trim().to_string())
-+            .filter(|value| !value.is_empty())
-+            .or_else(|| output.split_whitespace().last().map(|v| v.to_string()));
-+        return Some(CodexAuthStatus::LoggedIn(CodexAuthMethod::ApiKey {
-+            masked_key: masked,
-+        }));
++        CodexCapabilities {
++            cache_key: cache_key.clone(),
++            fingerprint,
++            version,
++            features,
++            probe_plan: plan,
++            collected_at: SystemTime::now(),
+         }
      }
-     None
- }
+-    None
+-}
  
 -fn cleaned_hex(token: &str) -> Option<String> {
 -    let trimmed = token
@@ -7412,9 +10321,24 @@ index 08e80ed..66fee60 100644
 -        Some(trimmed.to_string())
 -    } else {
 -        None
--    }
++    /// Computes an update advisory by comparing the probed Codex version against
++    /// caller-supplied latest releases.
++    ///
++    /// The crate does not fetch release metadata itself; hosts should populate
++    /// [`CodexLatestReleases`] using their preferred update channel (npm,
++    /// Homebrew, GitHub releases) and then call this helper. Results leverage
++    /// the capability probe cache; callers with an existing
++    /// [`CodexCapabilities`] snapshot can skip the probe by invoking
++    /// [`update_advisory_from_capabilities`].
++    pub async fn update_advisory(
++        &self,
++        latest_releases: &CodexLatestReleases,
++    ) -> CodexUpdateAdvisory {
++        let capabilities = self.probe_capabilities().await;
++        update_advisory_from_capabilities(&capabilities, latest_releases)
+     }
 -}
--
+ 
 -fn parse_features_from_json(output: &str) -> Option<CodexFeatureFlags> {
 -    let parsed: Value = serde_json::from_str(output).ok()?;
 -    let mut tokens = HashSet::new();
@@ -7422,14 +10346,20 @@ index 08e80ed..66fee60 100644
 -    if tokens.is_empty() {
 -        return None;
 -    }
--
++    fn directory_context(&self) -> Result<DirectoryContext, CodexError> {
++        if let Some(dir) = &self.working_dir {
++            return Ok(DirectoryContext::Fixed(dir.clone()));
++        }
+ 
 -    let mut flags = CodexFeatureFlags::default();
 -    for token in tokens {
 -        apply_feature_token(&mut flags, &token);
--    }
++        let temp = tempfile::tempdir().map_err(CodexError::TempDir)?;
++        Ok(DirectoryContext::Ephemeral(temp))
+     }
 -    Some(flags)
 -}
--
+ 
 -fn collect_feature_tokens(value: &Value, tokens: &mut HashSet<String>) {
 -    match value {
 -        Value::String(value) => {
@@ -7441,7 +10371,10 @@ index 08e80ed..66fee60 100644
 -            for item in items {
 -                collect_feature_tokens(item, tokens);
 -            }
--        }
++    fn sandbox_working_dir(&self, request_dir: Option<PathBuf>) -> Result<PathBuf, CodexError> {
++        if let Some(dir) = request_dir {
++            return Ok(dir);
+         }
 -        Value::Object(map) => {
 -            for (key, value) in map {
 -                if let Value::Bool(true) = value {
@@ -7449,11 +10382,14 @@ index 08e80ed..66fee60 100644
 -                }
 -                collect_feature_tokens(value, tokens);
 -            }
--        }
++
++        if let Some(dir) = &self.working_dir {
++            return Ok(dir.clone());
+         }
 -        _ => {}
 -    }
 -}
--
+ 
 -fn parse_features_from_text(output: &str) -> CodexFeatureFlags {
 -    let mut flags = CodexFeatureFlags::default();
 -    let lower = output.to_ascii_lowercase();
@@ -7471,8 +10407,9 @@ index 08e80ed..66fee60 100644
 -    }
 -    if lower.contains("login") && lower.contains("mcp") {
 -        flags.supports_mcp_login = true;
--    }
--
++        env::current_dir().map_err(|source| CodexError::WorkingDirectory { source })
+     }
+ 
 -    for token in lower
 -        .split(|c: char| c.is_ascii_whitespace() || c == ',' || c == ';' || c == '|')
 -        .filter(|token| !token.is_empty())
@@ -7481,7 +10418,15 @@ index 08e80ed..66fee60 100644
 -    }
 -    flags
 -}
--
++    async fn run_simple_command_with_overrides(
++        &self,
++        args: Vec<OsString>,
++        overrides: CliOverridesPatch,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let dir_ctx = self.directory_context()?;
++        let resolved_overrides =
++            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+ 
 -fn parse_help_output(output: &str) -> CodexFeatureFlags {
 -    let mut flags = parse_features_from_text(output);
 -    let lower = output.to_ascii_lowercase();
@@ -7490,25 +10435,35 @@ index 08e80ed..66fee60 100644
 -    }
 -    flags
 -}
--
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .args(args)
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(dir_ctx.path());
+ 
 -fn merge_feature_flags(target: &mut CodexFeatureFlags, update: CodexFeatureFlags) {
 -    target.supports_features_list |= update.supports_features_list;
 -    target.supports_output_schema |= update.supports_output_schema;
 -    target.supports_add_dir |= update.supports_add_dir;
 -    target.supports_mcp_login |= update.supports_mcp_login;
 -}
--
++        apply_cli_overrides(&mut command, &resolved_overrides, true);
+ 
 -fn detected_feature_flags(flags: &CodexFeatureFlags) -> bool {
 -    flags.supports_output_schema || flags.supports_add_dir || flags.supports_mcp_login
 -}
--
++        self.command_env.apply(&mut command)?;
+ 
 -fn should_run_help_fallback(flags: &CodexFeatureFlags) -> bool {
 -    !flags.supports_features_list
 -        || !flags.supports_output_schema
 -        || !flags.supports_add_dir
 -        || !flags.supports_mcp_login
 -}
--
++        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+ 
 -fn normalize_feature_token(token: &str) -> String {
 -    token
 -        .chars()
@@ -7521,7 +10476,9 @@ index 08e80ed..66fee60 100644
 -        })
 -        .collect()
 -}
--
++        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
++        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+ 
 -fn apply_feature_token(flags: &mut CodexFeatureFlags, token: &str) {
 -    let normalized = normalize_feature_token(token);
 -    let compact = normalized.replace('_', "");
@@ -7540,7 +10497,13 @@ index 08e80ed..66fee60 100644
 -        flags.supports_mcp_login = true;
 -    }
 -}
--
++        let stdout_task = tokio::spawn(tee_stream(
++            stdout,
++            ConsoleTarget::Stdout,
++            self.mirror_stdout,
++        ));
++        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+ 
 -fn parse_feature_list_output(
 -    stdout: &str,
 -    prefer_json: bool,
@@ -7549,7 +10512,24 @@ index 08e80ed..66fee60 100644
 -    if trimmed.is_empty() {
 -        return Err("features list output was empty".to_string());
 -    }
--
++        let timeout = self.timeout;
++        let wait_task = async move {
++            let _dir_ctx = dir_ctx;
++            let status = child
++                .wait()
++                .await
++                .map_err(|source| CodexError::Wait { source })?;
++            let stdout_bytes = stdout_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            let stderr_bytes = stderr_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
++        };
+ 
 -    if prefer_json {
 -        if let Some(features) = parse_feature_list_json(trimmed) {
 -            if !features.is_empty() {
@@ -7570,18 +10550,51 @@ index 08e80ed..66fee60 100644
 -        if let Some(features) = parse_feature_list_json(trimmed) {
 -            if !features.is_empty() {
 -                return Ok((features, FeaturesListFormat::Json));
--            }
--        }
--    }
--
++        let (status, stdout_bytes, stderr_bytes) = if timeout.is_zero() {
++            wait_task.await?
++        } else {
++            match time::timeout(timeout, wait_task).await {
++                Ok(result) => result?,
++                Err(_) => {
++                    return Err(CodexError::Timeout { timeout });
++                }
+             }
++        };
++
++        if !status.success() {
++            return Err(CodexError::NonZeroExit {
++                status,
++                stderr: String::from_utf8(stderr_bytes)?,
++            });
+         }
++
++        Ok(ApplyDiffArtifacts {
++            status,
++            stdout: String::from_utf8(stdout_bytes)?,
++            stderr: String::from_utf8(stderr_bytes)?,
++        })
+     }
+ 
 -    Err("could not parse JSON or text feature rows".to_string())
 -}
--
++    async fn run_basic_command<S, I>(&self, args: I) -> Result<CommandOutput, CodexError>
++    where
++        S: AsRef<OsStr>,
++        I: IntoIterator<Item = S>,
++    {
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .args(args)
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true);
+ 
 -fn parse_feature_list_json(output: &str) -> Option<Vec<CodexFeature>> {
 -    let parsed: Value = serde_json::from_str(output).ok()?;
 -    parse_feature_list_json_value(&parsed)
 -}
--
++        self.command_env.apply(&mut command)?;
+ 
 -fn parse_feature_list_json_value(value: &Value) -> Option<Vec<CodexFeature>> {
 -    match value {
 -        Value::Array(items) => Some(
@@ -7642,7 +10655,8 @@ index 08e80ed..66fee60 100644
 -        _ => None,
 -    }
 -}
--
++        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+ 
 -fn parse_feature_list_text(output: &str) -> Option<Vec<CodexFeature>> {
 -    let mut features = Vec::new();
 -    for line in output.lines() {
@@ -7656,7 +10670,9 @@ index 08e80ed..66fee60 100644
 -        {
 -            continue;
 -        }
--
++        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
++        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+ 
 -        let tokens: Vec<&str> = trimmed.split_whitespace().collect();
 -        if tokens.len() < 3 {
 -            continue;
@@ -7667,12 +10683,28 @@ index 08e80ed..66fee60 100644
 -        {
 -            continue;
 -        }
--
++        let stdout_task = tokio::spawn(tee_stream(stdout, ConsoleTarget::Stdout, false));
++        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, false));
+ 
 -        let enabled_token = tokens.last().copied().unwrap_or_default();
 -        let enabled = match parse_feature_enabled_str(enabled_token) {
 -            Some(value) => value,
 -            None => continue,
--        };
++        let wait_task = async move {
++            let status = child
++                .wait()
++                .await
++                .map_err(|source| CodexError::Wait { source })?;
++            let stdout_bytes = stdout_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            let stderr_bytes = stderr_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+         };
 -        let stage_token = tokens.get(tokens.len() - 2).copied().unwrap_or_default();
 -        let name = tokens[..tokens.len() - 2].join(" ");
 -        if name.is_empty() {
@@ -7686,30 +10718,50 @@ index 08e80ed..66fee60 100644
 -            extra: BTreeMap::new(),
 -        });
 -    }
--
+ 
 -    if features.is_empty() {
 -        None
 -    } else {
 -        Some(features)
 -    }
 -}
--
++        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
++            wait_task.await?
++        } else {
++            match time::timeout(self.timeout, wait_task).await {
++                Ok(result) => result?,
++                Err(_) => {
++                    return Err(CodexError::Timeout {
++                        timeout: self.timeout,
++                    });
++                }
++            }
++        };
+ 
 -fn parse_feature_enabled_value(value: &Value) -> Option<bool> {
 -    match value {
 -        Value::Bool(flag) => Some(*flag),
 -        Value::String(raw) => parse_feature_enabled_str(raw),
 -        _ => None,
--    }
--}
--
++        Ok(CommandOutput {
++            status,
++            stdout: stdout_bytes,
++            stderr: stderr_bytes,
++        })
+     }
+ }
+ 
 -fn parse_feature_enabled_str(raw: &str) -> Option<bool> {
 -    match raw.trim().to_ascii_lowercase().as_str() {
 -        "true" | "yes" | "y" | "on" | "1" | "enabled" => Some(true),
 -        "false" | "no" | "n" | "off" | "0" | "disabled" => Some(false),
 -        _ => None,
--    }
--}
--
++impl Default for CodexClient {
++    fn default() -> Self {
++        CodexClient::builder().build()
+     }
+ }
+ 
 -fn feature_from_json_fields(
 -    name_hint: Option<&str>,
 -    map: &serde_json::Map<String, Value>,
@@ -7746,8 +10798,106 @@ index 08e80ed..66fee60 100644
 -        enabled,
 -        extra,
 -    })
--}
--
++/// Errors that may occur while invoking the Codex CLI.
++#[derive(Debug, Error)]
++pub enum CodexError {
++    #[error("codex binary `{binary}` could not be spawned: {source}")]
++    Spawn {
++        binary: PathBuf,
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("failed to wait for codex process: {source}")]
++    Wait {
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("codex exceeded timeout of {timeout:?}")]
++    Timeout { timeout: Duration },
++    #[error("codex exited with {status:?}: {stderr}")]
++    NonZeroExit { status: ExitStatus, stderr: String },
++    #[error("codex output was not valid UTF-8: {0}")]
++    InvalidUtf8(#[from] std::string::FromUtf8Error),
++    #[error("failed to parse {context} JSON output: {source}")]
++    JsonParse {
++        context: &'static str,
++        stdout: String,
++        #[source]
++        source: serde_json::Error,
++    },
++    #[error("failed to parse execpolicy JSON output: {source}")]
++    ExecPolicyParse {
++        stdout: String,
++        #[source]
++        source: serde_json::Error,
++    },
++    #[error("failed to parse features list output: {reason}")]
++    FeatureListParse { reason: String, stdout: String },
++    #[error("failed to read responses-api-proxy server info from `{path}`: {source}")]
++    ResponsesApiProxyInfoRead {
++        path: PathBuf,
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("failed to parse responses-api-proxy server info from `{path}`: {source}")]
++    ResponsesApiProxyInfoParse {
++        path: PathBuf,
++        #[source]
++        source: serde_json::Error,
++    },
++    #[error("prompt must not be empty")]
++    EmptyPrompt,
++    #[error("sandbox command must not be empty")]
++    EmptySandboxCommand,
++    #[error("execpolicy command must not be empty")]
++    EmptyExecPolicyCommand,
++    #[error("API key must not be empty")]
++    EmptyApiKey,
++    #[error("task id must not be empty")]
++    EmptyTaskId,
++    #[error("environment id must not be empty")]
++    EmptyEnvId,
++    #[error("MCP server name must not be empty")]
++    EmptyMcpServerName,
++    #[error("MCP server command must not be empty")]
++    EmptyMcpCommand,
++    #[error("MCP server URL must not be empty")]
++    EmptyMcpUrl,
++    #[error("socket path must not be empty")]
++    EmptySocketPath,
++    #[error("failed to create temporary working directory: {0}")]
++    TempDir(#[source] std::io::Error),
++    #[error("failed to resolve working directory: {source}")]
++    WorkingDirectory {
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("failed to prepare app-server output directory `{path}`: {source}")]
++    PrepareOutputDirectory {
++        path: PathBuf,
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("failed to prepare CODEX_HOME at `{path}`: {source}")]
++    PrepareCodexHome {
++        path: PathBuf,
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("codex stdout unavailable")]
++    StdoutUnavailable,
++    #[error("codex stderr unavailable")]
++    StderrUnavailable,
++    #[error("codex stdin unavailable")]
++    StdinUnavailable,
++    #[error("failed to capture codex output: {0}")]
++    CaptureIo(#[from] std::io::Error),
++    #[error("failed to write prompt to codex stdin: {0}")]
++    StdinWrite(#[source] std::io::Error),
++    #[error("failed to join codex output task: {0}")]
++    Join(#[from] tokio::task::JoinError),
+ }
+ 
 -/// Computes an update advisory for a previously probed binary.
 -///
 -/// Callers that already have a [`CodexCapabilities`] snapshot can use this
@@ -7789,7 +10939,11 @@ index 08e80ed..66fee60 100644
 -            }
 -        }
 -    };
--
++enum DirectoryContext {
++    Fixed(PathBuf),
++    Ephemeral(TempDir),
++}
+ 
 -    match status {
 -        CodexUpdateStatus::UpdateRecommended => {
 -            if let (Some(local), Some(latest)) = (local_release.as_ref(), latest_release.as_ref()) {
@@ -7836,9 +10990,15 @@ index 08e80ed..66fee60 100644
 -                    latest_version = latest.version
 -                ));
 -            }
--        }
--    }
--
++impl DirectoryContext {
++    fn path(&self) -> &Path {
++        match self {
++            DirectoryContext::Fixed(path) => path.as_path(),
++            DirectoryContext::Ephemeral(dir) => dir.path(),
+         }
+     }
++}
+ 
 -    CodexUpdateAdvisory {
 -        local_release,
 -        latest_release,
@@ -7846,18 +11006,29 @@ index 08e80ed..66fee60 100644
 -        status,
 -        notes,
 -    }
--}
--
++fn default_rust_log_value() -> Option<&'static str> {
++    env::var_os(RUST_LOG_ENV)
++        .is_none()
++        .then_some(DEFAULT_RUST_LOG)
++}
++
++fn default_binary_path() -> PathBuf {
++    env::var_os(CODEX_BINARY_ENV)
++        .map(PathBuf::from)
++        .unwrap_or_else(|| PathBuf::from("codex"))
+ }
+ 
  #[cfg(test)]
  mod tests {
      use super::*;
++    use crate::auth::parse_login_success;
      use crate::builder::ResolvedCliOverrides;
      use futures_util::{pin_mut, StreamExt};
 +    use semver::Version;
      use serde_json::json;
      use std::collections::HashMap;
      use std::fs as std_fs;
-@@ -6772,7 +3426,7 @@ done
+@@ -6772,7 +3158,7 @@ done
                  binary_path: PathBuf::from("codex"),
              },
              fingerprint: None,
@@ -7866,7 +11037,7 @@ index 08e80ed..66fee60 100644
              features: CodexFeatureFlags::default(),
              probe_plan: CapabilityProbePlan::default(),
              collected_at: SystemTime::now(),
-@@ -6841,7 +3495,7 @@ done
+@@ -6841,7 +3227,7 @@ done
      fn sample_capability_overrides() -> CapabilityOverrides {
          CapabilityOverrides {
              snapshot: Some(sample_capabilities_snapshot()),
@@ -7875,7 +11046,7 @@ index 08e80ed..66fee60 100644
              features: CapabilityFeatureOverrides {
                  supports_features_list: Some(true),
                  supports_output_schema: Some(true),
-@@ -7348,7 +4002,7 @@ exit 0
+@@ -7348,7 +3734,7 @@ exit 0
  
      #[test]
      fn parses_version_output_fields() {
@@ -7884,7 +11055,7 @@ index 08e80ed..66fee60 100644
          assert_eq!(parsed.semantic, Some((3, 4, 5)));
          assert_eq!(parsed.channel, CodexReleaseChannel::Nightly);
          assert_eq!(parsed.commit.as_deref(), Some("abc1234"));
-@@ -7575,7 +4229,7 @@ exit 0
+@@ -7575,7 +3961,7 @@ exit 0
          let snapshot = CodexCapabilities {
              cache_key: cache_key.clone(),
              fingerprint: fingerprint.clone(),
@@ -7893,7 +11064,7 @@ index 08e80ed..66fee60 100644
              features: CodexFeatureFlags {
                  supports_features_list: true,
                  supports_output_schema: true,
-@@ -7673,7 +4327,7 @@ exit 0
+@@ -7673,7 +4059,7 @@ exit 0
                  CodexCapabilities {
                      cache_key: cache_key.clone(),
                      fingerprint: None,
@@ -7902,7 +11073,7 @@ index 08e80ed..66fee60 100644
                      features: CodexFeatureFlags {
                          supports_features_list: true,
                          supports_output_schema: true,
-@@ -7777,13 +4431,13 @@ fi
+@@ -7777,13 +4163,13 @@ fi
      #[test]
      fn parses_features_from_json_and_text() {
          let json = r#"{"features":["output_schema","add_dir"],"mcp_login":true}"#;
@@ -7918,7 +11089,7 @@ index 08e80ed..66fee60 100644
          assert!(parsed_text.supports_output_schema);
          assert!(parsed_text.supports_add_dir);
          assert!(parsed_text.supports_mcp_login);
-@@ -7792,7 +4446,7 @@ fi
+@@ -7792,7 +4178,7 @@ fi
      #[test]
      fn parses_feature_list_json_and_text_tables() {
          let json = r#"{"features":[{"name":"json-stream","stage":"stable","enabled":true,"notes":"keep"},{"name":"cloud-exec","stage":"experimental","enabled":false}]}"#;
@@ -7927,7 +11098,7 @@ index 08e80ed..66fee60 100644
          assert_eq!(json_format, FeaturesListFormat::Json);
          assert_eq!(json_features.len(), 2);
          assert_eq!(json_features[0].name, "json-stream");
-@@ -7808,9 +4462,9 @@ fi
+@@ -7808,9 +4194,9 @@ fi
          let text = r#"
  Feature   Stage         Enabled
  json-stream stable      true
@@ -7940,7 +11111,7 @@ index 08e80ed..66fee60 100644
          assert_eq!(text_format, FeaturesListFormat::Text);
          assert_eq!(text_features.len(), 2);
          assert_eq!(
-@@ -7819,7 +4473,8 @@ cloud-exec experimental false
+@@ -7819,7 +4205,8 @@ cloud-exec experimental false
          );
          assert!(!text_features[1].enabled);
  
@@ -7950,7 +11121,7 @@ index 08e80ed..66fee60 100644
          assert_eq!(fallback_format, FeaturesListFormat::Text);
          assert_eq!(fallback_features.len(), 2);
      }
-@@ -7828,7 +4483,7 @@ cloud-exec experimental false
+@@ -7828,7 +4215,7 @@ cloud-exec experimental false
      fn parses_help_output_flags() {
          let help =
              "Usage: codex --output-schema ... add-dir ... login --mcp. See `codex features list`.";
@@ -7959,7 +11130,7 @@ index 08e80ed..66fee60 100644
          assert!(parsed.supports_output_schema);
          assert!(parsed.supports_add_dir);
          assert!(parsed.supports_mcp_login);
-@@ -7919,7 +4574,7 @@ exit 99
+@@ -7919,7 +4306,7 @@ exit 99
                  binary_path: PathBuf::from("codex"),
              },
              fingerprint: None,
@@ -7968,7 +11139,7 @@ index 08e80ed..66fee60 100644
              features: CodexFeatureFlags {
                  supports_features_list: true,
                  supports_output_schema: true,
-@@ -8024,9 +4679,10 @@ elif [[ "$1" == "features" && "$2" == "list" ]]; then
+@@ -8024,9 +4411,10 @@ elif [[ "$1" == "features" && "$2" == "list" ]]; then
  elif [[ "$1" == "--help" ]]; then
    echo "Usage: codex add-dir"
  fi
@@ -7981,7 +11152,7 @@ index 08e80ed..66fee60 100644
  
          let client = CodexClient::builder()
              .binary(&binary)
-@@ -8957,90 +5613,3 @@ exit 2
+@@ -8957,90 +5345,3 @@ exit 2
          ));
      }
  }
