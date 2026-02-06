@@ -1,0 +1,14 @@
+  144 crates/codex/src/cli/app_server.rs
+  159 crates/codex/src/cli/cloud.rs
+   71 crates/codex/src/cli/exec.rs
+  224 crates/codex/src/cli/features.rs
+   66 crates/codex/src/cli/help.rs
+  246 crates/codex/src/cli/mcp.rs
+   32 crates/codex/src/cli/mod.rs
+  120 crates/codex/src/cli/responses_api_proxy.rs
+  146 crates/codex/src/cli/review.rs
+  108 crates/codex/src/cli/sandbox.rs
+  114 crates/codex/src/cli/session.rs
+   26 crates/codex/src/cli/stdio_to_uds.rs
+   32 crates/codex/src/cli/mod.rs
+ 1488 total

@@ -1,0 +1,356 @@
+diff --git a/crates/codex/src/builder/mod.rs b/crates/codex/src/builder/mod.rs
+index c69d160..76162a2 100644
+--- a/crates/codex/src/builder/mod.rs
++++ b/crates/codex/src/builder/mod.rs
+@@ -443,11 +443,11 @@ impl CodexClientBuilder {
+ impl Default for CodexClientBuilder {
+     fn default() -> Self {
+         Self {
+-            binary: super::default_binary_path(),
++            binary: crate::defaults::default_binary_path(),
+             codex_home: None,
+             create_home_dirs: true,
+             model: None,
+-            timeout: super::DEFAULT_TIMEOUT,
++            timeout: crate::defaults::DEFAULT_TIMEOUT,
+             color_mode: ColorMode::Never,
+             working_dir: None,
+             add_dirs: Vec::new(),
+diff --git a/crates/codex/src/defaults.rs b/crates/codex/src/defaults.rs
+new file mode 100644
+index 0000000..97d0580
+--- /dev/null
++++ b/crates/codex/src/defaults.rs
+@@ -0,0 +1,19 @@
++use std::{env, path::PathBuf, time::Duration};
++
++pub(crate) const DEFAULT_TIMEOUT: Duration = Duration::from_secs(120);
++pub(crate) const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
++pub(crate) const CODEX_HOME_ENV: &str = "CODEX_HOME";
++pub(crate) const RUST_LOG_ENV: &str = "RUST_LOG";
++pub(crate) const DEFAULT_RUST_LOG: &str = "error";
++
++pub(crate) fn default_rust_log_value() -> Option<&'static str> {
++    env::var_os(RUST_LOG_ENV)
++        .is_none()
++        .then_some(DEFAULT_RUST_LOG)
++}
++
++pub(crate) fn default_binary_path() -> PathBuf {
++    env::var_os(CODEX_BINARY_ENV)
++        .map(PathBuf::from)
++        .unwrap_or_else(|| PathBuf::from("codex"))
++}
+diff --git a/crates/codex/src/error.rs b/crates/codex/src/error.rs
+new file mode 100644
+index 0000000..09f2dce
+--- /dev/null
++++ b/crates/codex/src/error.rs
+@@ -0,0 +1,103 @@
++use std::{path::PathBuf, process::ExitStatus, time::Duration};
++
++use thiserror::Error;
++
++/// Errors that may occur while invoking the Codex CLI.
++#[derive(Debug, Error)]
++pub enum CodexError {
++    #[error("codex binary `{binary}` could not be spawned: {source}")]
++    Spawn {
++        binary: PathBuf,
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("failed to wait for codex process: {source}")]
++    Wait {
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("codex exceeded timeout of {timeout:?}")]
++    Timeout { timeout: Duration },
++    #[error("codex exited with {status:?}: {stderr}")]
++    NonZeroExit { status: ExitStatus, stderr: String },
++    #[error("codex output was not valid UTF-8: {0}")]
++    InvalidUtf8(#[from] std::string::FromUtf8Error),
++    #[error("failed to parse {context} JSON output: {source}")]
++    JsonParse {
++        context: &'static str,
++        stdout: String,
++        #[source]
++        source: serde_json::Error,
++    },
++    #[error("failed to parse execpolicy JSON output: {source}")]
++    ExecPolicyParse {
++        stdout: String,
++        #[source]
++        source: serde_json::Error,
++    },
++    #[error("failed to parse features list output: {reason}")]
++    FeatureListParse { reason: String, stdout: String },
++    #[error("failed to read responses-api-proxy server info from `{path}`: {source}")]
++    ResponsesApiProxyInfoRead {
++        path: PathBuf,
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("failed to parse responses-api-proxy server info from `{path}`: {source}")]
++    ResponsesApiProxyInfoParse {
++        path: PathBuf,
++        #[source]
++        source: serde_json::Error,
++    },
++    #[error("prompt must not be empty")]
++    EmptyPrompt,
++    #[error("sandbox command must not be empty")]
++    EmptySandboxCommand,
++    #[error("execpolicy command must not be empty")]
++    EmptyExecPolicyCommand,
++    #[error("API key must not be empty")]
++    EmptyApiKey,
++    #[error("task id must not be empty")]
++    EmptyTaskId,
++    #[error("environment id must not be empty")]
++    EmptyEnvId,
++    #[error("MCP server name must not be empty")]
++    EmptyMcpServerName,
++    #[error("MCP server command must not be empty")]
++    EmptyMcpCommand,
++    #[error("MCP server URL must not be empty")]
++    EmptyMcpUrl,
++    #[error("socket path must not be empty")]
++    EmptySocketPath,
++    #[error("failed to create temporary working directory: {0}")]
++    TempDir(#[source] std::io::Error),
++    #[error("failed to resolve working directory: {source}")]
++    WorkingDirectory {
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("failed to prepare app-server output directory `{path}`: {source}")]
++    PrepareOutputDirectory {
++        path: PathBuf,
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("failed to prepare CODEX_HOME at `{path}`: {source}")]
++    PrepareCodexHome {
++        path: PathBuf,
++        #[source]
++        source: std::io::Error,
++    },
++    #[error("codex stdout unavailable")]
++    StdoutUnavailable,
++    #[error("codex stderr unavailable")]
++    StderrUnavailable,
++    #[error("codex stdin unavailable")]
++    StdinUnavailable,
++    #[error("failed to capture codex output: {0}")]
++    CaptureIo(#[from] std::io::Error),
++    #[error("failed to write prompt to codex stdin: {0}")]
++    StdinWrite(#[source] std::io::Error),
++    #[error("failed to join codex output task: {0}")]
++    Join(#[from] tokio::task::JoinError),
++}
+diff --git a/crates/codex/src/home.rs b/crates/codex/src/home.rs
+index 18e7567..de46f08 100644
+--- a/crates/codex/src/home.rs
++++ b/crates/codex/src/home.rs
+@@ -7,7 +7,8 @@ use std::{
+ use thiserror::Error;
+ use tokio::process::Command;
+ 
+-use super::{default_rust_log_value, CodexError, CODEX_BINARY_ENV, CODEX_HOME_ENV, RUST_LOG_ENV};
++use crate::defaults::{default_rust_log_value, CODEX_BINARY_ENV, CODEX_HOME_ENV, RUST_LOG_ENV};
++use crate::CodexError;
+ 
+ #[derive(Clone, Debug)]
+ pub(super) struct CommandEnvironment {
+diff --git a/crates/codex/src/lib.rs b/crates/codex/src/lib.rs
+index 027e545..61ea81c 100644
+--- a/crates/codex/src/lib.rs
++++ b/crates/codex/src/lib.rs
+@@ -74,6 +74,8 @@ mod bundled_binary;
+ mod cli;
+ mod client_core;
+ mod commands;
++mod defaults;
++mod error;
+ mod events;
+ mod exec;
+ mod execpolicy;
+@@ -83,6 +85,7 @@ pub mod mcp;
+ mod process;
+ pub mod wrapper_coverage_manifest;
+ 
++pub use crate::error::CodexError;
+ pub use apply_diff::{ApplyDiffArtifacts, CloudApplyRequest, CloudDiffRequest};
+ pub use auth::{AuthSessionHelper, CodexAuthMethod, CodexAuthStatus, CodexLogoutStatus};
+ pub use builder::{
+@@ -126,17 +129,14 @@ pub use jsonl::{
+ };
+ 
+ use std::{
+-    env,
+     ffi::OsString,
+     path::PathBuf,
+-    process::ExitStatus,
+     time::{Duration, SystemTime},
+ };
+ 
+ use builder::{apply_cli_overrides, resolve_cli_overrides};
+ use home::CommandEnvironment;
+ use process::{command_output_text, spawn_with_retry, tee_stream, ConsoleTarget};
+-use thiserror::Error;
+ use tokio::process::Command;
+ use tracing::warn;
+ 
+@@ -149,12 +149,6 @@ use tokio::time;
+ #[cfg(test)]
+ use tokio::sync::mpsc;
+ 
+-const DEFAULT_TIMEOUT: Duration = Duration::from_secs(120);
+-const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
+-const CODEX_HOME_ENV: &str = "CODEX_HOME";
+-const RUST_LOG_ENV: &str = "RUST_LOG";
+-const DEFAULT_RUST_LOG: &str = "error";
+-
+ #[cfg(test)]
+ use builder::{
+     cli_override_args, reasoning_config_for, DEFAULT_REASONING_CONFIG_GPT5,
+@@ -941,117 +935,5 @@ impl Default for CodexClient {
+     }
+ }
+ 
+-/// Errors that may occur while invoking the Codex CLI.
+-#[derive(Debug, Error)]
+-pub enum CodexError {
+-    #[error("codex binary `{binary}` could not be spawned: {source}")]
+-    Spawn {
+-        binary: PathBuf,
+-        #[source]
+-        source: std::io::Error,
+-    },
+-    #[error("failed to wait for codex process: {source}")]
+-    Wait {
+-        #[source]
+-        source: std::io::Error,
+-    },
+-    #[error("codex exceeded timeout of {timeout:?}")]
+-    Timeout { timeout: Duration },
+-    #[error("codex exited with {status:?}: {stderr}")]
+-    NonZeroExit { status: ExitStatus, stderr: String },
+-    #[error("codex output was not valid UTF-8: {0}")]
+-    InvalidUtf8(#[from] std::string::FromUtf8Error),
+-    #[error("failed to parse {context} JSON output: {source}")]
+-    JsonParse {
+-        context: &'static str,
+-        stdout: String,
+-        #[source]
+-        source: serde_json::Error,
+-    },
+-    #[error("failed to parse execpolicy JSON output: {source}")]
+-    ExecPolicyParse {
+-        stdout: String,
+-        #[source]
+-        source: serde_json::Error,
+-    },
+-    #[error("failed to parse features list output: {reason}")]
+-    FeatureListParse { reason: String, stdout: String },
+-    #[error("failed to read responses-api-proxy server info from `{path}`: {source}")]
+-    ResponsesApiProxyInfoRead {
+-        path: PathBuf,
+-        #[source]
+-        source: std::io::Error,
+-    },
+-    #[error("failed to parse responses-api-proxy server info from `{path}`: {source}")]
+-    ResponsesApiProxyInfoParse {
+-        path: PathBuf,
+-        #[source]
+-        source: serde_json::Error,
+-    },
+-    #[error("prompt must not be empty")]
+-    EmptyPrompt,
+-    #[error("sandbox command must not be empty")]
+-    EmptySandboxCommand,
+-    #[error("execpolicy command must not be empty")]
+-    EmptyExecPolicyCommand,
+-    #[error("API key must not be empty")]
+-    EmptyApiKey,
+-    #[error("task id must not be empty")]
+-    EmptyTaskId,
+-    #[error("environment id must not be empty")]
+-    EmptyEnvId,
+-    #[error("MCP server name must not be empty")]
+-    EmptyMcpServerName,
+-    #[error("MCP server command must not be empty")]
+-    EmptyMcpCommand,
+-    #[error("MCP server URL must not be empty")]
+-    EmptyMcpUrl,
+-    #[error("socket path must not be empty")]
+-    EmptySocketPath,
+-    #[error("failed to create temporary working directory: {0}")]
+-    TempDir(#[source] std::io::Error),
+-    #[error("failed to resolve working directory: {source}")]
+-    WorkingDirectory {
+-        #[source]
+-        source: std::io::Error,
+-    },
+-    #[error("failed to prepare app-server output directory `{path}`: {source}")]
+-    PrepareOutputDirectory {
+-        path: PathBuf,
+-        #[source]
+-        source: std::io::Error,
+-    },
+-    #[error("failed to prepare CODEX_HOME at `{path}`: {source}")]
+-    PrepareCodexHome {
+-        path: PathBuf,
+-        #[source]
+-        source: std::io::Error,
+-    },
+-    #[error("codex stdout unavailable")]
+-    StdoutUnavailable,
+-    #[error("codex stderr unavailable")]
+-    StderrUnavailable,
+-    #[error("codex stdin unavailable")]
+-    StdinUnavailable,
+-    #[error("failed to capture codex output: {0}")]
+-    CaptureIo(#[from] std::io::Error),
+-    #[error("failed to write prompt to codex stdin: {0}")]
+-    StdinWrite(#[source] std::io::Error),
+-    #[error("failed to join codex output task: {0}")]
+-    Join(#[from] tokio::task::JoinError),
+-}
+-
+-fn default_rust_log_value() -> Option<&'static str> {
+-    env::var_os(RUST_LOG_ENV)
+-        .is_none()
+-        .then_some(DEFAULT_RUST_LOG)
+-}
+-
+-fn default_binary_path() -> PathBuf {
+-    env::var_os(CODEX_BINARY_ENV)
+-        .map(PathBuf::from)
+-        .unwrap_or_else(|| PathBuf::from("codex"))
+-}
+-
+ #[cfg(test)]
+ mod tests;
+diff --git a/crates/codex/src/tests.rs b/crates/codex/src/tests.rs
+index efc850b..e968684 100644
+--- a/crates/codex/src/tests.rs
++++ b/crates/codex/src/tests.rs
+@@ -1,10 +1,15 @@
+ use super::*;
+ use crate::auth::parse_login_success;
+ use crate::builder::ResolvedCliOverrides;
++use crate::defaults::{
++    default_binary_path, default_rust_log_value, CODEX_BINARY_ENV, CODEX_HOME_ENV,
++    DEFAULT_RUST_LOG, DEFAULT_TIMEOUT, RUST_LOG_ENV,
++};
+ use futures_util::{pin_mut, StreamExt};
+ use semver::Version;
+ use serde_json::json;
+ use std::collections::HashMap;
++use std::env;
+ use std::fs as std_fs;
+ #[cfg(unix)]
+ use std::os::unix::fs::PermissionsExt;

@@ -1,0 +1,42 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 029438b..81f5d43 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -424,8 +424,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.9 — Seam extraction: bundled binary resolver (`bundled_binary.rs`) (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Extract bundled binary resolution types + helpers (`BundledBinarySpec`, `BundledBinary`, `BundledBinaryError`, `resolve_bundled_binary`, `default_bundled_platform_label`) into `crates/codex/src/bundled_binary.rs`, preserving existing public API paths via re-exports from `lib.rs`.
+ - Expected files touched:
+@@ -1501,6 +1501,26 @@ Add entries as work lands. Format:
+ - Commit:
+   - 8406ddfb04e7df7b6337422de3510dd42375b10b
+ 
++### 2026-02-05 — P1.9 Seam extraction: bundled binary resolver (`bundled_binary.rs`) (API preserved)
++
++- Scope/step: P1.9
++- Why: Extract the bundled binary resolver into a cohesive module while preserving crate-root public API paths via façade + re-exports.
++- What changed:
++  - Moved `BundledBinarySpec`, `BundledBinary`, `BundledBinaryError`, `resolve_bundled_binary`, and `default_bundled_platform_label` into `crates/codex/src/bundled_binary.rs`.
++  - Wired `crates/codex/src/lib.rs` with `mod bundled_binary;` + `pub use ...` so existing `codex::{...}` paths continue to compile; kept a test-only shim for `bundled_binary_filename` to avoid churn in existing unit tests.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_fmt_check_final.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P1.9_cargo_fmt_apply.txt`; re-check: `evidence_runs/2026-02-05/P1.9_cargo_fmt_check_after.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_audit.txt`; reran offline with copied RustSec DB due to network/sandbox lock constraints)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_deny_advisories.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_deny_advisories_initial_fail.txt`; reran with offline cargo home due to network/sandbox lock constraints)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_deny_licenses.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.9_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.9_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

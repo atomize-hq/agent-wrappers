@@ -1,0 +1,127 @@
+diff --git a/crates/codex/src/lib.rs b/crates/codex/src/lib.rs
+index d87e18e..e790397 100644
+--- a/crates/codex/src/lib.rs
++++ b/crates/codex/src/lib.rs
+@@ -467,5 +467,4 @@ impl Default for CodexClient {
+ }
+ 
+ #[cfg(test)]
+-#[path = "tests.rs"]
+ mod tests;
+diff --git a/crates/codex/src/tests.rs b/crates/codex/src/tests.rs
+deleted file mode 100644
+index 75e3e29..0000000
+--- a/crates/codex/src/tests.rs
++++ /dev/null
+@@ -1,4 +0,0 @@
+-pub(super) use super::*;
+-
+-#[path = "tests/mod.rs"]
+-mod modularized;
+diff --git a/crates/codex/src/tests/jsonl_stream.rs b/crates/codex/src/tests/jsonl.rs
+similarity index 100%
+rename from crates/codex/src/tests/jsonl_stream.rs
+rename to crates/codex/src/tests/jsonl.rs
+diff --git a/crates/codex/src/tests/mod.rs b/crates/codex/src/tests/mod.rs
+index 6aa0ff0..47770ea 100644
+--- a/crates/codex/src/tests/mod.rs
++++ b/crates/codex/src/tests/mod.rs
+@@ -13,45 +13,14 @@ use std::env;
+ use std::fs as std_fs;
+ #[cfg(unix)]
+ use std::os::unix::fs::PermissionsExt;
+-use std::sync::OnceLock;
+ use std::time::{Duration, SystemTime};
+ use tokio::{
+     fs,
+     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+ };
+ 
+-fn env_mutex() -> &'static tokio::sync::Mutex<()> {
+-    static ENV_MUTEX: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
+-    ENV_MUTEX.get_or_init(|| tokio::sync::Mutex::new(()))
+-}
+-
+-fn env_guard() -> tokio::sync::MutexGuard<'static, ()> {
+-    env_mutex().blocking_lock()
+-}
+-
+-async fn env_guard_async() -> tokio::sync::MutexGuard<'static, ()> {
+-    env_mutex().lock().await
+-}
+-
+-fn write_executable(dir: &Path, name: &str, script: &str) -> PathBuf {
+-    let path = dir.join(name);
+-    std_fs::write(&path, script).unwrap();
+-    let mut perms = std_fs::metadata(&path).unwrap().permissions();
+-    #[cfg(unix)]
+-    {
+-        perms.set_mode(0o755);
+-    }
+-    std_fs::set_permissions(&path, perms).unwrap();
+-    path
+-}
+-
+-fn write_fake_codex(dir: &Path, script: &str) -> PathBuf {
+-    write_executable(dir, "codex", script)
+-}
+-
+-fn write_fake_bundled_codex(dir: &Path, platform: &str, script: &str) -> PathBuf {
+-    write_executable(dir, bundled_binary_filename(platform), script)
+-}
++mod support;
++use support::*;
+ 
+ mod auth_session;
+ mod builder_env_home;
+@@ -59,5 +28,5 @@ mod bundled_binary;
+ mod capabilities;
+ mod cli_commands;
+ mod cli_overrides;
+-mod jsonl_stream;
++mod jsonl;
+ mod sandbox_execpolicy;
+diff --git a/crates/codex/src/tests/support.rs b/crates/codex/src/tests/support.rs
+new file mode 100644
+index 0000000..58fad25
+--- /dev/null
++++ b/crates/codex/src/tests/support.rs
+@@ -0,0 +1,38 @@
++use std::fs as std_fs;
++#[cfg(unix)]
++use std::os::unix::fs::PermissionsExt;
++use std::path::{Path, PathBuf};
++use std::sync::OnceLock;
++
++fn env_mutex() -> &'static tokio::sync::Mutex<()> {
++    static ENV_MUTEX: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
++    ENV_MUTEX.get_or_init(|| tokio::sync::Mutex::new(()))
++}
++
++pub(super) fn env_guard() -> tokio::sync::MutexGuard<'static, ()> {
++    env_mutex().blocking_lock()
++}
++
++pub(super) async fn env_guard_async() -> tokio::sync::MutexGuard<'static, ()> {
++    env_mutex().lock().await
++}
++
++fn write_executable(dir: &Path, name: &str, script: &str) -> PathBuf {
++    let path = dir.join(name);
++    std_fs::write(&path, script).unwrap();
++    let mut perms = std_fs::metadata(&path).unwrap().permissions();
++    #[cfg(unix)]
++    {
++        perms.set_mode(0o755);
++    }
++    std_fs::set_permissions(&path, perms).unwrap();
++    path
++}
++
++pub(super) fn write_fake_codex(dir: &Path, script: &str) -> PathBuf {
++    write_executable(dir, "codex", script)
++}
++
++pub(super) fn write_fake_bundled_codex(dir: &Path, platform: &str, script: &str) -> PathBuf {
++    write_executable(dir, super::bundled_binary_filename(platform), script)
++}

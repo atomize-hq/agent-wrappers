@@ -1,0 +1,3 @@
+      Loaded 909 security advisories (from /tmp/p4.0.2-advisory-db)
+warning: couldn't open crates.io index: I/O operation failed: failed to obtain lock file '/home/dev/.cargo/.package-cache'
+    Scanning Cargo.lock for vulnerabilities (190 crate dependencies)

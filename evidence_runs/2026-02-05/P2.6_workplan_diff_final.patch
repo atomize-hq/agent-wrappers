@@ -1,0 +1,56 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 0b9a55b..72b6fd0 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -499,8 +499,8 @@ Last Updated: 2026-02-04
+ 
+ ##### P2.6 — Move high-level MCP clients into `mcp/client.rs` (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Reduce `crates/codex/src/mcp.rs` by extracting high-level client façade types (e.g., Codex/app-server client wrappers that sit above JSON-RPC transport) into `crates/codex/src/mcp/client.rs`, preserving stable `codex::mcp::*` API paths via re-exports.
+ - Expected files touched:
+@@ -1276,6 +1276,26 @@ Add entries as work lands. Format:
+ - Diffs/PRs:
+   - Commit: `b4da9b037f4e0fb3c03889b6e8d57853ece11826`
+ 
++### 2026-02-05 — Move high-level MCP clients into `mcp/client.rs`
++
++- Scope/step: P2.6
++- Why: Reduce `crates/codex/src/mcp.rs` by extracting high-level client façades into `crates/codex/src/mcp/client.rs` while preserving stable `codex::mcp::*` public API paths via re-exports.
++- What changed:
++  - Moved `McpError`, `CodexMcpServer`, and `CodexAppServer` into `crates/codex/src/mcp/client.rs`.
++  - Kept `crates/codex/src/mcp.rs` as a compatibility façade by wiring `mod client;` + re-exporting client items.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P2.6_cargo_fmt_check.txt`) (final: `evidence_runs/2026-02-05/P2.6_cargo_fmt_check_final.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P2.6_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P2.6_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P2.6_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P2.6_cargo_audit_final.txt`) (previous FAILs: `evidence_runs/2026-02-05/P2.6_cargo_audit_after.txt`, `evidence_runs/2026-02-05/P2.6_cargo_audit.txt`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P2.6_cargo_deny_advisories_final.txt`) (previous FAIL: `evidence_runs/2026-02-05/P2.6_cargo_deny_advisories_initial_fail.txt`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P2.6_cargo_deny_licenses_final.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P2.6_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P2.6_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+@@ -1297,8 +1317,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ 
+ Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+ 
+-1) P1.6 — Seam extraction: JSONL streaming/framing (`jsonl.rs`) (API preserved)
+-2) P2.6 — Move high-level MCP clients into `mcp/client.rs` (API preserved)
+-3) P2.7 — Reduce `mcp.rs` below program ceiling (remaining coordinator split) (API preserved)
+-4) P3.9 — Reduce `codex_validate.rs` below ceiling (follow-on split) with deterministic output preserved
+-5) (TBD) Next Phase 1 seam extraction after P1.6
++1) P2.7 — Reduce `mcp.rs` below program ceiling (remaining coordinator split) (API preserved)
++2) P3.9 — Reduce `codex_validate.rs` below ceiling (follow-on split) with deterministic output preserved
++3) (TBD) Next Phase 1 seam extraction after P1.6
++4) (TBD) Next Phase 2 follow-on after P2.7
++5) (TBD) Next Phase 3 follow-on after P3.9

@@ -1,0 +1,54 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 94639de..8b5b84b 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -610,8 +610,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.19 — Seam extraction: move `lib.rs` unit/integration-style tests into `crates/codex/src/tests.rs` (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Reduce `crates/codex/src/lib.rs` size by moving the large `#[cfg(test)] mod tests { ... }` block into an out-of-line module file (`crates/codex/src/tests.rs`) while keeping test behavior identical.
+ - Expected files touched:
+@@ -1921,6 +1921,24 @@ Add entries as work lands. Format:
+ - Commit:
+   - c310cfda06ce336410e6c99728c7c983c1f561b5
+ 
++### 2026-02-05 — P1.19: move crate-root tests out of `lib.rs`
++
++- Scope/step: P1.19
++- Why: Reduce `crates/codex/src/lib.rs` size by moving the large `#[cfg(test)] mod tests { ... }` block into `crates/codex/src/tests.rs` (mechanical move; no behavior changes).
++- What changed:
++  - Replaced inline `#[cfg(test)] mod tests { ... }` with `#[cfg(test)] mod tests;` in `crates/codex/src/lib.rs`.
++  - Added `crates/codex/src/tests.rs` containing the moved tests module contents.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.19_cargo_fmt_check_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.19_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P1.19_cargo_fmt_apply.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.19_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.19_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.19_cargo_audit_after2.txt`) (supersedes `evidence_runs/2026-02-05/P1.19_cargo_audit_after.txt`, which was not actually PASS due to missing crates.io registry index in the sandboxed `CARGO_HOME`; workaround: writable temp `CARGO_HOME=/tmp/cargo_home_p1_19_audit_fix` seeded from `/home/dev/.cargo/registry` + `/home/dev/.cargo/advisory-db`, run with `CARGO_NET_OFFLINE=true` + `--db ... --no-fetch --stale --json`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.19_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.19_cargo_deny_advisories.txt`; workaround: writable `CARGO_HOME=/tmp/cargo_home_p1_19_deny` seeded from `/home/dev/.cargo` + `--disable-fetch` + `CARGO_NET_OFFLINE=true`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.19_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.19_cargo_fmt_check_final.txt`)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+@@ -1942,8 +1960,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ 
+ Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+ 
+-1) P1.19 — Seam extraction: move `lib.rs` unit/integration-style tests into `crates/codex/src/tests.rs` (API preserved)
+-2) P1.20 — Seam extraction: core `CodexClient` command runner helpers into `client_core.rs` (API preserved)
+-3) P1.21 — Seam extraction: `CodexError` and shared “defaults” helpers into dedicated modules (API preserved)
+-4) P1.22 — Seam extraction: remaining `CodexClient` non-streaming wrapper methods into `commands/*` follow-ups (API preserved)
+-5) P1.23 — Refresh Phase 1 size evidence and (if eligible) close Phase 1 (no code moves)
++1) P1.20 — Seam extraction: core `CodexClient` command runner helpers into `client_core.rs` (API preserved)
++2) P1.21 — Seam extraction: `CodexError` and shared “defaults” helpers into dedicated modules (API preserved)
++3) P1.22 — Seam extraction: remaining `CodexClient` non-streaming wrapper methods into `commands/*` follow-ups (API preserved)
++4) P1.23 — Refresh Phase 1 size evidence and (if eligible) close Phase 1 (no code moves)
++5) P2.0 — Define the `mcp.rs` seam map (no code moves yet)

@@ -1,0 +1,246 @@
+  3040	    pub working_dir: Option<PathBuf>,
+  3041	}
+  3042	
+  3043	impl StdioToUdsRequest {
+  3044	    pub fn new(socket_path: impl Into<PathBuf>) -> Self {
+  3045	        Self {
+  3046	            socket_path: socket_path.into(),
+  3047	            working_dir: None,
+  3048	        }
+  3049	    }
+  3050	
+  3051	    /// Sets the working directory used to resolve the socket path.
+  3052	    pub fn working_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+  3053	        self.working_dir = Some(dir.into());
+  3054	        self
+  3055	    }
+  3056	}
+  3057	
+  3058	/// Stage labels reported by `codex features list`.
+  3059	#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+  3060	#[serde(from = "String", into = "String")]
+  3061	pub enum CodexFeatureStage {
+  3062	    Experimental,
+  3063	    Beta,
+  3064	    Stable,
+  3065	    Deprecated,
+  3066	    Removed,
+  3067	    Unknown(String),
+  3068	}
+  3069	
+  3070	impl CodexFeatureStage {
+  3071	    fn parse(raw: &str) -> Self {
+  3072	        let normalized = raw.trim();
+  3073	        match normalized.to_ascii_lowercase().as_str() {
+  3074	            "experimental" => CodexFeatureStage::Experimental,
+  3075	            "beta" => CodexFeatureStage::Beta,
+  3076	            "stable" => CodexFeatureStage::Stable,
+  3077	            "deprecated" => CodexFeatureStage::Deprecated,
+  3078	            "removed" => CodexFeatureStage::Removed,
+  3079	            _ => CodexFeatureStage::Unknown(normalized.to_string()),
+  3080	        }
+  3081	    }
+  3082	
+  3083	    /// Returns the normalized label for this stage.
+  3084	    pub fn as_str(&self) -> &str {
+  3085	        match self {
+  3086	            CodexFeatureStage::Experimental => "experimental",
+  3087	            CodexFeatureStage::Beta => "beta",
+  3088	            CodexFeatureStage::Stable => "stable",
+  3089	            CodexFeatureStage::Deprecated => "deprecated",
+  3090	            CodexFeatureStage::Removed => "removed",
+  3091	            CodexFeatureStage::Unknown(label) => label.as_str(),
+  3092	        }
+  3093	    }
+  3094	}
+  3095	
+  3096	impl From<String> for CodexFeatureStage {
+  3097	    fn from(value: String) -> Self {
+  3098	        CodexFeatureStage::parse(&value)
+  3099	    }
+  3100	}
+  3101	
+  3102	impl From<CodexFeatureStage> for String {
+  3103	    fn from(stage: CodexFeatureStage) -> Self {
+  3104	        String::from(&stage)
+  3105	    }
+  3106	}
+  3107	
+  3108	impl From<&CodexFeatureStage> for String {
+  3109	    fn from(stage: &CodexFeatureStage) -> Self {
+  3110	        stage.as_str().to_string()
+  3111	    }
+  3112	}
+  3113	
+  3114	/// Single feature entry reported by `codex features list`.
+  3115	#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+  3116	pub struct CodexFeature {
+  3117	    /// Feature name as reported by the CLI.
+  3118	    pub name: String,
+  3119	    /// Feature stage (experimental/beta/stable/deprecated/removed) when provided.
+  3120	    #[serde(default, skip_serializing_if = "Option::is_none")]
+  3121	    pub stage: Option<CodexFeatureStage>,
+  3122	    /// Whether the feature is enabled for the current config/profile.
+  3123	    pub enabled: bool,
+  3124	    /// Unrecognized fields from JSON output are preserved here.
+  3125	    #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+  3126	    pub extra: BTreeMap<String, Value>,
+  3127	}
+  3128	
+  3129	impl CodexFeature {
+  3130	    /// Convenience helper mirroring the `enabled` flag.
+  3131	    pub const fn is_enabled(&self) -> bool {
+  3132	        self.enabled
+  3133	    }
+  3134	}
+  3135	
+  3136	/// Format used to parse `codex features list` output.
+  3137	#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+  3138	pub enum FeaturesListFormat {
+  3139	    Json,
+  3140	    Text,
+  3141	}
+  3142	
+  3143	/// Parsed output from `codex features list`.
+  3144	#[derive(Clone, Debug, Eq, PartialEq)]
+  3145	pub struct FeaturesListOutput {
+  3146	    /// Exit status returned by the subcommand.
+  3147	    pub status: ExitStatus,
+  3148	    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
+  3149	    pub stdout: String,
+  3150	    /// Captured stderr (mirrored unless `quiet` is set).
+  3151	    pub stderr: String,
+  3152	    /// Parsed feature entries.
+  3153	    pub features: Vec<CodexFeature>,
+  3154	    /// Indicates whether JSON or text parsing was used.
+  3155	    pub format: FeaturesListFormat,
+  3156	}
+  3157	
+  3158	/// Request for `codex features list`.
+  3159	#[derive(Clone, Debug, Eq, PartialEq)]
+  3160	pub struct FeaturesListRequest {
+  3161	    /// Request JSON output via `--json` (falls back to text parsing when JSON is absent).
+  3162	    pub json: bool,
+  3163	    /// Per-call CLI overrides layered on top of the builder.
+  3164	    pub overrides: CliOverridesPatch,
+  3165	}
+  3166	
+  3167	impl FeaturesListRequest {
+  3168	    /// Creates a request with JSON disabled by default for compatibility with older binaries.
+  3169	    pub fn new() -> Self {
+  3170	        Self {
+  3171	            json: false,
+  3172	            overrides: CliOverridesPatch::default(),
+  3173	        }
+  3174	    }
+  3175	
+  3176	    /// Controls whether `--json` is passed to `codex features list`.
+  3177	    pub fn json(mut self, enable: bool) -> Self {
+  3178	        self.json = enable;
+  3179	        self
+  3180	    }
+  3181	
+  3182	    /// Replaces the default CLI overrides for this request.
+  3183	    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+  3184	        self.overrides = overrides;
+  3185	        self
+  3186	    }
+  3187	
+  3188	    /// Adds a `--config key=value` override for this request.
+  3189	    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+  3190	        self.overrides
+  3191	            .config_overrides
+  3192	            .push(ConfigOverride::new(key, value));
+  3193	        self
+  3194	    }
+  3195	
+  3196	    /// Adds a raw `--config key=value` override without validation.
+  3197	    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+  3198	        self.overrides
+  3199	            .config_overrides
+  3200	            .push(ConfigOverride::from_raw(raw));
+  3201	        self
+  3202	    }
+  3203	
+  3204	    /// Sets the config profile (`--profile`) for this request.
+  3205	    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+  3206	        let profile = profile.into();
+  3207	        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+  3208	        self
+  3209	    }
+  3210	
+  3211	    /// Requests the CLI `--oss` flag for this call.
+  3212	    pub fn oss(mut self, enable: bool) -> Self {
+  3213	        self.overrides.oss = if enable {
+  3214	            FlagState::Enable
+  3215	        } else {
+  3216	            FlagState::Disable
+  3217	        };
+  3218	        self
+  3219	    }
+  3220	
+  3221	    /// Adds a `--enable <feature>` toggle for this call.
+  3222	    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+  3223	        self.overrides.feature_toggles.enable.push(name.into());
+  3224	        self
+  3225	    }
+  3226	
+  3227	    /// Adds a `--disable <feature>` toggle for this call.
+  3228	    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+  3229	        self.overrides.feature_toggles.disable.push(name.into());
+  3230	        self
+  3231	    }
+  3232	
+  3233	    /// Controls whether `--search` is passed through to Codex.
+  3234	    pub fn search(mut self, enable: bool) -> Self {
+  3235	        self.overrides.search = if enable {
+  3236	            FlagState::Enable
+  3237	        } else {
+  3238	            FlagState::Disable
+  3239	        };
+  3240	        self
+  3241	    }
+  3242	}
+  3243	
+  3244	impl Default for FeaturesListRequest {
+  3245	    fn default() -> Self {
+  3246	        Self::new()
+  3247	    }
+  3248	}
+  3249	
+  3250	/// Request for `codex features`.
+  3251	#[derive(Clone, Debug, Eq, PartialEq)]
+  3252	pub struct FeaturesCommandRequest {
+  3253	    /// Per-call CLI overrides layered on top of the builder.
+  3254	    pub overrides: CliOverridesPatch,
+  3255	}
+  3256	
+  3257	impl FeaturesCommandRequest {
+  3258	    pub fn new() -> Self {
+  3259	        Self {
+  3260	            overrides: CliOverridesPatch::default(),
+  3261	        }
+  3262	    }
+  3263	
+  3264	    /// Replaces the default CLI overrides for this request.
+  3265	    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+  3266	        self.overrides = overrides;
+  3267	        self
+  3268	    }
+  3269	}
+  3270	
+  3271	impl Default for FeaturesCommandRequest {
+  3272	    fn default() -> Self {
+  3273	        Self::new()
+  3274	    }
+  3275	}
+  3276	
+  3277	/// Selector for `codex help`-style command families.
+  3278	#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+  3279	pub enum HelpScope {
+  3280	    Root,
+  3281	    Exec,
+  3282	    Features,
+  3283	    Login,
+  3284	    AppServer,
+  3285	    Sandbox,

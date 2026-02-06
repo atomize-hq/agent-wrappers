@@ -1,0 +1,2 @@
+cargo fmt --check failed (exit=1); applying fmt
+$ cargo fmt --all

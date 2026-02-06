@@ -1,0 +1,62 @@
+    Checking codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)
+error: unused imports: `Deserialize` and `Serialize`
+   --> crates/codex/src/lib.rs:135:13
+    |
+135 | use serde::{Deserialize, Serialize};
+    |             ^^^^^^^^^^^  ^^^^^^^^^
+    |
+    = note: `-D unused-imports` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+error[E0624]: associated function `parse` is private
+    --> crates/codex/src/lib.rs:3198:68
+     |
+3198 | ...                   stage: Some(CodexFeatureStage::parse(flag)),
+     |                                                      ^^^^^ private associated function
+     |
+    ::: crates/codex/src/cli/features.rs:19:5
+     |
+19   |     fn parse(raw: &str) -> Self {
+     |     --------------------------- private associated function defined here
+
+error[E0624]: associated function `parse` is private
+    --> crates/codex/src/lib.rs:3247:74
+     |
+3247 |         let stage = (!stage_token.is_empty()).then(|| CodexFeatureStage::parse(stage_token));
+     |                                                                          ^^^^^ private associated function
+     |
+    ::: crates/codex/src/cli/features.rs:19:5
+     |
+19   |     fn parse(raw: &str) -> Self {
+     |     --------------------------- private associated function defined here
+
+error[E0624]: associated function `parse` is private
+    --> crates/codex/src/lib.rs:3296:33
+     |
+3296 |         .map(CodexFeatureStage::parse);
+     |                                 ^^^^^ private associated function
+     |
+    ::: crates/codex/src/cli/features.rs:19:5
+     |
+19   |     fn parse(raw: &str) -> Self {
+     |     --------------------------- private associated function defined here
+
+error: unused import: `Deserialize`
+   --> crates/codex/src/lib.rs:135:13
+    |
+135 | use serde::{Deserialize, Serialize};
+    |             ^^^^^^^^^^^
+    |
+    = note: `-D unused-imports` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+error: unused import: `Serialize`
+   --> crates/codex/src/lib.rs:135:26
+    |
+135 | use serde::{Deserialize, Serialize};
+    |                          ^^^^^^^^^
+
+For more information about this error, try `rustc --explain E0624`.
+error: could not compile `codex` (lib) due to 5 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `codex` (lib test) due to 4 previous errors

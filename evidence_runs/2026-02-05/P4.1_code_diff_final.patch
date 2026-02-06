@@ -1,0 +1,2003 @@
+diff --git a/crates/codex/src/mcp/tests_core.rs b/crates/codex/src/mcp/tests_core.rs
+index f73a948..6933d83 100644
+--- a/crates/codex/src/mcp/tests_core.rs
++++ b/crates/codex/src/mcp/tests_core.rs
+@@ -1,982 +1,4 @@
+-use super::test_support::{prelude::*, *};
+-use super::*;
+-
+-#[tokio::test]
+-async fn app_server_launch_can_enable_analytics_flag() {
+-    let (dir, script) = write_fake_app_server();
+-    let log_path = dir.path().join("argv.json");
+-
+-    let mut config = test_config(script);
+-    config.app_server_analytics_default_enabled = true;
+-    config.env.push((
+-        OsString::from("ARGV_LOG"),
+-        OsString::from(log_path.as_os_str()),
+-    ));
+-
+-    let client = test_client();
+-    let server = CodexAppServer::start(config, client)
+-        .await
+-        .expect("spawn app server");
+-
+-    let mut argv_line = None;
+-    for _ in 0..50 {
+-        if let Ok(contents) = fs::read_to_string(&log_path) {
+-            argv_line = contents.lines().next().map(str::to_string);
+-            break;
+-        }
+-        tokio::time::sleep(Duration::from_millis(5)).await;
+-    }
+-
+-    let argv_line = argv_line.expect("argv log should be written");
+-    let argv: Vec<String> = serde_json::from_str(&argv_line).expect("argv json");
+-    assert_eq!(argv, vec!["app-server", "--analytics-default-enabled"]);
+-
+-    server.shutdown().await.expect("shutdown server");
+-}
+-
+-#[test]
+-fn add_stdio_server_injects_env_and_persists() {
+-    let (dir, manager) = temp_config_manager();
+-    let env_key = "MCP_STDIO_TEST_KEY";
+-    env::remove_var(env_key);
+-
+-    let mut env_map = BTreeMap::new();
+-    env_map.insert(env_key.to_string(), "secret".to_string());
+-
+-    let added = manager
+-        .add_server(AddServerRequest {
+-            name: "local".into(),
+-            definition: stdio_definition("my-mcp"),
+-            overwrite: false,
+-            env: env_map,
+-            bearer_token: None,
+-        })
+-        .expect("add server");
+-
+-    match added.definition.transport {
+-        McpTransport::Stdio(def) => {
+-            assert_eq!(def.command, "my-mcp");
+-            assert_eq!(def.env.get(env_key), Some(&"secret".to_string()));
+-        }
+-        _ => panic!("expected stdio transport"),
+-    }
+-
+-    let listed = manager.list_servers().expect("list servers");
+-    assert_eq!(listed.len(), 1);
+-    assert_eq!(listed[0].name, "local");
+-
+-    let fetched = manager.get_server("local").expect("get server");
+-    match fetched.definition.transport {
+-        McpTransport::Stdio(def) => {
+-            assert_eq!(def.env.get(env_key), Some(&"secret".to_string()))
+-        }
+-        _ => panic!("expected stdio transport"),
+-    }
+-
+-    let config_path = dir.path().join(DEFAULT_CONFIG_FILE);
+-    let serialized = fs::read_to_string(config_path).expect("read config");
+-    let value: TomlValue = serialized.parse().expect("parse toml");
+-    let table = value.as_table().expect("table root");
+-    let servers_table = table.get("mcp_servers").expect("mcp_servers");
+-    let decoded: BTreeMap<String, McpServerDefinition> = servers_table
+-        .clone()
+-        .try_into()
+-        .expect("decode mcp_servers");
+-    let stored = decoded.get("local").expect("stored server");
+-    match &stored.transport {
+-        McpTransport::Stdio(def) => {
+-            assert_eq!(def.env.get(env_key), Some(&"secret".to_string()))
+-        }
+-        _ => panic!("expected stdio transport"),
+-    }
+-
+-    assert_eq!(env::var(env_key).unwrap(), "secret");
+-    env::remove_var(env_key);
+-}
+-
+-#[test]
+-fn add_streamable_http_sets_token_and_allows_login_logout() {
+-    let (_dir, manager) = temp_config_manager();
+-    let env_var = "MCP_HTTP_TOKEN_E5";
+-    env::remove_var(env_var);
+-
+-    let mut definition = streamable_definition("https://example.test/mcp", env_var);
+-    if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
+-        http.headers.insert("X-Test".into(), "true".into());
+-    }
+-
+-    let _added = manager
+-        .add_server(AddServerRequest {
+-            name: "remote".into(),
+-            definition,
+-            overwrite: false,
+-            env: BTreeMap::new(),
+-            bearer_token: Some("token-a".into()),
+-        })
+-        .expect("add server");
+-
+-    assert_eq!(env::var(env_var).unwrap(), "token-a");
+-
+-    let logout = manager.logout("remote").expect("logout");
+-    assert_eq!(logout.env_var.as_deref(), Some(env_var));
+-    assert!(logout.cleared);
+-    assert!(env::var(env_var).is_err());
+-
+-    let login = manager.login("remote", "token-b").expect("login");
+-    assert_eq!(login.env_var.as_deref(), Some(env_var));
+-    assert_eq!(env::var(env_var).unwrap(), "token-b");
+-
+-    env::remove_var(env_var);
+-}
+-
+-#[test]
+-fn remove_server_prunes_config() {
+-    let (_dir, manager) = temp_config_manager();
+-
+-    manager
+-        .add_server(AddServerRequest {
+-            name: "one".into(),
+-            definition: stdio_definition("one"),
+-            overwrite: false,
+-            env: BTreeMap::new(),
+-            bearer_token: None,
+-        })
+-        .expect("add first");
+-
+-    manager
+-        .add_server(AddServerRequest {
+-            name: "two".into(),
+-            definition: stdio_definition("two"),
+-            overwrite: false,
+-            env: BTreeMap::new(),
+-            bearer_token: None,
+-        })
+-        .expect("add second");
+-
+-    let removed = manager.remove_server("one").expect("remove");
+-    assert!(removed.is_some());
+-
+-    let listed = manager.list_servers().expect("list");
+-    assert_eq!(listed.len(), 1);
+-    assert_eq!(listed[0].name, "two");
+-
+-    let config = fs::read_to_string(manager.config_path()).expect("read config");
+-    let value: TomlValue = config.parse().expect("parse config");
+-    let table = value.as_table().expect("table root");
+-    let servers_value = table.get("mcp_servers").cloned().expect("servers");
+-    let servers: BTreeMap<String, McpServerDefinition> =
+-        servers_value.try_into().expect("decode servers");
+-    assert!(!servers.contains_key("one"));
+-    assert!(servers.contains_key("two"));
+-}
+-
+-#[test]
+-fn runtime_stdio_server_resolves_env_and_tools() {
+-    let (_dir, manager) = temp_config_manager();
+-    let mut definition = stdio_definition("my-mcp");
+-    definition.description = Some("local mcp".into());
+-    definition.tags = vec!["dev".into(), "local".into()];
+-    definition.tools = Some(McpToolConfig {
+-        enabled: vec!["tool-a".into()],
+-        disabled: vec!["tool-b".into()],
+-    });
+-
+-    if let McpTransport::Stdio(ref mut stdio) = definition.transport {
+-        stdio.args = vec!["--flag".into()];
+-        stdio.env.insert("EXAMPLE".into(), "value".into());
+-        stdio.timeout_ms = Some(2500);
+-    }
+-
+-    let mut injected = BTreeMap::new();
+-    injected.insert("MCP_STDIO_INJECT_E6".into(), "yes".into());
+-
+-    manager
+-        .add_server(AddServerRequest {
+-            name: "local".into(),
+-            definition,
+-            overwrite: false,
+-            env: injected,
+-            bearer_token: None,
+-        })
+-        .expect("add server");
+-
+-    let runtime = manager.runtime_server("local").expect("runtime server");
+-    assert_eq!(runtime.name, "local");
+-    assert_eq!(runtime.description.as_deref(), Some("local mcp"));
+-    assert_eq!(runtime.tags, vec!["dev".to_string(), "local".to_string()]);
+-
+-    let tools = runtime.tools.as_ref().expect("tool hints");
+-    assert_eq!(tools.enabled, vec!["tool-a".to_string()]);
+-    assert_eq!(tools.disabled, vec!["tool-b".to_string()]);
+-
+-    match &runtime.transport {
+-        McpRuntimeTransport::Stdio(def) => {
+-            assert_eq!(def.command, "my-mcp");
+-            assert_eq!(def.args, vec!["--flag".to_string()]);
+-            assert_eq!(def.timeout_ms, Some(2500));
+-            assert_eq!(def.env.get("EXAMPLE").map(String::as_str), Some("value"));
+-            assert_eq!(
+-                def.env.get("MCP_STDIO_INJECT_E6").map(String::as_str),
+-                Some("yes")
+-            );
+-        }
+-        other => panic!("expected stdio transport, got {other:?}"),
+-    }
+-
+-    serde_json::to_string(&runtime).expect("serialize runtime");
+-    env::remove_var("MCP_STDIO_INJECT_E6");
+-}
+-
+-#[test]
+-fn runtime_http_resolves_bearer_and_sets_header() {
+-    let (_dir, manager) = temp_config_manager();
+-    let env_var = "MCP_HTTP_TOKEN_E6";
+-    env::set_var(env_var, "token-123");
+-
+-    let mut definition = streamable_definition("https://example.test/mcp", env_var);
+-    if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
+-        http.headers.insert("X-Test".into(), "true".into());
+-        http.connect_timeout_ms = Some(1200);
+-        http.request_timeout_ms = Some(3400);
+-    }
+-
+-    manager
+-        .add_server(AddServerRequest {
+-            name: "remote".into(),
+-            definition,
+-            overwrite: false,
+-            env: BTreeMap::new(),
+-            bearer_token: None,
+-        })
+-        .expect("add server");
+-
+-    let runtime = manager.runtime_server("remote").expect("runtime server");
+-    match &runtime.transport {
+-        McpRuntimeTransport::StreamableHttp(def) => {
+-            assert_eq!(def.url, "https://example.test/mcp");
+-            assert_eq!(def.bearer_env_var.as_deref(), Some(env_var));
+-            assert_eq!(def.bearer_token.as_deref(), Some("token-123"));
+-            assert_eq!(def.headers.get("X-Test").map(String::as_str), Some("true"));
+-            assert_eq!(
+-                def.headers.get("Authorization").map(String::as_str),
+-                Some("Bearer token-123")
+-            );
+-            assert_eq!(def.connect_timeout_ms, Some(1200));
+-            assert_eq!(def.request_timeout_ms, Some(3400));
+-        }
+-        other => panic!("expected streamable_http transport, got {other:?}"),
+-    }
+-
+-    let serialized = serde_json::to_value(&runtime).expect("serialize runtime");
+-    assert!(serialized.get("transport").is_some());
+-
+-    env::remove_var(env_var);
+-}
+-
+-#[test]
+-fn runtime_http_preserves_existing_auth_header() {
+-    let (_dir, manager) = temp_config_manager();
+-    let env_var = "MCP_HTTP_TOKEN_E6B";
+-    env::set_var(env_var, "token-override");
+-
+-    let mut definition = streamable_definition("https://example.test/custom", env_var);
+-    if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
+-        http.headers
+-            .insert("Authorization".into(), "Custom 123".into());
+-    }
+-
+-    manager
+-        .add_server(AddServerRequest {
+-            name: "remote-custom".into(),
+-            definition,
+-            overwrite: false,
+-            env: BTreeMap::new(),
+-            bearer_token: None,
+-        })
+-        .expect("add server");
+-
+-    let runtime = manager
+-        .runtime_server("remote-custom")
+-        .expect("runtime server");
+-    match &runtime.transport {
+-        McpRuntimeTransport::StreamableHttp(def) => {
+-            assert_eq!(def.bearer_token.as_deref(), Some("token-override"));
+-            assert_eq!(
+-                def.headers.get("Authorization").map(String::as_str),
+-                Some("Custom 123")
+-            );
+-        }
+-        other => panic!("expected streamable_http transport, got {other:?}"),
+-    }
+-
+-    env::remove_var(env_var);
+-}
+-
+-#[test]
+-fn runtime_stdio_launcher_merges_env_timeout_and_tools() {
+-    let base_dir = tempfile::tempdir().expect("tempdir");
+-    let code_home = base_dir.path().join("code_home");
+-
+-    let defaults = StdioServerConfig {
+-        binary: PathBuf::from("codex"),
+-        code_home: Some(code_home.clone()),
+-        current_dir: Some(base_dir.path().to_path_buf()),
+-        env: vec![
+-            (OsString::from("BASE_ONLY"), OsString::from("base")),
+-            (OsString::from("OVERRIDE_ME"), OsString::from("base")),
+-        ],
+-        app_server_analytics_default_enabled: false,
+-        mirror_stdio: true,
+-        startup_timeout: Duration::from_secs(5),
+-    };
+-
+-    let mut definition = StdioServerDefinition {
+-        command: "my-mcp".into(),
+-        args: vec!["--flag".into()],
+-        env: BTreeMap::new(),
+-        timeout_ms: Some(1500),
+-    };
+-    definition
+-        .env
+-        .insert("OVERRIDE_ME".into(), "runtime".into());
+-    definition
+-        .env
+-        .insert("RUNTIME_ONLY".into(), "runtime-env".into());
+-
+-    let runtime = McpRuntimeServer {
+-        name: "local".into(),
+-        transport: McpRuntimeTransport::Stdio(definition),
+-        description: Some("example".into()),
+-        tags: vec!["dev".into()],
+-        tools: Some(McpToolConfig {
+-            enabled: vec!["tool-1".into()],
+-            disabled: vec!["tool-2".into()],
+-        }),
+-    };
+-
+-    let launcher = runtime.into_launcher(&defaults);
+-    assert_eq!(launcher.name, "local");
+-    assert_eq!(launcher.description.as_deref(), Some("example"));
+-    assert_eq!(launcher.tags, vec!["dev".to_string()]);
+-
+-    let tools = launcher.tools.clone().expect("tool hints");
+-    assert_eq!(tools.enabled, vec!["tool-1".to_string()]);
+-    assert_eq!(tools.disabled, vec!["tool-2".to_string()]);
+-
+-    match launcher.transport {
+-        McpServerLauncherTransport::Stdio(launch) => {
+-            assert_eq!(launch.command, PathBuf::from("my-mcp"));
+-            assert_eq!(launch.args, vec!["--flag".to_string()]);
+-            assert_eq!(launch.current_dir.as_ref(), defaults.current_dir.as_ref());
+-            assert_eq!(launch.timeout, Duration::from_millis(1500));
+-            assert!(launch.mirror_stdio);
+-
+-            let env_map: HashMap<OsString, OsString> = launch.env.into_iter().collect();
+-            assert_eq!(
+-                env_map.get(&OsString::from("BASE_ONLY")),
+-                Some(&OsString::from("base"))
+-            );
+-            assert_eq!(
+-                env_map.get(&OsString::from("OVERRIDE_ME")),
+-                Some(&OsString::from("runtime"))
+-            );
+-            assert_eq!(
+-                env_map.get(&OsString::from("RUNTIME_ONLY")),
+-                Some(&OsString::from("runtime-env"))
+-            );
+-            assert_eq!(
+-                env_map.get(&OsString::from("CODEX_HOME")),
+-                Some(&code_home.as_os_str().to_os_string())
+-            );
+-        }
+-        other => panic!("expected stdio launcher, got {other:?}"),
+-    }
+-}
+-
+-#[test]
+-fn streamable_http_connector_converts_timeouts_and_headers() {
+-    let env_var = "MCP_HTTP_TOKEN_E7";
+-    env::set_var(env_var, "token-launcher");
+-
+-    let mut definition = StreamableHttpDefinition {
+-        url: "https://example.test/stream".into(),
+-        headers: BTreeMap::new(),
+-        bearer_env_var: Some(env_var.to_string()),
+-        connect_timeout_ms: Some(1200),
+-        request_timeout_ms: Some(3400),
+-    };
+-    definition.headers.insert("X-Test".into(), "true".into());
+-
+-    let runtime = McpRuntimeServer::from_definition(
+-        "remote",
+-        McpServerDefinition {
+-            transport: McpTransport::StreamableHttp(definition),
+-            description: None,
+-            tags: vec!["http".into()],
+-            tools: Some(McpToolConfig {
+-                enabled: vec!["tool-a".into()],
+-                disabled: vec![],
+-            }),
+-        },
+-    );
+-
+-    let defaults = StdioServerConfig {
+-        binary: PathBuf::from("codex"),
+-        code_home: None,
+-        current_dir: None,
+-        env: Vec::new(),
+-        app_server_analytics_default_enabled: false,
+-        mirror_stdio: false,
+-        startup_timeout: Duration::from_secs(2),
+-    };
+-
+-    let launcher = runtime.into_launcher(&defaults);
+-    match launcher.transport {
+-        McpServerLauncherTransport::StreamableHttp(connector) => {
+-            assert_eq!(connector.url, "https://example.test/stream");
+-            assert_eq!(
+-                connector.headers.get("X-Test").map(String::as_str),
+-                Some("true")
+-            );
+-            assert_eq!(
+-                connector.headers.get("Authorization").map(String::as_str),
+-                Some("Bearer token-launcher")
+-            );
+-            assert_eq!(connector.connect_timeout, Some(Duration::from_millis(1200)));
+-            assert_eq!(connector.request_timeout, Some(Duration::from_millis(3400)));
+-            assert_eq!(connector.bearer_env_var.as_deref(), Some(env_var));
+-            assert_eq!(connector.bearer_token.as_deref(), Some("token-launcher"));
+-
+-            let tools = launcher.tools.as_ref().expect("tool hints present");
+-            assert_eq!(tools.enabled, vec!["tool-a".to_string()]);
+-            assert!(tools.disabled.is_empty());
+-        }
+-        other => panic!("expected http connector, got {other:?}"),
+-    }
+-
+-    env::remove_var(env_var);
+-}
+-
+-#[tokio::test]
+-async fn codex_flow_streams_events_and_response() {
+-    let (_dir, server) = start_fake_mcp_server().await;
+-
+-    let params = CodexCallParams {
+-        prompt: "hello".into(),
+-        model: None,
+-        cwd: None,
+-        sandbox: None,
+-        approval_policy: None,
+-        profile: None,
+-        config: BTreeMap::new(),
+-    };
+-
+-    let mut handle = server.codex(params).await.expect("codex call");
+-
+-    let first_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+-        .await
+-        .expect("event timeout")
+-        .expect("event value");
+-    match first_event {
+-        CodexEvent::ApprovalRequired(req) => {
+-            assert!(req.approval_id.starts_with("ap-"));
+-            assert_eq!(req.kind, ApprovalKind::Exec);
+-        }
+-        other => panic!("unexpected event: {other:?}"),
+-    }
+-
+-    let second_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+-        .await
+-        .expect("event timeout")
+-        .expect("event value");
+-    let event_conversation = match second_event {
+-        CodexEvent::TaskComplete {
+-            conversation_id, ..
+-        } => {
+-            assert!(!conversation_id.is_empty());
+-            conversation_id
+-        }
+-        other => panic!("unexpected event: {other:?}"),
+-    };
+-
+-    let response = time::timeout(Duration::from_secs(2), handle.response)
+-        .await
+-        .expect("response timeout")
+-        .expect("response recv");
+-    let response = response.expect("response ok");
+-    assert_eq!(
+-        response.conversation_id.as_deref(),
+-        Some(event_conversation.as_str())
+-    );
+-    assert_eq!(response.output, serde_json::json!({ "ok": true }));
+-
+-    let _ = server.shutdown().await;
+-}
+-
+-#[tokio::test]
+-async fn canceling_request_returns_cancelled_error() {
+-    let (_dir, server) = start_fake_mcp_server().await;
+-
+-    let params = CodexCallParams {
+-        prompt: "cancel me".into(),
+-        model: None,
+-        cwd: None,
+-        sandbox: None,
+-        approval_policy: None,
+-        profile: None,
+-        config: BTreeMap::new(),
+-    };
+-
+-    let mut handle = server.codex(params).await.expect("codex call");
+-    server.cancel(handle.request_id).expect("cancel send");
+-
+-    let expected_conversation = format!("conv-{}", handle.request_id);
+-    let cancel_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+-        .await
+-        .expect("event timeout")
+-        .expect("cancel notification");
+-    match cancel_event {
+-        CodexEvent::Cancelled {
+-            conversation_id,
+-            reason,
+-        } => {
+-            assert_eq!(
+-                conversation_id.as_deref(),
+-                Some(expected_conversation.as_str())
+-            );
+-            assert_eq!(reason.as_deref(), Some("client_cancel"));
+-        }
+-        other => panic!("expected cancellation event, got {other:?}"),
+-    }
+-
+-    let response = time::timeout(Duration::from_secs(2), handle.response)
+-        .await
+-        .expect("response timeout")
+-        .expect("recv");
+-    assert!(matches!(response, Err(McpError::Cancelled)));
+-
+-    let _ = server.shutdown().await;
+-}
+-
+-#[tokio::test]
+-async fn codex_reply_streams_follow_up_notifications() {
+-    let (_dir, server) = start_fake_mcp_server().await;
+-
+-    let params = CodexCallParams {
+-        prompt: "hello".into(),
+-        model: None,
+-        cwd: None,
+-        sandbox: None,
+-        approval_policy: None,
+-        profile: None,
+-        config: BTreeMap::new(),
+-    };
+-    let first = server.codex(params).await.expect("start codex");
+-    let first_response = time::timeout(Duration::from_secs(2), first.response)
+-        .await
+-        .expect("response timeout")
+-        .expect("recv")
+-        .expect("ok");
+-    let conversation_id = first_response.conversation_id.expect("conversation id set");
+-    assert!(!conversation_id.is_empty());
+-
+-    let reply_params = CodexReplyParams {
+-        conversation_id: conversation_id.clone(),
+-        prompt: "follow up".into(),
+-    };
+-    let mut reply = server.codex_reply(reply_params).await.expect("codex reply");
+-
+-    let expected_approval = format!("ap-{}", reply.request_id);
+-    let approval = time::timeout(Duration::from_secs(2), reply.events.recv())
+-        .await
+-        .expect("event timeout")
+-        .expect("approval");
+-    match approval {
+-        CodexEvent::ApprovalRequired(req) => {
+-            assert_eq!(req.approval_id, expected_approval);
+-            assert_eq!(req.kind, ApprovalKind::Exec);
+-        }
+-        other => panic!("unexpected event: {other:?}"),
+-    }
+-
+-    let complete = time::timeout(Duration::from_secs(2), reply.events.recv())
+-        .await
+-        .expect("event timeout")
+-        .expect("task completion");
+-    match complete {
+-        CodexEvent::TaskComplete {
+-            conversation_id: event_conv,
+-            ..
+-        } => assert_eq!(event_conv, conversation_id),
+-        other => panic!("unexpected event: {other:?}"),
+-    }
+-
+-    let reply_response = time::timeout(Duration::from_secs(2), reply.response)
+-        .await
+-        .expect("response timeout")
+-        .expect("recv")
+-        .expect("ok");
+-    assert_eq!(
+-        reply_response.conversation_id.as_deref(),
+-        Some(conversation_id.as_str())
+-    );
+-    assert_eq!(reply_response.output, serde_json::json!({ "ok": true }));
+-
+-    let _ = server.shutdown().await;
+-}
+-
+-#[tokio::test]
+-async fn app_flow_streams_notifications_and_response() {
+-    let (_dir, server) = start_fake_app_server().await;
+-
+-    let thread_params = ThreadStartParams {
+-        thread_id: None,
+-        metadata: Value::Null,
+-    };
+-    let thread_handle = server
+-        .thread_start(thread_params)
+-        .await
+-        .expect("thread start");
+-    let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+-        .await
+-        .expect("thread response timeout")
+-        .expect("thread response recv")
+-        .expect("thread response ok");
+-    let thread_id = thread_response
+-        .get("thread_id")
+-        .and_then(Value::as_str)
+-        .unwrap_or_default()
+-        .to_string();
+-    assert!(!thread_id.is_empty());
+-
+-    let params = TurnStartParams {
+-        thread_id: thread_id.clone(),
+-        input: vec![TurnInput {
+-            kind: "text".to_string(),
+-            text: Some("hi".to_string()),
+-        }],
+-        model: None,
+-        config: BTreeMap::new(),
+-    };
+-    let mut handle = server.turn_start(params).await.expect("turn start");
+-
+-    let first_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+-        .await
+-        .expect("event timeout")
+-        .expect("event value");
+-    let turn_id = match first_event {
+-        AppNotification::Item {
+-            thread_id: tid,
+-            turn_id: Some(turn),
+-            item,
+-        } => {
+-            assert_eq!(tid, thread_id);
+-            assert!(item.get("message").is_some());
+-            turn
+-        }
+-        other => panic!("unexpected event: {other:?}"),
+-    };
+-
+-    let second_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+-        .await
+-        .expect("event timeout")
+-        .expect("event value");
+-    match second_event {
+-        AppNotification::TaskComplete {
+-            thread_id: tid,
+-            turn_id: event_turn,
+-            result,
+-        } => {
+-            assert_eq!(tid, thread_id);
+-            assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
+-            assert_eq!(result, serde_json::json!({ "ok": true }));
+-        }
+-        other => panic!("unexpected event: {other:?}"),
+-    }
+-
+-    let response = time::timeout(Duration::from_secs(2), handle.response)
+-        .await
+-        .expect("response timeout")
+-        .expect("response recv");
+-    let response = response.expect("response ok");
+-    assert_eq!(
+-        response
+-            .get("turn_id")
+-            .and_then(Value::as_str)
+-            .unwrap_or_default(),
+-        turn_id
+-    );
+-
+-    let _ = server.shutdown().await;
+-}
+-
+-#[tokio::test]
+-async fn canceling_app_request_returns_cancelled_error() {
+-    let (_dir, server) = start_fake_app_server().await;
+-
+-    let thread_params = ThreadStartParams {
+-        thread_id: None,
+-        metadata: Value::Null,
+-    };
+-    let thread_handle = server
+-        .thread_start(thread_params)
+-        .await
+-        .expect("thread start");
+-    let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+-        .await
+-        .expect("thread response timeout")
+-        .expect("thread response recv")
+-        .expect("thread response ok");
+-    let thread_id = thread_response
+-        .get("thread_id")
+-        .and_then(Value::as_str)
+-        .unwrap_or_default()
+-        .to_string();
+-
+-    let params = TurnStartParams {
+-        thread_id: thread_id.clone(),
+-        input: vec![TurnInput {
+-            kind: "text".to_string(),
+-            text: Some("cancel me".to_string()),
+-        }],
+-        model: None,
+-        config: BTreeMap::new(),
+-    };
+-
+-    let mut handle = server.turn_start(params).await.expect("turn start");
+-    server.cancel(handle.request_id).expect("send cancel");
+-
+-    let cancel_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+-        .await
+-        .expect("event timeout")
+-        .expect("cancel event");
+-    match cancel_event {
+-        AppNotification::TaskComplete {
+-            thread_id: tid,
+-            turn_id,
+-            result,
+-        } => {
+-            assert_eq!(tid, thread_id);
+-            assert!(turn_id.is_some());
+-            assert_eq!(result.get("cancelled"), Some(&Value::Bool(true)));
+-            assert_eq!(
+-                result.get("reason"),
+-                Some(&Value::String("client_cancel".into()))
+-            );
+-        }
+-        other => panic!("unexpected cancellation notification: {other:?}"),
+-    }
+-
+-    let response = time::timeout(Duration::from_secs(2), handle.response)
+-        .await
+-        .expect("response timeout")
+-        .expect("recv");
+-    assert!(matches!(response, Err(McpError::Cancelled)));
+-
+-    let _ = server.shutdown().await;
+-}
+-
+-#[tokio::test]
+-async fn thread_resume_allows_follow_up_turns() {
+-    let (_dir, server) = start_fake_app_server().await;
+-
+-    let thread_params = ThreadStartParams {
+-        thread_id: None,
+-        metadata: Value::Null,
+-    };
+-    let thread_handle = server
+-        .thread_start(thread_params)
+-        .await
+-        .expect("thread start");
+-    let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+-        .await
+-        .expect("thread response timeout")
+-        .expect("recv")
+-        .expect("ok");
+-    let thread_id = thread_response
+-        .get("thread_id")
+-        .and_then(Value::as_str)
+-        .unwrap_or_default()
+-        .to_string();
+-
+-    let resume_params = ThreadResumeParams {
+-        thread_id: thread_id.clone(),
+-    };
+-    let resume_handle = server
+-        .thread_resume(resume_params)
+-        .await
+-        .expect("thread resume");
+-    let resume_response = time::timeout(Duration::from_secs(2), resume_handle.response)
+-        .await
+-        .expect("resume response timeout")
+-        .expect("recv")
+-        .expect("ok");
+-    assert_eq!(
+-        resume_response
+-            .get("thread_id")
+-            .and_then(Value::as_str)
+-            .unwrap_or_default(),
+-        thread_id
+-    );
+-    assert!(resume_response
+-        .get("resumed")
+-        .and_then(Value::as_bool)
+-        .unwrap_or(false));
+-
+-    let params = TurnStartParams {
+-        thread_id: thread_id.clone(),
+-        input: vec![TurnInput {
+-            kind: "text".to_string(),
+-            text: Some("resume flow".to_string()),
+-        }],
+-        model: None,
+-        config: BTreeMap::new(),
+-    };
+-    let mut turn = server.turn_start(params).await.expect("turn start");
+-
+-    let item = time::timeout(Duration::from_secs(2), turn.events.recv())
+-        .await
+-        .expect("event timeout")
+-        .expect("item event");
+-    let turn_id = match item {
+-        AppNotification::Item {
+-            thread_id: tid,
+-            turn_id: Some(turn_id),
+-            ..
+-        } => {
+-            assert_eq!(tid, thread_id);
+-            turn_id
+-        }
+-        other => panic!("unexpected event: {other:?}"),
+-    };
+-
+-    let complete = time::timeout(Duration::from_secs(2), turn.events.recv())
+-        .await
+-        .expect("event timeout")
+-        .expect("completion event");
+-    match complete {
+-        AppNotification::TaskComplete {
+-            thread_id: tid,
+-            turn_id: event_turn,
+-            result,
+-        } => {
+-            assert_eq!(tid, thread_id);
+-            assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
+-            assert_eq!(result, serde_json::json!({ "ok": true }));
+-        }
+-        other => panic!("unexpected event: {other:?}"),
+-    }
+-
+-    let turn_response = time::timeout(Duration::from_secs(2), turn.response)
+-        .await
+-        .expect("response timeout")
+-        .expect("recv")
+-        .expect("ok");
+-    assert_eq!(
+-        turn_response
+-            .get("turn_id")
+-            .and_then(Value::as_str)
+-            .unwrap_or_default(),
+-        turn_id
+-    );
+-
+-    let _ = server.shutdown().await;
+-}
+-
+-#[tokio::test]
+-async fn turn_interrupt_sends_cancel_notification() {
+-    let (_dir, server) = start_fake_app_server().await;
+-
+-    let thread_params = ThreadStartParams {
+-        thread_id: None,
+-        metadata: Value::Null,
+-    };
+-    let thread_handle = server
+-        .thread_start(thread_params)
+-        .await
+-        .expect("thread start");
+-    let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+-        .await
+-        .expect("thread response timeout")
+-        .expect("recv")
+-        .expect("ok");
+-    let thread_id = thread_response
+-        .get("thread_id")
+-        .and_then(Value::as_str)
+-        .unwrap_or_default()
+-        .to_string();
+-
+-    let params = TurnStartParams {
+-        thread_id: thread_id.clone(),
+-        input: vec![TurnInput {
+-            kind: "text".to_string(),
+-            text: Some("please interrupt".to_string()),
+-        }],
+-        model: None,
+-        config: BTreeMap::new(),
+-    };
+-    let mut turn = server.turn_start(params).await.expect("turn start");
+-
+-    let first_event = time::timeout(Duration::from_secs(2), turn.events.recv())
+-        .await
+-        .expect("event timeout")
+-        .expect("event value");
+-    let turn_id = match first_event {
+-        AppNotification::Item {
+-            thread_id: tid,
+-            turn_id: Some(turn),
+-            ..
+-        } => {
+-            assert_eq!(tid, thread_id);
+-            turn
+-        }
+-        other => panic!("unexpected event: {other:?}"),
+-    };
+-
+-    let interrupt = server
+-        .turn_interrupt(TurnInterruptParams {
+-            thread_id: Some(thread_id.clone()),
+-            turn_id: turn_id.clone(),
+-        })
+-        .await
+-        .expect("send interrupt");
+-
+-    let cancel_event = time::timeout(Duration::from_secs(2), turn.events.recv())
+-        .await
+-        .expect("event timeout")
+-        .expect("cancel event");
+-    match cancel_event {
+-        AppNotification::TaskComplete {
+-            thread_id: tid,
+-            turn_id: event_turn,
+-            result,
+-        } => {
+-            assert_eq!(tid, thread_id);
+-            assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
+-            assert_eq!(result.get("cancelled"), Some(&Value::Bool(true)));
+-            assert_eq!(
+-                result.get("reason"),
+-                Some(&Value::String("interrupted".into()))
+-            );
+-        }
+-        other => panic!("unexpected cancel notification: {other:?}"),
+-    }
+-
+-    let turn_response = time::timeout(Duration::from_secs(2), turn.response)
+-        .await
+-        .expect("response timeout")
+-        .expect("recv");
+-    assert!(matches!(turn_response, Err(McpError::Cancelled)));
+-
+-    let interrupt_response = time::timeout(Duration::from_secs(2), interrupt.response)
+-        .await
+-        .expect("interrupt response timeout")
+-        .expect("recv")
+-        .expect("ok");
+-    assert!(interrupt_response
+-        .get("interrupted")
+-        .and_then(Value::as_bool)
+-        .unwrap_or(false));
+-
+-    let _ = server.shutdown().await;
+-}
++mod app_server_launch;
++mod app_server_rpc_flows;
++mod codex_rpc_flows;
++mod config_runtime;
+diff --git a/crates/codex/src/mcp/tests_core/app_server_launch.rs b/crates/codex/src/mcp/tests_core/app_server_launch.rs
+new file mode 100644
+index 0000000..83740b2
+--- /dev/null
++++ b/crates/codex/src/mcp/tests_core/app_server_launch.rs
+@@ -0,0 +1,35 @@
++use super::super::test_support::{prelude::*, *};
++use super::super::*;
++
++#[tokio::test]
++async fn app_server_launch_can_enable_analytics_flag() {
++    let (dir, script) = write_fake_app_server();
++    let log_path = dir.path().join("argv.json");
++
++    let mut config = test_config(script);
++    config.app_server_analytics_default_enabled = true;
++    config.env.push((
++        OsString::from("ARGV_LOG"),
++        OsString::from(log_path.as_os_str()),
++    ));
++
++    let client = test_client();
++    let server = CodexAppServer::start(config, client)
++        .await
++        .expect("spawn app server");
++
++    let mut argv_line = None;
++    for _ in 0..50 {
++        if let Ok(contents) = fs::read_to_string(&log_path) {
++            argv_line = contents.lines().next().map(str::to_string);
++            break;
++        }
++        tokio::time::sleep(Duration::from_millis(5)).await;
++    }
++
++    let argv_line = argv_line.expect("argv log should be written");
++    let argv: Vec<String> = serde_json::from_str(&argv_line).expect("argv json");
++    assert_eq!(argv, vec!["app-server", "--analytics-default-enabled"]);
++
++    server.shutdown().await.expect("shutdown server");
++}
+diff --git a/crates/codex/src/mcp/tests_core/app_server_rpc_flows.rs b/crates/codex/src/mcp/tests_core/app_server_rpc_flows.rs
+new file mode 100644
+index 0000000..ea54506
+--- /dev/null
++++ b/crates/codex/src/mcp/tests_core/app_server_rpc_flows.rs
+@@ -0,0 +1,358 @@
++use super::super::test_support::{prelude::*, *};
++use super::super::*;
++
++#[tokio::test]
++async fn app_flow_streams_notifications_and_response() {
++    let (_dir, server) = start_fake_app_server().await;
++
++    let thread_params = ThreadStartParams {
++        thread_id: None,
++        metadata: Value::Null,
++    };
++    let thread_handle = server
++        .thread_start(thread_params)
++        .await
++        .expect("thread start");
++    let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
++        .await
++        .expect("thread response timeout")
++        .expect("thread response recv")
++        .expect("thread response ok");
++    let thread_id = thread_response
++        .get("thread_id")
++        .and_then(Value::as_str)
++        .unwrap_or_default()
++        .to_string();
++    assert!(!thread_id.is_empty());
++
++    let params = TurnStartParams {
++        thread_id: thread_id.clone(),
++        input: vec![TurnInput {
++            kind: "text".to_string(),
++            text: Some("hi".to_string()),
++        }],
++        model: None,
++        config: BTreeMap::new(),
++    };
++    let mut handle = server.turn_start(params).await.expect("turn start");
++
++    let first_event = time::timeout(Duration::from_secs(2), handle.events.recv())
++        .await
++        .expect("event timeout")
++        .expect("event value");
++    let turn_id = match first_event {
++        AppNotification::Item {
++            thread_id: tid,
++            turn_id: Some(turn),
++            item,
++        } => {
++            assert_eq!(tid, thread_id);
++            assert!(item.get("message").is_some());
++            turn
++        }
++        other => panic!("unexpected event: {other:?}"),
++    };
++
++    let second_event = time::timeout(Duration::from_secs(2), handle.events.recv())
++        .await
++        .expect("event timeout")
++        .expect("event value");
++    match second_event {
++        AppNotification::TaskComplete {
++            thread_id: tid,
++            turn_id: event_turn,
++            result,
++        } => {
++            assert_eq!(tid, thread_id);
++            assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
++            assert_eq!(result, serde_json::json!({ "ok": true }));
++        }
++        other => panic!("unexpected event: {other:?}"),
++    }
++
++    let response = time::timeout(Duration::from_secs(2), handle.response)
++        .await
++        .expect("response timeout")
++        .expect("response recv");
++    let response = response.expect("response ok");
++    assert_eq!(
++        response
++            .get("turn_id")
++            .and_then(Value::as_str)
++            .unwrap_or_default(),
++        turn_id
++    );
++
++    let _ = server.shutdown().await;
++}
++
++#[tokio::test]
++async fn canceling_app_request_returns_cancelled_error() {
++    let (_dir, server) = start_fake_app_server().await;
++
++    let thread_params = ThreadStartParams {
++        thread_id: None,
++        metadata: Value::Null,
++    };
++    let thread_handle = server
++        .thread_start(thread_params)
++        .await
++        .expect("thread start");
++    let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
++        .await
++        .expect("thread response timeout")
++        .expect("thread response recv")
++        .expect("thread response ok");
++    let thread_id = thread_response
++        .get("thread_id")
++        .and_then(Value::as_str)
++        .unwrap_or_default()
++        .to_string();
++
++    let params = TurnStartParams {
++        thread_id: thread_id.clone(),
++        input: vec![TurnInput {
++            kind: "text".to_string(),
++            text: Some("cancel me".to_string()),
++        }],
++        model: None,
++        config: BTreeMap::new(),
++    };
++
++    let mut handle = server.turn_start(params).await.expect("turn start");
++    server.cancel(handle.request_id).expect("send cancel");
++
++    let cancel_event = time::timeout(Duration::from_secs(2), handle.events.recv())
++        .await
++        .expect("event timeout")
++        .expect("cancel event");
++    match cancel_event {
++        AppNotification::TaskComplete {
++            thread_id: tid,
++            turn_id,
++            result,
++        } => {
++            assert_eq!(tid, thread_id);
++            assert!(turn_id.is_some());
++            assert_eq!(result.get("cancelled"), Some(&Value::Bool(true)));
++            assert_eq!(
++                result.get("reason"),
++                Some(&Value::String("client_cancel".into()))
++            );
++        }
++        other => panic!("unexpected cancellation notification: {other:?}"),
++    }
++
++    let response = time::timeout(Duration::from_secs(2), handle.response)
++        .await
++        .expect("response timeout")
++        .expect("recv");
++    assert!(matches!(response, Err(McpError::Cancelled)));
++
++    let _ = server.shutdown().await;
++}
++
++#[tokio::test]
++async fn thread_resume_allows_follow_up_turns() {
++    let (_dir, server) = start_fake_app_server().await;
++
++    let thread_params = ThreadStartParams {
++        thread_id: None,
++        metadata: Value::Null,
++    };
++    let thread_handle = server
++        .thread_start(thread_params)
++        .await
++        .expect("thread start");
++    let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
++        .await
++        .expect("thread response timeout")
++        .expect("recv")
++        .expect("ok");
++    let thread_id = thread_response
++        .get("thread_id")
++        .and_then(Value::as_str)
++        .unwrap_or_default()
++        .to_string();
++
++    let resume_params = ThreadResumeParams {
++        thread_id: thread_id.clone(),
++    };
++    let resume_handle = server
++        .thread_resume(resume_params)
++        .await
++        .expect("thread resume");
++    let resume_response = time::timeout(Duration::from_secs(2), resume_handle.response)
++        .await
++        .expect("resume response timeout")
++        .expect("recv")
++        .expect("ok");
++    assert_eq!(
++        resume_response
++            .get("thread_id")
++            .and_then(Value::as_str)
++            .unwrap_or_default(),
++        thread_id
++    );
++    assert!(resume_response
++        .get("resumed")
++        .and_then(Value::as_bool)
++        .unwrap_or(false));
++
++    let params = TurnStartParams {
++        thread_id: thread_id.clone(),
++        input: vec![TurnInput {
++            kind: "text".to_string(),
++            text: Some("resume flow".to_string()),
++        }],
++        model: None,
++        config: BTreeMap::new(),
++    };
++    let mut turn = server.turn_start(params).await.expect("turn start");
++
++    let item = time::timeout(Duration::from_secs(2), turn.events.recv())
++        .await
++        .expect("event timeout")
++        .expect("item event");
++    let turn_id = match item {
++        AppNotification::Item {
++            thread_id: tid,
++            turn_id: Some(turn_id),
++            ..
++        } => {
++            assert_eq!(tid, thread_id);
++            turn_id
++        }
++        other => panic!("unexpected event: {other:?}"),
++    };
++
++    let complete = time::timeout(Duration::from_secs(2), turn.events.recv())
++        .await
++        .expect("event timeout")
++        .expect("completion event");
++    match complete {
++        AppNotification::TaskComplete {
++            thread_id: tid,
++            turn_id: event_turn,
++            result,
++        } => {
++            assert_eq!(tid, thread_id);
++            assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
++            assert_eq!(result, serde_json::json!({ "ok": true }));
++        }
++        other => panic!("unexpected event: {other:?}"),
++    }
++
++    let turn_response = time::timeout(Duration::from_secs(2), turn.response)
++        .await
++        .expect("response timeout")
++        .expect("recv")
++        .expect("ok");
++    assert_eq!(
++        turn_response
++            .get("turn_id")
++            .and_then(Value::as_str)
++            .unwrap_or_default(),
++        turn_id
++    );
++
++    let _ = server.shutdown().await;
++}
++
++#[tokio::test]
++async fn turn_interrupt_sends_cancel_notification() {
++    let (_dir, server) = start_fake_app_server().await;
++
++    let thread_params = ThreadStartParams {
++        thread_id: None,
++        metadata: Value::Null,
++    };
++    let thread_handle = server
++        .thread_start(thread_params)
++        .await
++        .expect("thread start");
++    let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
++        .await
++        .expect("thread response timeout")
++        .expect("recv")
++        .expect("ok");
++    let thread_id = thread_response
++        .get("thread_id")
++        .and_then(Value::as_str)
++        .unwrap_or_default()
++        .to_string();
++
++    let params = TurnStartParams {
++        thread_id: thread_id.clone(),
++        input: vec![TurnInput {
++            kind: "text".to_string(),
++            text: Some("please interrupt".to_string()),
++        }],
++        model: None,
++        config: BTreeMap::new(),
++    };
++    let mut turn = server.turn_start(params).await.expect("turn start");
++
++    let first_event = time::timeout(Duration::from_secs(2), turn.events.recv())
++        .await
++        .expect("event timeout")
++        .expect("event value");
++    let turn_id = match first_event {
++        AppNotification::Item {
++            thread_id: tid,
++            turn_id: Some(turn),
++            ..
++        } => {
++            assert_eq!(tid, thread_id);
++            turn
++        }
++        other => panic!("unexpected event: {other:?}"),
++    };
++
++    let interrupt = server
++        .turn_interrupt(TurnInterruptParams {
++            thread_id: Some(thread_id.clone()),
++            turn_id: turn_id.clone(),
++        })
++        .await
++        .expect("send interrupt");
++
++    let cancel_event = time::timeout(Duration::from_secs(2), turn.events.recv())
++        .await
++        .expect("event timeout")
++        .expect("cancel event");
++    match cancel_event {
++        AppNotification::TaskComplete {
++            thread_id: tid,
++            turn_id: event_turn,
++            result,
++        } => {
++            assert_eq!(tid, thread_id);
++            assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
++            assert_eq!(result.get("cancelled"), Some(&Value::Bool(true)));
++            assert_eq!(
++                result.get("reason"),
++                Some(&Value::String("interrupted".into()))
++            );
++        }
++        other => panic!("unexpected cancel notification: {other:?}"),
++    }
++
++    let turn_response = time::timeout(Duration::from_secs(2), turn.response)
++        .await
++        .expect("response timeout")
++        .expect("recv");
++    assert!(matches!(turn_response, Err(McpError::Cancelled)));
++
++    let interrupt_response = time::timeout(Duration::from_secs(2), interrupt.response)
++        .await
++        .expect("interrupt response timeout")
++        .expect("recv")
++        .expect("ok");
++    assert!(interrupt_response
++        .get("interrupted")
++        .and_then(Value::as_bool)
++        .unwrap_or(false));
++
++    let _ = server.shutdown().await;
++}
+diff --git a/crates/codex/src/mcp/tests_core/codex_rpc_flows.rs b/crates/codex/src/mcp/tests_core/codex_rpc_flows.rs
+new file mode 100644
+index 0000000..c406928
+--- /dev/null
++++ b/crates/codex/src/mcp/tests_core/codex_rpc_flows.rs
+@@ -0,0 +1,170 @@
++use super::super::test_support::{prelude::*, *};
++use super::super::*;
++
++#[tokio::test]
++async fn codex_flow_streams_events_and_response() {
++    let (_dir, server) = start_fake_mcp_server().await;
++
++    let params = CodexCallParams {
++        prompt: "hello".into(),
++        model: None,
++        cwd: None,
++        sandbox: None,
++        approval_policy: None,
++        profile: None,
++        config: BTreeMap::new(),
++    };
++
++    let mut handle = server.codex(params).await.expect("codex call");
++
++    let first_event = time::timeout(Duration::from_secs(2), handle.events.recv())
++        .await
++        .expect("event timeout")
++        .expect("event value");
++    match first_event {
++        CodexEvent::ApprovalRequired(req) => {
++            assert!(req.approval_id.starts_with("ap-"));
++            assert_eq!(req.kind, ApprovalKind::Exec);
++        }
++        other => panic!("unexpected event: {other:?}"),
++    }
++
++    let second_event = time::timeout(Duration::from_secs(2), handle.events.recv())
++        .await
++        .expect("event timeout")
++        .expect("event value");
++    let event_conversation = match second_event {
++        CodexEvent::TaskComplete {
++            conversation_id, ..
++        } => {
++            assert!(!conversation_id.is_empty());
++            conversation_id
++        }
++        other => panic!("unexpected event: {other:?}"),
++    };
++
++    let response = time::timeout(Duration::from_secs(2), handle.response)
++        .await
++        .expect("response timeout")
++        .expect("response recv");
++    let response = response.expect("response ok");
++    assert_eq!(
++        response.conversation_id.as_deref(),
++        Some(event_conversation.as_str())
++    );
++    assert_eq!(response.output, serde_json::json!({ "ok": true }));
++
++    let _ = server.shutdown().await;
++}
++
++#[tokio::test]
++async fn canceling_request_returns_cancelled_error() {
++    let (_dir, server) = start_fake_mcp_server().await;
++
++    let params = CodexCallParams {
++        prompt: "cancel me".into(),
++        model: None,
++        cwd: None,
++        sandbox: None,
++        approval_policy: None,
++        profile: None,
++        config: BTreeMap::new(),
++    };
++
++    let mut handle = server.codex(params).await.expect("codex call");
++    server.cancel(handle.request_id).expect("cancel send");
++
++    let expected_conversation = format!("conv-{}", handle.request_id);
++    let cancel_event = time::timeout(Duration::from_secs(2), handle.events.recv())
++        .await
++        .expect("event timeout")
++        .expect("cancel notification");
++    match cancel_event {
++        CodexEvent::Cancelled {
++            conversation_id,
++            reason,
++        } => {
++            assert_eq!(
++                conversation_id.as_deref(),
++                Some(expected_conversation.as_str())
++            );
++            assert_eq!(reason.as_deref(), Some("client_cancel"));
++        }
++        other => panic!("expected cancellation event, got {other:?}"),
++    }
++
++    let response = time::timeout(Duration::from_secs(2), handle.response)
++        .await
++        .expect("response timeout")
++        .expect("recv");
++    assert!(matches!(response, Err(McpError::Cancelled)));
++
++    let _ = server.shutdown().await;
++}
++
++#[tokio::test]
++async fn codex_reply_streams_follow_up_notifications() {
++    let (_dir, server) = start_fake_mcp_server().await;
++
++    let params = CodexCallParams {
++        prompt: "hello".into(),
++        model: None,
++        cwd: None,
++        sandbox: None,
++        approval_policy: None,
++        profile: None,
++        config: BTreeMap::new(),
++    };
++    let first = server.codex(params).await.expect("start codex");
++    let first_response = time::timeout(Duration::from_secs(2), first.response)
++        .await
++        .expect("response timeout")
++        .expect("recv")
++        .expect("ok");
++    let conversation_id = first_response.conversation_id.expect("conversation id set");
++    assert!(!conversation_id.is_empty());
++
++    let reply_params = CodexReplyParams {
++        conversation_id: conversation_id.clone(),
++        prompt: "follow up".into(),
++    };
++    let mut reply = server.codex_reply(reply_params).await.expect("codex reply");
++
++    let expected_approval = format!("ap-{}", reply.request_id);
++    let approval = time::timeout(Duration::from_secs(2), reply.events.recv())
++        .await
++        .expect("event timeout")
++        .expect("approval");
++    match approval {
++        CodexEvent::ApprovalRequired(req) => {
++            assert_eq!(req.approval_id, expected_approval);
++            assert_eq!(req.kind, ApprovalKind::Exec);
++        }
++        other => panic!("unexpected event: {other:?}"),
++    }
++
++    let complete = time::timeout(Duration::from_secs(2), reply.events.recv())
++        .await
++        .expect("event timeout")
++        .expect("task completion");
++    match complete {
++        CodexEvent::TaskComplete {
++            conversation_id: event_conv,
++            ..
++        } => assert_eq!(event_conv, conversation_id),
++        other => panic!("unexpected event: {other:?}"),
++    }
++
++    let reply_response = time::timeout(Duration::from_secs(2), reply.response)
++        .await
++        .expect("response timeout")
++        .expect("recv")
++        .expect("ok");
++    assert_eq!(
++        reply_response.conversation_id.as_deref(),
++        Some(conversation_id.as_str())
++    );
++    assert_eq!(reply_response.output, serde_json::json!({ "ok": true }));
++
++    let _ = server.shutdown().await;
++}
+diff --git a/crates/codex/src/mcp/tests_core/config_runtime.rs b/crates/codex/src/mcp/tests_core/config_runtime.rs
+new file mode 100644
+index 0000000..c447e6b
+--- /dev/null
++++ b/crates/codex/src/mcp/tests_core/config_runtime.rs
+@@ -0,0 +1,425 @@
++use super::super::test_support::{prelude::*, *};
++use super::super::*;
++
++#[test]
++fn add_stdio_server_injects_env_and_persists() {
++    let (dir, manager) = temp_config_manager();
++    let env_key = "MCP_STDIO_TEST_KEY";
++    env::remove_var(env_key);
++
++    let mut env_map = BTreeMap::new();
++    env_map.insert(env_key.to_string(), "secret".to_string());
++
++    let added = manager
++        .add_server(AddServerRequest {
++            name: "local".into(),
++            definition: stdio_definition("my-mcp"),
++            overwrite: false,
++            env: env_map,
++            bearer_token: None,
++        })
++        .expect("add server");
++
++    match added.definition.transport {
++        McpTransport::Stdio(def) => {
++            assert_eq!(def.command, "my-mcp");
++            assert_eq!(def.env.get(env_key), Some(&"secret".to_string()));
++        }
++        _ => panic!("expected stdio transport"),
++    }
++
++    let listed = manager.list_servers().expect("list servers");
++    assert_eq!(listed.len(), 1);
++    assert_eq!(listed[0].name, "local");
++
++    let fetched = manager.get_server("local").expect("get server");
++    match fetched.definition.transport {
++        McpTransport::Stdio(def) => {
++            assert_eq!(def.env.get(env_key), Some(&"secret".to_string()))
++        }
++        _ => panic!("expected stdio transport"),
++    }
++
++    let config_path = dir.path().join(DEFAULT_CONFIG_FILE);
++    let serialized = fs::read_to_string(config_path).expect("read config");
++    let value: TomlValue = serialized.parse().expect("parse toml");
++    let table = value.as_table().expect("table root");
++    let servers_table = table.get("mcp_servers").expect("mcp_servers");
++    let decoded: BTreeMap<String, McpServerDefinition> = servers_table
++        .clone()
++        .try_into()
++        .expect("decode mcp_servers");
++    let stored = decoded.get("local").expect("stored server");
++    match &stored.transport {
++        McpTransport::Stdio(def) => {
++            assert_eq!(def.env.get(env_key), Some(&"secret".to_string()))
++        }
++        _ => panic!("expected stdio transport"),
++    }
++
++    assert_eq!(env::var(env_key).unwrap(), "secret");
++    env::remove_var(env_key);
++}
++
++#[test]
++fn add_streamable_http_sets_token_and_allows_login_logout() {
++    let (_dir, manager) = temp_config_manager();
++    let env_var = "MCP_HTTP_TOKEN_E5";
++    env::remove_var(env_var);
++
++    let mut definition = streamable_definition("https://example.test/mcp", env_var);
++    if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
++        http.headers.insert("X-Test".into(), "true".into());
++    }
++
++    let _added = manager
++        .add_server(AddServerRequest {
++            name: "remote".into(),
++            definition,
++            overwrite: false,
++            env: BTreeMap::new(),
++            bearer_token: Some("token-a".into()),
++        })
++        .expect("add server");
++
++    assert_eq!(env::var(env_var).unwrap(), "token-a");
++
++    let logout = manager.logout("remote").expect("logout");
++    assert_eq!(logout.env_var.as_deref(), Some(env_var));
++    assert!(logout.cleared);
++    assert!(env::var(env_var).is_err());
++
++    let login = manager.login("remote", "token-b").expect("login");
++    assert_eq!(login.env_var.as_deref(), Some(env_var));
++    assert_eq!(env::var(env_var).unwrap(), "token-b");
++
++    env::remove_var(env_var);
++}
++
++#[test]
++fn remove_server_prunes_config() {
++    let (_dir, manager) = temp_config_manager();
++
++    manager
++        .add_server(AddServerRequest {
++            name: "one".into(),
++            definition: stdio_definition("one"),
++            overwrite: false,
++            env: BTreeMap::new(),
++            bearer_token: None,
++        })
++        .expect("add first");
++
++    manager
++        .add_server(AddServerRequest {
++            name: "two".into(),
++            definition: stdio_definition("two"),
++            overwrite: false,
++            env: BTreeMap::new(),
++            bearer_token: None,
++        })
++        .expect("add second");
++
++    let removed = manager.remove_server("one").expect("remove");
++    assert!(removed.is_some());
++
++    let listed = manager.list_servers().expect("list");
++    assert_eq!(listed.len(), 1);
++    assert_eq!(listed[0].name, "two");
++
++    let config = fs::read_to_string(manager.config_path()).expect("read config");
++    let value: TomlValue = config.parse().expect("parse config");
++    let table = value.as_table().expect("table root");
++    let servers_value = table.get("mcp_servers").cloned().expect("servers");
++    let servers: BTreeMap<String, McpServerDefinition> =
++        servers_value.try_into().expect("decode servers");
++    assert!(!servers.contains_key("one"));
++    assert!(servers.contains_key("two"));
++}
++
++#[test]
++fn runtime_stdio_server_resolves_env_and_tools() {
++    let (_dir, manager) = temp_config_manager();
++    let mut definition = stdio_definition("my-mcp");
++    definition.description = Some("local mcp".into());
++    definition.tags = vec!["dev".into(), "local".into()];
++    definition.tools = Some(McpToolConfig {
++        enabled: vec!["tool-a".into()],
++        disabled: vec!["tool-b".into()],
++    });
++
++    if let McpTransport::Stdio(ref mut stdio) = definition.transport {
++        stdio.args = vec!["--flag".into()];
++        stdio.env.insert("EXAMPLE".into(), "value".into());
++        stdio.timeout_ms = Some(2500);
++    }
++
++    let mut injected = BTreeMap::new();
++    injected.insert("MCP_STDIO_INJECT_E6".into(), "yes".into());
++
++    manager
++        .add_server(AddServerRequest {
++            name: "local".into(),
++            definition,
++            overwrite: false,
++            env: injected,
++            bearer_token: None,
++        })
++        .expect("add server");
++
++    let runtime = manager.runtime_server("local").expect("runtime server");
++    assert_eq!(runtime.name, "local");
++    assert_eq!(runtime.description.as_deref(), Some("local mcp"));
++    assert_eq!(runtime.tags, vec!["dev".to_string(), "local".to_string()]);
++
++    let tools = runtime.tools.as_ref().expect("tool hints");
++    assert_eq!(tools.enabled, vec!["tool-a".to_string()]);
++    assert_eq!(tools.disabled, vec!["tool-b".to_string()]);
++
++    match &runtime.transport {
++        McpRuntimeTransport::Stdio(def) => {
++            assert_eq!(def.command, "my-mcp");
++            assert_eq!(def.args, vec!["--flag".to_string()]);
++            assert_eq!(def.timeout_ms, Some(2500));
++            assert_eq!(def.env.get("EXAMPLE").map(String::as_str), Some("value"));
++            assert_eq!(
++                def.env.get("MCP_STDIO_INJECT_E6").map(String::as_str),
++                Some("yes")
++            );
++        }
++        other => panic!("expected stdio transport, got {other:?}"),
++    }
++
++    serde_json::to_string(&runtime).expect("serialize runtime");
++    env::remove_var("MCP_STDIO_INJECT_E6");
++}
++
++#[test]
++fn runtime_http_resolves_bearer_and_sets_header() {
++    let (_dir, manager) = temp_config_manager();
++    let env_var = "MCP_HTTP_TOKEN_E6";
++    env::set_var(env_var, "token-123");
++
++    let mut definition = streamable_definition("https://example.test/mcp", env_var);
++    if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
++        http.headers.insert("X-Test".into(), "true".into());
++        http.connect_timeout_ms = Some(1200);
++        http.request_timeout_ms = Some(3400);
++    }
++
++    manager
++        .add_server(AddServerRequest {
++            name: "remote".into(),
++            definition,
++            overwrite: false,
++            env: BTreeMap::new(),
++            bearer_token: None,
++        })
++        .expect("add server");
++
++    let runtime = manager.runtime_server("remote").expect("runtime server");
++    match &runtime.transport {
++        McpRuntimeTransport::StreamableHttp(def) => {
++            assert_eq!(def.url, "https://example.test/mcp");
++            assert_eq!(def.bearer_env_var.as_deref(), Some(env_var));
++            assert_eq!(def.bearer_token.as_deref(), Some("token-123"));
++            assert_eq!(def.headers.get("X-Test").map(String::as_str), Some("true"));
++            assert_eq!(
++                def.headers.get("Authorization").map(String::as_str),
++                Some("Bearer token-123")
++            );
++            assert_eq!(def.connect_timeout_ms, Some(1200));
++            assert_eq!(def.request_timeout_ms, Some(3400));
++        }
++        other => panic!("expected streamable_http transport, got {other:?}"),
++    }
++
++    let serialized = serde_json::to_value(&runtime).expect("serialize runtime");
++    assert!(serialized.get("transport").is_some());
++
++    env::remove_var(env_var);
++}
++
++#[test]
++fn runtime_http_preserves_existing_auth_header() {
++    let (_dir, manager) = temp_config_manager();
++    let env_var = "MCP_HTTP_TOKEN_E6B";
++    env::set_var(env_var, "token-override");
++
++    let mut definition = streamable_definition("https://example.test/custom", env_var);
++    if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
++        http.headers
++            .insert("Authorization".into(), "Custom 123".into());
++    }
++
++    manager
++        .add_server(AddServerRequest {
++            name: "remote-custom".into(),
++            definition,
++            overwrite: false,
++            env: BTreeMap::new(),
++            bearer_token: None,
++        })
++        .expect("add server");
++
++    let runtime = manager
++        .runtime_server("remote-custom")
++        .expect("runtime server");
++    match &runtime.transport {
++        McpRuntimeTransport::StreamableHttp(def) => {
++            assert_eq!(def.bearer_token.as_deref(), Some("token-override"));
++            assert_eq!(
++                def.headers.get("Authorization").map(String::as_str),
++                Some("Custom 123")
++            );
++        }
++        other => panic!("expected streamable_http transport, got {other:?}"),
++    }
++
++    env::remove_var(env_var);
++}
++
++#[test]
++fn runtime_stdio_launcher_merges_env_timeout_and_tools() {
++    let base_dir = tempfile::tempdir().expect("tempdir");
++    let code_home = base_dir.path().join("code_home");
++
++    let defaults = StdioServerConfig {
++        binary: PathBuf::from("codex"),
++        code_home: Some(code_home.clone()),
++        current_dir: Some(base_dir.path().to_path_buf()),
++        env: vec![
++            (OsString::from("BASE_ONLY"), OsString::from("base")),
++            (OsString::from("OVERRIDE_ME"), OsString::from("base")),
++        ],
++        app_server_analytics_default_enabled: false,
++        mirror_stdio: true,
++        startup_timeout: Duration::from_secs(5),
++    };
++
++    let mut definition = StdioServerDefinition {
++        command: "my-mcp".into(),
++        args: vec!["--flag".into()],
++        env: BTreeMap::new(),
++        timeout_ms: Some(1500),
++    };
++    definition
++        .env
++        .insert("OVERRIDE_ME".into(), "runtime".into());
++    definition
++        .env
++        .insert("RUNTIME_ONLY".into(), "runtime-env".into());
++
++    let runtime = McpRuntimeServer {
++        name: "local".into(),
++        transport: McpRuntimeTransport::Stdio(definition),
++        description: Some("example".into()),
++        tags: vec!["dev".into()],
++        tools: Some(McpToolConfig {
++            enabled: vec!["tool-1".into()],
++            disabled: vec!["tool-2".into()],
++        }),
++    };
++
++    let launcher = runtime.into_launcher(&defaults);
++    assert_eq!(launcher.name, "local");
++    assert_eq!(launcher.description.as_deref(), Some("example"));
++    assert_eq!(launcher.tags, vec!["dev".to_string()]);
++
++    let tools = launcher.tools.clone().expect("tool hints");
++    assert_eq!(tools.enabled, vec!["tool-1".to_string()]);
++    assert_eq!(tools.disabled, vec!["tool-2".to_string()]);
++
++    match launcher.transport {
++        McpServerLauncherTransport::Stdio(launch) => {
++            assert_eq!(launch.command, PathBuf::from("my-mcp"));
++            assert_eq!(launch.args, vec!["--flag".to_string()]);
++            assert_eq!(launch.current_dir.as_ref(), defaults.current_dir.as_ref());
++            assert_eq!(launch.timeout, Duration::from_millis(1500));
++            assert!(launch.mirror_stdio);
++
++            let env_map: HashMap<OsString, OsString> = launch.env.into_iter().collect();
++            assert_eq!(
++                env_map.get(&OsString::from("BASE_ONLY")),
++                Some(&OsString::from("base"))
++            );
++            assert_eq!(
++                env_map.get(&OsString::from("OVERRIDE_ME")),
++                Some(&OsString::from("runtime"))
++            );
++            assert_eq!(
++                env_map.get(&OsString::from("RUNTIME_ONLY")),
++                Some(&OsString::from("runtime-env"))
++            );
++            assert_eq!(
++                env_map.get(&OsString::from("CODEX_HOME")),
++                Some(&code_home.as_os_str().to_os_string())
++            );
++        }
++        other => panic!("expected stdio launcher, got {other:?}"),
++    }
++}
++
++#[test]
++fn streamable_http_connector_converts_timeouts_and_headers() {
++    let env_var = "MCP_HTTP_TOKEN_E7";
++    env::set_var(env_var, "token-launcher");
++
++    let mut definition = StreamableHttpDefinition {
++        url: "https://example.test/stream".into(),
++        headers: BTreeMap::new(),
++        bearer_env_var: Some(env_var.to_string()),
++        connect_timeout_ms: Some(1200),
++        request_timeout_ms: Some(3400),
++    };
++    definition.headers.insert("X-Test".into(), "true".into());
++
++    let runtime = McpRuntimeServer::from_definition(
++        "remote",
++        McpServerDefinition {
++            transport: McpTransport::StreamableHttp(definition),
++            description: None,
++            tags: vec!["http".into()],
++            tools: Some(McpToolConfig {
++                enabled: vec!["tool-a".into()],
++                disabled: vec![],
++            }),
++        },
++    );
++
++    let defaults = StdioServerConfig {
++        binary: PathBuf::from("codex"),
++        code_home: None,
++        current_dir: None,
++        env: Vec::new(),
++        app_server_analytics_default_enabled: false,
++        mirror_stdio: false,
++        startup_timeout: Duration::from_secs(2),
++    };
++
++    let launcher = runtime.into_launcher(&defaults);
++    match launcher.transport {
++        McpServerLauncherTransport::StreamableHttp(connector) => {
++            assert_eq!(connector.url, "https://example.test/stream");
++            assert_eq!(
++                connector.headers.get("X-Test").map(String::as_str),
++                Some("true")
++            );
++            assert_eq!(
++                connector.headers.get("Authorization").map(String::as_str),
++                Some("Bearer token-launcher")
++            );
++            assert_eq!(connector.connect_timeout, Some(Duration::from_millis(1200)));
++            assert_eq!(connector.request_timeout, Some(Duration::from_millis(3400)));
++            assert_eq!(connector.bearer_env_var.as_deref(), Some(env_var));
++            assert_eq!(connector.bearer_token.as_deref(), Some("token-launcher"));
++
++            let tools = launcher.tools.as_ref().expect("tool hints present");
++            assert_eq!(tools.enabled, vec!["tool-a".to_string()]);
++            assert!(tools.disabled.is_empty());
++        }
++        other => panic!("expected http connector, got {other:?}"),
++    }
++
++    env::remove_var(env_var);
++}

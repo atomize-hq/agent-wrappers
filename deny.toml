@@ -1,0 +1,31 @@
+# cargo-deny config
+#
+# The upstream audit pack ran `cargo deny check ...` without an explicit config,
+# which falls back to a deny-by-default license allowlist (i.e., empty) and
+# fails for effectively all crates. This file defines the project's intended
+# license policy and scopes checks to the supported target triples.
+
+[graph]
+# Only check the targets we ship/support. This avoids pulling in target-specific
+# crates (e.g., UEFI-only) that are irrelevant to our distribution targets.
+targets = [
+    "x86_64-unknown-linux-musl",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+]
+
+# Match the repo's usual CI posture (`--all-features` for build/lint/test).
+all-features = true
+
+[licenses]
+# Permissive allowlist consistent with this workspace's licensing.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSL-1.0",
+    "Unicode-3.0",
+]
+
+confidence-threshold = 0.8

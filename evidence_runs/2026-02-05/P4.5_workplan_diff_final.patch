@@ -1,0 +1,45 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 661f872..6c6f511 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -1097,7 +1097,7 @@ Last Updated: 2026-02-05
+ 
+ ##### P4.5 — Reduce `crates/codex/src/tests/capabilities.rs` below hard threshold
+ 
+-Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
+ Last Updated: 2026-02-05
+ 
+ - Goal: Reduce `crates/codex/src/tests/capabilities.rs` from 904 LOC to `<= 600` LOC by splitting capability-domain tests into cohesive submodules.
+@@ -2332,6 +2332,31 @@ Add entries as work lands. Format:
+ - Commit:
+   - 6568e780bf16016d7fe19dc2b28ec74f487fcc17
+ 
++### 2026-02-05 — P4.5 tests modularization (`crates/codex/src/tests/capabilities.rs` below hard threshold)
++
++- Scope/step: P4.5
++- Why: Earliest queued not-done item in §10; reduce `crates/codex/src/tests/capabilities.rs` from 904 LOC to `<= 600` LOC via mechanical capability-domain test splitting.
++- What changed:
++  - Replaced monolithic test body in `crates/codex/src/tests/capabilities.rs` with a thin helper + module-wiring façade (now 109 LOC).
++  - Added cohesive capability-domain test submodules under `crates/codex/src/tests/capabilities/`:
++    - `version_and_advisory.rs`
++    - `snapshots_and_cache.rs`
++    - `probe_cache_policy.rs`
++    - `feature_parsing_and_guards.rs`
++    - `overrides_and_probe.rs`
++    - `exec_and_login.rs`
++  - Preserved test names/assertions/fixtures; this is organization-only.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.5_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P4.5_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P4.5_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P4.5_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.5_cargo_audit.txt`; reran with `--no-fetch --stale` due advisory DB lock/fetch constraints in this sandbox)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P4.5_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.5_cargo_deny_advisories.txt`; reran with writable temp `CARGO_HOME`, offline mode, and `--disable-fetch` due advisory DB lock constraints in this sandbox)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.5_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.5_cargo_fmt_check_final.txt`)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

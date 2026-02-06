@@ -1,0 +1,17 @@
+1752:        request: ResponsesApiProxyRequest,
+1753:    ) -> Result<ResponsesApiProxyHandle, CodexError> {
+1754:        let ResponsesApiProxyRequest {
+1811:        Ok(ResponsesApiProxyHandle {
+2562:    ResponsesApiProxyInfoRead {
+2568:    ResponsesApiProxyInfoParse {
+2922:pub struct ResponsesApiProxyRequest {
+2935:impl ResponsesApiProxyRequest {
+2975:pub struct ResponsesApiProxyHandle {
+2982:impl ResponsesApiProxyHandle {
+2986:    pub async fn read_server_info(&self) -> Result<Option<ResponsesApiProxyInfo>, CodexError> {
+2996:                Ok(contents) => match serde_json::from_str::<ResponsesApiProxyInfo>(&contents) {
+3000:                            return Err(CodexError::ResponsesApiProxyInfoParse {
+3010:                        return Err(CodexError::ResponsesApiProxyInfoRead {
+3027:pub struct ResponsesApiProxyInfo {
+6017:                ResponsesApiProxyRequest::new("sk-test-123")
+6070:            .start_responses_api_proxy(ResponsesApiProxyRequest::new("  "))

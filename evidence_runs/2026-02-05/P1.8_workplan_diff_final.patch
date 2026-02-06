@@ -1,0 +1,166 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index cad50e9..206eff6 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -409,8 +409,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.8 — Plan next Phase 1 seams after `builder/*` (no code moves)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Update Phase 1 seam plan for the remaining `crates/codex/src/lib.rs` “god module” content after P1.7, identifying the next 2–4 PR-sized seams while preserving public API paths.
+ - Expected files touched:
+@@ -422,6 +422,89 @@ Last Updated: YYYY-MM-DD
+ - Risk: Low.
+ - Rollback: N/A (planning-only change).
+ 
++##### P1.9 — Seam extraction: bundled binary resolver (`bundled_binary.rs`) (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Extract bundled binary resolution types + helpers (`BundledBinarySpec`, `BundledBinary`, `BundledBinaryError`, `resolve_bundled_binary`, `default_bundled_platform_label`) into `crates/codex/src/bundled_binary.rs`, preserving existing public API paths via re-exports from `lib.rs`.
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (wire `mod bundled_binary;` + `pub use ...`; remove moved items)
++  - `crates/codex/src/bundled_binary.rs` (new)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No public API path changes (façade + re-exports).
++  - New module meets §7.3 size policy (target ≤ 300 LOC; may exceed soft if cohesive but must stay ≤ 600).
++- Risk: Low (leaf-ish extraction; minimal call site churn).
++- Rollback: Revert module move + re-exports; restore original definitions in `lib.rs`.
++
++##### P1.10 — Seam extraction: exec JSONL event models (`events.rs`) (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Extract JSONL event envelope + payload models emitted by `codex exec --json` into `crates/codex/src/events.rs`, preserving existing public API paths via re-exports from `lib.rs` (e.g., `ThreadEvent`, `ItemEnvelope`, `ItemPayload`, delta/state structs, statuses).
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (wire `mod events;` + `pub use ...`; remove moved items)
++  - `crates/codex/src/events.rs` (new)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No public API path changes (façade + re-exports).
++  - Serde shapes remain identical (pure move; no field/tag renames; tests pass).
++  - New module meets §7.3 size policy (likely > soft; must stay ≤ 600 or be split into `events/*` if it grows).
++- Risk: Medium (serialization/type visibility churn; keep move mechanical).
++- Rollback: Revert module move + re-exports; restore original event model definitions in `lib.rs`.
++
++##### P1.11 — Seam extraction: CLI subcommand request/response models (`cli/*`) (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Extract request/response model structs for non-streaming CLI subcommands into a cohesive `crates/codex/src/cli/*` module tree (e.g., features/help/review/resume/fork/cloud/app-server and `codex mcp` command request types), preserving existing public API paths via re-exports from `lib.rs`.
++  - Naming note: keep this distinct from the `mcp/*` runtime module tree; this seam is about *invoking CLI subcommands*, not the internal MCP client/runtime implementation.
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (wire `mod cli;` + `pub use ...`; remove moved items)
++  - `crates/codex/src/cli/mod.rs` (new)
++  - `crates/codex/src/cli/*.rs` (new; split by domain to satisfy §7.3)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No public API path changes (façade + re-exports).
++  - New files meet §7.3 size policy (target ≤ 300 LOC each; must stay ≤ 600).
++  - Step is “models-only” unless a small amount of wiring is necessary to keep the wrapper compiling (avoid moving execution logic in the same PR).
++- Risk: Medium (large move surface; keep extraction mechanical and domain-split).
++- Rollback: Revert module tree move + re-exports; restore original model structs in `lib.rs`.
++
++##### P1.12 — Seam extraction: feature/version parsing + update advisory helpers (`version.rs`) (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Extract internal parsing/helpers around `codex --version` / `codex help` / `codex features list` probes (semver/channel parsing, commit hash extraction, feature-flag parsing, and update advisory helpers) into `crates/codex/src/version.rs`, preserving existing public API paths for any public helpers (e.g., `update_advisory_from_capabilities`) via re-exports from `lib.rs`.
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (wire `mod version;` + `pub use ...`; remove moved items)
++  - `crates/codex/src/version.rs` (new)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No public API path changes (façade + re-exports).
++  - Parsing behavior remains unchanged (pure move; tests pass).
++  - New module meets §7.3 size policy (target ≤ 300 LOC; may exceed soft if cohesive but must stay ≤ 600).
++- Risk: Low–Medium (behavioral regression possible if parsing logic is accidentally edited; keep move mechanical).
++- Rollback: Revert module move + re-exports; restore original helper functions in `lib.rs`.
++
++##### P1.13 — Plan remaining Phase 1 seams after P1.12 (no code moves)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: After P1.9–P1.12 land, refresh the Phase 1 seam plan based on the then-current `crates/codex/src/lib.rs` structure and remaining top offenders, keeping extraction steps PR-sized and API-stable.
++- Expected files touched:
++  - `refactor_workplan.md` (this file): update §7.1 and §10 queue with the next concrete seam steps.
++- Acceptance criteria (“done when”):
++  - Updated seam list in §7.1 reflects the then-current module layout and identifies the next 2–4 PR-sized extractions.
++  - No behavior changes (planning only).
++- Risk: Low.
++- Rollback: N/A (planning-only change).
++
+ ---
+ 
+ #### Phase 2 — Split `crates/codex/src/mcp.rs` into `crates/codex/src/mcp/*` (API stable)
+@@ -780,10 +863,17 @@ Seam order (defined in P1.0; extract in PR-sized steps):
+ 4) Execpolicy modeling + parsing → `execpolicy.rs` (P1.4).
+ 5) Builder/config/flags surfaces → one or more cohesive modules (P1.5; define concrete module(s) when scheduled).
+ 6) JSONL streaming/framing + process IO → `jsonl.rs` seam (P1.6).
++7) Bundled binary resolution helpers → `bundled_binary.rs` (P1.9).
++8) Exec JSONL event envelope + payload models → `events.rs` (P1.10).
++9) CLI subcommand request/response models → `cli/*` (P1.11).
++10) Version/features probe parsing + update advisory helpers → `version.rs` (P1.12).
+ 
+ Notes / dependencies:
+ - `capabilities.rs` is used by the builder/client for cache policies, overrides, and probes; extract before apply/diff to reduce cross-cutting churn.
+ - `apply_diff.rs` depends on command execution plumbing but should remain API-stable via re-exports from `lib.rs`.
++- `bundled_binary.rs` is leaf-ish and can move early to reduce `lib.rs` churn (it is used mainly by the builder and docs).
++- `events.rs` is a dependency of streaming exec/resume types; extract it before moving execution/stream implementation blocks.
++- `cli/*` request/response models depend on builder override types (`CliOverridesPatch`, `FeatureToggles`, `ConfigOverride`), so schedule after P1.7 stabilized the builder module tree.
+ 
+ ### 7.2 `crates/codex/src/mcp.rs` boundaries and extraction order (Phase 2)
+ 
+@@ -1389,6 +1479,28 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — Plan next Phase 1 seams after `builder/*`
++
++- Scope/step: P1.8
++- Why this step is next:
++  - Earliest not-done item in §10 queue at dispatch (2026-02-05): `P1.8 — Plan next Phase 1 seams after builder/* (no code moves)`.
++- What changed:
++  - Updated §7.1 seam extraction order with the next concrete PR-sized seams after P1.7 (bundled-binary, events, CLI models, version/features helpers).
++  - Added Phase 1 checklist steps P1.9–P1.13 and refreshed §10 queue accordingly.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.8_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.8_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.8_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.8_cargo_audit.txt`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.8_cargo_deny_advisories.txt`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.8_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.8_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.8_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.8_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+@@ -1410,8 +1522,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ 
+ Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+ 
+-1) P1.8 — Plan next Phase 1 seams after `builder/*` (no code moves)
+-2) (TBD) Next Phase 2 follow-on after P2.7
+-3) (TBD) Next Phase 3 follow-on after P3.9
+-4) (TBD) Next cross-phase follow-on
+-5) (TBD) Next follow-on
++1) P1.9 — Seam extraction: bundled binary resolver (`bundled_binary.rs`) (API preserved)
++2) P1.10 — Seam extraction: exec JSONL event models (`events.rs`) (API preserved)
++3) P1.11 — Seam extraction: CLI subcommand request/response models (`cli/*`) (API preserved)
++4) P1.12 — Seam extraction: feature/version parsing + update advisory helpers (`version.rs`) (API preserved)
++5) P1.13 — Plan remaining Phase 1 seams after P1.12 (no code moves)

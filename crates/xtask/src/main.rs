@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 mod codex_report;
 mod codex_retain;
 mod codex_snapshot;

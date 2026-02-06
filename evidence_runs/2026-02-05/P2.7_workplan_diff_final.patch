@@ -1,0 +1,68 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 72b6fd0..9dade27 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -396,9 +396,9 @@ Last Updated: 2026-02-05
+ 
+ **Phase goal:** Split `mcp.rs` into a module tree while maintaining stable public APIs via re-exports from `mcp` (and/or `lib.rs`).
+ 
+-Phase Status: [ ] Not Started  [x] In Progress  [ ] Done  
++Phase Status: [ ] Not Started  [ ] In Progress  [x] Done  
+ Last Updated: 2026-02-05  
+-Reason: `crates/codex/src/mcp.rs` remains above the program ceiling per §3.2 (evidence: `audit_pack/execution/2026-02-04/post_refactor_tokei_files_sorted_updated.txt`).
++Reason: P2.7 completed; `crates/codex/src/mcp.rs` is now a thin façade below the program ceiling (policy: §7.3).
+ 
+ ##### P2.0 — Define the `mcp.rs` seam map (no code moves yet)
+ 
+@@ -515,8 +515,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P2.7 — Reduce `mcp.rs` below program ceiling (remaining coordinator split) (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Further reduce `crates/codex/src/mcp.rs` by moving remaining cohesive coordinator/state helpers into one or more `crates/codex/src/mcp/*` modules, leaving `mcp.rs` as a thin compatibility façade while preserving stable `codex::mcp::*` public API paths via re-exports.
+ - Expected files touched:
+@@ -1296,6 +1296,26 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P2.7 MCP façade: split remaining `mcp.rs` bulk into test modules (API preserved)
++
++- Scope/step: P2.7
++- Why: Reduce `crates/codex/src/mcp.rs` below the program ceiling per §7.3 (evidence: `audit_pack/execution/2026-02-04/post_refactor_tokei_files_sorted_updated.txt`).
++- What changed:
++  - Moved the large `#[cfg(test)]` unit test module out of `crates/codex/src/mcp.rs` into `crates/codex/src/mcp/test_support.rs`, `crates/codex/src/mcp/tests_core.rs`, and `crates/codex/src/mcp/tests_runtime_app.rs`.
++  - Left `crates/codex/src/mcp.rs` as a thin compatibility façade with stable `codex::mcp::*` public API paths preserved via existing re-exports.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P2.7_cargo_fmt_check_final.txt`) (initial FAIL: `evidence_runs/2026-02-05/P2.7_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P2.7_cargo_fmt_apply.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P2.7_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P2.7_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P2.7_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P2.7_cargo_audit.txt`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P2.7_cargo_deny_advisories.txt`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P2.7_cargo_deny_licenses.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P2.7_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P2.7_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+@@ -1317,8 +1337,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ 
+ Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+ 
+-1) P2.7 — Reduce `mcp.rs` below program ceiling (remaining coordinator split) (API preserved)
+-2) P3.9 — Reduce `codex_validate.rs` below ceiling (follow-on split) with deterministic output preserved
+-3) (TBD) Next Phase 1 seam extraction after P1.6
+-4) (TBD) Next Phase 2 follow-on after P2.7
+-5) (TBD) Next Phase 3 follow-on after P3.9
++1) P3.9 — Reduce `codex_validate.rs` below ceiling (follow-on split) with deterministic output preserved
++2) (TBD) Next Phase 1 seam extraction after P1.6
++3) (TBD) Next Phase 2 follow-on after P2.7
++4) (TBD) Next Phase 3 follow-on after P3.9
++5) (TBD) Next cross-phase follow-on

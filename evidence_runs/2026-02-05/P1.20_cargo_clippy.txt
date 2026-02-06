@@ -1,0 +1,263 @@
+    Checking codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)
+error[E0432]: unresolved imports `super::tee_stream`, `super::ConsoleTarget`
+  --> crates/codex/src/execpolicy.rs:13:67
+   |
+13 |     apply_cli_overrides, resolve_cli_overrides, spawn_with_retry, tee_stream, CliOverridesPatch,
+   |                                                                   ^^^^^^^^^^ no `tee_stream` in the root
+14 |     CodexClient, CodexError, ConfigOverride, ConsoleTarget, FlagState,
+   |                                              ^^^^^^^^^^^^^ no `ConsoleTarget` in the root
+   |
+   = help: consider importing this enum instead:
+           crate::process::ConsoleTarget
+
+error[E0412]: cannot find type `Path` in this scope
+   --> crates/codex/src/tests.rs:292:27
+    |
+292 | fn write_executable(dir: &Path, name: &str, script: &str) -> PathBuf {
+    |                           ^^^^ not found in this scope
+    |
+help: consider importing this struct
+    |
+1   + use std::path::Path;
+    |
+
+error[E0412]: cannot find type `Path` in this scope
+   --> crates/codex/src/tests.rs:304:27
+    |
+304 | fn write_fake_codex(dir: &Path, script: &str) -> PathBuf {
+    |                           ^^^^ not found in this scope
+    |
+help: consider importing this struct
+    |
+1   + use std::path::Path;
+    |
+
+error[E0412]: cannot find type `Path` in this scope
+   --> crates/codex/src/tests.rs:308:35
+    |
+308 | fn write_fake_bundled_codex(dir: &Path, platform: &str, script: &str) -> PathBuf {
+    |                                   ^^^^ not found in this scope
+    |
+help: consider importing this struct
+    |
+1   + use std::path::Path;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `Path`
+   --> crates/codex/src/tests.rs:429:16
+    |
+429 |     assert_eq!(Path::new(pwd), env::current_dir().unwrap().as_path());
+    |                ^^^^ use of undeclared type `Path`
+    |
+help: consider importing this struct
+    |
+1   + use std::path::Path;
+    |
+
+error: unused import: `CommandOutput`
+   --> crates/codex/src/lib.rs:138:54
+    |
+138 | use process::{command_output_text, spawn_with_retry, CommandOutput};
+    |                                                      ^^^^^^^^^^^^^
+    |
+    = note: `-D unused-imports` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+error[E0433]: failed to resolve: use of undeclared type `Path`
+   --> crates/codex/src/tests.rs:511:16
+    |
+511 |     assert_eq!(Path::new(request_pwd), request_dir.as_path());
+    |                ^^^^ use of undeclared type `Path`
+    |
+help: consider importing this struct
+    |
+1   + use std::path::Path;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `Path`
+   --> crates/codex/src/tests.rs:521:16
+    |
+521 |     assert_eq!(Path::new(builder_pwd), builder_dir.as_path());
+    |                ^^^^ use of undeclared type `Path`
+    |
+help: consider importing this struct
+    |
+1   + use std::path::Path;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `Path`
+   --> crates/codex/src/tests.rs:537:9
+    |
+537 |         Path::new(default_pwd),
+    |         ^^^^ use of undeclared type `Path`
+    |
+help: consider importing this struct
+    |
+1   + use std::path::Path;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `Path`
+   --> crates/codex/src/tests.rs:632:16
+    |
+632 |     assert_eq!(Path::new(pwd), workdir.as_path());
+    |                ^^^^ use of undeclared type `Path`
+    |
+help: consider importing this struct
+    |
+1   + use std::path::Path;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `Path`
+   --> crates/codex/src/tests.rs:748:16
+    |
+748 |     assert_eq!(Path::new(pwd), workdir.as_path());
+    |                ^^^^ use of undeclared type `Path`
+    |
+help: consider importing this struct
+    |
+1   + use std::path::Path;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `Path`
+    --> crates/codex/src/tests.rs:1126:16
+     |
+1126 |     assert_eq!(Path::new(pwd), workdir.as_path());
+     |                ^^^^ use of undeclared type `Path`
+     |
+help: consider importing this struct
+     |
+1    + use std::path::Path;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Path`
+    --> crates/codex/src/tests.rs:1242:16
+     |
+1242 |     assert_eq!(Path::new(&pwd), workdir.as_path());
+     |                ^^^^ use of undeclared type `Path`
+     |
+help: consider importing this struct
+     |
+1    + use std::path::Path;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/tests.rs:1313:13
+     |
+1313 |             time::sleep(Duration::from_millis(25)).await;
+     |             ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::time` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use tokio::time;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Path`
+    --> crates/codex/src/tests.rs:1323:16
+     |
+1323 |     assert_eq!(Path::new(&pwd), workdir.as_path());
+     |                ^^^^ use of undeclared type `Path`
+     |
+help: consider importing this struct
+     |
+1    + use std::path::Path;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `time`
+    --> crates/codex/src/tests.rs:1338:18
+     |
+1338 |     let status = time::timeout(Duration::from_secs(5), child.wait())
+     |                  ^^^^ use of unresolved module or unlinked crate `time`
+     |
+     = help: if you wanted to use a crate named `time`, use `cargo add time` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::time` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use tokio::time;
+     |
+
+error[E0624]: method `directory_context` is private
+  --> crates/codex/src/commands/app_server.rs:34:28
+   |
+34 |         let dir_ctx = self.directory_context()?;
+   |                            ^^^^^^^^^^^^^^^^^ private method
+   |
+  ::: crates/codex/src/client_core.rs:17:5
+   |
+17 |     fn directory_context(&self) -> Result<DirectoryContext, CodexError> {
+   |     ------------------------------------------------------------------- private method defined here
+
+error[E0624]: method `directory_context` is private
+  --> crates/codex/src/commands/apply_diff.rs:94:28
+   |
+94 |         let dir_ctx = self.directory_context()?;
+   |                            ^^^^^^^^^^^^^^^^^ private method
+   |
+  ::: crates/codex/src/client_core.rs:17:5
+   |
+17 |     fn directory_context(&self) -> Result<DirectoryContext, CodexError> {
+   |     ------------------------------------------------------------------- private method defined here
+
+error[E0624]: method `directory_context` is private
+  --> crates/codex/src/commands/features.rs:22:28
+   |
+22 |         let dir_ctx = self.directory_context()?;
+   |                            ^^^^^^^^^^^^^^^^^ private method
+   |
+  ::: crates/codex/src/client_core.rs:17:5
+   |
+17 |     fn directory_context(&self) -> Result<DirectoryContext, CodexError> {
+   |     ------------------------------------------------------------------- private method defined here
+
+error[E0624]: method `directory_context` is private
+  --> crates/codex/src/exec.rs:88:28
+   |
+88 |         let dir_ctx = self.directory_context()?;
+   |                            ^^^^^^^^^^^^^^^^^ private method
+   |
+  ::: crates/codex/src/client_core.rs:17:5
+   |
+17 |     fn directory_context(&self) -> Result<DirectoryContext, CodexError> {
+   |     ------------------------------------------------------------------- private method defined here
+
+error[E0624]: method `directory_context` is private
+   --> crates/codex/src/exec.rs:262:28
+    |
+262 |         let dir_ctx = self.directory_context()?;
+    |                            ^^^^^^^^^^^^^^^^^ private method
+    |
+   ::: crates/codex/src/client_core.rs:17:5
+    |
+17  |     fn directory_context(&self) -> Result<DirectoryContext, CodexError> {
+    |     ------------------------------------------------------------------- private method defined here
+
+error[E0624]: method `directory_context` is private
+   --> crates/codex/src/exec.rs:469:28
+    |
+469 |         let dir_ctx = self.directory_context()?;
+    |                            ^^^^^^^^^^^^^^^^^ private method
+    |
+   ::: crates/codex/src/client_core.rs:17:5
+    |
+17  |     fn directory_context(&self) -> Result<DirectoryContext, CodexError> {
+    |     ------------------------------------------------------------------- private method defined here
+
+error[E0624]: method `directory_context` is private
+   --> crates/codex/src/execpolicy.rs:233:28
+    |
+233 |         let dir_ctx = self.directory_context()?;
+    |                            ^^^^^^^^^^^^^^^^^ private method
+    |
+   ::: crates/codex/src/client_core.rs:17:5
+    |
+17  |     fn directory_context(&self) -> Result<DirectoryContext, CodexError> {
+    |     ------------------------------------------------------------------- private method defined here
+
+Some errors have detailed explanations: E0432, E0624.
+For more information about an error, try `rustc --explain E0432`.
+error: could not compile `codex` (lib) due to 9 previous errors
+warning: build failed, waiting for other jobs to finish...
+Some errors have detailed explanations: E0412, E0432, E0433, E0624.
+For more information about an error, try `rustc --explain E0412`.
+error: could not compile `codex` (lib test) due to 23 previous errors

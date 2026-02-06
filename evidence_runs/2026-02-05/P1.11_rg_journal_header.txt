@@ -1,0 +1,4 @@
+196:- Execution Journal §8 contains an auditable sequence of changes with validation results.
+214:  - Run §4.1 commands; record outcomes in §8 (Execution Journal).
+953:## 8) Execution Journal (append-only)
+955:### 8.1 Execution evidence storage (future runs)

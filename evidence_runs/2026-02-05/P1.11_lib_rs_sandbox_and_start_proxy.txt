@@ -1,0 +1,165 @@
+  2761	/// Sandbox platform variant; maps to platform subcommands of `codex sandbox`.
+  2762	#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+  2763	pub enum SandboxPlatform {
+  2764	    Macos,
+  2765	    Linux,
+  2766	    Windows,
+  2767	}
+  2768	
+  2769	impl SandboxPlatform {
+  2770	    fn subcommand(self) -> &'static str {
+  2771	        match self {
+  2772	            SandboxPlatform::Macos => "macos",
+  2773	            SandboxPlatform::Linux => "linux",
+  2774	            SandboxPlatform::Windows => "windows",
+  2775	        }
+  2776	    }
+  2777	}
+  2778	
+  2779	/// Request to run an arbitrary command inside a Codex-provided sandbox.
+  2780	#[derive(Clone, Debug, Eq, PartialEq)]
+  2781	pub struct SandboxCommandRequest {
+  2782	    /// Target platform subcommand; maps to `macos` (alias `seatbelt`), `linux` (alias `landlock`), or `windows`.
+  2783	    pub platform: SandboxPlatform,
+  2784	    /// Trailing command arguments to execute. Must be non-empty to avoid the upstream CLI panic.
+  2785	    pub command: Vec<OsString>,
+  2786	    /// Request the workspace-write sandbox preset (`--full-auto`).
+  2787	    pub full_auto: bool,
+  2788	    /// Stream macOS sandbox denials after the child process exits (no-op on other platforms).
+  2789	    pub log_denials: bool,
+  2790	    /// Additional `--config key=value` overrides to pass through.
+  2791	    pub config_overrides: Vec<ConfigOverride>,
+  2792	    /// Feature toggles forwarded to `--enable`/`--disable`.
+  2793	    pub feature_toggles: FeatureToggles,
+  2794	    /// Working directory for the spawned command; falls back to the builder value, then the current process directory.
+  2795	    pub working_dir: Option<PathBuf>,
+  2796	}
+  2797	
+  2798	impl SandboxCommandRequest {
+  2799	    pub fn new<I, S>(platform: SandboxPlatform, command: I) -> Self
+  2800	    where
+  2801	        I: IntoIterator<Item = S>,
+  2802	        S: Into<OsString>,
+  2803	    {
+  2804	        Self {
+  2805	            platform,
+  2806	            command: command.into_iter().map(Into::into).collect(),
+  2807	            full_auto: false,
+  2808	            log_denials: false,
+  2809	            config_overrides: Vec::new(),
+  2810	            feature_toggles: FeatureToggles::default(),
+  2811	            working_dir: None,
+  2812	        }
+  2813	    }
+  2814	
+  2815	    pub fn full_auto(mut self, enable: bool) -> Self {
+  2816	        self.full_auto = enable;
+  2817	        self
+  2818	    }
+  2819	
+  2820	    pub fn log_denials(mut self, enable: bool) -> Self {
+  2821	        self.log_denials = enable;
+  2822	        self
+  2823	    }
+  2824	
+  2825	    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+  2826	        self.config_overrides.push(ConfigOverride::new(key, value));
+  2827	        self
+  2828	    }
+  2829	
+  2830	    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+  2831	        self.config_overrides.push(ConfigOverride::from_raw(raw));
+  2832	        self
+  2833	    }
+  2834	
+  2835	    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+  2836	        self.feature_toggles.enable.push(name.into());
+  2837	        self
+  2838	    }
+  2839	
+  2840	    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+  2841	        self.feature_toggles.disable.push(name.into());
+  2842	        self
+  2843	    }
+  2844	
+  2845	    pub fn working_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+  2846	        self.working_dir = Some(dir.into());
+  2847	        self
+  2848	    }
+  2849	}
+  2850	
+  2851	/// Captured output from `codex sandbox <platform>`.
+  2852	#[derive(Clone, Debug)]
+  2853	pub struct SandboxRun {
+  2854	    /// Exit status returned by the inner command (mirrors the sandbox helper).
+  2855	    pub status: ExitStatus,
+  2856	    /// Captured stdout (mirrored to the console when `mirror_stdout` is true).
+  2857	    pub stdout: String,
+  2858	    /// Captured stderr (mirrored unless `quiet` is set).
+  2859	    pub stderr: String,
+  2860	}
+  2861	
+  2862	/// Request for `codex responses-api-proxy`.
+  2863	#[derive(Clone, Debug, Eq, PartialEq)]
+  2864	pub struct ResponsesApiProxyRequest {
+  2865	    /// API key to write to stdin on startup.
+  2866	    pub api_key: String,
+  2867	    /// Optional port to bind; falls back to an OS-assigned ephemeral port when omitted.
+  2868	    pub port: Option<u16>,
+  2869	    /// Optional path passed to `--server-info` for `{port,pid}` JSON output.
+  2870	    pub server_info_path: Option<PathBuf>,
+  2871	    /// Enables the HTTP shutdown endpoint (`GET /shutdown`).
+  2872	    pub http_shutdown: bool,
+  2873	    /// Optional upstream URL passed to `--upstream-url` (defaults to `https://api.openai.com/v1/responses`).
+  2874	    pub upstream_url: Option<String>,
+  2875	}
+  2876	
+  2877	impl ResponsesApiProxyRequest {
+  2878	    /// Creates a request with the API key provided via stdin.
+  2879	    pub fn new(api_key: impl Into<String>) -> Self {
+  2880	        Self {
+  2881	            api_key: api_key.into(),
+  2882	            port: None,
+  2883	            server_info_path: None,
+  2884	            http_shutdown: false,
+  2885	            upstream_url: None,
+  2886	        }
+  2887	    }
+  2888	
+  2889	    /// Sets the listening port (`--port`).
+  2890	    pub fn port(mut self, port: u16) -> Self {
+  2891	        self.port = Some(port);
+  2892	        self
+  2893	    }
+  2894	
+  2895	    /// Writes `{port,pid}` JSON to the provided path via `--server-info`.
+  2896	    pub fn server_info(mut self, path: impl Into<PathBuf>) -> Self {
+  2897	        self.server_info_path = Some(path.into());
+  2898	        self
+  2899	    }
+  2900	
+  2901	    /// Enables the `--http-shutdown` flag (GET /shutdown).
+  2902	    pub fn http_shutdown(mut self, enable: bool) -> Self {
+  2903	        self.http_shutdown = enable;
+  2904	        self
+  2905	    }
+  2906	
+  2907	    /// Overrides the upstream responses endpoint URL.
+  2908	    pub fn upstream_url(mut self, url: impl Into<String>) -> Self {
+  2909	        let url = url.into();
+  2910	        self.upstream_url = (!url.trim().is_empty()).then_some(url);
+  2911	        self
+  2912	    }
+  2913	}
+  2914	
+  2915	/// Running responses proxy process and metadata.
+  2916	#[derive(Debug)]
+  2917	pub struct ResponsesApiProxyHandle {
+  2918	    /// Spawned `codex responses-api-proxy` child (inherits kill-on-drop).
+  2919	    pub child: tokio::process::Child,
+  2920	    /// Optional `--server-info` path that may contain `{port,pid}` JSON.
+  2921	    pub server_info_path: Option<PathBuf>,
+  2922	}
+  2923	
+  2924	impl ResponsesApiProxyHandle {
+  2925	    /// Reads and parses the `{port,pid}` JSON written by `--server-info`.

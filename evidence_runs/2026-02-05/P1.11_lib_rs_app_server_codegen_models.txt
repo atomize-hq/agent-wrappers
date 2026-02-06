@@ -1,0 +1,108 @@
+  3988	    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+  3989	        self.overrides = overrides;
+  3990	        self
+  3991	    }
+  3992	}
+  3993	
+  3994	/// Target for app-server code generation.
+  3995	#[derive(Clone, Debug, Eq, PartialEq)]
+  3996	pub enum AppServerCodegenTarget {
+  3997	    /// Emits TypeScript bindings for the app-server protocol. Optionally formats the output with Prettier.
+  3998	    TypeScript { prettier: Option<PathBuf> },
+  3999	    /// Emits a JSON schema bundle for the app-server protocol.
+  4000	    JsonSchema,
+  4001	}
+  4002	
+  4003	impl AppServerCodegenTarget {
+  4004	    fn subcommand(&self) -> &'static str {
+  4005	        match self {
+  4006	            AppServerCodegenTarget::TypeScript { .. } => "generate-ts",
+  4007	            AppServerCodegenTarget::JsonSchema => "generate-json-schema",
+  4008	        }
+  4009	    }
+  4010	
+  4011	    fn prettier(&self) -> Option<&PathBuf> {
+  4012	        match self {
+  4013	            AppServerCodegenTarget::TypeScript { prettier } => prettier.as_ref(),
+  4014	            AppServerCodegenTarget::JsonSchema => None,
+  4015	        }
+  4016	    }
+  4017	}
+  4018	
+  4019	/// Request for `codex app-server generate-ts` or `generate-json-schema`.
+  4020	#[derive(Clone, Debug, Eq, PartialEq)]
+  4021	pub struct AppServerCodegenRequest {
+  4022	    /// Codegen target and optional Prettier path (TypeScript only).
+  4023	    pub target: AppServerCodegenTarget,
+  4024	    /// Output directory passed to `--out`; created if missing.
+  4025	    pub out_dir: PathBuf,
+  4026	    /// Per-call CLI overrides layered on top of the builder.
+  4027	    pub overrides: CliOverridesPatch,
+  4028	}
+  4029	
+  4030	impl AppServerCodegenRequest {
+  4031	    /// Generates TypeScript bindings into `out_dir`.
+  4032	    pub fn typescript(out_dir: impl Into<PathBuf>) -> Self {
+  4033	        Self {
+  4034	            target: AppServerCodegenTarget::TypeScript { prettier: None },
+  4035	            out_dir: out_dir.into(),
+  4036	            overrides: CliOverridesPatch::default(),
+  4037	        }
+  4038	    }
+  4039	
+  4040	    /// Generates a JSON schema bundle into `out_dir`.
+  4041	    pub fn json_schema(out_dir: impl Into<PathBuf>) -> Self {
+  4042	        Self {
+  4043	            target: AppServerCodegenTarget::JsonSchema,
+  4044	            out_dir: out_dir.into(),
+  4045	            overrides: CliOverridesPatch::default(),
+  4046	        }
+  4047	    }
+  4048	
+  4049	    /// Formats TypeScript output with the provided Prettier executable (no-op for JSON schema).
+  4050	    pub fn prettier(mut self, prettier: impl Into<PathBuf>) -> Self {
+  4051	        if let AppServerCodegenTarget::TypeScript { prettier: slot } = &mut self.target {
+  4052	            *slot = Some(prettier.into());
+  4053	        }
+  4054	        self
+  4055	    }
+  4056	
+  4057	    /// Replaces the default CLI overrides for this request.
+  4058	    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+  4059	        self.overrides = overrides;
+  4060	        self
+  4061	    }
+  4062	
+  4063	    /// Adds a `--config key=value` override for this request.
+  4064	    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+  4065	        self.overrides
+  4066	            .config_overrides
+  4067	            .push(ConfigOverride::new(key, value));
+  4068	        self
+  4069	    }
+  4070	
+  4071	    /// Adds a raw `--config key=value` override without validation.
+  4072	    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+  4073	        self.overrides
+  4074	            .config_overrides
+  4075	            .push(ConfigOverride::from_raw(raw));
+  4076	        self
+  4077	    }
+  4078	
+  4079	    /// Sets the config profile (`--profile`) for this request.
+  4080	    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+  4081	        let profile = profile.into();
+  4082	        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+  4083	        self
+  4084	    }
+  4085	
+  4086	    /// Requests the CLI `--oss` flag for this codegen call.
+  4087	    pub fn oss(mut self, enable: bool) -> Self {
+  4088	        self.overrides.oss = if enable {
+  4089	            FlagState::Enable
+  4090	        } else {
+  4091	            FlagState::Disable
+  4092	        };
+  4093	        self
+  4094	    }
+  4095	

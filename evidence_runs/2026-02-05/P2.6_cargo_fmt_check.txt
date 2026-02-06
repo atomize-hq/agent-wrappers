@@ -1,0 +1,46 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/client.rs:4:
+ use thiserror::Error;
+ 
+ use super::{
+[31m-    ApprovalDecision, AppCallHandle, ClientInfo, CodexCallHandle, CodexCallParams,
+(B[m[31m-    CodexCallResult, CodexReplyParams, InitializeParams, RequestId, StdioServerConfig,
+(B[m[31m-    METHOD_CODEX, METHOD_CODEX_APPROVAL, METHOD_THREAD_RESUME, METHOD_THREAD_START,
+(B[m[31m-    METHOD_TURN_INTERRUPT, METHOD_TURN_START,
+(B[m[32m+    AppCallHandle, ApprovalDecision, ClientInfo, CodexCallHandle, CodexCallParams, CodexCallResult,
+(B[m[32m+    CodexReplyParams, InitializeParams, RequestId, StdioServerConfig, METHOD_CODEX,
+(B[m[32m+    METHOD_CODEX_APPROVAL, METHOD_THREAD_RESUME, METHOD_THREAD_START, METHOD_TURN_INTERRUPT,
+(B[m[32m+    METHOD_TURN_START,
+(B[m };
+ 
+ use super::jsonrpc::{map_response, JsonRpcTransport};
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/client.rs:177:
+     }
+ 
+     /// Start a new thread (or use a provided ID) via `thread/start`.
+[31m-    pub async fn thread_start(&self, params: super::ThreadStartParams) -> Result<AppCallHandle, McpError> {
+(B[m[32m+    pub async fn thread_start(
+(B[m[32m+        &self,
+(B[m[32m+        params: super::ThreadStartParams,
+(B[m[32m+    ) -> Result<AppCallHandle, McpError> {
+(B[m         self.invoke_app_call(METHOD_THREAD_START, serde_json::to_value(params)?)
+             .await
+     }
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/client.rs:192:
+     }
+ 
+     /// Start a new turn on a thread via `turn/start`.
+[31m-    pub async fn turn_start(&self, params: super::TurnStartParams) -> Result<AppCallHandle, McpError> {
+(B[m[32m+    pub async fn turn_start(
+(B[m[32m+        &self,
+(B[m[32m+        params: super::TurnStartParams,
+(B[m[32m+    ) -> Result<AppCallHandle, McpError> {
+(B[m         self.invoke_app_call(METHOD_TURN_START, serde_json::to_value(params)?)
+             .await
+     }
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/client.rs:232:
+         })
+     }
+ }
+[31m-
+(B[m 
+cargo fmt --check failed; applying fmt

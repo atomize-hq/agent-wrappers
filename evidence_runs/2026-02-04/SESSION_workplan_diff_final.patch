@@ -1,0 +1,57 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 2d03fef..6a54ea8 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -594,8 +594,8 @@ Last Updated: 2026-02-04
+ 
+ ##### P3.8 — Split xtask module: `codex_snapshot` (extract snapshot pipeline domains) with deterministic output preserved
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-04
+ 
+ - Goal: Further reduce `crates/xtask/src/codex_snapshot.rs` by extracting snapshot pipeline stages (help parsing/discovery, supplements/normalization, output layout/version probing) into `crates/xtask/src/codex_snapshot/*` without changing outputs.
+ - Expected files touched:
+@@ -1115,6 +1115,27 @@ Add entries as work lands. Format:
+ - Commit:
+   - `29b3880fe387e831dcb29d9eb7de035dbcf1e6cf`
+ 
++### 2026-02-04 — P3.8 codex_snapshot pipeline domain split
++
++- Scope/step: P3.8
++- Why this step is next:
++  - Earliest not-done item in Phase 3 queue: `Status: [ ] Not Started  [ ] In Progress  [ ] Done` (P3.8).
++- What changed:
++  - Split `crates/xtask/src/codex_snapshot.rs` into a smaller façade (`Args`, `Error`, `run`) and extracted snapshot pipeline stages into `crates/xtask/src/codex_snapshot/*` (discovery/help parsing, supplements/normalization, output layout, and probes).
++  - Preserved deterministic output semantics (stable sort order, `serde_json::to_string_pretty` + trailing newline; `SOURCE_DATE_EPOCH` support unchanged).
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-04/P3.8_cargo_fmt_check_final.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-04/P3.8_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-04/P3.8_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-04/P3.8_cargo_audit.txt`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-04/P3.8_cargo_deny_advisories.txt`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-04/P3.8_cargo_deny_licenses.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-04/SESSION_code_diff_final.patch`
++  - Workplan diff: `evidence_runs/2026-02-04/SESSION_workplan_diff_final.patch`
++- Commit:
++  - `f447ec5a4cb64c7a0d94cb5ad0bc4f596178dc5a`
++
+ ---
+ 
+ ## 9) Open Questions / Decisions (lightweight log)
+@@ -1134,8 +1155,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ 
+ ## 10) Next 5 Tasks (execution queue; do not start until this workplan is current)
+ 
+-1) P3.6 — Split xtask module: `codex_validate` (extract validation passes) with deterministic output preserved
+-2) P3.7 — Split xtask module: `codex_report` (extract report domains) with deterministic output preserved
+-3) P3.8 — Split xtask module: `codex_snapshot` (extract snapshot pipeline domains) with deterministic output preserved
+-4) TBD — Pick next Phase 1 `lib.rs` seam after reassessing remaining `lib.rs` responsibilities and size offenders.
+-5) TBD — Reassess Phase 2 `mcp.rs` test fixtures and decide whether to move large inline scripts into external test assets (proposal only; do not start without explicit workplan step).
++1) TBD — Refresh file-size metrics and update Phase 1/2/3 status reasons if thresholds have changed.
++2) TBD — Pick next Phase 1 `lib.rs` seam after reassessing remaining `lib.rs` responsibilities and size offenders.
++3) TBD — Reassess Phase 2 `mcp.rs` test fixtures and decide whether to move large inline scripts into external test assets (proposal only; do not start without explicit workplan step).
++4) TBD — Decide whether any additional `xtask` modules need a Phase 3 follow-on split (only if size offenders remain).
++5) TBD — Re-run supply-chain gates in a networked environment if CI differs from this sandbox (verification only; no code changes).

@@ -1,0 +1,46 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 5be29bc..5741fdc 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -1064,7 +1064,7 @@ Last Updated: 2026-02-05
+ 
+ ##### P4.3 — Reduce `crates/xtask/src/codex_report/report.rs` below hard threshold (domain split with deterministic output preserved)
+ 
+-Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
+ Last Updated: 2026-02-05
+ 
+ - Goal: Reduce `crates/xtask/src/codex_report/report.rs` from 922 LOC to `<= 600` LOC by extracting cohesive report domains while preserving deterministic outputs.
+@@ -2203,6 +2203,32 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P4.3 report domain split (`crates/xtask/src/codex_report/report.rs` below hard threshold)
++
++- Scope/step: P4.3
++- Why: Earliest not-done task in §10 after P4.2; reduce `crates/xtask/src/codex_report/report.rs` to `<= 600` LOC while preserving deterministic report behavior.
++- What changed:
++  - Kept `crates/xtask/src/codex_report/report.rs` as orchestration logic (`index_upstream` + `build_report`) and extracted cohesive helper domains to `crates/xtask/src/codex_report/report/`:
++    - `schema.rs` (report output structs/enums for deterministic JSON shape)
++    - `filtering.rs` (platform-filter presence/classification helpers)
++    - `iu.rs` (intentionally-unsupported inheritance resolution + deterministic sort comparator)
++    - `parity.rs` (parity exclusions index builder)
++  - Preserved API path usage in callers via `report::build_parity_exclusions_index` and `report::build_report`.
++  - Preserved ordering/formatting behavior (all sorting/comparison logic moved without semantic changes).
++  - Result: `crates/xtask/src/codex_report/report.rs` is now 551 LOC (<= 600).
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.3_cargo_fmt_check_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.3_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P4.3_cargo_fmt_apply.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P4.3_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.3_cargo_clippy.txt`; fixed module visibility wiring in step scope)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P4.3_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P4.3_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.3_cargo_audit.txt`; reran with `--no-fetch --stale` due advisory DB fetch/network constraints in this sandbox)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P4.3_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.3_cargo_deny_advisories.txt`; reran with writable temp `CARGO_HOME` and `--disable-fetch` due advisory DB lock/network constraints)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.3_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.3_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Base commit: `evidence_runs/2026-02-05/P4.3_BASE_STEP.txt`
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

@@ -1,0 +1,2 @@
+advisories ok
+exit_code=0

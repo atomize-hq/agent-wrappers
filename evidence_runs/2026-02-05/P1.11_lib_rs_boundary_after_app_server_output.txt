@@ -1,0 +1,41 @@
+  4105	#[derive(Debug, Error)]
+  4106	pub enum ExecStreamError {
+  4107	    #[error(transparent)]
+  4108	    Codex(#[from] CodexError),
+  4109	    #[error("failed to parse codex JSONL event: {source}: `{line}`")]
+  4110	    Parse {
+  4111	        line: String,
+  4112	        #[source]
+  4113	        source: serde_json::Error,
+  4114	    },
+  4115	    #[error("codex JSONL event missing required context: {message}: `{line}`")]
+  4116	    Normalize { line: String, message: String },
+  4117	    #[error("codex JSON stream idle for {idle_for:?}")]
+  4118	    IdleTimeout { idle_for: Duration },
+  4119	    #[error("codex JSON stream closed unexpectedly")]
+  4120	    ChannelClosed,
+  4121	}
+  4122	
+  4123	async fn read_last_message(path: &Path) -> Option<String> {
+  4124	    (fs::read_to_string(path).await).ok()
+  4125	}
+  4126	
+  4127	fn unique_temp_path(prefix: &str, extension: &str) -> PathBuf {
+  4128	    let mut path = env::temp_dir();
+  4129	    let timestamp = SystemTime::now()
+  4130	        .duration_since(UNIX_EPOCH)
+  4131	        .unwrap_or_else(|_| Duration::from_secs(0))
+  4132	        .as_nanos();
+  4133	    path.push(format!(
+  4134	        "{prefix}{timestamp}_{}.{}",
+  4135	        std::process::id(),
+  4136	        extension
+  4137	    ));
+  4138	    path
+  4139	}
+  4140	
+  4141	enum DirectoryContext {
+  4142	    Fixed(PathBuf),
+  4143	    Ephemeral(TempDir),
+  4144	}
+  4145	

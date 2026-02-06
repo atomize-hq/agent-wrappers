@@ -1,0 +1,14 @@
+    Checking codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)
+error: unused import: `fs as std_fs`
+   --> crates/codex/src/lib.rs:130:5
+    |
+130 |     fs as std_fs,
+    |     ^^^^^^^^^^^^
+    |
+    = note: `-D unused-imports` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+error: could not compile `codex` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `codex` (lib test) due to 1 previous error
+clippy failed

@@ -1,0 +1,27 @@
+1117:    ) -> Result<FeaturesListOutput, CodexError> {
+1199:        Ok(FeaturesListOutput {
+3116:pub struct CodexFeature {
+3129:impl CodexFeature {
+3138:pub enum FeaturesListFormat {
+3145:pub struct FeaturesListOutput {
+3153:    pub features: Vec<CodexFeature>,
+3155:    pub format: FeaturesListFormat,
+4484:) -> Result<(Vec<CodexFeature>, FeaturesListFormat), String> {
+4493:                return Ok((features, FeaturesListFormat::Json));
+4498:                return Ok((features, FeaturesListFormat::Text));
+4504:                return Ok((features, FeaturesListFormat::Text));
+4509:                return Ok((features, FeaturesListFormat::Json));
+4517:fn parse_feature_list_json(output: &str) -> Option<Vec<CodexFeature>> {
+4522:fn parse_feature_list_json_value(value: &Value) -> Option<Vec<CodexFeature>> {
+4529:                    Value::String(name) => Some(CodexFeature {
+4553:                        Value::Bool(flag) => Some(CodexFeature {
+4560:                            .map(|enabled| CodexFeature {
+4567:                                Some(CodexFeature {
+4583:fn parse_feature_list_text(output: &str) -> Option<Vec<CodexFeature>> {
+4619:        features.push(CodexFeature {
+4653:) -> Option<CodexFeature> {
+4680:    Some(CodexFeature {
+5533:        assert_eq!(output.format, FeaturesListFormat::Json);
+7182:        assert_eq!(json_format, FeaturesListFormat::Json);
+7200:        assert_eq!(text_format, FeaturesListFormat::Text);
+7209:        assert_eq!(fallback_format, FeaturesListFormat::Text);

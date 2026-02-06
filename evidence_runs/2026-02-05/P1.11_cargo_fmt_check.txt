@@ -1,0 +1,125 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/app_server.rs:1:
+ use crate::{CliOverridesPatch, ConfigOverride, FlagState};
+[31m-use std::{
+(B[m[31m-    path::PathBuf,
+(B[m[31m-    process::ExitStatus,
+(B[m[31m-};
+(B[m[32m+use std::{path::PathBuf, process::ExitStatus};
+(B[m 
+ /// Target for app-server code generation.
+ #[derive(Clone, Debug, Eq, PartialEq)]
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/app_server.rs:141:
+     /// Output directory passed to `--out`.
+     pub out_dir: PathBuf,
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/cloud.rs:156:
+         self
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/exec.rs:68:
+         self
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/features.rs:221:
+         Self::new()
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/help.rs:63:
+         self
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/mcp.rs:243:
+         self
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/mod.rs:16:
+ };
+ pub use exec::ExecRequest;
+ pub use features::{
+[31m-    CodexFeature, CodexFeatureStage, FeaturesCommandRequest, FeaturesListFormat, FeaturesListOutput,
+(B[m[31m-    FeaturesListRequest,
+(B[m[32m+    CodexFeature, CodexFeatureStage, FeaturesCommandRequest, FeaturesListFormat,
+(B[m[32m+    FeaturesListOutput, FeaturesListRequest,
+(B[m };
+ pub use help::{HelpCommandRequest, HelpScope};
+ pub use mcp::{
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/mod.rs:24:
+     McpAddRequest, McpAddTransport, McpGetRequest, McpListOutput, McpListRequest, McpLogoutRequest,
+     McpOauthLoginRequest, McpOverviewRequest, McpRemoveRequest,
+ };
+[31m-pub use responses_api_proxy::{ResponsesApiProxyHandle, ResponsesApiProxyInfo, ResponsesApiProxyRequest};
+(B[m[32m+pub use responses_api_proxy::{
+(B[m[32m+    ResponsesApiProxyHandle, ResponsesApiProxyInfo, ResponsesApiProxyRequest,
+(B[m[32m+};
+(B[m pub use review::{ExecReviewCommandRequest, ReviewCommandRequest};
+ pub use sandbox::{SandboxCommandRequest, SandboxPlatform, SandboxRun};
+ pub use session::{ForkSessionRequest, ResumeSessionRequest};
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/mod.rs:31:
+ pub use stdio_to_uds::StdioToUdsRequest;
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/responses_api_proxy.rs:117:
+     #[serde(flatten, default, skip_serializing_if = "BTreeMap::is_empty")]
+     pub extra: BTreeMap<String, Value>,
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/review.rs:143:
+         Self::new()
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/sandbox.rs:1:
+ use crate::{ConfigOverride, FeatureToggles};
+[31m-use std::{
+(B[m[31m-    ffi::OsString,
+(B[m[31m-    path::PathBuf,
+(B[m[31m-    process::ExitStatus,
+(B[m[31m-};
+(B[m[32m+use std::{ffi::OsString, path::PathBuf, process::ExitStatus};
+(B[m 
+ /// Sandbox platform variant; maps to platform subcommands of `codex sandbox`.
+ #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/sandbox.rs:105:
+     /// Captured stderr (mirrored unless `quiet` is set).
+     pub stderr: String,
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/session.rs:111:
+         Self::new()
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/cli/stdio_to_uds.rs:23:
+         self
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:95:
+     FeaturesListFormat, FeaturesListOutput, FeaturesListRequest, ForkSessionRequest,
+     HelpCommandRequest, HelpScope, McpAddRequest, McpAddTransport, McpGetRequest, McpListOutput,
+     McpListRequest, McpLogoutRequest, McpOauthLoginRequest, McpOverviewRequest, McpRemoveRequest,
+[31m-    ResponsesApiProxyHandle, ResponsesApiProxyInfo, ResponsesApiProxyRequest, ReviewCommandRequest,
+(B[m[31m-    ResumeSessionRequest, SandboxCommandRequest, SandboxPlatform, SandboxRun, StdioToUdsRequest,
+(B[m[32m+    ResponsesApiProxyHandle, ResponsesApiProxyInfo, ResponsesApiProxyRequest, ResumeSessionRequest,
+(B[m[32m+    ReviewCommandRequest, SandboxCommandRequest, SandboxPlatform, SandboxRun, StdioToUdsRequest,
+(B[m };
+ pub use events::{
+     CommandExecutionDelta, CommandExecutionState, EventError, FileChangeDelta, FileChangeKind,
+cargo fmt check failed

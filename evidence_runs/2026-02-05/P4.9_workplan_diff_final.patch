@@ -1,0 +1,43 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index a1c0ae8..b39a2c0 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -1161,7 +1161,7 @@ Last Updated: 2026-02-05
+ 
+ ##### P4.9 — Reduce `crates/codex/src/exec.rs` below hard threshold
+ 
+-Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
+ Last Updated: 2026-02-05
+ 
+ - Goal: Reduce `crates/codex/src/exec.rs` from 676 LOC to `<= 600` LOC by extracting cohesive execution helpers while preserving public behavior.
+@@ -2427,6 +2427,29 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P4.9 exec streaming helper extraction (`crates/codex/src/exec.rs` below hard threshold)
++
++- Scope/step: P4.9
++- Why: Earliest queued not-done item in §10 after P4.8; reduce `crates/codex/src/exec.rs` to `<= 600` LOC while preserving public API paths and runtime behavior.
++- What changed:
++  - Kept `crates/codex/src/exec.rs` as the stable façade for public entrypoints/types.
++  - Extracted streaming exec/resume internals into `crates/codex/src/exec/streaming.rs`.
++  - Replaced `stream_exec_with_overrides` and `stream_resume` bodies in `exec.rs` with thin delegating wrappers.
++  - Preserved command construction, option ordering, stdin handling, stream forwarding, timeout/error semantics, and completion payload behavior; no API path changes.
++  - Result: `crates/codex/src/exec.rs` is now 469 LOC (<= 600).
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.9_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P4.9_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P4.9_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P4.9_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.9_cargo_audit.txt`; reran with `--no-fetch --stale` due advisory DB lock/fetch constraints in this sandbox)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P4.9_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.9_cargo_deny_advisories.txt`; reran with writable temp `CARGO_HOME`, offline mode, and `--disable-fetch` due advisory DB lock constraints in this sandbox)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.9_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.9_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Base commit: `evidence_runs/2026-02-05/P4.9_BASE_STEP.txt`
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

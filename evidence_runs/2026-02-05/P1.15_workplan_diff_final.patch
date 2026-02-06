@@ -1,0 +1,57 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 08380df..c828ff8 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -528,8 +528,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.15 — Seam extraction: exec streaming + resume types + helpers (`exec/*`) (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Extract remaining exec/streaming surface area still defined in `crates/codex/src/lib.rs` into a cohesive `crates/codex/src/exec/*` module tree (or a single `exec.rs` first), preserving crate-root public API paths via `pub use` re-exports from `lib.rs`.
+ - Scope (targeted; avoid bundling unrelated subcommands):
+@@ -1751,6 +1751,27 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P1.15 Seam extraction: exec streaming + resume types + helpers (`exec/*`) (API preserved)
++
++- Scope/step: P1.15
++- Why: Reduce `crates/codex/src/lib.rs` bulk by extracting the exec streaming + resume surface into a cohesive `crates/codex/src/exec.rs` module while preserving the crate-root API via re-exports.
++- What changed:
++  - Added `crates/codex/src/exec.rs` and moved the exec streaming and resume surface (`ExecStreamRequest`, `ResumeSelector`, `ResumeRequest`, `ExecStream`, `ExecCompletion`, `ExecStreamError`) plus `CodexClient::{send_prompt*, stream_exec*, stream_resume, resume_session}` and exec-only helpers.
++  - Wired `mod exec;` + `pub use exec::{...}` in `crates/codex/src/lib.rs` to preserve public `codex::*` paths.
++- Validation results (§4.1): PASS (with read-only `$HOME/.cargo` lock workarounds for supply-chain checks)
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.15_cargo_fmt_check_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.15_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P1.15_cargo_fmt_apply.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.15_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.15_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.15_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.15_cargo_audit.txt`; workaround: `cargo audit --no-fetch --stale` due to read-only advisory DB lock)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.15_cargo_deny_advisories.txt`) (workaround: writable `CARGO_HOME=/tmp/cargo_home_p1_15_deny` seeded from `/home/dev/.cargo` advisory DB + registry symlink; `--disable-fetch`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.15_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.15_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.15_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.15_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+@@ -1772,8 +1793,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ 
+ Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+ 
+-1) P1.15 — Seam extraction: exec streaming + resume types + helpers (`exec/*`) (API preserved)
+-2) P1.16 — Seam extraction: auth/login helpers (`auth.rs`) (API preserved)
+-3) P1.17 — Seam extraction: remaining client subcommand wrappers (`commands/*`) (API preserved)
+-4) P1.18 — Plan next Phase 1 seams after P1.17 (no code moves)
+-5) P2.0 — Define the `mcp.rs` seam map (no code moves yet)
++1) P1.16 — Seam extraction: auth/login helpers (`auth.rs`) (API preserved)
++2) P1.17 — Seam extraction: remaining client subcommand wrappers (`commands/*`) (API preserved)
++3) P1.18 — Plan next Phase 1 seams after P1.17 (no code moves)
++4) P2.0 — Define the `mcp.rs` seam map (no code moves yet)
++5) P2.1 — Create `mcp/` module façade and move one internal submodule (smallest-first)

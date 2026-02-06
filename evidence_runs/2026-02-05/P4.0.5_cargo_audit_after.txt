@@ -1,0 +1,2 @@
+      Loaded 909 security advisories (from /tmp/p4.0.5-cargo-home/advisory-db)
+    Scanning Cargo.lock for vulnerabilities (190 crate dependencies)

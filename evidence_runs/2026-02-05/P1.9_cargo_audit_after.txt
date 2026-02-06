@@ -1,0 +1,2 @@
+      Loaded 909 security advisories (from /tmp/rustsec_advisory_db_p1_9_1770302917)
+    Scanning Cargo.lock for vulnerabilities (190 crate dependencies)

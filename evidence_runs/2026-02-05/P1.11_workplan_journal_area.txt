@@ -1,0 +1,70 @@
+  1500	  - Workplan diff: `evidence_runs/2026-02-05/P1.8_workplan_diff_final.patch` (post-commit)
+  1501	- Commit:
+  1502	  - 8406ddfb04e7df7b6337422de3510dd42375b10b
+  1503	
+  1504	### 2026-02-05 — P1.9 Seam extraction: bundled binary resolver (`bundled_binary.rs`) (API preserved)
+  1505	
+  1506	- Scope/step: P1.9
+  1507	- Why: Extract the bundled binary resolver into a cohesive module while preserving crate-root public API paths via façade + re-exports.
+  1508	- What changed:
+  1509	  - Moved `BundledBinarySpec`, `BundledBinary`, `BundledBinaryError`, `resolve_bundled_binary`, and `default_bundled_platform_label` into `crates/codex/src/bundled_binary.rs`.
+  1510	  - Wired `crates/codex/src/lib.rs` with `mod bundled_binary;` + `pub use ...` so existing `codex::{...}` paths continue to compile; kept a test-only shim for `bundled_binary_filename` to avoid churn in existing unit tests.
+  1511	- Validation results (§4.1):
+  1512	  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_fmt_check_final.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P1.9_cargo_fmt_apply.txt`; re-check: `evidence_runs/2026-02-05/P1.9_cargo_fmt_check_after.txt`)
+  1513	  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_clippy.txt`)
+  1514	  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_test.txt`)
+  1515	  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_audit.txt`; reran offline with copied RustSec DB due to network/sandbox lock constraints)
+  1516	  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_deny_advisories.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.9_cargo_deny_advisories_initial_fail.txt`; reran with offline cargo home due to network/sandbox lock constraints)
+  1517	  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.9_cargo_deny_licenses.txt`)
+  1518	- Evidence/patches:
+  1519	  - Code diff: `evidence_runs/2026-02-05/P1.9_code_diff_final.patch` (post-commit)
+  1520	  - Workplan diff: `evidence_runs/2026-02-05/P1.9_workplan_diff_final.patch` (post-commit)
+  1521	- Commit:
+  1522	  - TBD_POST_COMMIT
+  1523	
+  1524	### 2026-02-05 — P1.10 Seam extraction: exec JSONL event models (`events.rs`) (API preserved)
+  1525	
+  1526	- Scope/step: P1.10
+  1527	- Why: Reduce `lib.rs` bulk by extracting the JSONL event envelope + payload models emitted by `codex exec --json` into a dedicated module, while preserving crate-root public API via re-exports.
+  1528	- What changed:
+  1529	  - Moved JSONL event models (`ThreadEvent`, `ItemEnvelope`, `ItemPayload`, deltas/states/status enums, and `EventError`) from `crates/codex/src/lib.rs` into `crates/codex/src/events.rs` with identical serde shapes (mechanical move).
+  1530	  - Wired `crates/codex/src/lib.rs` with `mod events;` + `pub use events::{...};` so existing `codex::{...}` paths continue to compile.
+  1531	- Validation results (§4.1):
+  1532	  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.10_cargo_fmt_check_final.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.10_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P1.10_cargo_fmt_apply.txt`; re-check: `evidence_runs/2026-02-05/P1.10_cargo_fmt_check_after.txt`)
+  1533	  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.10_cargo_clippy.txt`)
+  1534	  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.10_cargo_test.txt`)
+  1535	  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.10_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.10_cargo_audit.txt`; reran with `--no-fetch --stale` + writable `CARGO_HOME` due to sandbox/network constraints; see also `evidence_runs/2026-02-05/P1.10_cargo_audit_after_fetch_fail.txt`)
+  1536	  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.10_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.10_cargo_deny_advisories.txt`; reran with `--disable-fetch` due to network constraints; help: `evidence_runs/2026-02-05/P1.10_cargo_deny_advisories_help.txt`)
+  1537	  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.10_cargo_deny_licenses.txt`)
+  1538	- Evidence/patches:
+  1539	  - Code diff: `evidence_runs/2026-02-05/P1.10_code_diff_final.patch` (post-commit)
+  1540	  - Workplan diff: `evidence_runs/2026-02-05/P1.10_workplan_diff_final.patch` (post-commit)
+  1541	- Commit:
+  1542	  - TBD_POST_COMMIT
+  1543	
+  1544	## 9) Open Questions / Decisions (lightweight log)
+  1545	
+  1546	Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+  1547	
+  1548	| Decision | Date | Status (Proposed/Accepted/Rejected) | Rationale | Notes |
+  1549	|---|---|---|---|---|
+  1550	| Confirm Phase 0 remediation state vs audit pack | 2026-02-04 | Accepted | Audit pack shows failures; baseline claims fixes | Preflight gates are green; see §8 “Phase 0 preflight…” entry. |
+  1551	| Duplicate versions policy (fix now vs defer) | 2026-02-04 | Accepted | Non-goal: dependency upgrades beyond security/compliance in Phase 0 | `cargo tree -d --target all` shows `getrandom` + `windows-sys` duplicates; `audit_pack/deps/cargo_tree_duplicates.txt` showed none (audit-time command likely ran without `--target all`). Decision: defer consolidation unless a security/compliance gate requires it. |
+  1552	| Allowlist license expressions in `deny.toml` | 2026-02-04 | Accepted | `cargo deny` defaults fail without config; policy must be explicit | `deny.toml` establishes allowlist + target scoping + confidence; `cargo deny check licenses` PASS (see §8 “Phase 0 preflight…” entry). |
+  1553	| Legacy execution evidence location (`audit_pack/execution/YYYY-MM-DD/...`) | 2026-02-04 | Accepted | Preserve provenance for already-generated evidence | Keep existing execution artifacts under `audit_pack/execution/...` as-is (do not move/delete). New execution evidence goes under `evidence_runs/...` (§8.1). |
+  1554	| Post-plan work request: “complete next 5 tasks” vs remaining checklist items | 2026-02-04 | Accepted | Workplan needed additional scope to reflect remaining seams beyond P3.5 | Added P1.4 (execpolicy seam), P2.5 (JSON-RPC transport), and P3.6–P3.8 (deeper xtask splits) as Not Started follow-ons. |
+  1555	| Legacy combined commit for multiple steps (P1.4/P2.5/P3.6) | 2026-02-05 | Accepted | These steps landed before the “one step = one commit” orchestrator rule was enforced | Commit `2d17281b8d09c7797cd555d4b2fd5951af75b328` contains P1.4 + P2.5 + P3.6 changes; journal entries cite it for provenance. Future steps must follow per-step commit policy. |
+  1556	| Execution evidence storage policy (`evidence_runs/YYYY-MM-DD/`); keep `audit_pack/execution/*` legacy | 2026-02-04 | Accepted | Provenance clarity: separate immutable audit snapshot (`audit_pack/`) from ongoing execution runs | Store new evidence under `evidence_runs/…` with stable filenames (§8.1). Do not move/delete existing `audit_pack/execution/…` evidence; continue citing it where already referenced. |
+  1557	| P1.5 size exception: `builder.rs` > 600 LOC | 2026-02-05 | Accepted | Keep builder/config/flags surfaces cohesive during seam extraction to avoid churn across call sites; follow-up split can happen once the façade boundaries stabilize | `crates/codex/src/builder.rs` is ~921 LOC (above §7.3 hard=600). Follow-up: split into `builder/overrides.rs` + `builder/types.rs` + `builder/mod.rs` once P1.6 lands, preserving re-exports. |
+  1558	
+  1559	---
+  1560	
+  1561	## 10) Next 5 Tasks (execution queue; do not start until this workplan is current)
+  1562	
+  1563	Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+  1564	
+  1565	1) P1.9 — Seam extraction: bundled binary resolver (`bundled_binary.rs`) (API preserved)
+  1566	2) P1.10 — Seam extraction: exec JSONL event models (`events.rs`) (API preserved)
+  1567	3) P1.11 — Seam extraction: CLI subcommand request/response models (`cli/*`) (API preserved)
+  1568	4) P1.12 — Seam extraction: feature/version parsing + update advisory helpers (`version.rs`) (API preserved)
+  1569	5) P1.13 — Plan remaining Phase 1 seams after P1.12 (no code moves)

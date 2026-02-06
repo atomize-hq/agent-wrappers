@@ -1,0 +1,44 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 43543e5..759355e 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -1008,7 +1008,7 @@ Reason: P4.4 refreshed the measurements (`evidence_runs/2026-02-05/P4.4_tokei_cr
+ 
+ ##### P4.0 — Reduce crates/codex/src/tests.rs below ceiling (tests modularization)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Status: [ ] Not Started  [x] In Progress  [ ] Done  
+ Last Updated: 2026-02-05
+ 
+ - Goal: Reduce `crates/codex/src/tests.rs` from 3,178 LOC to `<= 1000` LOC while preserving test behavior.
+@@ -2450,6 +2450,30 @@ Add entries as work lands. Format:
+ - Commit:
+   - ad66f9830be0af5b9df912d225ce16b450ab0751
+ 
++### 2026-02-05 — P4.0.1 tests modularization follow-up (`jsonl` domain split scaffold 1/5)
++
++- Scope/step: P4.0.1
++- Why: Continue the P4.0 loop by moving one cohesive tests domain into its own module while keeping behavior unchanged.
++- What changed:
++  - Removed transitional `crates/codex/src/tests.rs` so `tests/mod.rs` is now the direct test-module entrypoint.
++  - Added `crates/codex/src/tests/support.rs` and moved shared helper functions there (`env_guard*`, fake executable writers).
++  - Renamed `crates/codex/src/tests/jsonl_stream.rs` to `crates/codex/src/tests/jsonl.rs` with test bodies preserved.
++  - Updated `crates/codex/src/tests/mod.rs` wiring (`mod support;`, `mod jsonl;`) and kept existing shared imports behavior for sibling modules.
++  - Updated `crates/codex/src/lib.rs` test wiring from `#[path = "tests.rs"] mod tests;` to `mod tests;`.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.0.1_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P4.0.1_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0.1_cargo_clippy.txt`; fixed module visibility/import wiring in step scope)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P4.0.1_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P4.0.1_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0.1_cargo_audit.txt`; reran with writable copied advisory DB + `--no-fetch --stale` due read-only advisory DB lock in this sandbox)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P4.0.1_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0.1_cargo_deny_advisories.txt`; reran with writable temp `CARGO_HOME`, offline mode, and `--disable-fetch` due advisory DB lock constraints in this sandbox)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.0.1_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.0.1_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P4.0.1_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P4.0.1_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - 2baa20910226765b579e73ec18d48bf75cb1f363
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

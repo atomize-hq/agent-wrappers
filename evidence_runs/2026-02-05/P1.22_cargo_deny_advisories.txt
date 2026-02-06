@@ -1,0 +1,16 @@
+2026-02-05 19:46:47 [ERROR] failed to acquire advisory database lock: failed to obtain lock file '/home/dev/.cargo/advisory-dbs/db.lock': attempted to take an exclusive lock on a read-only path
+cargo deny advisories failed; attempting offline
+2026-02-05 19:46:47 [ERROR] failed to acquire advisory database lock: failed to obtain lock file '/home/dev/.cargo/advisory-dbs/db.lock': attempted to take an exclusive lock on a read-only path
+--- offline rerun with CARGO_HOME=/tmp/tmp.Kzm01QaFxw/cargo_home ---
+2026-02-05 19:47:48 [ERROR] failed to fetch crates: error: no matching package named `semver` found
+location searched: crates.io index
+required by package `codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)`
+As a reminder, you're using offline mode (--offline) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--offline`.
+
+2026-02-05 19:47:48 [ERROR] `cargo metadata` exited with an error: error: no matching package named `semver` found
+location searched: crates.io index
+required by package `codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)`
+As a reminder, you're using offline mode (--offline) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--offline`.
+
+--- offline rerun (seeded registry/git) with CARGO_HOME=/tmp/tmp.92kNlrB1QF/cargo_home ---
+advisories ok

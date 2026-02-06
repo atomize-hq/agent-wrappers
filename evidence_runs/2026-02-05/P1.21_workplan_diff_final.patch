@@ -1,0 +1,42 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 398a089..e20aaa9 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -643,8 +643,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.21 — Seam extraction: `CodexError` and shared “defaults” helpers into dedicated modules (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Move `CodexError` and small crate-root helper functions/constants (e.g., default env/binary path helpers) out of `lib.rs` into cohesive modules to reduce façade size, while preserving `codex::CodexError` and all other public item paths via re-exports.
+ - Expected files touched:
+@@ -1960,6 +1960,26 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P1.21: extract `CodexError` + shared defaults into modules
++
++- Scope/step: P1.21
++- Why: Reduce `crates/codex/src/lib.rs` façade size by moving `CodexError` and shared default helpers/constants into dedicated modules while preserving `codex::CodexError`.
++- What changed:
++  - Added `crates/codex/src/error.rs` containing the `CodexError` definition; re-exported via `pub use crate::error::CodexError;` from `crates/codex/src/lib.rs`.
++  - Added `crates/codex/src/defaults.rs` for shared defaults (`DEFAULT_TIMEOUT`, `CODEX_*`/`RUST_LOG` env keys, and default env/binary helpers); updated internal call sites to reference `crate::defaults::*` (mechanical path move only).
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.21_cargo_fmt_check_final.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.21_cargo_fmt_check.txt`; re-check: `evidence_runs/2026-02-05/P1.21_cargo_fmt_check_after.txt`; applies: `evidence_runs/2026-02-05/P1.21_cargo_fmt_apply.txt`, `evidence_runs/2026-02-05/P1.21_cargo_fmt_apply_final.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.21_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.21_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.21_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.21_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.21_cargo_audit.txt`; workaround: writable temp `--db` copy under `/tmp`, run with `CARGO_NET_OFFLINE=true` + `--no-fetch --stale --json`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.21_cargo_deny_advisories.txt`) (initial FAILs: `evidence_runs/2026-02-05/P1.21_cargo_deny_advisories_after.txt` (crates.io DNS/network) + earlier read-only advisory DB lock; workaround: writable temp `CARGO_HOME=/tmp/p1_21_cargo_home_deny` seeded from `/home/dev/.cargo/{advisory-dbs,registry}`, run with `CARGO_NET_OFFLINE=true` + `--disable-fetch`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.21_cargo_deny_licenses.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.21_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.21_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

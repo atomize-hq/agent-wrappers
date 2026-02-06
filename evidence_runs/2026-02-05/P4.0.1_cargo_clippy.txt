@@ -1,0 +1,121 @@
+    Checking codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)
+error: glob import doesn't reexport anything with visibility `pub(crate)` because no imported item is public enough
+  --> crates/codex/src/tests/mod.rs:21:16
+   |
+21 | pub(super) use support::*;
+   |                ^^^^^^^^^^
+   |
+note: the most public imported item is `pub(self)`
+  --> crates/codex/src/tests/mod.rs:21:16
+   |
+21 | pub(super) use support::*;
+   |                ^^^^^^^^^^
+   = help: reduce the glob import's visibility or increase visibility of imported items
+   = note: `-D unused-imports` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+error[E0599]: no method named `set_mode` found for struct `std::fs::Permissions` in the current scope
+   --> crates/codex/src/tests/builder_env_home.rs:264:11
+    |
+264 |     perms.set_mode(0o755);
+    |           ^^^^^^^^
+   --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/std/src/os/unix/fs.rs:359:8
+    |
+    = note: the method is available for `std::fs::Permissions` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `mode` with a similar name, but with different arguments
+   --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/std/src/os/unix/fs.rs:355:5
+help: trait `PermissionsExt` which provides `set_mode` is implemented but not in scope; perhaps you want to import it
+    |
+1   + use std::os::unix::fs::PermissionsExt;
+    |
+
+error[E0599]: no method named `set_mode` found for struct `std::fs::Permissions` in the current scope
+   --> crates/codex/src/tests/builder_env_home.rs:303:11
+    |
+303 |     perms.set_mode(0o755);
+    |           ^^^^^^^^
+   --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/std/src/os/unix/fs.rs:359:8
+    |
+    = note: the method is available for `std::fs::Permissions` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `mode` with a similar name, but with different arguments
+   --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/std/src/os/unix/fs.rs:355:5
+help: trait `PermissionsExt` which provides `set_mode` is implemented but not in scope; perhaps you want to import it
+    |
+1   + use std::os::unix::fs::PermissionsExt;
+    |
+
+error[E0599]: no method named `set_mode` found for struct `std::fs::Permissions` in the current scope
+   --> crates/codex/src/tests/capabilities/exec_and_login.rs:228:11
+    |
+228 |     perms.set_mode(0o755);
+    |           ^^^^^^^^
+   --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/std/src/os/unix/fs.rs:359:8
+    |
+    = note: the method is available for `std::fs::Permissions` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `mode` with a similar name, but with different arguments
+   --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/std/src/os/unix/fs.rs:355:5
+help: trait `PermissionsExt` which provides `set_mode` is implemented but not in scope; perhaps you want to import it
+    |
+1   + use std::os::unix::fs::PermissionsExt;
+    |
+
+error[E0599]: no method named `set_mode` found for struct `std::fs::Permissions` in the current scope
+  --> crates/codex/src/tests/capabilities/snapshots_and_cache.rs:64:11
+   |
+64 |     perms.set_mode(0o755);
+   |           ^^^^^^^^
+  --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/std/src/os/unix/fs.rs:359:8
+   |
+   = note: the method is available for `std::fs::Permissions` here
+   |
+   = help: items from traits can only be used if the trait is in scope
+help: there is a method `mode` with a similar name, but with different arguments
+  --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/std/src/os/unix/fs.rs:355:5
+help: trait `PermissionsExt` which provides `set_mode` is implemented but not in scope; perhaps you want to import it
+   |
+1  + use std::os::unix::fs::PermissionsExt;
+   |
+
+error[E0599]: no method named `set_mode` found for struct `std::fs::Permissions` in the current scope
+   --> crates/codex/src/tests/sandbox_execpolicy.rs:193:11
+    |
+193 |     perms.set_mode(0o755);
+    |           ^^^^^^^^
+   --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/std/src/os/unix/fs.rs:359:8
+    |
+    = note: the method is available for `std::fs::Permissions` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `mode` with a similar name, but with different arguments
+   --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/std/src/os/unix/fs.rs:355:5
+help: trait `PermissionsExt` which provides `set_mode` is implemented but not in scope; perhaps you want to import it
+    |
+1   + use std::os::unix::fs::PermissionsExt;
+    |
+
+error[E0599]: no method named `set_mode` found for struct `std::fs::Permissions` in the current scope
+   --> crates/codex/src/tests/sandbox_execpolicy.rs:285:11
+    |
+285 |     perms.set_mode(0o755);
+    |           ^^^^^^^^
+   --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/std/src/os/unix/fs.rs:359:8
+    |
+    = note: the method is available for `std::fs::Permissions` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `mode` with a similar name, but with different arguments
+   --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/std/src/os/unix/fs.rs:355:5
+help: trait `PermissionsExt` which provides `set_mode` is implemented but not in scope; perhaps you want to import it
+    |
+1   + use std::os::unix::fs::PermissionsExt;
+    |
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `codex` (lib test) due to 7 previous errors
+warning: build failed, waiting for other jobs to finish...

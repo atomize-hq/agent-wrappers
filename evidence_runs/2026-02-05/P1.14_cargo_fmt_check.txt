@@ -1,0 +1,17 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:74:
+ mod events;
+ mod execpolicy;
+ mod home;
+[31m-mod process;
+(B[m pub mod jsonl;
+ pub mod mcp;
+[32m+mod process;
+(B[m pub mod wrapper_coverage_manifest;
+ 
+ pub use apply_diff::{ApplyDiffArtifacts, CloudApplyRequest, CloudDiffRequest};
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/process.rs:109:
+     pub(crate) stdout: Vec<u8>,
+     pub(crate) stderr: Vec<u8>,
+ }
+[31m-
+(B[m 

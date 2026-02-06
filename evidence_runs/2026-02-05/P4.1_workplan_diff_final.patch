@@ -1,0 +1,46 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 40e79fa..53912d4 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -1030,7 +1030,7 @@ Last Updated: 2026-02-05
+ 
+ ##### P4.1 — Reduce `crates/codex/src/mcp/tests_core.rs` below hard threshold (test modularization)
+ 
+-Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
+ Last Updated: 2026-02-05
+ 
+ - Goal: Reduce `crates/codex/src/mcp/tests_core.rs` from 870 LOC to `<= 600` LOC by extracting cohesive test domains into submodules.
+@@ -2151,6 +2151,32 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P4.1 tests modularization (`crates/codex/src/mcp/tests_core.rs` below hard threshold)
++
++- Scope/step: P4.1
++- Why: Earliest not-done task in §10 after P4.0; reduce `crates/codex/src/mcp/tests_core.rs` to `<= 600` LOC without behavior changes.
++- What changed:
++  - Replaced monolithic `crates/codex/src/mcp/tests_core.rs` with a thin module façade and moved test bodies into `crates/codex/src/mcp/tests_core/` domain files.
++  - Added:
++    - `crates/codex/src/mcp/tests_core/app_server_launch.rs`
++    - `crates/codex/src/mcp/tests_core/config_runtime.rs`
++    - `crates/codex/src/mcp/tests_core/codex_rpc_flows.rs`
++    - `crates/codex/src/mcp/tests_core/app_server_rpc_flows.rs`
++  - Preserved test assertions/fixtures/semantics; this is a mechanical organization-only split.
++  - Result: `crates/codex/src/mcp/tests_core.rs` is now 4 LOC (<= 600).
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.1_cargo_fmt_check_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.1_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P4.1_cargo_fmt_apply.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P4.1_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P4.1_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P4.1_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.1_cargo_audit.txt`; reran with `--no-fetch --stale` due advisory DB fetch/lock constraints in this sandbox)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P4.1_cargo_deny_advisories.txt`) (initial FAIL due read-only advisory DB lock at default `CARGO_HOME`; reran with writable temp `CARGO_HOME`, `--disable-fetch`, and offline mode in this sandbox)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.1_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.1_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Base commit: `evidence_runs/2026-02-05/P4.1_BASE_STEP.txt`
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

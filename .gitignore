@@ -12,3 +12,6 @@ cli_manifests/codex/raw_help/
 *:Zone.Identifier
 /codex-stream.log
 /error.log
+kickoff_prompt_min5.md
+evidence_runs
+audit_pack

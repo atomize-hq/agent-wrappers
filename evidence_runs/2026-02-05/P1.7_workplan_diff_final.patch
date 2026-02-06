@@ -1,0 +1,82 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index edae91c..cad50e9 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -390,6 +390,38 @@ Last Updated: 2026-02-05
+ 
+ *(Repeat P1.x as needed until `lib.rs` is within the program ceiling or is a thin façade with the bulk in modules.)*
+ 
++##### P1.7 — Follow-up split: `builder.rs` into `builder/*` (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
++
++- Goal: Reduce `crates/codex/src/builder.rs` size by splitting it into a cohesive `crates/codex/src/builder/*` module tree while preserving existing public API paths via re-exports from `crates/codex/src/lib.rs`.
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (module wiring + re-exports as needed)
++  - `crates/codex/src/builder.rs` (move to module tree)
++  - `crates/codex/src/builder/` (new file(s))
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No public API path changes (façade + re-exports maintain compatibility).
++  - New file(s) meet §7.3 size policy (or have documented exception in §9).
++- Risk: Medium (cross-cutting builder/config; keep changes seam-local).
++- Rollback: Revert module split and re-exports; restore single-file `builder.rs`.
++
++##### P1.8 — Plan next Phase 1 seams after `builder/*` (no code moves)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Update Phase 1 seam plan for the remaining `crates/codex/src/lib.rs` “god module” content after P1.7, identifying the next 2–4 PR-sized seams while preserving public API paths.
++- Expected files touched:
++  - `refactor_workplan.md` (this file): update §7.1 and §10 queue with the next concrete seam steps.
++- Acceptance criteria (“done when”):
++  - Next seams are listed in §7.1 with clear boundaries and extraction order.
++  - Each planned extraction is PR-sized and reversible; size-policy expectations are noted (§7.3).
++  - No behavior changes (planning only).
++- Risk: Low.
++- Rollback: N/A (planning-only change).
++
+ ---
+ 
+ #### Phase 2 — Split `crates/codex/src/mcp.rs` into `crates/codex/src/mcp/*` (API stable)
+@@ -1336,6 +1368,27 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — Split `builder.rs` into `builder/*` (API preserved)
++
++- Scope/step: P1.7
++- Why: Bring `crates/codex/src/builder.rs` below the size ceiling by splitting into a cohesive `crates/codex/src/builder/*` module tree while preserving public API paths via re-exports from `crates/codex/src/lib.rs`.
++- What changed:
++  - Converted `crates/codex/src/builder.rs` into `crates/codex/src/builder/{mod.rs,types.rs,cli_overrides.rs}`.
++  - Preserved stable public API paths (e.g., `codex::CodexClientBuilder`, `codex::CliOverrides`, `codex::ColorMode`) via existing `crates/codex/src/lib.rs` re-exports.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.7_cargo_fmt_check_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.7_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P1.7_cargo_fmt_apply.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.7_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.7_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.7_cargo_test_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.7_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.7_cargo_audit_after.txt`) (initial output incomplete: `evidence_runs/2026-02-05/P1.7_cargo_audit.txt`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.7_cargo_deny_advisories.txt`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.7_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.7_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.7_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.7_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+@@ -1357,8 +1410,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ 
+ Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+ 
+-1) (TBD) Next Phase 1 seam extraction after P1.6
++1) P1.8 — Plan next Phase 1 seams after `builder/*` (no code moves)
+ 2) (TBD) Next Phase 2 follow-on after P2.7
+ 3) (TBD) Next Phase 3 follow-on after P3.9
+ 4) (TBD) Next cross-phase follow-on
+-5) (TBD) Next execution item
++5) (TBD) Next follow-on

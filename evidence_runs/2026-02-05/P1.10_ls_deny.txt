@@ -1,0 +1,3 @@
+ls: cannot access 'crates/codex/deny.toml': No such file or directory
+-rw-r--r-- 1 dev dev 563 Jan 27 20:42 Cargo.toml
+-rw-r--r-- 1 dev dev 932 Feb  4 08:16 deny.toml

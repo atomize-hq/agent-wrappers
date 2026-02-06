@@ -1,0 +1,533 @@
+   Compiling xtask v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.05s
+     Running unittests src/lib.rs (target/debug/deps/codex-e47e587a1a97e35d)
+
+running 131 tests
+test mcp::tests_core::config_runtime::streamable_http_connector_converts_timeouts_and_headers ... ok
+test mcp::tests_runtime_app::app_runtime_api::app_runtime_api_not_found_errors ... ok
+test mcp::tests_runtime_app::runtime_manager::runtime_manager_propagates_tool_hints_for_http ... ok
+test mcp::tests_runtime_app::runtime_manager::http_connector_retrieval_is_non_destructive ... ok
+test mcp::tests_core::config_runtime::runtime_stdio_launcher_merges_env_timeout_and_tools ... ok
+test mcp::tests_core::config_runtime::runtime_stdio_server_resolves_env_and_tools ... ok
+test mcp::tests_core::config_runtime::runtime_http_preserves_existing_auth_header ... ok
+test mcp::tests_core::config_runtime::add_stdio_server_injects_env_and_persists ... ok
+test mcp::tests_runtime_app::runtime_api::runtime_api_prepare_http_is_non_destructive ... ok
+test mcp::tests_core::config_runtime::runtime_http_resolves_bearer_and_sets_header ... ok
+test tests::modularized::auth_session::parse_login_accepts_unknown_on_success ... ok
+test tests::modularized::auth_session::parses_api_key_login ... ok
+test mcp::tests_runtime_app::app_runtime_api::app_runtime_api_lists_and_merges_without_writes ... ok
+test mcp::tests_core::config_runtime::remove_server_prunes_config ... ok
+test mcp::tests_runtime_app::runtime_api::runtime_api_lists_launchers_without_changing_config ... ok
+test tests::modularized::auth_session::parses_chatgpt_login ... ok
+test mcp::tests_core::config_runtime::add_streamable_http_sets_token_and_allows_login_logout ... ok
+test tests::modularized::builder_env_home::builder_can_disable_stdout_mirroring ... ok
+test tests::modularized::builder_env_home::builder_collects_images ... ok
+test tests::modularized::builder_env_home::builder_defaults_are_sane ... ok
+test tests::modularized::builder_env_home::builder_mirrors_stdout_by_default ... ok
+test tests::modularized::builder_env_home::builder_sets_json_event_log ... ok
+test tests::modularized::builder_env_home::builder_sets_json_flag ... ok
+test tests::modularized::builder_env_home::builder_sets_quiet_flag ... ok
+test tests::modularized::builder_env_home::codex_home_layout_exposes_paths ... ok
+test tests::modularized::auth_session::auth_helper_uses_app_scoped_home_without_mutating_env ... ok
+test tests::modularized::builder_env_home::apply_and_diff_capture_outputs_and_status ... ok
+test tests::modularized::auth_session::ensure_chatgpt_login_launches_when_needed ... ok
+test tests::modularized::builder_env_home::codex_client_returns_configured_home_layout ... ok
+test tests::modularized::builder_env_home::codex_home_layout_respects_materialization_flag ... ok
+test tests::modularized::builder_env_home::seed_auth_errors_when_required_missing ... ok
+test tests::modularized::builder_env_home::seed_auth_copies_files_and_creates_targets ... ok
+test tests::modularized::builder_env_home::seed_auth_skips_optional_files ... ok
+test tests::modularized::bundled_binary::resolve_bundled_binary_defaults_to_runtime_platform ... ok
+test tests::modularized::bundled_binary::resolve_bundled_binary_errors_when_binary_missing ... ok
+test tests::modularized::auth_session::ensure_api_key_login_runs_when_logged_out ... ok
+test tests::modularized::bundled_binary::resolve_bundled_binary_honors_platform_override ... ok
+test tests::modularized::bundled_binary::resolve_bundled_binary_rejects_empty_version ... ok
+test tests::modularized::builder_env_home::apply_respects_rust_log_default ... ok
+test tests::modularized::builder_env_home::builder_uses_env_binary_when_set ... ok
+test tests::modularized::builder_env_home::command_env_applies_home_and_binary_per_command ... ok
+test tests::modularized::capabilities::feature_parsing_and_guards::capability_guard_marks_absent_feature_as_unsupported ... ok
+test tests::modularized::builder_env_home::command_env_can_skip_home_creation ... ok
+test tests::modularized::builder_env_home::command_env_respects_existing_rust_log ... ok
+test tests::modularized::capabilities::feature_parsing_and_guards::capability_guard_reports_detected_support ... ok
+test tests::modularized::capabilities::feature_parsing_and_guards::capability_guard_returns_unknown_without_feature_list ... ok
+test tests::modularized::capabilities::feature_parsing_and_guards::parses_help_output_flags ... ok
+test tests::modularized::capabilities::feature_parsing_and_guards::parses_features_from_json_and_text ... ok
+test tests::modularized::capabilities::feature_parsing_and_guards::parses_feature_list_json_and_text_tables ... ok
+test tests::modularized::builder_env_home::command_env_sets_expected_overrides ... ok
+test tests::modularized::builder_env_home::default_binary_falls_back_when_env_missing ... ok
+test tests::modularized::builder_env_home::default_rust_log_is_error_when_unset ... ok
+test tests::modularized::builder_env_home::default_rust_log_respects_existing_env ... ok
+test tests::modularized::capabilities::exec_and_login::exec_applies_guarded_flags_when_supported ... ok
+test tests::modularized::capabilities::snapshots_and_cache::capability_snapshot_match_checks_fingerprint ... ok
+test tests::modularized::capabilities::snapshots_and_cache::capability_snapshots_and_overrides_round_trip_via_files ... ok
+test tests::modularized::capabilities::snapshots_and_cache::capability_snapshots_serialize_to_json_and_toml ... ok
+test tests::modularized::capabilities::snapshots_and_cache::capability_ttl_decision_bypasses_when_metadata_missing ... ok
+test tests::modularized::capabilities::snapshots_and_cache::capability_ttl_decision_refreshes_after_ttl_with_fingerprint ... ok
+test tests::modularized::capabilities::snapshots_and_cache::capability_ttl_decision_reuses_fresh_snapshot ... ok
+test tests::modularized::capabilities::version_and_advisory::parses_version_output_fields ... ok
+test tests::modularized::capabilities::version_and_advisory::update_advisory_detects_newer_release ... ok
+test tests::modularized::capabilities::version_and_advisory::update_advisory_falls_back_when_channel_missing ... ok
+test tests::modularized::capabilities::version_and_advisory::update_advisory_handles_local_newer_than_known ... ok
+test tests::modularized::capabilities::version_and_advisory::update_advisory_handles_missing_latest_metadata ... ok
+test tests::modularized::capabilities::version_and_advisory::update_advisory_handles_unknown_local_version ... ok
+test tests::modularized::capabilities::version_and_advisory::update_advisory_marks_up_to_date ... ok
+test tests::modularized::capabilities::exec_and_login::exec_skips_guarded_flags_when_unknown ... ok
+test tests::modularized::cli_commands::app_server_codegen_maps_overrides_and_prettier ... ok
+test mcp::tests_core::codex_rpc_flows::canceling_request_returns_cancelled_error ... ok
+test tests::modularized::cli_commands::app_server_codegen_surfaces_non_zero_exit ... ok
+test mcp::tests_core::app_server_rpc_flows::canceling_app_request_returns_cancelled_error ... ok
+test tests::modularized::cli_commands::cloud_exec_maps_args_and_rejects_empty_env_id ... ok
+test tests::modularized::capabilities::exec_and_login::mcp_login_runs_when_supported ... ok
+test tests::modularized::cli_commands::cloud_list_parses_json_and_maps_args ... ok
+test tests::modularized::cli_commands::responses_api_proxy_rejects_empty_api_key ... ok
+test tests::modularized::cli_commands::features_list_maps_overrides_and_json_flag ... ok
+test tests::modularized::cli_commands::stdio_to_uds_rejects_empty_socket_path ... ok
+test tests::modularized::cli_commands::responses_api_proxy_maps_flags_and_parses_server_info ... ok
+test tests::modularized::capabilities::exec_and_login::mcp_login_skips_when_unsupported ... ok
+test tests::modularized::cli_overrides::cli_override_args_apply_safety_precedence ... ok
+test tests::modularized::cli_commands::stdio_to_uds_maps_args_and_pipes_stdio ... ok
+test tests::modularized::cli_overrides::color_mode_strings_are_stable ... ok
+test tests::modularized::cli_overrides::explicit_reasoning_overrides_disable_defaults ... ok
+test tests::modularized::cli_overrides::feature_toggles_merge_builder_and_request ... ok
+test tests::modularized::cli_overrides::reasoning_config_by_model ... ok
+test tests::modularized::cli_overrides::request_can_disable_auto_reasoning_defaults ... ok
+test tests::modularized::cli_commands::mcp_add_maps_transports_and_validates_required_fields ... ok
+test tests::modularized::cli_overrides::request_config_overrides_follow_builder_order ... ok
+test tests::modularized::cli_overrides::request_oss_override_can_disable_builder_flag ... ok
+test tests::modularized::cli_overrides::request_profile_override_replaces_builder_value ... ok
+test tests::modularized::cli_overrides::request_search_override_can_disable_builder_flag ... ok
+test tests::modularized::cli_overrides::resolve_cli_overrides_respects_reasoning_defaults ... ok
+test tests::modularized::cli_commands::mcp_list_get_and_add_map_args_and_parse_json ... ok
+test tests::modularized::jsonl_stream::json_event_log_captures_apply_diff_and_tool_payloads ... ok
+test tests::modularized::jsonl_stream::json_stream_preserves_order_and_parses_tool_calls ... ok
+test tests::modularized::jsonl_stream::json_stream_propagates_parse_errors ... ok
+test tests::modularized::jsonl_stream::json_stream_tees_logs_before_forwarding ... ok
+test tests::modularized::jsonl_stream::normalize_stream_errors_without_context ... ok
+test tests::modularized::jsonl_stream::normalize_stream_infers_missing_thread_and_turn ... ok
+test tests::modularized::jsonl_stream::event_channel_stream_times_out_when_idle ... ok
+test tests::modularized::sandbox_execpolicy::execpolicy_rejects_empty_command ... ok
+test tests::modularized::capabilities::exec_and_login::probe_capabilities_caches_and_invalidates ... ok
+test tests::modularized::sandbox_execpolicy::execpolicy_surfaces_parse_errors ... ok
+test tests::modularized::sandbox_execpolicy::execpolicy_maps_policies_and_overrides ... ok
+test tests::modularized::capabilities::overrides_and_probe::capability_feature_overrides_apply_to_cached_entries ... ok
+test tests::modularized::sandbox_execpolicy::sandbox_rejects_empty_command ... ok
+test tests::modularized::sandbox_execpolicy::sandbox_maps_platform_flags_and_command ... ok
+test tests::modularized::capabilities::overrides_and_probe::capability_snapshot_short_circuits_probes ... ok
+test tests::modularized::sandbox_execpolicy::sandbox_includes_log_denials_on_macos ... ok
+test tests::modularized::cli_commands::supports_help_review_fork_resume_and_features_commands ... ok
+test tests::modularized::sandbox_execpolicy::sandbox_honors_working_dir_precedence ... ok
+test tests::modularized::sandbox_execpolicy::sandbox_returns_non_zero_status_without_error ... ok
+test tests::modularized::capabilities::overrides_and_probe::capability_version_override_replaces_probe_version ... ok
+test mcp::tests_runtime_app::runtime_manager::runtime_manager_starts_and_stops_stdio ... ok
+test tests::modularized::capabilities::probe_cache_policy::probe_bypass_policy_skips_cache_writes ... ok
+test mcp::tests_core::app_server_launch::app_server_launch_can_enable_analytics_flag ... ok
+test mcp::tests_runtime_app::app_runtime_api::app_runtime_lifecycle_starts_and_stops_without_mutation ... ok
+test tests::modularized::capabilities::probe_cache_policy::probe_refresh_policy_forces_new_snapshot ... ok
+test tests::modularized::capabilities::probe_cache_policy::probe_reprobes_when_metadata_missing ... ok
+test tests::modularized::capabilities::snapshots_and_cache::capability_cache_entries_exposes_cache_state ... ok
+test tests::modularized::cli_overrides::apply_respects_cli_overrides_without_search ... ok
+test tests::modularized::cli_overrides::exec_applies_cli_overrides_and_request_patch ... ok
+test tests::modularized::cli_overrides::resume_applies_search_and_selector_overrides ... ok
+test mcp::tests_core::app_server_rpc_flows::turn_interrupt_sends_cancel_notification ... ok
+test mcp::tests_runtime_app::app_runtime_pool_api::app_runtime_pool_api_reuses_and_restarts_stdio ... ok
+test mcp::tests_core::app_server_rpc_flows::app_flow_streams_notifications_and_response ... ok
+test mcp::tests_core::app_server_rpc_flows::thread_resume_allows_follow_up_turns ... ok
+test mcp::tests_core::codex_rpc_flows::codex_flow_streams_events_and_response ... ok
+test mcp::tests_runtime_app::app_runtime_pool_api::app_runtime_pool_api_stop_all_shuts_down_runtimes ... ok
+test mcp::tests_core::codex_rpc_flows::codex_reply_streams_follow_up_notifications ... ok
+
+test result: ok. 131 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+
+     Running tests/binary_env_integration.rs (target/debug/deps/binary_env_integration-d9c45d6743c28b6c)
+
+running 1 test
+test applies_env_overrides_across_spawn_sites ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+     Running tests/cli_e2e.rs (target/debug/deps/cli_e2e-8f53920a852f8001)
+
+running 8 tests
+test exec_resume_diff_apply_live_roundtrip ... ok
+test stdio_to_uds_relays_bytes ... ok
+test execpolicy_check_is_missing_in_current_cli ... ok
+test sandbox_runs_echo_command ... ok
+test features_list_prefers_text_when_json_flag_is_missing ... ok
+test diff_and_apply_report_current_cli_gaps ... ok
+test app_server_codegen_generates_schema_bundle ... ok
+test responses_api_proxy_emits_server_info_and_shuts_down ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.45s
+
+     Running tests/examples_manifest.rs (target/debug/deps/examples_manifest-866ea9c42ad2b67d)
+
+running 1 test
+test examples_manifest_covers_all_explicit_wrapper_commands ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/fixtures.rs (target/debug/deps/fixtures-f36a99f41b864dcc)
+
+running 3 tests
+test apply_fixture_parses_and_carries_exit_code ... ok
+test resume_fixture_includes_thread_and_turn_ids ... ok
+test streaming_fixture_covers_event_shapes ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/jsonl_compat.rs (target/debug/deps/jsonl_compat-cd54909432563adc)
+
+running 5 tests
+test known_good_fixtures_include_text_payloads ... ok
+test retains_unknown_fields_in_extra_maps ... ok
+test malformed_lines_are_non_fatal ... ok
+test parses_versioned_exec_fixtures ... ok
+test parses_versioned_resume_fixtures ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/jsonl_parser_api.rs (target/debug/deps/jsonl_parser_api-7a768cc835b5775a)
+
+running 6 tests
+test scenario_f_unknown_type_yields_error_and_continues ... ok
+test scenario_c_malformed_lines_yield_errors_and_continue ... ok
+test scenario_a_parses_streaming_fixtures_without_errors ... ok
+test scenario_e_crlf_tolerance_trailing_carriage_return ... ok
+test scenario_b_parses_resume_fixtures_without_errors ... ok
+test scenario_d_offline_matches_streaming_normalization ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests examples/app_server_codegen.rs (target/debug/examples/app_server_codegen-673e91546bd0d5b5)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/app_server_thread_turn.rs (target/debug/examples/app_server_thread_turn-22999b626d4a0363)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/app_server_turns.rs (target/debug/examples/app_server_turns-95c16a0b4ec1782b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/auth_flow.rs (target/debug/examples/auth_flow-8c333a1934245305)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/bundled_binary.rs (target/debug/examples/bundled_binary-137bfbae0f1f5cb6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/bundled_binary_home.rs (target/debug/examples/bundled_binary_home-cdd76e32cefd7fd6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/capability_snapshot.rs (target/debug/examples/capability_snapshot-6b4e768302f265b6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/cli_overrides.rs (target/debug/examples/cli_overrides-bea14c444980501f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/cloud_tasks.rs (target/debug/examples/cloud_tasks-10d7154cc0bc8521)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/codex_home.rs (target/debug/examples/codex_home-05babfa7275e0d46)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/color_always.rs (target/debug/examples/color_always-09ad9507a3a155d0)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/env_binary.rs (target/debug/examples/env_binary-1cf43e3beb4e88e6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/exec_resume_apply_wrapper.rs (target/debug/examples/exec_resume_apply_wrapper-994fa6cfeb71736c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/execpolicy_check.rs (target/debug/examples/execpolicy_check-6f8490635da7c31b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/feature_detection.rs (target/debug/examples/feature_detection-10c0dcabc8f539c0)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/features_cmd.rs (target/debug/examples/features_cmd-1d0dce047b1c55ef)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/help_scopes.rs (target/debug/examples/help_scopes-33696051f4d1b55d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/image_json.rs (target/debug/examples/image_json-3ac03e1075385177)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/json_stream.rs (target/debug/examples/json_stream-27785efe594ffe9c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/mcp_codex_flow.rs (target/debug/examples/mcp_codex_flow-7721ad926129216c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/mcp_codex_reply.rs (target/debug/examples/mcp_codex_reply-309e588bfbddb688)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/mcp_codex_tool.rs (target/debug/examples/mcp_codex_tool-d63fc51ad8d3a95f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/mcp_manage.rs (target/debug/examples/mcp_manage-1ff1a16e191ad17e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/no_stdout_mirror.rs (target/debug/examples/no_stdout_mirror-773a3099f201bd78)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/quiet.rs (target/debug/examples/quiet-e5f34aef6df3ec0a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/responses_api_proxy.rs (target/debug/examples/responses_api_proxy-1f9e02f8eabafef2)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/resume_apply.rs (target/debug/examples/resume_apply-578ea1e74d1dd69e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/review_commands.rs (target/debug/examples/review_commands-ff7e3558c92b6df7)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/run_sandbox.rs (target/debug/examples/run_sandbox-646ff0e1d6a0cd6e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/select_model.rs (target/debug/examples/select_model-1d66e12957425b44)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/send_prompt.rs (target/debug/examples/send_prompt-36b286e60710e572)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/session_commands.rs (target/debug/examples/session_commands-eb16903d856002a0)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/stdio_to_uds_live.rs (target/debug/examples/stdio_to_uds_live-f98f1eb38ca94805)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/stream_events.rs (target/debug/examples/stream_events-8797ea39ec97d8b6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/stream_last_message.rs (target/debug/examples/stream_last_message-7c1b196b207242bf)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/stream_with_log.rs (target/debug/examples/stream_with_log-2e4b02439a4700f0)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/timeout.rs (target/debug/examples/timeout-3400066ed703ecea)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/timeout_zero.rs (target/debug/examples/timeout_zero-ec05f79d2982d0d3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/working_dir.rs (target/debug/examples/working_dir-a0d590aa652f3516)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests examples/working_dir_json.rs (target/debug/examples/working_dir_json-5332d76f2fc06c7b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/xtask-add83d1f8ab534b7)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/c0_spec_snapshot.rs (target/debug/deps/c0_spec_snapshot-d124a5c78eb92861)
+
+running 4 tests
+test unix::c0_snapshot_applies_supplement_and_sorts_commands_and_flags ... ok
+test unix::c0_snapshot_infers_usage_args_and_parses_flags_across_blank_lines ... ok
+test unix::c0_snapshot_records_feature_probe_and_feature_gated_commands ... ok
+test unix::c0_snapshot_is_deterministic_except_for_collected_at ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests/c0_spec_validate.rs (target/debug/deps/c0_spec_validate-425740bd5559e6ae)
+
+running 5 tests
+test c0_validate_passes_on_minimal_valid_codex_dir ... ok
+test c0_validate_rejects_pointer_files_without_trailing_newline ... ok
+test c0_validate_reports_wrapper_overlap_errors_with_required_fields_and_is_deterministic ... ok
+test c0_validate_requires_reports_when_version_status_reported ... ok
+test c0_validate_requires_coverage_all_only_when_union_complete ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/c1_spec_snapshot_per_target.rs (target/debug/deps/c1_spec_snapshot_per_target-c9e2a9551349ed45)
+
+running 2 tests
+test unix::c1_snapshot_rejects_out_dir_when_out_file_is_set ... ok
+test unix::c1_snapshot_writes_per_target_out_file_and_raw_help_under_codex_root ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/c1_spec_union.rs (target/debug/deps/c1_spec_union-dfda266e61ac2669)
+
+running 4 tests
+test c1_union_fails_when_required_target_missing ... ok
+test c1_union_dedupes_per_command_flags_against_root ... ok
+test c1_union_emits_complete_false_and_missing_targets_for_non_required_missing ... ok
+test c1_union_records_conflicts_and_is_deterministic_with_source_date_epoch ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/c2_spec_wrapper_coverage.rs (target/debug/deps/c2_spec_wrapper_coverage-08ef4f403c0c8a75)
+
+running 4 tests
+test c2_wrapper_coverage_generation_is_deterministic_and_includes_wrapper_version ... ok
+test c2_validate_rejects_intentionally_unsupported_without_note ... ok
+test c2_validate_rejects_overlapping_wrapper_scopes_platforms_expand_via_union_platform_mapping ... ok
+test c2_validate_rejects_overlapping_wrapper_scopes_no_scope_means_all_expected_targets ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/c3_spec_reports_metadata_retain.rs (target/debug/deps/c3_spec_reports_metadata_retain-daeed37517852a7c)
+
+running 4 tests
+test c3_report_skips_coverage_all_when_union_incomplete ... ok
+test c3_retain_deletes_only_snapshots_and_reports_outside_keep_set ... ok
+test c3_version_metadata_reported_requires_union_and_any_report ... ok
+test c3_report_filter_semantics_complete_union_empty_wrapper ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/c4_spec_ci_wiring.rs (target/debug/deps/c4_spec_ci_wiring-917c6273daae94cd)
+
+running 2 tests
+test c4_spec_update_snapshot_workflow_runs_full_pipeline_and_uploads_artifacts ... ok
+test c4_spec_ci_workflow_has_conditional_codex_validate_gate ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/c5_spec_iu_subtree_inheritance.rs (target/debug/deps/c5_spec_iu_subtree_inheritance-2b06c8c2813a423c)
+
+running 1 test
+test c5_iu_subtree_inheritance_classifies_descendants_and_sorts_deterministically ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/c6_spec_report_iu_validator.rs (target/debug/deps/c6_spec_report_iu_validator-43cdc0ec5252f992)
+
+running 1 test
+test c6_validator_emits_report_missing_includes_intentionally_unsupported ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/c7_spec_iu_roots_adoption.rs (target/debug/deps/c7_spec_iu_roots_adoption-64fe6e4eadff4547)
+
+running 1 test
+test c7_iu_roots_are_generated_and_reports_waive_descendants ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

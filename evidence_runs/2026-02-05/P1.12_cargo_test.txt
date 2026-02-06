@@ -1,0 +1,18 @@
+   Compiling codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)
+error[E0364]: `update_advisory_from_capabilities` is only public within the crate, and cannot be re-exported outside
+   --> crates/codex/src/lib.rs:169:9
+    |
+169 | pub use version::update_advisory_from_capabilities;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+note: consider marking `update_advisory_from_capabilities` as `pub` in the imported module
+   --> crates/codex/src/lib.rs:169:9
+    |
+169 | pub use version::update_advisory_from_capabilities;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For more information about this error, try `rustc --explain E0364`.
+error: could not compile `codex` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `codex` (lib test) due to 1 previous error
+cargo test failed

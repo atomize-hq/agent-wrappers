@@ -1,0 +1,43 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/cloud.rs:161:
+             .await
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/fork.rs:34:
+             .await
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/help.rs:4:
+ 
+ impl CodexClient {
+     /// Runs `codex <scope> help [COMMAND]...` and returns captured output.
+[31m-    pub async fn help(&self, request: HelpCommandRequest) -> Result<ApplyDiffArtifacts, CodexError> {
+(B[m[32m+    pub async fn help(
+(B[m[32m+        &self,
+(B[m[32m+        request: HelpCommandRequest,
+(B[m[32m+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+(B[m         let mut args: Vec<OsString> = request
+             .scope
+             .argv_prefix()
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/help.rs:16:
+             .await
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/mcp.rs:218:
+         spawn_with_retry(&mut command, self.command_env.binary_path())
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/review.rs:93:
+             .await
+     }
+ }
+[31m-
+(B[m 
+cargo fmt --check failed; applying fmt

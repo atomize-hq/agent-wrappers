@@ -1,0 +1,44 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index e20aaa9..c2fe9b7 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -661,8 +661,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.22 — Seam extraction: remaining `CodexClient` non-streaming wrapper methods into `commands/*` follow-ups (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Finish draining `lib.rs` of the remaining non-streaming `CodexClient` wrapper methods still implemented in the crate root (e.g., `features`, `help`, `review`, `exec_review`, `fork_session`, `cloud_*`), by moving them into additional `crates/codex/src/commands/*` modules as `impl CodexClient` blocks.
+ - Expected files touched:
+@@ -1980,6 +1980,28 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P1.22: move remaining non-streaming `CodexClient` wrappers
++
++- Scope/step: P1.22
++- Why: Finish draining `crates/codex/src/lib.rs` of the remaining non-streaming `CodexClient` wrapper methods by moving them into `crates/codex/src/commands/*` follow-ups, while preserving `CodexClient` method signatures and behavior.
++- What changed:
++  - Moved `CodexClient::{features, help, review, exec_review, fork_session}` into `crates/codex/src/commands/{features,help,review,fork}.rs`.
++  - Moved `CodexClient::{cloud_overview, cloud_list, cloud_status, cloud_diff, cloud_apply, cloud_exec}` into `crates/codex/src/commands/cloud.rs`.
++  - Moved `CodexClient::{mcp_overview, mcp_list, mcp_get, mcp_add, mcp_remove, mcp_logout, spawn_mcp_oauth_login_process}` into `crates/codex/src/commands/mcp.rs`.
++  - Updated `crates/codex/src/commands/mod.rs` to include the new command-domain modules; `crates/codex/src/lib.rs` remains the façade + capability/update helpers.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.22_cargo_fmt_check_final.txt`) (initial: `evidence_runs/2026-02-05/P1.22_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.22_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.22_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.22_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.22_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.22_cargo_audit.txt`; workaround: writable temp `CARGO_HOME` + `--db` copy seeded from `/home/dev/.cargo/{registry,advisory-db}`, run with `CARGO_NET_OFFLINE=true` + `--no-fetch --stale --json`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.22_cargo_deny_advisories.txt`) (initial FAIL: read-only advisory DB lock; workaround: writable temp `CARGO_HOME` seeded from `/home/dev/.cargo/{advisory-dbs,registry,git}`, run with `CARGO_NET_OFFLINE=true` + `--disable-fetch`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.22_cargo_deny_licenses.txt`) (workaround: writable temp `CARGO_HOME` seeded from `/home/dev/.cargo/{registry,git}`, run with `CARGO_NET_OFFLINE=true`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.22_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.22_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

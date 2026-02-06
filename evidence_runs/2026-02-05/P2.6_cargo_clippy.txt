@@ -1,0 +1,371 @@
+    Checking codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)
+error[E0433]: failed to resolve: use of undeclared type `Value`
+   --> crates/codex/src/mcp.rs:953:23
+    |
+953 |             metadata: Value::Null,
+    |                       ^^^^^ use of undeclared type `Value`
+    |
+help: consider importing one of these items
+    |
+36  +     use crate::Value;
+    |
+36  +     use serde_json::Value;
+    |
+36  +     use toml::Value;
+    |
+36  +     use tracing::Value;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+   --> crates/codex/src/mcp.rs:966:23
+    |
+966 |             .and_then(Value::as_str)
+    |                       ^^^^^ use of undeclared type `Value`
+    |
+help: consider importing one of these items
+    |
+36  +     use crate::Value;
+    |
+36  +     use serde_json::Value;
+    |
+36  +     use toml::Value;
+    |
+36  +     use tracing::Value;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1024:27
+     |
+1024 |                 .and_then(Value::as_str)
+     |                           ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1038:23
+     |
+1038 |             metadata: Value::Null,
+     |                       ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1051:23
+     |
+1051 |             .and_then(Value::as_str)
+     |                       ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1080:59
+     |
+1080 |                 assert_eq!(result.get("cancelled"), Some(&Value::Bool(true)));
+     |                                                           ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1083:27
+     |
+1083 |                     Some(&Value::String("client_cancel".into()))
+     |                           ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1104:23
+     |
+1104 |             metadata: Value::Null,
+     |                       ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1117:23
+     |
+1117 |             .and_then(Value::as_str)
+     |                       ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1136:27
+     |
+1136 |                 .and_then(Value::as_str)
+     |                           ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1142:23
+     |
+1142 |             .and_then(Value::as_bool)
+     |                       ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1197:27
+     |
+1197 |                 .and_then(Value::as_str)
+     |                           ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1211:23
+     |
+1211 |             metadata: Value::Null,
+     |                       ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1224:23
+     |
+1224 |             .and_then(Value::as_str)
+     |                       ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1275:59
+     |
+1275 |                 assert_eq!(result.get("cancelled"), Some(&Value::Bool(true)));
+     |                                                           ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1278:27
+     |
+1278 |                     Some(&Value::String("interrupted".into()))
+     |                           ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1297:23
+     |
+1297 |             .and_then(Value::as_bool)
+     |                       ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1769:23
+     |
+1769 |             .and_then(Value::as_str)
+     |                       ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Value`
+    --> crates/codex/src/mcp.rs:1932:23
+     |
+1932 |             .and_then(Value::as_str)
+     |                       ^^^^^ use of undeclared type `Value`
+     |
+help: consider importing one of these items
+     |
+36   +     use crate::Value;
+     |
+36   +     use serde_json::Value;
+     |
+36   +     use toml::Value;
+     |
+36   +     use tracing::Value;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Arc`
+    --> crates/codex/src/mcp.rs:1948:17
+     |
+1948 |         assert!(Arc::ptr_eq(&runtime, &reused));
+     |                 ^^^ use of undeclared type `Arc`
+     |
+help: consider importing this struct
+     |
+36   +     use std::sync::Arc;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Arc`
+    --> crates/codex/src/mcp.rs:1962:18
+     |
+1962 |         assert!(!Arc::ptr_eq(&runtime, &restarted));
+     |                  ^^^ use of undeclared type `Arc`
+     |
+help: consider importing this struct
+     |
+36   +     use std::sync::Arc;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Arc`
+    --> crates/codex/src/mcp.rs:2073:18
+     |
+2073 |         assert!(!Arc::ptr_eq(&alpha, &restarted_alpha));
+     |                  ^^^ use of undeclared type `Arc`
+     |
+help: consider importing this struct
+     |
+36   +     use std::sync::Arc;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Arc`
+    --> crates/codex/src/mcp.rs:2077:18
+     |
+2077 |         assert!(!Arc::ptr_eq(&beta, &restarted_beta));
+     |                  ^^^ use of undeclared type `Arc`
+     |
+help: consider importing this struct
+     |
+36   +     use std::sync::Arc;
+     |
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `codex` (lib test) due to 23 previous errors
+warning: build failed, waiting for other jobs to finish...

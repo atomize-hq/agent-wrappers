@@ -1,0 +1,4 @@
+[0m[0m[1m[32m      Loaded[0m 909 security advisories (from /home/dev/.cargo/advisory-db)
+[0m[0m[1m[33mwarning:[0m couldn't open crates.io index: I/O operation failed: failed to obtain lock file '/home/dev/.cargo/.package-cache'
+[0m[0m[1m[32m    Scanning[0m Cargo.lock for vulnerabilities (190 crate dependencies)
+EXIT:0

@@ -1,0 +1,991 @@
+diff --git a/crates/xtask/src/codex_report/report.rs b/crates/xtask/src/codex_report/report.rs
+index f4d4f73..1ab463a 100644
+--- a/crates/xtask/src/codex_report/report.rs
++++ b/crates/xtask/src/codex_report/report.rs
+@@ -1,15 +1,30 @@
+ use std::collections::{BTreeMap, BTreeSet};
+ 
+-use serde::Serialize;
+-
+ use super::{
+-    models::{UnionArgV2, UnionCommandV2, UnionFlagV2, UnionSnapshotV2, WrapperCoverageV1},
+-    rules::{ParityExclusionUnit, RulesFile, RulesParityExclusions},
++    models::{UnionCommandV2, UnionSnapshotV2, WrapperCoverageV1},
++    rules::RulesFile,
+     util,
+-    wrapper::{self, CoverageResolution, FilterMode, WrapperIndex},
++    wrapper::{self, FilterMode, WrapperIndex},
+     ReportError,
+ };
+ 
++mod filtering;
++mod iu;
++mod parity;
++mod schema;
++
++use filtering::{
++    classify_arg_delta, classify_command_delta, classify_flag_delta, present_on_filter,
++    upstream_arg_availability, upstream_flag_availability,
++};
++use iu::{build_iu_roots, cmp_iu_delta, find_inherited_iu_root, require_non_empty_note};
++pub(super) use parity::{build_parity_exclusions_index, ParityExclusionsIndex};
++use schema::{
++    CoverageReportV1, PlatformFilterV1, ReportArgDeltaV1, ReportCommandDeltaV1, ReportDeltasV1,
++    ReportFlagDeltaV1, ReportInputsV1, ReportIntentionallyUnsupportedDeltaV1, ReportRulesInputsV1,
++    ReportUpstreamInputsV1, ReportWrapperInputsV1,
++};
++
+ pub(super) fn index_upstream(union: &UnionSnapshotV2) -> BTreeMap<Vec<String>, UnionCommandV2> {
+     let mut out = BTreeMap::new();
+     for cmd in &union.commands {
+@@ -534,454 +549,3 @@ pub(super) fn build_report(
+         deltas,
+     })
+ }
+-
+-fn present_on_filter(
+-    available_on: &[String],
+-    report_targets: &BTreeSet<String>,
+-    expected_targets: &[String],
+-    mode: FilterMode<'_>,
+-) -> bool {
+-    match mode {
+-        FilterMode::Any => available_on.iter().any(|t| report_targets.contains(t)),
+-        FilterMode::ExactTarget(t) => available_on.iter().any(|x| x == t),
+-        FilterMode::All => expected_targets
+-            .iter()
+-            .all(|t| available_on.iter().any(|x| x == t)),
+-    }
+-}
+-
+-fn classify_command_delta(
+-    missing: &mut Vec<ReportCommandDeltaV1>,
+-    passthrough_candidates: &mut Vec<ReportCommandDeltaV1>,
+-    unsupported: &mut Vec<ReportCommandDeltaV1>,
+-    path: &[String],
+-    upstream_available_on: &[String],
+-    wrapper: &CoverageResolution,
+-) {
+-    let entry = ReportCommandDeltaV1 {
+-        path: path.to_vec(),
+-        upstream_available_on: upstream_available_on.to_vec(),
+-        wrapper_level: wrapper.level.clone(),
+-        note: wrapper.note.clone(),
+-    };
+-
+-    match wrapper.level.as_deref() {
+-        None => missing.push(entry),
+-        Some("unknown") => missing.push(entry),
+-        Some("unsupported") => unsupported.push(entry),
+-        Some("intentionally_unsupported") => {}
+-        Some("passthrough") => passthrough_candidates.push(entry),
+-        Some("explicit") => {}
+-        Some(other) => missing.push(ReportCommandDeltaV1 {
+-            wrapper_level: Some(other.to_string()),
+-            ..entry
+-        }),
+-    }
+-}
+-
+-fn classify_flag_delta(
+-    out: &mut Vec<ReportFlagDeltaV1>,
+-    path: &[String],
+-    flag: &UnionFlagV2,
+-    wrapper: &CoverageResolution,
+-) {
+-    match wrapper.level.as_deref() {
+-        None | Some("unknown") | Some("unsupported") => out.push(ReportFlagDeltaV1 {
+-            path: path.to_vec(),
+-            key: flag.key.clone(),
+-            upstream_available_on: flag.available_on.clone(),
+-            wrapper_level: wrapper.level.clone(),
+-            note: wrapper.note.clone(),
+-        }),
+-        Some("intentionally_unsupported") => {}
+-        Some("explicit") | Some("passthrough") => {}
+-        Some(other) => out.push(ReportFlagDeltaV1 {
+-            path: path.to_vec(),
+-            key: flag.key.clone(),
+-            upstream_available_on: flag.available_on.clone(),
+-            wrapper_level: Some(other.to_string()),
+-            note: wrapper.note.clone(),
+-        }),
+-    }
+-}
+-
+-fn classify_arg_delta(
+-    out: &mut Vec<ReportArgDeltaV1>,
+-    path: &[String],
+-    arg: &UnionArgV2,
+-    wrapper: &CoverageResolution,
+-) {
+-    match wrapper.level.as_deref() {
+-        None | Some("unknown") | Some("unsupported") => out.push(ReportArgDeltaV1 {
+-            path: path.to_vec(),
+-            name: arg.name.clone(),
+-            upstream_available_on: arg.available_on.clone(),
+-            wrapper_level: wrapper.level.clone(),
+-            note: wrapper.note.clone(),
+-        }),
+-        Some("intentionally_unsupported") => {}
+-        Some("explicit") | Some("passthrough") => {}
+-        Some(other) => out.push(ReportArgDeltaV1 {
+-            path: path.to_vec(),
+-            name: arg.name.clone(),
+-            upstream_available_on: arg.available_on.clone(),
+-            wrapper_level: Some(other.to_string()),
+-            note: wrapper.note.clone(),
+-        }),
+-    }
+-}
+-
+-fn upstream_flag_availability(
+-    upstream: &BTreeMap<Vec<String>, UnionCommandV2>,
+-    path: &[String],
+-    key: &str,
+-    wrapper_res: &CoverageResolution,
+-    report_targets: &BTreeSet<String>,
+-    expected_targets: &[String],
+-    mode: FilterMode<'_>,
+-) -> (Vec<String>, bool) {
+-    if let Some(cmd) = upstream.get(path) {
+-        if let Some(flag) = cmd.flags.iter().find(|f| f.key == key) {
+-            let present =
+-                present_on_filter(&flag.available_on, report_targets, expected_targets, mode);
+-            return (flag.available_on.clone(), present);
+-        }
+-        return (cmd.available_on.clone(), false);
+-    }
+-    (
+-        util::ordered_subset(expected_targets, &wrapper_res.targets),
+-        false,
+-    )
+-}
+-
+-fn upstream_arg_availability(
+-    upstream: &BTreeMap<Vec<String>, UnionCommandV2>,
+-    path: &[String],
+-    name: &str,
+-    wrapper_res: &CoverageResolution,
+-    report_targets: &BTreeSet<String>,
+-    expected_targets: &[String],
+-    mode: FilterMode<'_>,
+-) -> (Vec<String>, bool) {
+-    if let Some(cmd) = upstream.get(path) {
+-        if let Some(arg) = cmd.args.iter().find(|a| a.name == name) {
+-            let present =
+-                present_on_filter(&arg.available_on, report_targets, expected_targets, mode);
+-            return (arg.available_on.clone(), present);
+-        }
+-        return (cmd.available_on.clone(), false);
+-    }
+-    (
+-        util::ordered_subset(expected_targets, &wrapper_res.targets),
+-        false,
+-    )
+-}
+-
+-#[derive(Debug, Serialize)]
+-pub(super) struct CoverageReportV1 {
+-    schema_version: u32,
+-    generated_at: String,
+-    inputs: ReportInputsV1,
+-    platform_filter: PlatformFilterV1,
+-    deltas: ReportDeltasV1,
+-}
+-
+-#[derive(Debug, Serialize)]
+-struct ReportInputsV1 {
+-    upstream: ReportUpstreamInputsV1,
+-    wrapper: ReportWrapperInputsV1,
+-    rules: ReportRulesInputsV1,
+-}
+-
+-#[derive(Debug, Serialize)]
+-struct ReportUpstreamInputsV1 {
+-    semantic_version: String,
+-    mode: String,
+-    targets: Vec<String>,
+-}
+-
+-#[derive(Debug, Serialize)]
+-struct ReportWrapperInputsV1 {
+-    schema_version: u32,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    wrapper_version: Option<String>,
+-}
+-
+-#[derive(Debug, Serialize)]
+-struct ReportRulesInputsV1 {
+-    rules_schema_version: u32,
+-}
+-
+-#[derive(Debug, Serialize)]
+-struct PlatformFilterV1 {
+-    mode: String,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    target_triple: Option<String>,
+-}
+-
+-#[derive(Debug, Serialize)]
+-struct ReportDeltasV1 {
+-    missing_commands: Vec<ReportCommandDeltaV1>,
+-    missing_flags: Vec<ReportFlagDeltaV1>,
+-    missing_args: Vec<ReportArgDeltaV1>,
+-
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    excluded_commands: Option<Vec<ReportCommandDeltaV1>>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    excluded_flags: Option<Vec<ReportFlagDeltaV1>>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    excluded_args: Option<Vec<ReportArgDeltaV1>>,
+-
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    passthrough_candidates: Option<Vec<ReportCommandDeltaV1>>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    unsupported: Option<Vec<ReportCommandDeltaV1>>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    intentionally_unsupported: Option<Vec<ReportIntentionallyUnsupportedDeltaV1>>,
+-
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    wrapper_only_commands: Option<Vec<ReportCommandDeltaV1>>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    wrapper_only_flags: Option<Vec<ReportFlagDeltaV1>>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    wrapper_only_args: Option<Vec<ReportArgDeltaV1>>,
+-}
+-
+-#[derive(Debug, Serialize)]
+-struct ReportCommandDeltaV1 {
+-    path: Vec<String>,
+-    upstream_available_on: Vec<String>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    wrapper_level: Option<String>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    note: Option<String>,
+-}
+-
+-#[derive(Debug, Serialize)]
+-struct ReportFlagDeltaV1 {
+-    path: Vec<String>,
+-    key: String,
+-    upstream_available_on: Vec<String>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    wrapper_level: Option<String>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    note: Option<String>,
+-}
+-
+-#[derive(Debug, Serialize)]
+-struct ReportArgDeltaV1 {
+-    path: Vec<String>,
+-    name: String,
+-    upstream_available_on: Vec<String>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    wrapper_level: Option<String>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    note: Option<String>,
+-}
+-
+-#[derive(Debug, Serialize)]
+-#[serde(untagged)]
+-enum ReportIntentionallyUnsupportedDeltaV1 {
+-    Command(ReportCommandDeltaV1),
+-    Flag(ReportFlagDeltaV1),
+-    Arg(ReportArgDeltaV1),
+-}
+-
+-#[derive(Debug, Clone)]
+-struct IuRoot {
+-    path: Vec<String>,
+-    targets: BTreeSet<String>,
+-    note: String,
+-}
+-
+-fn build_iu_roots(
+-    wrapper: &WrapperCoverageV1,
+-    wrapper_index: &WrapperIndex,
+-    report_target_set: &BTreeSet<String>,
+-    expected_targets: &[String],
+-    filter_mode: FilterMode<'_>,
+-) -> Result<Vec<IuRoot>, ReportError> {
+-    let mut unique_paths: BTreeSet<Vec<String>> = BTreeSet::new();
+-    for cmd in &wrapper.coverage {
+-        if cmd.level == "intentionally_unsupported" {
+-            unique_paths.insert(cmd.path.clone());
+-        }
+-    }
+-
+-    let mut roots = Vec::new();
+-    for path in unique_paths {
+-        let res = wrapper::resolve_wrapper(
+-            wrapper_index
+-                .commands
+-                .get(&path)
+-                .map(Vec::as_slice)
+-                .unwrap_or(&[]),
+-            report_target_set,
+-            expected_targets,
+-            filter_mode,
+-            "command",
+-            &format!("path={}", util::format_path(&path)),
+-        )?;
+-        if res.level.as_deref() != Some("intentionally_unsupported") {
+-            continue;
+-        }
+-        let note = require_non_empty_note(
+-            res.note.as_deref(),
+-            "command",
+-            &format!("path={}", util::format_path(&path)),
+-        )?;
+-        roots.push(IuRoot {
+-            path,
+-            targets: res.targets,
+-            note,
+-        });
+-    }
+-
+-    roots.sort_by(|a, b| {
+-        b.path
+-            .len()
+-            .cmp(&a.path.len())
+-            .then_with(|| util::cmp_path(&a.path, &b.path))
+-    });
+-    Ok(roots)
+-}
+-
+-fn find_inherited_iu_root<'a>(
+-    roots: &'a [IuRoot],
+-    unit_path: &[String],
+-    unit_available_on: &[String],
+-    report_target_set: &BTreeSet<String>,
+-    unit_kind: &'static str,
+-) -> Result<Option<&'a IuRoot>, ReportError> {
+-    let relevant_targets: BTreeSet<String> = unit_available_on
+-        .iter()
+-        .filter(|t| report_target_set.contains(*t))
+-        .cloned()
+-        .collect();
+-    if relevant_targets.is_empty() {
+-        return Ok(None);
+-    }
+-
+-    for root in roots {
+-        if !util::is_prefix(&root.path, unit_path) {
+-            continue;
+-        }
+-
+-        let overlap: BTreeSet<String> = relevant_targets
+-            .intersection(&root.targets)
+-            .cloned()
+-            .collect();
+-        if overlap.is_empty() {
+-            continue;
+-        }
+-        if overlap != relevant_targets {
+-            return Err(ReportError::WrapperResolution {
+-                unit: unit_kind.to_string(),
+-                detail: format!(
+-                    "IU subtree root scope mismatch: root_path={} does not cover all upstream targets for unit_path={} (root_targets={} unit_targets={})",
+-                    util::format_path(&root.path),
+-                    util::format_path(unit_path),
+-                    root.targets.iter().cloned().collect::<Vec<_>>().join(","),
+-                    relevant_targets
+-                        .iter()
+-                        .cloned()
+-                        .collect::<Vec<_>>()
+-                        .join(","),
+-                ),
+-            });
+-        }
+-
+-        return Ok(Some(root));
+-    }
+-
+-    Ok(None)
+-}
+-
+-fn require_non_empty_note(
+-    note: Option<&str>,
+-    unit_kind: &'static str,
+-    detail: &str,
+-) -> Result<String, ReportError> {
+-    match note.map(str::trim).filter(|s| !s.is_empty()) {
+-        Some(v) => Ok(v.to_string()),
+-        None => Err(ReportError::WrapperResolution {
+-            unit: unit_kind.to_string(),
+-            detail: format!("{detail} intentionally_unsupported requires non-empty note"),
+-        }),
+-    }
+-}
+-
+-fn iu_kind_rank(entry: &ReportIntentionallyUnsupportedDeltaV1) -> u8 {
+-    match entry {
+-        ReportIntentionallyUnsupportedDeltaV1::Command(_) => 0,
+-        ReportIntentionallyUnsupportedDeltaV1::Flag(_) => 1,
+-        ReportIntentionallyUnsupportedDeltaV1::Arg(_) => 2,
+-    }
+-}
+-
+-fn iu_path(entry: &ReportIntentionallyUnsupportedDeltaV1) -> &[String] {
+-    match entry {
+-        ReportIntentionallyUnsupportedDeltaV1::Command(v) => &v.path,
+-        ReportIntentionallyUnsupportedDeltaV1::Flag(v) => &v.path,
+-        ReportIntentionallyUnsupportedDeltaV1::Arg(v) => &v.path,
+-    }
+-}
+-
+-fn cmp_iu_delta(
+-    a: &ReportIntentionallyUnsupportedDeltaV1,
+-    b: &ReportIntentionallyUnsupportedDeltaV1,
+-) -> std::cmp::Ordering {
+-    iu_kind_rank(a).cmp(&iu_kind_rank(b)).then_with(|| {
+-        util::cmp_path(iu_path(a), iu_path(b)).then_with(|| match (a, b) {
+-            (
+-                ReportIntentionallyUnsupportedDeltaV1::Flag(a),
+-                ReportIntentionallyUnsupportedDeltaV1::Flag(b),
+-            ) => a.key.cmp(&b.key),
+-            (
+-                ReportIntentionallyUnsupportedDeltaV1::Arg(a),
+-                ReportIntentionallyUnsupportedDeltaV1::Arg(b),
+-            ) => a.name.cmp(&b.name),
+-            _ => std::cmp::Ordering::Equal,
+-        })
+-    })
+-}
+-
+-#[derive(Debug)]
+-pub(super) struct ParityExclusionsIndex {
+-    commands: BTreeMap<Vec<String>, ParityExclusionUnit>,
+-    flags: BTreeMap<(Vec<String>, String), ParityExclusionUnit>,
+-    args: BTreeMap<(Vec<String>, String), ParityExclusionUnit>,
+-}
+-
+-pub(super) fn build_parity_exclusions_index(
+-    exclusions: &RulesParityExclusions,
+-) -> ParityExclusionsIndex {
+-    let mut commands = BTreeMap::new();
+-    let mut flags = BTreeMap::new();
+-    let mut args = BTreeMap::new();
+-
+-    for unit in &exclusions.units {
+-        match unit.unit.as_str() {
+-            "command" => {
+-                commands.insert(unit.path.clone(), unit.clone());
+-            }
+-            "flag" => {
+-                if let Some(key) = unit.key.as_ref() {
+-                    flags.insert((unit.path.clone(), key.clone()), unit.clone());
+-                }
+-            }
+-            "arg" => {
+-                if let Some(name) = unit.name.as_ref() {
+-                    args.insert((unit.path.clone(), name.clone()), unit.clone());
+-                }
+-            }
+-            _ => {}
+-        }
+-    }
+-
+-    ParityExclusionsIndex {
+-        commands,
+-        flags,
+-        args,
+-    }
+-}
+diff --git a/crates/xtask/src/codex_report/report/filtering.rs b/crates/xtask/src/codex_report/report/filtering.rs
+new file mode 100644
+index 0000000..ae5f63a
+--- /dev/null
++++ b/crates/xtask/src/codex_report/report/filtering.rs
+@@ -0,0 +1,152 @@
++use std::collections::{BTreeMap, BTreeSet};
++
++use super::{
++    super::{
++        models::{UnionArgV2, UnionCommandV2, UnionFlagV2},
++        util,
++        wrapper::{CoverageResolution, FilterMode},
++    },
++    schema::{ReportArgDeltaV1, ReportCommandDeltaV1, ReportFlagDeltaV1},
++};
++
++pub(super) fn present_on_filter(
++    available_on: &[String],
++    report_targets: &BTreeSet<String>,
++    expected_targets: &[String],
++    mode: FilterMode<'_>,
++) -> bool {
++    match mode {
++        FilterMode::Any => available_on.iter().any(|t| report_targets.contains(t)),
++        FilterMode::ExactTarget(t) => available_on.iter().any(|x| x == t),
++        FilterMode::All => expected_targets
++            .iter()
++            .all(|t| available_on.iter().any(|x| x == t)),
++    }
++}
++
++pub(super) fn classify_command_delta(
++    missing: &mut Vec<ReportCommandDeltaV1>,
++    passthrough_candidates: &mut Vec<ReportCommandDeltaV1>,
++    unsupported: &mut Vec<ReportCommandDeltaV1>,
++    path: &[String],
++    upstream_available_on: &[String],
++    wrapper: &CoverageResolution,
++) {
++    let entry = ReportCommandDeltaV1 {
++        path: path.to_vec(),
++        upstream_available_on: upstream_available_on.to_vec(),
++        wrapper_level: wrapper.level.clone(),
++        note: wrapper.note.clone(),
++    };
++
++    match wrapper.level.as_deref() {
++        None => missing.push(entry),
++        Some("unknown") => missing.push(entry),
++        Some("unsupported") => unsupported.push(entry),
++        Some("intentionally_unsupported") => {}
++        Some("passthrough") => passthrough_candidates.push(entry),
++        Some("explicit") => {}
++        Some(other) => missing.push(ReportCommandDeltaV1 {
++            wrapper_level: Some(other.to_string()),
++            ..entry
++        }),
++    }
++}
++
++pub(super) fn classify_flag_delta(
++    out: &mut Vec<ReportFlagDeltaV1>,
++    path: &[String],
++    flag: &UnionFlagV2,
++    wrapper: &CoverageResolution,
++) {
++    match wrapper.level.as_deref() {
++        None | Some("unknown") | Some("unsupported") => out.push(ReportFlagDeltaV1 {
++            path: path.to_vec(),
++            key: flag.key.clone(),
++            upstream_available_on: flag.available_on.clone(),
++            wrapper_level: wrapper.level.clone(),
++            note: wrapper.note.clone(),
++        }),
++        Some("intentionally_unsupported") => {}
++        Some("explicit") | Some("passthrough") => {}
++        Some(other) => out.push(ReportFlagDeltaV1 {
++            path: path.to_vec(),
++            key: flag.key.clone(),
++            upstream_available_on: flag.available_on.clone(),
++            wrapper_level: Some(other.to_string()),
++            note: wrapper.note.clone(),
++        }),
++    }
++}
++
++pub(super) fn classify_arg_delta(
++    out: &mut Vec<ReportArgDeltaV1>,
++    path: &[String],
++    arg: &UnionArgV2,
++    wrapper: &CoverageResolution,
++) {
++    match wrapper.level.as_deref() {
++        None | Some("unknown") | Some("unsupported") => out.push(ReportArgDeltaV1 {
++            path: path.to_vec(),
++            name: arg.name.clone(),
++            upstream_available_on: arg.available_on.clone(),
++            wrapper_level: wrapper.level.clone(),
++            note: wrapper.note.clone(),
++        }),
++        Some("intentionally_unsupported") => {}
++        Some("explicit") | Some("passthrough") => {}
++        Some(other) => out.push(ReportArgDeltaV1 {
++            path: path.to_vec(),
++            name: arg.name.clone(),
++            upstream_available_on: arg.available_on.clone(),
++            wrapper_level: Some(other.to_string()),
++            note: wrapper.note.clone(),
++        }),
++    }
++}
++
++pub(super) fn upstream_flag_availability(
++    upstream: &BTreeMap<Vec<String>, UnionCommandV2>,
++    path: &[String],
++    key: &str,
++    wrapper_res: &CoverageResolution,
++    report_targets: &BTreeSet<String>,
++    expected_targets: &[String],
++    mode: FilterMode<'_>,
++) -> (Vec<String>, bool) {
++    if let Some(cmd) = upstream.get(path) {
++        if let Some(flag) = cmd.flags.iter().find(|f| f.key == key) {
++            let present =
++                present_on_filter(&flag.available_on, report_targets, expected_targets, mode);
++            return (flag.available_on.clone(), present);
++        }
++        return (cmd.available_on.clone(), false);
++    }
++    (
++        util::ordered_subset(expected_targets, &wrapper_res.targets),
++        false,
++    )
++}
++
++pub(super) fn upstream_arg_availability(
++    upstream: &BTreeMap<Vec<String>, UnionCommandV2>,
++    path: &[String],
++    name: &str,
++    wrapper_res: &CoverageResolution,
++    report_targets: &BTreeSet<String>,
++    expected_targets: &[String],
++    mode: FilterMode<'_>,
++) -> (Vec<String>, bool) {
++    if let Some(cmd) = upstream.get(path) {
++        if let Some(arg) = cmd.args.iter().find(|a| a.name == name) {
++            let present =
++                present_on_filter(&arg.available_on, report_targets, expected_targets, mode);
++            return (arg.available_on.clone(), present);
++        }
++        return (cmd.available_on.clone(), false);
++    }
++    (
++        util::ordered_subset(expected_targets, &wrapper_res.targets),
++        false,
++    )
++}
+diff --git a/crates/xtask/src/codex_report/report/iu.rs b/crates/xtask/src/codex_report/report/iu.rs
+new file mode 100644
+index 0000000..109c994
+--- /dev/null
++++ b/crates/xtask/src/codex_report/report/iu.rs
+@@ -0,0 +1,166 @@
++use std::collections::BTreeSet;
++
++use super::{
++    super::{
++        models::WrapperCoverageV1,
++        util,
++        wrapper::{self, FilterMode, WrapperIndex},
++        ReportError,
++    },
++    schema::ReportIntentionallyUnsupportedDeltaV1,
++};
++
++#[derive(Debug, Clone)]
++pub(super) struct IuRoot {
++    pub(super) path: Vec<String>,
++    targets: BTreeSet<String>,
++    pub(super) note: String,
++}
++
++pub(super) fn build_iu_roots(
++    wrapper: &WrapperCoverageV1,
++    wrapper_index: &WrapperIndex,
++    report_target_set: &BTreeSet<String>,
++    expected_targets: &[String],
++    filter_mode: FilterMode<'_>,
++) -> Result<Vec<IuRoot>, ReportError> {
++    let mut unique_paths: BTreeSet<Vec<String>> = BTreeSet::new();
++    for cmd in &wrapper.coverage {
++        if cmd.level == "intentionally_unsupported" {
++            unique_paths.insert(cmd.path.clone());
++        }
++    }
++
++    let mut roots = Vec::new();
++    for path in unique_paths {
++        let res = wrapper::resolve_wrapper(
++            wrapper_index
++                .commands
++                .get(&path)
++                .map(Vec::as_slice)
++                .unwrap_or(&[]),
++            report_target_set,
++            expected_targets,
++            filter_mode,
++            "command",
++            &format!("path={}", util::format_path(&path)),
++        )?;
++        if res.level.as_deref() != Some("intentionally_unsupported") {
++            continue;
++        }
++        let note = require_non_empty_note(
++            res.note.as_deref(),
++            "command",
++            &format!("path={}", util::format_path(&path)),
++        )?;
++        roots.push(IuRoot {
++            path,
++            targets: res.targets,
++            note,
++        });
++    }
++
++    roots.sort_by(|a, b| {
++        b.path
++            .len()
++            .cmp(&a.path.len())
++            .then_with(|| util::cmp_path(&a.path, &b.path))
++    });
++    Ok(roots)
++}
++
++pub(super) fn find_inherited_iu_root<'a>(
++    roots: &'a [IuRoot],
++    unit_path: &[String],
++    unit_available_on: &[String],
++    report_target_set: &BTreeSet<String>,
++    unit_kind: &'static str,
++) -> Result<Option<&'a IuRoot>, ReportError> {
++    let relevant_targets: BTreeSet<String> = unit_available_on
++        .iter()
++        .filter(|t| report_target_set.contains(*t))
++        .cloned()
++        .collect();
++    if relevant_targets.is_empty() {
++        return Ok(None);
++    }
++
++    for root in roots {
++        if !util::is_prefix(&root.path, unit_path) {
++            continue;
++        }
++
++        let overlap: BTreeSet<String> = relevant_targets
++            .intersection(&root.targets)
++            .cloned()
++            .collect();
++        if overlap.is_empty() {
++            continue;
++        }
++        if overlap != relevant_targets {
++            return Err(ReportError::WrapperResolution {
++                unit: unit_kind.to_string(),
++                detail: format!(
++                    "IU subtree root scope mismatch: root_path={} does not cover all upstream targets for unit_path={} (root_targets={} unit_targets={})",
++                    util::format_path(&root.path),
++                    util::format_path(unit_path),
++                    root.targets.iter().cloned().collect::<Vec<_>>().join(","),
++                    relevant_targets.iter().cloned().collect::<Vec<_>>().join(","),
++                ),
++            });
++        }
++
++        return Ok(Some(root));
++    }
++
++    Ok(None)
++}
++
++pub(super) fn require_non_empty_note(
++    note: Option<&str>,
++    unit_kind: &'static str,
++    detail: &str,
++) -> Result<String, ReportError> {
++    match note.map(str::trim).filter(|s| !s.is_empty()) {
++        Some(v) => Ok(v.to_string()),
++        None => Err(ReportError::WrapperResolution {
++            unit: unit_kind.to_string(),
++            detail: format!("{detail} intentionally_unsupported requires non-empty note"),
++        }),
++    }
++}
++
++fn iu_kind_rank(entry: &ReportIntentionallyUnsupportedDeltaV1) -> u8 {
++    match entry {
++        ReportIntentionallyUnsupportedDeltaV1::Command(_) => 0,
++        ReportIntentionallyUnsupportedDeltaV1::Flag(_) => 1,
++        ReportIntentionallyUnsupportedDeltaV1::Arg(_) => 2,
++    }
++}
++
++fn iu_path(entry: &ReportIntentionallyUnsupportedDeltaV1) -> &[String] {
++    match entry {
++        ReportIntentionallyUnsupportedDeltaV1::Command(v) => &v.path,
++        ReportIntentionallyUnsupportedDeltaV1::Flag(v) => &v.path,
++        ReportIntentionallyUnsupportedDeltaV1::Arg(v) => &v.path,
++    }
++}
++
++pub(super) fn cmp_iu_delta(
++    a: &ReportIntentionallyUnsupportedDeltaV1,
++    b: &ReportIntentionallyUnsupportedDeltaV1,
++) -> std::cmp::Ordering {
++    iu_kind_rank(a).cmp(&iu_kind_rank(b)).then_with(|| {
++        util::cmp_path(iu_path(a), iu_path(b)).then_with(|| match (a, b) {
++            (
++                ReportIntentionallyUnsupportedDeltaV1::Flag(a),
++                ReportIntentionallyUnsupportedDeltaV1::Flag(b),
++            ) => a.key.cmp(&b.key),
++            (
++                ReportIntentionallyUnsupportedDeltaV1::Arg(a),
++                ReportIntentionallyUnsupportedDeltaV1::Arg(b),
++            ) => a.name.cmp(&b.name),
++            _ => std::cmp::Ordering::Equal,
++        })
++    })
++}
+diff --git a/crates/xtask/src/codex_report/report/parity.rs b/crates/xtask/src/codex_report/report/parity.rs
+new file mode 100644
+index 0000000..be9e3ef
+--- /dev/null
++++ b/crates/xtask/src/codex_report/report/parity.rs
+@@ -0,0 +1,43 @@
++use std::collections::BTreeMap;
++
++use super::super::rules::{ParityExclusionUnit, RulesParityExclusions};
++
++#[derive(Debug)]
++pub(in super::super) struct ParityExclusionsIndex {
++    pub(in super::super) commands: BTreeMap<Vec<String>, ParityExclusionUnit>,
++    pub(in super::super) flags: BTreeMap<(Vec<String>, String), ParityExclusionUnit>,
++    pub(in super::super) args: BTreeMap<(Vec<String>, String), ParityExclusionUnit>,
++}
++
++pub(in super::super) fn build_parity_exclusions_index(
++    exclusions: &RulesParityExclusions,
++) -> ParityExclusionsIndex {
++    let mut commands = BTreeMap::new();
++    let mut flags = BTreeMap::new();
++    let mut args = BTreeMap::new();
++
++    for unit in &exclusions.units {
++        match unit.unit.as_str() {
++            "command" => {
++                commands.insert(unit.path.clone(), unit.clone());
++            }
++            "flag" => {
++                if let Some(key) = unit.key.as_ref() {
++                    flags.insert((unit.path.clone(), key.clone()), unit.clone());
++                }
++            }
++            "arg" => {
++                if let Some(name) = unit.name.as_ref() {
++                    args.insert((unit.path.clone(), name.clone()), unit.clone());
++                }
++            }
++            _ => {}
++        }
++    }
++
++    ParityExclusionsIndex {
++        commands,
++        flags,
++        args,
++    }
++}
+diff --git a/crates/xtask/src/codex_report/report/schema.rs b/crates/xtask/src/codex_report/report/schema.rs
+new file mode 100644
+index 0000000..ebeec50
+--- /dev/null
++++ b/crates/xtask/src/codex_report/report/schema.rs
+@@ -0,0 +1,111 @@
++use serde::Serialize;
++
++#[derive(Debug, Serialize)]
++pub(in super::super) struct CoverageReportV1 {
++    pub(super) schema_version: u32,
++    pub(super) generated_at: String,
++    pub(super) inputs: ReportInputsV1,
++    pub(super) platform_filter: PlatformFilterV1,
++    pub(super) deltas: ReportDeltasV1,
++}
++
++#[derive(Debug, Serialize)]
++pub(super) struct ReportInputsV1 {
++    pub(super) upstream: ReportUpstreamInputsV1,
++    pub(super) wrapper: ReportWrapperInputsV1,
++    pub(super) rules: ReportRulesInputsV1,
++}
++
++#[derive(Debug, Serialize)]
++pub(super) struct ReportUpstreamInputsV1 {
++    pub(super) semantic_version: String,
++    pub(super) mode: String,
++    pub(super) targets: Vec<String>,
++}
++
++#[derive(Debug, Serialize)]
++pub(super) struct ReportWrapperInputsV1 {
++    pub(super) schema_version: u32,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) wrapper_version: Option<String>,
++}
++
++#[derive(Debug, Serialize)]
++pub(super) struct ReportRulesInputsV1 {
++    pub(super) rules_schema_version: u32,
++}
++
++#[derive(Debug, Serialize)]
++pub(super) struct PlatformFilterV1 {
++    pub(super) mode: String,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) target_triple: Option<String>,
++}
++
++#[derive(Debug, Serialize)]
++pub(super) struct ReportDeltasV1 {
++    pub(super) missing_commands: Vec<ReportCommandDeltaV1>,
++    pub(super) missing_flags: Vec<ReportFlagDeltaV1>,
++    pub(super) missing_args: Vec<ReportArgDeltaV1>,
++
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) excluded_commands: Option<Vec<ReportCommandDeltaV1>>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) excluded_flags: Option<Vec<ReportFlagDeltaV1>>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) excluded_args: Option<Vec<ReportArgDeltaV1>>,
++
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) passthrough_candidates: Option<Vec<ReportCommandDeltaV1>>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) unsupported: Option<Vec<ReportCommandDeltaV1>>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) intentionally_unsupported: Option<Vec<ReportIntentionallyUnsupportedDeltaV1>>,
++
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) wrapper_only_commands: Option<Vec<ReportCommandDeltaV1>>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) wrapper_only_flags: Option<Vec<ReportFlagDeltaV1>>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) wrapper_only_args: Option<Vec<ReportArgDeltaV1>>,
++}
++
++#[derive(Debug, Serialize)]
++pub(super) struct ReportCommandDeltaV1 {
++    pub(super) path: Vec<String>,
++    pub(super) upstream_available_on: Vec<String>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) wrapper_level: Option<String>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) note: Option<String>,
++}
++
++#[derive(Debug, Serialize)]
++pub(super) struct ReportFlagDeltaV1 {
++    pub(super) path: Vec<String>,
++    pub(super) key: String,
++    pub(super) upstream_available_on: Vec<String>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) wrapper_level: Option<String>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) note: Option<String>,
++}
++
++#[derive(Debug, Serialize)]
++pub(super) struct ReportArgDeltaV1 {
++    pub(super) path: Vec<String>,
++    pub(super) name: String,
++    pub(super) upstream_available_on: Vec<String>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) wrapper_level: Option<String>,
++    #[serde(skip_serializing_if = "Option::is_none")]
++    pub(super) note: Option<String>,
++}
++
++#[derive(Debug, Serialize)]
++#[serde(untagged)]
++pub(super) enum ReportIntentionallyUnsupportedDeltaV1 {
++    Command(ReportCommandDeltaV1),
++    Flag(ReportFlagDeltaV1),
++    Arg(ReportArgDeltaV1),
++}

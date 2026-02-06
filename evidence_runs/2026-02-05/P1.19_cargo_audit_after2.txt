@@ -1,0 +1,4 @@
++ date: 2026-02-05T13:57:35-05:00
++ cmd: CARGO_HOME="/tmp/cargo_home_p1_19_audit_fix" CARGO_NET_OFFLINE=true cargo audit --no-fetch --stale --db "/tmp/cargo_home_p1_19_audit_fix/advisory-db" --json
+{"database":{"advisory-count":909,"last-commit":null,"last-updated":null},"lockfile":{"dependency-count":190},"settings":{"target_arch":[],"target_os":[],"severity":null,"ignore":[],"informational_warnings":["unmaintained","unsound","notice"]},"vulnerabilities":{"found":false,"count":0,"list":[]},"warnings":{}}
++ exit_code: 0

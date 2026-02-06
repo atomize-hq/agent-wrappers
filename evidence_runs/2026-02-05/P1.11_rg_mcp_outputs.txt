@@ -1,0 +1,5 @@
+1551:    pub async fn mcp_list(&self, request: McpListRequest) -> Result<McpListOutput, CodexError> {
+1573:        Ok(McpListOutput {
+1582:    pub async fn mcp_get(&self, request: McpGetRequest) -> Result<McpListOutput, CodexError> {
+1609:        Ok(McpListOutput {
+3811:pub struct McpListOutput {

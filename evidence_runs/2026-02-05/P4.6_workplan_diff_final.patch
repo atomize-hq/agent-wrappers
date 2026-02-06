@@ -1,0 +1,42 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 6c6f511..757a4d6 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -1113,7 +1113,7 @@ Last Updated: 2026-02-05
+ 
+ ##### P4.6 — Reduce `crates/xtask/src/codex_union.rs` below hard threshold
+ 
+-Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
+ Last Updated: 2026-02-05
+ 
+ - Goal: Reduce `crates/xtask/src/codex_union.rs` from 799 LOC to `<= 600` LOC by extracting cohesive union helpers/modules while preserving deterministic outputs.
+@@ -2357,6 +2357,28 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P4.6 union modularization (`crates/xtask/src/codex_union.rs` below hard threshold)
++
++- Scope/step: P4.6
++- Why: Earliest queued not-done item in §10 after P4.5; reduce `crates/xtask/src/codex_union.rs` to `<= 600` LOC while preserving deterministic union output/ordering behavior.
++- What changed:
++  - Kept `crates/xtask/src/codex_union.rs` as the stable façade/orchestration entrypoint (`run`, rules validation, normalization, deterministic timestamp helper).
++  - Extracted command/flag/arg union merge + conflict/evidence helpers into `crates/xtask/src/codex_union/merge.rs`.
++  - Preserved deterministic ordering/comparison semantics by moving existing sort and conflict-key logic unchanged.
++  - Result: `crates/xtask/src/codex_union.rs` is now 364 LOC (<= 600).
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.6_cargo_fmt_check_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.6_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P4.6_cargo_fmt_apply.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P4.6_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P4.6_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P4.6_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.6_cargo_audit.txt`; reran with `--no-fetch --stale` due advisory DB lock/fetch constraints in this sandbox)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P4.6_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.6_cargo_deny_advisories.txt`; reran with writable temp `CARGO_HOME`, offline mode, and `--disable-fetch` due advisory DB lock constraints in this sandbox)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.6_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.6_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Base commit: `evidence_runs/2026-02-05/P4.6_BASE_STEP.txt`
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

@@ -1,0 +1,165 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 72f0479..35ed38b 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -596,8 +596,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.18 — Plan next Phase 1 seams after P1.17 (no code moves)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: After P1.14–P1.17 land, refresh §7.1 seam order + §10 queue based on the then-current `lib.rs` contents and remaining top offenders, keeping follow-on extractions PR-sized and reversible.
+ - Expected files touched:
+@@ -608,6 +608,90 @@ Last Updated: YYYY-MM-DD
+ - Risk: Low.
+ - Rollback: N/A.
+ 
++##### P1.19 — Seam extraction: move `lib.rs` unit/integration-style tests into `crates/codex/src/tests.rs` (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Reduce `crates/codex/src/lib.rs` size by moving the large `#[cfg(test)] mod tests { ... }` block into an out-of-line module file (`crates/codex/src/tests.rs`) while keeping test behavior identical.
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (replace the inline test module with `#[cfg(test)] mod tests;`)
++  - `crates/codex/src/tests.rs` (new; contains the moved test module content)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No public API path changes (tests-only move).
++  - Move is mechanical: no test logic edits beyond import/path fixes required by the move.
++- Risk: Low–Medium (test compilation visibility/import churn; keep move mechanical).
++- Rollback: Move the test module back into `lib.rs`.
++
++##### P1.20 — Seam extraction: core `CodexClient` command runner helpers into `client_core.rs` (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Reduce `lib.rs` size by moving the “core runner” implementation details (e.g., `run_basic_command`, `run_simple_command_with_overrides`, working dir context helpers) into a dedicated internal module while keeping `CodexClient`’s public API and behavior unchanged.
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (wire `mod client_core;` and keep a small façade `impl CodexClient` surface)
++  - `crates/codex/src/client_core.rs` (new; `impl CodexClient { ... }` blocks + private helpers)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No externally observable behavior changes (pure move; tests pass).
++  - No public API path changes.
++  - New file meets §7.3 size policy (split if it grows beyond 600 LOC).
++- Risk: Medium (subtle behavior changes if refactoring instead of moving; keep edits purely mechanical).
++- Rollback: Revert module move; restore the original implementations in `lib.rs`.
++
++##### P1.21 — Seam extraction: `CodexError` and shared “defaults” helpers into dedicated modules (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Move `CodexError` and small crate-root helper functions/constants (e.g., default env/binary path helpers) out of `lib.rs` into cohesive modules to reduce façade size, while preserving `codex::CodexError` and all other public item paths via re-exports.
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (wire new modules + `pub use` re-exports)
++  - `crates/codex/src/error.rs` (new; `CodexError` definition)
++  - `crates/codex/src/defaults.rs` (new; small helpers/constants as appropriate)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No public API path changes (`codex::CodexError` and any public helpers remain available at the same paths).
++  - Move is mechanical: error variants/messages and helper semantics unchanged (tests pass).
++  - New files meet §7.3 size policy.
++- Risk: Low–Medium (import/visibility churn; keep move mechanical).
++- Rollback: Revert module move; restore original definitions in `lib.rs`.
++
++##### P1.22 — Seam extraction: remaining `CodexClient` non-streaming wrapper methods into `commands/*` follow-ups (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Finish draining `lib.rs` of the remaining non-streaming `CodexClient` wrapper methods still implemented in the crate root (e.g., `features`, `help`, `review`, `exec_review`, `fork_session`, `cloud_*`), by moving them into additional `crates/codex/src/commands/*` modules as `impl CodexClient` blocks.
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (remove moved method bodies; keep façade + re-exports stable)
++  - `crates/codex/src/commands/` (add new file(s) as needed, split by subcommand/domain)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No public API path changes (methods remain on `CodexClient`; signatures unchanged).
++  - Move is mechanical: CLI args/env/output handling unchanged (tests pass).
++  - New files meet §7.3 size policy.
++- Risk: Medium (many small flows; keep moves grouped by subcommand domain and avoid opportunistic edits).
++- Rollback: Revert module moves; restore method bodies in `lib.rs`.
++
++##### P1.23 — Refresh Phase 1 size evidence and (if eligible) close Phase 1 (no code moves)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: After P1.19–P1.22 land, re-measure `crates/codex/src/lib.rs` size/top offenders and update §3.2/Phase 1 status so the workplan reflects the actual post-extraction state.
++- Expected files touched:
++  - `refactor_workplan.md` (this file): update §3.2 top-offenders evidence reference(s) and Phase 1 status/reason if `lib.rs` is now below the ceiling.
++  - `evidence_runs/YYYY-MM-DD/` (new measurement outputs, e.g., tokei + sorted list)
++- Acceptance criteria (“done when”):
++  - Measurement evidence is captured and cited via file paths.
++  - Phase 1 status is updated only if the evidence supports it (no subjective “looks good”).
++  - No behavior changes (planning/measurement only).
++- Risk: Low.
++- Rollback: N/A.
++
+ #### Phase 2 — Split `crates/codex/src/mcp.rs` into `crates/codex/src/mcp/*` (API stable)
+ 
+ **Phase goal:** Split `mcp.rs` into a module tree while maintaining stable public APIs via re-exports from `mcp` (and/or `lib.rs`).
+@@ -972,6 +1056,10 @@ Seam order (defined in P1.0; extract in PR-sized steps):
+ 12) Exec streaming + resume types + helpers → `exec/*` (P1.15).
+ 13) Auth/login helpers → `auth.rs` (P1.16).
+ 14) Remaining client subcommand wrappers → `commands/*` (P1.17).
++15) Move crate-root `#[cfg(test)]` tests out-of-line → `tests.rs` (P1.19).
++16) Core `CodexClient` runner helpers (`run_*`, working dir context) → `client_core.rs` (P1.20).
++17) Error + defaults consolidation → `error.rs` / `defaults.rs` (P1.21).
++18) Drain remaining non-streaming wrappers still in `lib.rs` → `commands/*` follow-ups (P1.22).
+ 
+ Notes / dependencies:
+ - `capabilities.rs` is used by the builder/client for cache policies, overrides, and probes; extract before apply/diff to reduce cross-cutting churn.
+@@ -981,6 +1069,7 @@ Notes / dependencies:
+ - `cli/*` request/response models depend on builder override types (`CliOverridesPatch`, `FeatureToggles`, `ConfigOverride`), so schedule after P1.7 stabilized the builder module tree (done in P1.11).
+ - `process.rs` should land before moving additional `CodexClient` impl blocks so spawn/stdio helpers have a single home and are not duplicated across modules.
+ - `exec/*` should focus on `codex exec` streaming + resume surfaces; keep other subcommands (apply/diff, sandbox, app-server generate) out of scope to keep the PR-sized.
++- P1.19 is the lowest-risk “big win” to reduce `lib.rs` LOC quickly without touching runtime code; do it before additional `impl CodexClient` extraction to minimize merge conflicts.
+ 
+ ### 7.2 `crates/codex/src/mcp.rs` boundaries and extraction order (Phase 2)
+ 
+@@ -1813,6 +1902,25 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P1.18 Plan next Phase 1 seams after P1.17 (no code moves)
++
++- Scope/step: P1.18
++- Why: `crates/codex/src/lib.rs` still contains significant bulk after P1.14–P1.17 (notably a large `#[cfg(test)]` test module and additional `CodexClient` wrapper methods); plan the next PR-sized extractions while keeping public API paths stable.
++- What changed:
++  - Updated §7.1 seam extraction order to reflect the current module layout and added the next extraction seams.
++  - Updated §10 “Next 5 Tasks” to remove already-done items and queue the next Phase 1 steps.
++  - Added new Phase 1 checklist items (P1.19–P1.23) to capture the next PR-sized extractions and Phase 1 evidence refresh.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.18_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.18_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.18_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.18_cargo_audit.txt`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.18_cargo_deny_advisories.txt`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.18_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.18_cargo_fmt_check_final.txt`)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+@@ -1834,8 +1942,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ 
+ Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+ 
+-1) P1.16 — Seam extraction: auth/login helpers (`auth.rs`) (API preserved)
+-2) P1.17 — Seam extraction: remaining client subcommand wrappers (`commands/*`) (API preserved)
+-3) P1.18 — Plan next Phase 1 seams after P1.17 (no code moves)
+-4) P2.0 — Define the `mcp.rs` seam map (no code moves yet)
+-5) P2.1 — Create `mcp/` module façade and move one internal submodule (smallest-first)
++1) P1.19 — Seam extraction: move `lib.rs` unit/integration-style tests into `crates/codex/src/tests.rs` (API preserved)
++2) P1.20 — Seam extraction: core `CodexClient` command runner helpers into `client_core.rs` (API preserved)
++3) P1.21 — Seam extraction: `CodexError` and shared “defaults” helpers into dedicated modules (API preserved)
++4) P1.22 — Seam extraction: remaining `CodexClient` non-streaming wrapper methods into `commands/*` follow-ups (API preserved)
++5) P1.23 — Refresh Phase 1 size evidence and (if eligible) close Phase 1 (no code moves)

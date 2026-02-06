@@ -1,0 +1,731 @@
+    Checking codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)
+error: unused import: `DEFAULT_RUST_LOG`
+   --> crates/codex/src/lib.rs:133:5
+    |
+133 |     DEFAULT_RUST_LOG, DEFAULT_TIMEOUT, RUST_LOG_ENV,
+    |     ^^^^^^^^^^^^^^^^
+    |
+    = note: `-D unused-imports` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+error: unused import: `process::ExitStatus`
+   --> crates/codex/src/lib.rs:139:5
+    |
+139 |     process::ExitStatus,
+    |     ^^^^^^^^^^^^^^^^^^^
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+   --> crates/codex/src/tests.rs:429:32
+    |
+429 |     assert_eq!(Path::new(pwd), env::current_dir().unwrap().as_path());
+    |                                ^^^ use of unresolved module or unlinked crate `env`
+    |
+    = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+    = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+    |
+1   + use std::env;
+    |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+   --> crates/codex/src/tests.rs:538:9
+    |
+538 |         env::current_dir().unwrap().as_path()
+    |         ^^^ use of unresolved module or unlinked crate `env`
+    |
+    = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+    = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+    |
+1   + use std::env;
+    |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1540:20
+     |
+1540 |     let original = env::var_os(key);
+     |                    ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1541:5
+     |
+1541 |     env::set_var(key, "custom_codex");
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1545:9
+     |
+1545 |         env::set_var(key, value);
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1547:9
+     |
+1547 |         env::remove_var(key);
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1555:20
+     |
+1555 |     let original = env::var_os(key);
+     |                    ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1556:5
+     |
+1556 |     env::remove_var(key);
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1561:9
+     |
+1561 |         env::set_var(key, value);
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1563:9
+     |
+1563 |         env::remove_var(key);
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1570:20
+     |
+1570 |     let original = env::var_os("RUST_LOG");
+     |                    ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1571:5
+     |
+1571 |     env::remove_var("RUST_LOG");
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1576:9
+     |
+1576 |         env::set_var("RUST_LOG", value);
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1578:9
+     |
+1578 |         env::remove_var("RUST_LOG");
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1585:20
+     |
+1585 |     let original = env::var_os("RUST_LOG");
+     |                    ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1586:5
+     |
+1586 |     env::set_var("RUST_LOG", "info");
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1591:9
+     |
+1591 |         env::set_var("RUST_LOG", value);
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1593:9
+     |
+1593 |         env::remove_var("RUST_LOG");
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1600:29
+     |
+1600 |     let rust_log_original = env::var_os(RUST_LOG_ENV);
+     |                             ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1601:5
+     |
+1601 |     env::remove_var(RUST_LOG_ENV);
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1628:24
+     |
+1628 |         Some(value) => env::set_var(RUST_LOG_ENV, value),
+     |                        ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1629:17
+     |
+1629 |         None => env::remove_var(RUST_LOG_ENV),
+     |                 ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1639:27
+     |
+1639 |     let original_binary = env::var_os(binary_key);
+     |                           ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1640:25
+     |
+1640 |     let original_home = env::var_os(home_key);
+     |                         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1641:29
+     |
+1641 |     let original_rust_log = env::var_os(rust_log_key);
+     |                             ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1643:5
+     |
+1643 |     env::set_var(binary_key, "/tmp/ignored_codex");
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1644:5
+     |
+1644 |     env::set_var(home_key, "/tmp/ambient_home");
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1645:5
+     |
+1645 |     env::remove_var(rust_log_key);
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1677:9
+     |
+1677 |         env::var_os(home_key),
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1685:24
+     |
+1685 |         Some(value) => env::set_var(binary_key, value),
+     |                        ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1686:17
+     |
+1686 |         None => env::remove_var(binary_key),
+     |                 ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1689:24
+     |
+1689 |         Some(value) => env::set_var(home_key, value),
+     |                        ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1690:17
+     |
+1690 |         None => env::remove_var(home_key),
+     |                 ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1693:24
+     |
+1693 |         Some(value) => env::set_var(rust_log_key, value),
+     |                        ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1694:17
+     |
+1694 |         None => env::remove_var(rust_log_key),
+     |                 ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1749:20
+     |
+1749 |     let original = env::var_os("RUST_LOG");
+     |                    ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1750:5
+     |
+1750 |     env::remove_var("RUST_LOG");
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1776:9
+     |
+1776 |         env::set_var("RUST_LOG", value);
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1778:9
+     |
+1778 |         env::remove_var("RUST_LOG");
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1785:29
+     |
+1785 |     let rust_log_original = env::var_os(RUST_LOG_ENV);
+     |                             ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1786:5
+     |
+1786 |     env::set_var(RUST_LOG_ENV, "trace");
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1799:24
+     |
+1799 |         Some(value) => env::set_var(RUST_LOG_ENV, value),
+     |                        ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1800:17
+     |
+1800 |         None => env::remove_var(RUST_LOG_ENV),
+     |                 ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1807:29
+     |
+1807 |     let rust_log_original = env::var_os(RUST_LOG_ENV);
+     |                             ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1808:5
+     |
+1808 |     env::remove_var(RUST_LOG_ENV);
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1825:24
+     |
+1825 |         Some(value) => env::set_var(RUST_LOG_ENV, value),
+     |                        ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:1826:17
+     |
+1826 |         None => env::remove_var(RUST_LOG_ENV),
+     |                 ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:3358:25
+     |
+3358 |     let previous_home = env::var("CODEX_HOME").ok();
+     |                         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:3359:5
+     |
+3359 |     env::set_var("CODEX_HOME", &caller_home);
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:3360:5
+     |
+3360 |     env::set_var("AUTH_HELPER_LOG", &log_path);
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:3392:9
+     |
+3392 |         env::var("CODEX_HOME").unwrap(),
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:3396:5
+     |
+3396 |     env::remove_var("AUTH_HELPER_LOG");
+     |     ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:3398:9
+     |
+3398 |         env::set_var("CODEX_HOME", previous);
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `env`
+    --> crates/codex/src/tests.rs:3400:9
+     |
+3400 |         env::remove_var("CODEX_HOME");
+     |         ^^^ use of unresolved module or unlinked crate `env`
+     |
+     = help: if you wanted to use a crate named `env`, use `cargo add env` to add it to your `Cargo.toml`
+     = note: module `crate::mcp::tests_runtime_app::prelude::env` exists but is inaccessible
+help: consider importing this module
+     |
+1    + use std::env;
+     |
+
+error: unused import: `process::ExitStatus`
+   --> crates/codex/src/lib.rs:139:5
+    |
+139 |     process::ExitStatus,
+    |     ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `-D unused-imports` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `codex` (lib test) due to 55 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `codex` (lib) due to 2 previous errors

@@ -1,0 +1,76 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index c2fe9b7..5693cb0 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -126,17 +126,17 @@ Note: These replace the audit-time thresholds from `audit_pack/metrics/loc_summa
+ 
+ ### 3.2 Top offenders (largest Rust files)
+ 
+-Post-refactor top 10 from `audit_pack/execution/2026-02-04/post_refactor_tokei_files_sorted_updated.txt` (Rust per-file code LOC):
+-- `crates/codex/src/lib.rs` — 8,677 LOC (>> ceiling)
+-- `crates/codex/src/mcp.rs` — 2,191 LOC (>> ceiling)
+-- `crates/xtask/src/codex_validate.rs` — 1,148 LOC (>> ceiling)
++Latest top 10 from `evidence_runs/2026-02-05/P1.23_rust_files_sorted_by_code.txt` (Rust per-file code LOC; derived from `evidence_runs/2026-02-05/P1.23_tokei_crates.json`):
++- `crates/codex/src/tests.rs` — 3,178 LOC (>> ceiling)
+ - `crates/xtask/src/codex_report/report.rs` — 922 LOC (> hard)
++- `crates/codex/src/mcp/tests_core.rs` — 870 LOC (> hard)
++- `crates/codex/src/mcp/tests_runtime_app.rs` — 861 LOC (> hard)
+ - `crates/xtask/src/codex_union.rs` — 799 LOC (> hard)
+ - `crates/xtask/tests/c3_spec_reports_metadata_retain.rs` — 742 LOC (> hard)
+ - `crates/xtask/src/codex_version_metadata.rs` — 721 LOC (> hard)
++- `crates/codex/src/exec.rs` — 676 LOC (> hard)
+ - `crates/codex/tests/cli_e2e.rs` — 669 LOC (> hard)
+ - `crates/xtask/src/codex_snapshot/discovery.rs` — 607 LOC (> hard)
+-- `crates/codex/src/mcp/config.rs` — 538 LOC (> soft)
+ 
+ ### 3.3 Baseline quality signals (audit time)
+ 
+@@ -274,9 +274,9 @@ Last Updated: 2026-02-04
+ 
+ **Phase goal:** Reduce `lib.rs` from “god module” size by extracting cohesive modules while preserving existing public API paths through re-exports.
+ 
+-Phase Status: [ ] Not Started  [x] In Progress  [ ] Done  
++Phase Status: [ ] Not Started  [ ] In Progress  [x] Done  
+ Last Updated: 2026-02-05  
+-Reason: `crates/codex/src/lib.rs` remains above the program ceiling per §3.2 (evidence: `audit_pack/execution/2026-02-04/post_refactor_tokei_files_sorted_updated.txt`).
++Reason: `crates/codex/src/lib.rs` is now below the program ceiling per §3.2 (334 Rust code LOC; evidence: `evidence_runs/2026-02-05/P1.23_rust_files_sorted_by_code.txt` derived from `evidence_runs/2026-02-05/P1.23_tokei_crates.json`).
+ 
+ ##### P1.0 — Define the `lib.rs` seam map (no code moves yet)
+ 
+@@ -678,8 +678,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.23 — Refresh Phase 1 size evidence and (if eligible) close Phase 1 (no code moves)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: After P1.19–P1.22 land, re-measure `crates/codex/src/lib.rs` size/top offenders and update §3.2/Phase 1 status so the workplan reflects the actual post-extraction state.
+ - Expected files touched:
+@@ -2002,6 +2002,25 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P1.23 Refresh Phase 1 size evidence and close Phase 1 (no code moves)
++
++- Scope/step: P1.23
++- Why: Refresh §3.2 “Top offenders” and Phase 1 status after P1.19–P1.22; update only if evidence supports it.
++- Measurement artifacts:
++  - Base commit: `evidence_runs/2026-02-05/P1.23_BASE_STEP.txt`
++  - Raw `tokei` JSON: `evidence_runs/2026-02-05/P1.23_tokei_crates.json`
++  - Derived Rust per-file code LOC list: `evidence_runs/2026-02-05/P1.23_rust_files_sorted_by_code.txt`
++- Result: Phase 1 is eligible to close because `crates/codex/src/lib.rs` is 334 Rust code LOC (<= ceiling=1000) per `evidence_runs/2026-02-05/P1.23_rust_files_sorted_by_code.txt`.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.23_cargo_fmt_check.txt`) (final: `evidence_runs/2026-02-05/P1.23_cargo_fmt_check_final.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.23_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.23_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.23_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.23_cargo_audit.txt`; workaround: writable `/tmp` advisory DB copy via `--db ...` + `CARGO_NET_OFFLINE=true` + `--no-fetch --stale --json`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.23_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.23_cargo_deny_advisories.txt`; workaround: writable temp `CARGO_HOME` seeded from `/home/dev/.cargo/{advisory-dbs,registry,git}` + `CARGO_NET_OFFLINE=true` + `--disable-fetch`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.23_cargo_deny_licenses.txt`)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

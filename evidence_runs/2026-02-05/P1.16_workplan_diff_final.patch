@@ -1,0 +1,42 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index c828ff8..a2323bb 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -550,8 +550,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.16 — Seam extraction: auth/login helpers (`auth.rs`) (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Move authentication state + login flow helpers out of `crates/codex/src/lib.rs` into `crates/codex/src/auth.rs`, preserving existing public API paths via re-exports from `lib.rs`.
+ - Scope:
+@@ -1772,6 +1772,26 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P1.16 Seam extraction: auth/login helpers (`auth.rs`) (API preserved)
++
++- Scope/step: P1.16
++- Why: Move authentication state + login flow helpers out of `crates/codex/src/lib.rs` into `crates/codex/src/auth.rs` while preserving crate-root public API paths via re-exports.
++- What changed:
++  - Extracted `AuthSessionHelper` and auth enums (`CodexAuthStatus`, `CodexAuthMethod`, `CodexLogoutStatus`) into `crates/codex/src/auth.rs`; re-exported them from `crates/codex/src/lib.rs` to preserve `codex::*` API paths.
++  - Moved `CodexClient` login/logout helpers (`spawn_*login_process`, `login_with_api_key`, `login_status`, `logout`) and `parse_login_success` into `crates/codex/src/auth.rs` (pure move; signatures/behavior unchanged).
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.16_cargo_fmt_check_final.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.16_cargo_fmt_check.txt`; re-check: `evidence_runs/2026-02-05/P1.16_cargo_fmt_check_after.txt`; final apply: `evidence_runs/2026-02-05/P1.16_cargo_fmt_apply_final.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.16_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.16_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.16_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.16_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.16_cargo_audit.txt`; reran with `--no-fetch --stale` due to sandbox advisory DB lock constraints)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.16_cargo_deny_advisories_final.txt`) (initial FAILs: `evidence_runs/2026-02-05/P1.16_cargo_deny_advisories.txt` (read-only advisory DB lock) + `evidence_runs/2026-02-05/P1.16_cargo_deny_advisories_after.txt` (crates.io DNS/network); workaround: writable temp `CARGO_HOME` seeded from `/home/dev/.cargo` advisory DB + registry symlink; `--disable-fetch` + `CARGO_NET_OFFLINE=true`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.16_cargo_deny_licenses.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.16_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.16_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

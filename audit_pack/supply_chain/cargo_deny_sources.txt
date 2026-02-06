@@ -1,2 +1,0 @@
-2026-02-04 13:01:52 [WARN] unable to find a config path, falling back to default config
-sources ok

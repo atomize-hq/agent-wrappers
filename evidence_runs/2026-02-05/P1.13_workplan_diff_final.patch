@@ -1,0 +1,187 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index be223a8..eee47a3 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -493,8 +493,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.13 — Plan remaining Phase 1 seams after P1.12 (no code moves)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: After P1.9–P1.12 land, refresh the Phase 1 seam plan based on the then-current `crates/codex/src/lib.rs` structure and remaining top offenders, keeping extraction steps PR-sized and API-stable.
+ - Expected files touched:
+@@ -507,6 +507,107 @@ Last Updated: YYYY-MM-DD
+ 
+ ---
+ 
++##### P1.14 — Seam extraction: spawn/process plumbing (`process.rs`) (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Extract the internal, cross-cutting subprocess spawning + stdio handling helpers from `crates/codex/src/lib.rs` into `crates/codex/src/process.rs` (or `process/*` if it grows), preserving public APIs by keeping these helpers private to the crate (or re-exporting only if already publicly reachable).
++- Candidate contents (keep cohesive; move mechanically):
++  - `spawn_with_retry` + spawn error classification.
++  - stdout/stderr tee helpers (console mirroring, buffering, “quiet” handling) and shared IO utilities used by exec/apply/diff/sandbox/proxy flows.
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (wire `mod process;`; update internal call sites)
++  - `crates/codex/src/process.rs` (new) or `crates/codex/src/process/*` (new)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No public API path changes (helpers remain crate-private unless already exposed).
++  - New file(s) meet §7.3 size policy (target ≤ 300 LOC; must stay ≤ 600 unless intentionally split).
++- Risk: Medium (cross-cutting; many call sites). Keep changes purely mechanical and avoid behavior edits.
++- Rollback: Revert module move; restore helpers in `lib.rs`.
++
++##### P1.15 — Seam extraction: exec streaming + resume types + helpers (`exec/*`) (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Extract remaining exec/streaming surface area still defined in `crates/codex/src/lib.rs` into a cohesive `crates/codex/src/exec/*` module tree (or a single `exec.rs` first), preserving crate-root public API paths via `pub use` re-exports from `lib.rs`.
++- Scope (targeted; avoid bundling unrelated subcommands):
++  - Public types currently in `lib.rs`: `ExecStreamRequest`, `ResumeSelector`, `ResumeRequest`, `ExecStream`, `ExecCompletion`, `ExecStreamError`.
++  - `CodexClient` methods: `send_prompt*`, `stream_exec*`, resume helpers, and any private helpers that are exec-stream specific (JSONL framing already lives in `jsonl.rs`; event models already live in `events.rs`).
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (wire `mod exec;` or `mod exec { ... }` via `mod exec;` + re-exports; remove moved items)
++  - `crates/codex/src/exec.rs` or `crates/codex/src/exec/*` (new)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No public API path changes (all moved public types remain available at their existing `codex::*` paths).
++  - Move is mechanical: serde shapes, streaming semantics, and buffering/backpressure behavior unchanged (tests pass).
++  - New files meet §7.3 size policy (split by domain if needed to stay ≤ 600 LOC).
++- Dependencies / ordering:
++  - Do after P1.14 so spawn/stdio helpers can be shared cleanly.
++- Risk: Medium (streaming correctness; move-only mitigates).
++- Rollback: Revert module move; restore original `lib.rs` definitions.
++
++##### P1.16 — Seam extraction: auth/login helpers (`auth.rs`) (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Move authentication state + login flow helpers out of `crates/codex/src/lib.rs` into `crates/codex/src/auth.rs`, preserving existing public API paths via re-exports from `lib.rs`.
++- Scope:
++  - `AuthSessionHelper` + related public enums: `CodexAuthStatus`, `CodexAuthMethod`, `CodexLogoutStatus`.
++  - `CodexClient` login-related helpers (spawn/login status helpers) that are not exec-stream specific.
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (wire `mod auth;` + re-exports; remove moved items)
++  - `crates/codex/src/auth.rs` (new)
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No public API path changes.
++  - Login process invocation semantics unchanged (pure move; tests pass).
++  - New module meets §7.3 size policy.
++- Dependencies / ordering:
++  - Prefer after P1.14 so any shared spawn/stdio helpers can be referenced from a single internal module.
++- Risk: Low–Medium (process spawn plumbing; keep move mechanical).
++- Rollback: Revert module move + re-exports; restore original definitions in `lib.rs`.
++
++##### P1.17 — Seam extraction: remaining client subcommand wrappers (`commands/*`) (API preserved)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: Extract the remaining `CodexClient` subcommand wrapper methods still implemented in `crates/codex/src/lib.rs` into a cohesive `crates/codex/src/commands/*` module tree while preserving public API paths and avoiding large cross-cutting moves.
++- Scope (PR-sized; split by domain if needed):
++  - `CodexClient::apply` / `CodexClient::diff` method implementations (types already live in `apply_diff.rs`).
++  - `CodexClient::generate_app_server_bindings` (app-server generate helpers).
++  - `CodexClient::list_features` (execution wrapper; parsing is in `version.rs`).
++  - `CodexClient::start_responses_api_proxy`, `CodexClient::stdio_to_uds`, `CodexClient::run_sandbox`.
++- Expected files touched:
++  - `crates/codex/src/lib.rs` (wire `mod commands;` + `mod sandbox;`/`mod responses_api_proxy;` if split; keep façade stable)
++  - `crates/codex/src/commands/` (new file(s))
++- Acceptance criteria (“done when”):
++  - All §4.1 gates pass.
++  - No public API path changes (methods remain on `CodexClient`; any public helper types remain available at existing `codex::*` paths).
++  - Changes are mechanical: command flags/env, stdout/stderr mirroring, and exit-status handling unchanged.
++  - New file(s) meet §7.3 size policy.
++- Dependencies / ordering:
++  - Prefer after P1.14 so shared spawn/stdio helpers live in one place.
++- Risk: Medium (many flows; keep each move small and consider splitting this step into two PRs if it grows).
++- Rollback: Revert module move(s); restore original method bodies in `lib.rs`.
++
++##### P1.18 — Plan next Phase 1 seams after P1.17 (no code moves)
++
++Status: [ ] Not Started  [ ] In Progress  [ ] Done  
++Last Updated: YYYY-MM-DD
++
++- Goal: After P1.14–P1.17 land, refresh §7.1 seam order + §10 queue based on the then-current `lib.rs` contents and remaining top offenders, keeping follow-on extractions PR-sized and reversible.
++- Expected files touched:
++  - `refactor_workplan.md` (this file): update §7.1 and §10 queue.
++- Acceptance criteria (“done when”):
++  - Updated seam list in §7.1 reflects the then-current module layout and identifies the next 2–4 PR-sized extractions.
++  - No behavior changes (planning only).
++- Risk: Low.
++- Rollback: N/A.
++
+ #### Phase 2 — Split `crates/codex/src/mcp.rs` into `crates/codex/src/mcp/*` (API stable)
+ 
+ **Phase goal:** Split `mcp.rs` into a module tree while maintaining stable public APIs via re-exports from `mcp` (and/or `lib.rs`).
+@@ -867,13 +968,19 @@ Seam order (defined in P1.0; extract in PR-sized steps):
+ 8) Exec JSONL event envelope + payload models → `events.rs` (P1.10).
+ 9) CLI subcommand request/response models → `cli/*` (P1.11).
+ 10) Version/features probe parsing + update advisory helpers → `version.rs` (P1.12).
++11) Spawn/process plumbing → `process.rs` (P1.14).
++12) Exec streaming + resume types + helpers → `exec/*` (P1.15).
++13) Auth/login helpers → `auth.rs` (P1.16).
++14) Remaining client subcommand wrappers → `commands/*` (P1.17).
+ 
+ Notes / dependencies:
+ - `capabilities.rs` is used by the builder/client for cache policies, overrides, and probes; extract before apply/diff to reduce cross-cutting churn.
+ - `apply_diff.rs` depends on command execution plumbing but should remain API-stable via re-exports from `lib.rs`.
+ - `bundled_binary.rs` is leaf-ish and can move early to reduce `lib.rs` churn (it is used mainly by the builder and docs).
+ - `events.rs` is a dependency of streaming exec/resume types; extract it before moving execution/stream implementation blocks.
+-- `cli/*` request/response models depend on builder override types (`CliOverridesPatch`, `FeatureToggles`, `ConfigOverride`), so schedule after P1.7 stabilized the builder module tree.
++- `cli/*` request/response models depend on builder override types (`CliOverridesPatch`, `FeatureToggles`, `ConfigOverride`), so schedule after P1.7 stabilized the builder module tree (done in P1.11).
++- `process.rs` should land before moving additional `CodexClient` impl blocks so spawn/stdio helpers have a single home and are not duplicated across modules.
++- `exec/*` should focus on `codex exec` streaming + resume surfaces; keep other subcommands (apply/diff, sandbox, app-server generate) out of scope to keep the PR-sized.
+ 
+ ### 7.2 `crates/codex/src/mcp.rs` boundaries and extraction order (Phase 2)
+ 
+@@ -1601,6 +1708,28 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P1.13 Plan remaining Phase 1 seams after P1.12 (no code moves)
++
++- Scope/step: P1.13
++- Why: Refresh Phase 1 seam planning after P1.9–P1.12 so the remaining `crates/codex/src/lib.rs` bulk can be extracted in PR-sized, API-stable steps aligned with the current module layout.
++- What changed:
++  - Updated §7.1 seam extraction order to reflect the current module layout after P1.9–P1.12 and to queue the next 2–4 PR-sized extractions (process plumbing, exec streaming, auth/login, and remaining subcommand wrappers).
++  - Added Phase 1 checklist steps P1.14–P1.18 with clear scope boundaries and ordering assumptions.
++  - Updated §10 execution queue to reflect the next Phase 1 seams after P1.13.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.13_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.13_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.13_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.13_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.13_cargo_audit.txt`; workaround: writable `CARGO_HOME=/tmp/p113_cargo_home` seeded with `/home/dev/.cargo` RustSec DB + registry index, `--no-fetch --stale`, `CARGO_NET_OFFLINE=true`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.13_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.13_cargo_deny_advisories.txt`; workaround: writable `CARGO_HOME=/tmp/p113_deny_cargo_home` seeded from `/home/dev/.cargo`, `--disable-fetch`, `CARGO_NET_OFFLINE=true`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.13_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.13_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.13_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.13_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+@@ -1622,8 +1751,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ 
+ Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+ 
+-1) P1.9 — Seam extraction: bundled binary resolver (`bundled_binary.rs`) (API preserved)
+-2) P1.10 — Seam extraction: exec JSONL event models (`events.rs`) (API preserved)
+-3) P1.11 — Seam extraction: CLI subcommand request/response models (`cli/*`) (API preserved)
+-4) P1.12 — Seam extraction: feature/version parsing + update advisory helpers (`version.rs`) (API preserved)
+-5) P1.13 — Plan remaining Phase 1 seams after P1.12 (no code moves)
++1) P1.14 — Seam extraction: spawn/process plumbing (`process.rs`) (API preserved)
++2) P1.15 — Seam extraction: exec streaming + resume types + helpers (`exec/*`) (API preserved)
++3) P1.16 — Seam extraction: auth/login helpers (`auth.rs`) (API preserved)
++4) P1.17 — Seam extraction: remaining client subcommand wrappers (`commands/*`) (API preserved)
++5) P1.18 — Plan next Phase 1 seams after P1.17 (no code moves)

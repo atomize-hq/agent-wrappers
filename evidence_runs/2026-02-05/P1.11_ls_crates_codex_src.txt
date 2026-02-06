@@ -1,0 +1,15 @@
+total 404
+drwxr-xr-x 5 dev dev   4096 Feb  5 10:05 .
+drwxr-xr-x 6 dev dev   4096 Feb  2 16:40 ..
+-rw-r--r-- 1 dev dev   1897 Feb  4 09:58 apply_diff.rs
+drwxr-xr-x 2 dev dev   4096 Feb  5 08:49 builder
+-rw-r--r-- 1 dev dev   7484 Feb  5 09:43 bundled_binary.rs
+drwxr-xr-x 2 dev dev   4096 Feb  4 09:48 capabilities
+-rw-r--r-- 1 dev dev  13623 Feb  5 10:06 events.rs
+-rw-r--r-- 1 dev dev  10881 Feb  4 13:38 execpolicy.rs
+-rw-r--r-- 1 dev dev   9293 Feb  4 08:22 home.rs
+-rw-r--r-- 1 dev dev  22401 Feb  5 06:22 jsonl.rs
+-rw-r--r-- 1 dev dev 289673 Feb  5 10:06 lib.rs
+drwxr-xr-x 2 dev dev   4096 Feb  5 08:00 mcp
+-rw-r--r-- 1 dev dev   1354 Feb  5 08:05 mcp.rs
+-rw-r--r-- 1 dev dev  19700 Feb  2 16:16 wrapper_coverage_manifest.rs

@@ -1,0 +1,43 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 8b5b84b..398a089 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -626,8 +626,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.20 — Seam extraction: core `CodexClient` command runner helpers into `client_core.rs` (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Reduce `lib.rs` size by moving the “core runner” implementation details (e.g., `run_basic_command`, `run_simple_command_with_overrides`, working dir context helpers) into a dedicated internal module while keeping `CodexClient`’s public API and behavior unchanged.
+ - Expected files touched:
+@@ -1939,6 +1939,27 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P1.20: extract core `CodexClient` runner helpers into `client_core.rs`
++
++- Scope/step: P1.20
++- Why: Reduce `crates/codex/src/lib.rs` size by moving the core `CodexClient` command runner helpers (`run_*`, working directory context helpers) into an internal `crates/codex/src/client_core.rs` module without changing public API paths or behavior.
++- What changed:
++  - Added `crates/codex/src/client_core.rs` with the extracted `CodexClient` helpers (`directory_context`, `sandbox_working_dir`, `run_simple_command_with_overrides`, `run_basic_command`) plus `DirectoryContext`.
++  - Wired `mod client_core;` from `crates/codex/src/lib.rs` and removed the extracted helper implementations from `lib.rs` (no signature/behavior changes).
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.20_cargo_fmt_check_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.20_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P1.20_cargo_fmt_apply.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.20_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.20_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.20_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.20_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.20_cargo_audit.txt`; workaround: writable temp `CARGO_HOME` seeded from `/home/dev/.cargo/registry` + `/home/dev/.cargo/advisory-db`, run with `CARGO_NET_OFFLINE=true` + `--db ... --no-fetch --stale --json`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.20_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.20_cargo_deny_advisories.txt`; workaround: writable temp `CARGO_HOME` seeded from `/home/dev/.cargo/advisory-dbs` + `/home/dev/.cargo/registry`, run with `CARGO_NET_OFFLINE=true` + `--disable-fetch`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.20_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.20_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.20_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.20_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

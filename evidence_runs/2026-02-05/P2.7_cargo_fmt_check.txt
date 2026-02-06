@@ -1,0 +1,3909 @@
+$ cargo fmt --all -- --check
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/test_support.rs:21:
+ 
+ use prelude::*;
+ 
+[31m-    pub(super) fn temp_config_manager() -> (tempfile::TempDir, McpConfigManager) {
+(B[m[31m-        let dir = tempfile::tempdir().expect("tempdir");
+(B[m[31m-        let manager = McpConfigManager::from_code_home(dir.path());
+(B[m[31m-        (dir, manager)
+(B[m[31m-    }
+(B[m[32m+pub(super) fn temp_config_manager() -> (tempfile::TempDir, McpConfigManager) {
+(B[m[32m+    let dir = tempfile::tempdir().expect("tempdir");
+(B[m[32m+    let manager = McpConfigManager::from_code_home(dir.path());
+(B[m[32m+    (dir, manager)
+(B[m[32m+}
+(B[m 
+[31m-    pub(super) fn stdio_definition(command: &str) -> McpServerDefinition {
+(B[m[31m-        McpServerDefinition {
+(B[m[31m-            transport: McpTransport::Stdio(StdioServerDefinition {
+(B[m[31m-                command: command.to_string(),
+(B[m[31m-                args: Vec::new(),
+(B[m[31m-                env: BTreeMap::new(),
+(B[m[31m-                timeout_ms: Some(1500),
+(B[m[31m-            }),
+(B[m[31m-            description: None,
+(B[m[31m-            tags: Vec::new(),
+(B[m[31m-            tools: None,
+(B[m[31m-        }
+(B[m[32m+pub(super) fn stdio_definition(command: &str) -> McpServerDefinition {
+(B[m[32m+    McpServerDefinition {
+(B[m[32m+        transport: McpTransport::Stdio(StdioServerDefinition {
+(B[m[32m+            command: command.to_string(),
+(B[m[32m+            args: Vec::new(),
+(B[m[32m+            env: BTreeMap::new(),
+(B[m[32m+            timeout_ms: Some(1500),
+(B[m[32m+        }),
+(B[m[32m+        description: None,
+(B[m[32m+        tags: Vec::new(),
+(B[m[32m+        tools: None,
+(B[m     }
+[32m+}
+(B[m 
+[31m-    pub(super) fn streamable_definition(url: &str, bearer_var: &str) -> McpServerDefinition {
+(B[m[31m-        McpServerDefinition {
+(B[m[31m-            transport: McpTransport::StreamableHttp(StreamableHttpDefinition {
+(B[m[31m-                url: url.to_string(),
+(B[m[31m-                headers: BTreeMap::new(),
+(B[m[31m-                bearer_env_var: Some(bearer_var.to_string()),
+(B[m[31m-                connect_timeout_ms: Some(5000),
+(B[m[31m-                request_timeout_ms: Some(5000),
+(B[m[31m-            }),
+(B[m[31m-            description: None,
+(B[m[31m-            tags: Vec::new(),
+(B[m[31m-            tools: Some(McpToolConfig {
+(B[m[31m-                enabled: vec![],
+(B[m[31m-                disabled: vec![],
+(B[m[31m-            }),
+(B[m[31m-        }
+(B[m[32m+pub(super) fn streamable_definition(url: &str, bearer_var: &str) -> McpServerDefinition {
+(B[m[32m+    McpServerDefinition {
+(B[m[32m+        transport: McpTransport::StreamableHttp(StreamableHttpDefinition {
+(B[m[32m+            url: url.to_string(),
+(B[m[32m+            headers: BTreeMap::new(),
+(B[m[32m+            bearer_env_var: Some(bearer_var.to_string()),
+(B[m[32m+            connect_timeout_ms: Some(5000),
+(B[m[32m+            request_timeout_ms: Some(5000),
+(B[m[32m+        }),
+(B[m[32m+        description: None,
+(B[m[32m+        tags: Vec::new(),
+(B[m[32m+        tools: Some(McpToolConfig {
+(B[m[32m+            enabled: vec![],
+(B[m[32m+            disabled: vec![],
+(B[m[32m+        }),
+(B[m     }
+[32m+}
+(B[m 
+[31m-    pub(super) fn write_fake_mcp_server() -> (tempfile::TempDir, PathBuf) {
+(B[m[31m-        let dir = tempfile::tempdir().expect("tempdir");
+(B[m[31m-        let script_path = dir.path().join("fake-codex");
+(B[m[31m-        let script = r#"#!/usr/bin/env python3
+(B[m[32m+pub(super) fn write_fake_mcp_server() -> (tempfile::TempDir, PathBuf) {
+(B[m[32m+    let dir = tempfile::tempdir().expect("tempdir");
+(B[m[32m+    let script_path = dir.path().join("fake-codex");
+(B[m[32m+    let script = r#"#!/usr/bin/env python3
+(B[m import json
+ import sys
+ import threading
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/test_support.rs:125:
+         break
+ "#;
+ 
+[31m-        fs::write(&script_path, script).expect("write script");
+(B[m[31m-        let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
+(B[m[31m-        perms.set_mode(0o755);
+(B[m[31m-        fs::set_permissions(&script_path, perms).expect("chmod");
+(B[m[31m-        (dir, script_path)
+(B[m[31m-    }
+(B[m[32m+    fs::write(&script_path, script).expect("write script");
+(B[m[32m+    let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
+(B[m[32m+    perms.set_mode(0o755);
+(B[m[32m+    fs::set_permissions(&script_path, perms).expect("chmod");
+(B[m[32m+    (dir, script_path)
+(B[m[32m+}
+(B[m 
+[31m-    pub(super) fn write_fake_app_server() -> (tempfile::TempDir, PathBuf) {
+(B[m[31m-        let dir = tempfile::tempdir().expect("tempdir");
+(B[m[31m-        let script_path = dir.path().join("fake-codex-app");
+(B[m[31m-        let script = r#"#!/usr/bin/env python3
+(B[m[32m+pub(super) fn write_fake_app_server() -> (tempfile::TempDir, PathBuf) {
+(B[m[32m+    let dir = tempfile::tempdir().expect("tempdir");
+(B[m[32m+    let script_path = dir.path().join("fake-codex-app");
+(B[m[32m+    let script = r#"#!/usr/bin/env python3
+(B[m import json
+ import os
+ import sys
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/test_support.rs:224:
+         break
+ "#;
+ 
+[31m-        fs::write(&script_path, script).expect("write script");
+(B[m[31m-        let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
+(B[m[31m-        perms.set_mode(0o755);
+(B[m[31m-        fs::set_permissions(&script_path, perms).expect("chmod");
+(B[m[31m-        (dir, script_path)
+(B[m[31m-    }
+(B[m[32m+    fs::write(&script_path, script).expect("write script");
+(B[m[32m+    let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
+(B[m[32m+    perms.set_mode(0o755);
+(B[m[32m+    fs::set_permissions(&script_path, perms).expect("chmod");
+(B[m[32m+    (dir, script_path)
+(B[m[32m+}
+(B[m 
+[31m-    pub(super) fn write_env_probe_server(var: &str) -> (tempfile::TempDir, PathBuf) {
+(B[m[31m-        let dir = tempfile::tempdir().expect("tempdir");
+(B[m[31m-        let script_path = dir.path().join("env-probe-server");
+(B[m[31m-        let script = format!(
+(B[m[31m-            r#"#!/usr/bin/env python3
+(B[m[32m+pub(super) fn write_env_probe_server(var: &str) -> (tempfile::TempDir, PathBuf) {
+(B[m[32m+    let dir = tempfile::tempdir().expect("tempdir");
+(B[m[32m+    let script_path = dir.path().join("env-probe-server");
+(B[m[32m+    let script = format!(
+(B[m[32m+        r#"#!/usr/bin/env python3
+(B[m import os
+ import sys
+ import time
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/test_support.rs:244:
+ sys.stdout.flush()
+ time.sleep(30)
+ "#
+[31m-        );
+(B[m[32m+    );
+(B[m 
+[31m-        fs::write(&script_path, script).expect("write script");
+(B[m[31m-        let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
+(B[m[31m-        perms.set_mode(0o755);
+(B[m[31m-        fs::set_permissions(&script_path, perms).expect("chmod");
+(B[m[31m-        (dir, script_path)
+(B[m[31m-    }
+(B[m[32m+    fs::write(&script_path, script).expect("write script");
+(B[m[32m+    let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
+(B[m[32m+    perms.set_mode(0o755);
+(B[m[32m+    fs::set_permissions(&script_path, perms).expect("chmod");
+(B[m[32m+    (dir, script_path)
+(B[m[32m+}
+(B[m 
+[31m-    pub(super) fn test_config(binary: PathBuf) -> StdioServerConfig {
+(B[m[31m-        StdioServerConfig {
+(B[m[31m-            binary,
+(B[m[31m-            code_home: None,
+(B[m[31m-            current_dir: None,
+(B[m[31m-            env: Vec::new(),
+(B[m[31m-            app_server_analytics_default_enabled: false,
+(B[m[31m-            mirror_stdio: false,
+(B[m[31m-            startup_timeout: Duration::from_secs(5),
+(B[m[31m-        }
+(B[m[32m+pub(super) fn test_config(binary: PathBuf) -> StdioServerConfig {
+(B[m[32m+    StdioServerConfig {
+(B[m[32m+        binary,
+(B[m[32m+        code_home: None,
+(B[m[32m+        current_dir: None,
+(B[m[32m+        env: Vec::new(),
+(B[m[32m+        app_server_analytics_default_enabled: false,
+(B[m[32m+        mirror_stdio: false,
+(B[m[32m+        startup_timeout: Duration::from_secs(5),
+(B[m     }
+[32m+}
+(B[m 
+[31m-    pub(super) fn test_client() -> ClientInfo {
+(B[m[31m-        ClientInfo {
+(B[m[31m-            name: "tests".to_string(),
+(B[m[31m-            version: "0.0.0".to_string(),
+(B[m[31m-        }
+(B[m[32m+pub(super) fn test_client() -> ClientInfo {
+(B[m[32m+    ClientInfo {
+(B[m[32m+        name: "tests".to_string(),
+(B[m[32m+        version: "0.0.0".to_string(),
+(B[m     }
+[32m+}
+(B[m 
+[31m-    pub(super) async fn start_fake_mcp_server() -> (tempfile::TempDir, CodexMcpServer) {
+(B[m[31m-        let (dir, script) = write_fake_mcp_server();
+(B[m[31m-        let config = test_config(script);
+(B[m[31m-        let client = test_client();
+(B[m[31m-        let server = CodexMcpServer::start(config, client)
+(B[m[31m-            .await
+(B[m[31m-            .expect("spawn mcp server");
+(B[m[31m-        (dir, server)
+(B[m[31m-    }
+(B[m[32m+pub(super) async fn start_fake_mcp_server() -> (tempfile::TempDir, CodexMcpServer) {
+(B[m[32m+    let (dir, script) = write_fake_mcp_server();
+(B[m[32m+    let config = test_config(script);
+(B[m[32m+    let client = test_client();
+(B[m[32m+    let server = CodexMcpServer::start(config, client)
+(B[m[32m+        .await
+(B[m[32m+        .expect("spawn mcp server");
+(B[m[32m+    (dir, server)
+(B[m[32m+}
+(B[m 
+[31m-    pub(super) async fn start_fake_app_server() -> (tempfile::TempDir, CodexAppServer) {
+(B[m[31m-        let (dir, script) = write_fake_app_server();
+(B[m[31m-        let config = test_config(script);
+(B[m[31m-        let client = test_client();
+(B[m[31m-        let server = CodexAppServer::start(config, client)
+(B[m[31m-            .await
+(B[m[31m-            .expect("spawn app server");
+(B[m[31m-        (dir, server)
+(B[m[31m-    }
+(B[m[31m-
+(B[m[32m+pub(super) async fn start_fake_app_server() -> (tempfile::TempDir, CodexAppServer) {
+(B[m[32m+    let (dir, script) = write_fake_app_server();
+(B[m[32m+    let config = test_config(script);
+(B[m[32m+    let client = test_client();
+(B[m[32m+    let server = CodexAppServer::start(config, client)
+(B[m[32m+        .await
+(B[m[32m+        .expect("spawn app server");
+(B[m[32m+    (dir, server)
+(B[m[32m+}
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/tests_core.rs:1:
+[31m-use super::*;
+(B[m use super::test_support::{prelude::*, *};
+[32m+use super::*;
+(B[m 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn app_server_launch_can_enable_analytics_flag() {
+(B[m[31m-        let (dir, script) = write_fake_app_server();
+(B[m[31m-        let log_path = dir.path().join("argv.json");
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn app_server_launch_can_enable_analytics_flag() {
+(B[m[32m+    let (dir, script) = write_fake_app_server();
+(B[m[32m+    let log_path = dir.path().join("argv.json");
+(B[m 
+[31m-        let mut config = test_config(script);
+(B[m[31m-        config.app_server_analytics_default_enabled = true;
+(B[m[31m-        config.env.push((
+(B[m[31m-            OsString::from("ARGV_LOG"),
+(B[m[31m-            OsString::from(log_path.as_os_str()),
+(B[m[31m-        ));
+(B[m[32m+    let mut config = test_config(script);
+(B[m[32m+    config.app_server_analytics_default_enabled = true;
+(B[m[32m+    config.env.push((
+(B[m[32m+        OsString::from("ARGV_LOG"),
+(B[m[32m+        OsString::from(log_path.as_os_str()),
+(B[m[32m+    ));
+(B[m 
+[31m-        let client = test_client();
+(B[m[31m-        let server = CodexAppServer::start(config, client)
+(B[m[31m-            .await
+(B[m[31m-            .expect("spawn app server");
+(B[m[32m+    let client = test_client();
+(B[m[32m+    let server = CodexAppServer::start(config, client)
+(B[m[32m+        .await
+(B[m[32m+        .expect("spawn app server");
+(B[m 
+[31m-        let mut argv_line = None;
+(B[m[31m-        for _ in 0..50 {
+(B[m[31m-            if let Ok(contents) = fs::read_to_string(&log_path) {
+(B[m[31m-                argv_line = contents.lines().next().map(str::to_string);
+(B[m[31m-                break;
+(B[m[31m-            }
+(B[m[31m-            tokio::time::sleep(Duration::from_millis(5)).await;
+(B[m[32m+    let mut argv_line = None;
+(B[m[32m+    for _ in 0..50 {
+(B[m[32m+        if let Ok(contents) = fs::read_to_string(&log_path) {
+(B[m[32m+            argv_line = contents.lines().next().map(str::to_string);
+(B[m[32m+            break;
+(B[m         }
+[32m+        tokio::time::sleep(Duration::from_millis(5)).await;
+(B[m[32m+    }
+(B[m 
+[31m-        let argv_line = argv_line.expect("argv log should be written");
+(B[m[31m-        let argv: Vec<String> = serde_json::from_str(&argv_line).expect("argv json");
+(B[m[31m-        assert_eq!(argv, vec!["app-server", "--analytics-default-enabled"]);
+(B[m[32m+    let argv_line = argv_line.expect("argv log should be written");
+(B[m[32m+    let argv: Vec<String> = serde_json::from_str(&argv_line).expect("argv json");
+(B[m[32m+    assert_eq!(argv, vec!["app-server", "--analytics-default-enabled"]);
+(B[m 
+[31m-        server.shutdown().await.expect("shutdown server");
+(B[m[31m-    }
+(B[m[32m+    server.shutdown().await.expect("shutdown server");
+(B[m[32m+}
+(B[m 
+[31m-    #[test]
+(B[m[31m-    fn add_stdio_server_injects_env_and_persists() {
+(B[m[31m-        let (dir, manager) = temp_config_manager();
+(B[m[31m-        let env_key = "MCP_STDIO_TEST_KEY";
+(B[m[31m-        env::remove_var(env_key);
+(B[m[32m+#[test]
+(B[m[32m+fn add_stdio_server_injects_env_and_persists() {
+(B[m[32m+    let (dir, manager) = temp_config_manager();
+(B[m[32m+    let env_key = "MCP_STDIO_TEST_KEY";
+(B[m[32m+    env::remove_var(env_key);
+(B[m 
+[31m-        let mut env_map = BTreeMap::new();
+(B[m[31m-        env_map.insert(env_key.to_string(), "secret".to_string());
+(B[m[32m+    let mut env_map = BTreeMap::new();
+(B[m[32m+    env_map.insert(env_key.to_string(), "secret".to_string());
+(B[m 
+[31m-        let added = manager
+(B[m[31m-            .add_server(AddServerRequest {
+(B[m[31m-                name: "local".into(),
+(B[m[31m-                definition: stdio_definition("my-mcp"),
+(B[m[31m-                overwrite: false,
+(B[m[31m-                env: env_map,
+(B[m[31m-                bearer_token: None,
+(B[m[31m-            })
+(B[m[31m-            .expect("add server");
+(B[m[32m+    let added = manager
+(B[m[32m+        .add_server(AddServerRequest {
+(B[m[32m+            name: "local".into(),
+(B[m[32m+            definition: stdio_definition("my-mcp"),
+(B[m[32m+            overwrite: false,
+(B[m[32m+            env: env_map,
+(B[m[32m+            bearer_token: None,
+(B[m[32m+        })
+(B[m[32m+        .expect("add server");
+(B[m 
+[31m-        match added.definition.transport {
+(B[m[31m-            McpTransport::Stdio(def) => {
+(B[m[31m-                assert_eq!(def.command, "my-mcp");
+(B[m[31m-                assert_eq!(def.env.get(env_key), Some(&"secret".to_string()));
+(B[m[31m-            }
+(B[m[31m-            _ => panic!("expected stdio transport"),
+(B[m[32m+    match added.definition.transport {
+(B[m[32m+        McpTransport::Stdio(def) => {
+(B[m[32m+            assert_eq!(def.command, "my-mcp");
+(B[m[32m+            assert_eq!(def.env.get(env_key), Some(&"secret".to_string()));
+(B[m         }
+[32m+        _ => panic!("expected stdio transport"),
+(B[m[32m+    }
+(B[m 
+[31m-        let listed = manager.list_servers().expect("list servers");
+(B[m[31m-        assert_eq!(listed.len(), 1);
+(B[m[31m-        assert_eq!(listed[0].name, "local");
+(B[m[32m+    let listed = manager.list_servers().expect("list servers");
+(B[m[32m+    assert_eq!(listed.len(), 1);
+(B[m[32m+    assert_eq!(listed[0].name, "local");
+(B[m 
+[31m-        let fetched = manager.get_server("local").expect("get server");
+(B[m[31m-        match fetched.definition.transport {
+(B[m[31m-            McpTransport::Stdio(def) => {
+(B[m[31m-                assert_eq!(def.env.get(env_key), Some(&"secret".to_string()))
+(B[m[31m-            }
+(B[m[31m-            _ => panic!("expected stdio transport"),
+(B[m[32m+    let fetched = manager.get_server("local").expect("get server");
+(B[m[32m+    match fetched.definition.transport {
+(B[m[32m+        McpTransport::Stdio(def) => {
+(B[m[32m+            assert_eq!(def.env.get(env_key), Some(&"secret".to_string()))
+(B[m         }
+[32m+        _ => panic!("expected stdio transport"),
+(B[m[32m+    }
+(B[m 
+[31m-        let config_path = dir.path().join(DEFAULT_CONFIG_FILE);
+(B[m[31m-        let serialized = fs::read_to_string(config_path).expect("read config");
+(B[m[31m-        let value: TomlValue = serialized.parse().expect("parse toml");
+(B[m[31m-        let table = value.as_table().expect("table root");
+(B[m[31m-        let servers_table = table.get("mcp_servers").expect("mcp_servers");
+(B[m[31m-        let decoded: BTreeMap<String, McpServerDefinition> = servers_table
+(B[m[31m-            .clone()
+(B[m[31m-            .try_into()
+(B[m[31m-            .expect("decode mcp_servers");
+(B[m[31m-        let stored = decoded.get("local").expect("stored server");
+(B[m[31m-        match &stored.transport {
+(B[m[31m-            McpTransport::Stdio(def) => {
+(B[m[31m-                assert_eq!(def.env.get(env_key), Some(&"secret".to_string()))
+(B[m[31m-            }
+(B[m[31m-            _ => panic!("expected stdio transport"),
+(B[m[32m+    let config_path = dir.path().join(DEFAULT_CONFIG_FILE);
+(B[m[32m+    let serialized = fs::read_to_string(config_path).expect("read config");
+(B[m[32m+    let value: TomlValue = serialized.parse().expect("parse toml");
+(B[m[32m+    let table = value.as_table().expect("table root");
+(B[m[32m+    let servers_table = table.get("mcp_servers").expect("mcp_servers");
+(B[m[32m+    let decoded: BTreeMap<String, McpServerDefinition> = servers_table
+(B[m[32m+        .clone()
+(B[m[32m+        .try_into()
+(B[m[32m+        .expect("decode mcp_servers");
+(B[m[32m+    let stored = decoded.get("local").expect("stored server");
+(B[m[32m+    match &stored.transport {
+(B[m[32m+        McpTransport::Stdio(def) => {
+(B[m[32m+            assert_eq!(def.env.get(env_key), Some(&"secret".to_string()))
+(B[m         }
+[32m+        _ => panic!("expected stdio transport"),
+(B[m[32m+    }
+(B[m 
+[31m-        assert_eq!(env::var(env_key).unwrap(), "secret");
+(B[m[31m-        env::remove_var(env_key);
+(B[m[32m+    assert_eq!(env::var(env_key).unwrap(), "secret");
+(B[m[32m+    env::remove_var(env_key);
+(B[m[32m+}
+(B[m[32m+
+(B[m[32m+#[test]
+(B[m[32m+fn add_streamable_http_sets_token_and_allows_login_logout() {
+(B[m[32m+    let (_dir, manager) = temp_config_manager();
+(B[m[32m+    let env_var = "MCP_HTTP_TOKEN_E5";
+(B[m[32m+    env::remove_var(env_var);
+(B[m[32m+
+(B[m[32m+    let mut definition = streamable_definition("https://example.test/mcp", env_var);
+(B[m[32m+    if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
+(B[m[32m+        http.headers.insert("X-Test".into(), "true".into());
+(B[m     }
+ 
+[31m-    #[test]
+(B[m[31m-    fn add_streamable_http_sets_token_and_allows_login_logout() {
+(B[m[31m-        let (_dir, manager) = temp_config_manager();
+(B[m[31m-        let env_var = "MCP_HTTP_TOKEN_E5";
+(B[m[31m-        env::remove_var(env_var);
+(B[m[32m+    let _added = manager
+(B[m[32m+        .add_server(AddServerRequest {
+(B[m[32m+            name: "remote".into(),
+(B[m[32m+            definition,
+(B[m[32m+            overwrite: false,
+(B[m[32m+            env: BTreeMap::new(),
+(B[m[32m+            bearer_token: Some("token-a".into()),
+(B[m[32m+        })
+(B[m[32m+        .expect("add server");
+(B[m 
+[31m-        let mut definition = streamable_definition("https://example.test/mcp", env_var);
+(B[m[31m-        if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
+(B[m[31m-            http.headers.insert("X-Test".into(), "true".into());
+(B[m[31m-        }
+(B[m[32m+    assert_eq!(env::var(env_var).unwrap(), "token-a");
+(B[m 
+[31m-        let _added = manager
+(B[m[31m-            .add_server(AddServerRequest {
+(B[m[31m-                name: "remote".into(),
+(B[m[31m-                definition,
+(B[m[31m-                overwrite: false,
+(B[m[31m-                env: BTreeMap::new(),
+(B[m[31m-                bearer_token: Some("token-a".into()),
+(B[m[31m-            })
+(B[m[31m-            .expect("add server");
+(B[m[32m+    let logout = manager.logout("remote").expect("logout");
+(B[m[32m+    assert_eq!(logout.env_var.as_deref(), Some(env_var));
+(B[m[32m+    assert!(logout.cleared);
+(B[m[32m+    assert!(env::var(env_var).is_err());
+(B[m 
+[31m-        assert_eq!(env::var(env_var).unwrap(), "token-a");
+(B[m[32m+    let login = manager.login("remote", "token-b").expect("login");
+(B[m[32m+    assert_eq!(login.env_var.as_deref(), Some(env_var));
+(B[m[32m+    assert_eq!(env::var(env_var).unwrap(), "token-b");
+(B[m 
+[31m-        let logout = manager.logout("remote").expect("logout");
+(B[m[31m-        assert_eq!(logout.env_var.as_deref(), Some(env_var));
+(B[m[31m-        assert!(logout.cleared);
+(B[m[31m-        assert!(env::var(env_var).is_err());
+(B[m[32m+    env::remove_var(env_var);
+(B[m[32m+}
+(B[m 
+[31m-        let login = manager.login("remote", "token-b").expect("login");
+(B[m[31m-        assert_eq!(login.env_var.as_deref(), Some(env_var));
+(B[m[31m-        assert_eq!(env::var(env_var).unwrap(), "token-b");
+(B[m[32m+#[test]
+(B[m[32m+fn remove_server_prunes_config() {
+(B[m[32m+    let (_dir, manager) = temp_config_manager();
+(B[m 
+[31m-        env::remove_var(env_var);
+(B[m[31m-    }
+(B[m[32m+    manager
+(B[m[32m+        .add_server(AddServerRequest {
+(B[m[32m+            name: "one".into(),
+(B[m[32m+            definition: stdio_definition("one"),
+(B[m[32m+            overwrite: false,
+(B[m[32m+            env: BTreeMap::new(),
+(B[m[32m+            bearer_token: None,
+(B[m[32m+        })
+(B[m[32m+        .expect("add first");
+(B[m 
+[31m-    #[test]
+(B[m[31m-    fn remove_server_prunes_config() {
+(B[m[31m-        let (_dir, manager) = temp_config_manager();
+(B[m[32m+    manager
+(B[m[32m+        .add_server(AddServerRequest {
+(B[m[32m+            name: "two".into(),
+(B[m[32m+            definition: stdio_definition("two"),
+(B[m[32m+            overwrite: false,
+(B[m[32m+            env: BTreeMap::new(),
+(B[m[32m+            bearer_token: None,
+(B[m[32m+        })
+(B[m[32m+        .expect("add second");
+(B[m 
+[31m-        manager
+(B[m[31m-            .add_server(AddServerRequest {
+(B[m[31m-                name: "one".into(),
+(B[m[31m-                definition: stdio_definition("one"),
+(B[m[31m-                overwrite: false,
+(B[m[31m-                env: BTreeMap::new(),
+(B[m[31m-                bearer_token: None,
+(B[m[31m-            })
+(B[m[31m-            .expect("add first");
+(B[m[32m+    let removed = manager.remove_server("one").expect("remove");
+(B[m[32m+    assert!(removed.is_some());
+(B[m 
+[31m-        manager
+(B[m[31m-            .add_server(AddServerRequest {
+(B[m[31m-                name: "two".into(),
+(B[m[31m-                definition: stdio_definition("two"),
+(B[m[31m-                overwrite: false,
+(B[m[31m-                env: BTreeMap::new(),
+(B[m[31m-                bearer_token: None,
+(B[m[31m-            })
+(B[m[31m-            .expect("add second");
+(B[m[32m+    let listed = manager.list_servers().expect("list");
+(B[m[32m+    assert_eq!(listed.len(), 1);
+(B[m[32m+    assert_eq!(listed[0].name, "two");
+(B[m 
+[31m-        let removed = manager.remove_server("one").expect("remove");
+(B[m[31m-        assert!(removed.is_some());
+(B[m[32m+    let config = fs::read_to_string(manager.config_path()).expect("read config");
+(B[m[32m+    let value: TomlValue = config.parse().expect("parse config");
+(B[m[32m+    let table = value.as_table().expect("table root");
+(B[m[32m+    let servers_value = table.get("mcp_servers").cloned().expect("servers");
+(B[m[32m+    let servers: BTreeMap<String, McpServerDefinition> =
+(B[m[32m+        servers_value.try_into().expect("decode servers");
+(B[m[32m+    assert!(!servers.contains_key("one"));
+(B[m[32m+    assert!(servers.contains_key("two"));
+(B[m[32m+}
+(B[m 
+[31m-        let listed = manager.list_servers().expect("list");
+(B[m[31m-        assert_eq!(listed.len(), 1);
+(B[m[31m-        assert_eq!(listed[0].name, "two");
+(B[m[32m+#[test]
+(B[m[32m+fn runtime_stdio_server_resolves_env_and_tools() {
+(B[m[32m+    let (_dir, manager) = temp_config_manager();
+(B[m[32m+    let mut definition = stdio_definition("my-mcp");
+(B[m[32m+    definition.description = Some("local mcp".into());
+(B[m[32m+    definition.tags = vec!["dev".into(), "local".into()];
+(B[m[32m+    definition.tools = Some(McpToolConfig {
+(B[m[32m+        enabled: vec!["tool-a".into()],
+(B[m[32m+        disabled: vec!["tool-b".into()],
+(B[m[32m+    });
+(B[m 
+[31m-        let config = fs::read_to_string(manager.config_path()).expect("read config");
+(B[m[31m-        let value: TomlValue = config.parse().expect("parse config");
+(B[m[31m-        let table = value.as_table().expect("table root");
+(B[m[31m-        let servers_value = table.get("mcp_servers").cloned().expect("servers");
+(B[m[31m-        let servers: BTreeMap<String, McpServerDefinition> =
+(B[m[31m-            servers_value.try_into().expect("decode servers");
+(B[m[31m-        assert!(!servers.contains_key("one"));
+(B[m[31m-        assert!(servers.contains_key("two"));
+(B[m[32m+    if let McpTransport::Stdio(ref mut stdio) = definition.transport {
+(B[m[32m+        stdio.args = vec!["--flag".into()];
+(B[m[32m+        stdio.env.insert("EXAMPLE".into(), "value".into());
+(B[m[32m+        stdio.timeout_ms = Some(2500);
+(B[m     }
+ 
+[31m-    #[test]
+(B[m[31m-    fn runtime_stdio_server_resolves_env_and_tools() {
+(B[m[31m-        let (_dir, manager) = temp_config_manager();
+(B[m[31m-        let mut definition = stdio_definition("my-mcp");
+(B[m[31m-        definition.description = Some("local mcp".into());
+(B[m[31m-        definition.tags = vec!["dev".into(), "local".into()];
+(B[m[31m-        definition.tools = Some(McpToolConfig {
+(B[m[31m-            enabled: vec!["tool-a".into()],
+(B[m[31m-            disabled: vec!["tool-b".into()],
+(B[m[31m-        });
+(B[m[32m+    let mut injected = BTreeMap::new();
+(B[m[32m+    injected.insert("MCP_STDIO_INJECT_E6".into(), "yes".into());
+(B[m 
+[31m-        if let McpTransport::Stdio(ref mut stdio) = definition.transport {
+(B[m[31m-            stdio.args = vec!["--flag".into()];
+(B[m[31m-            stdio.env.insert("EXAMPLE".into(), "value".into());
+(B[m[31m-            stdio.timeout_ms = Some(2500);
+(B[m[31m-        }
+(B[m[32m+    manager
+(B[m[32m+        .add_server(AddServerRequest {
+(B[m[32m+            name: "local".into(),
+(B[m[32m+            definition,
+(B[m[32m+            overwrite: false,
+(B[m[32m+            env: injected,
+(B[m[32m+            bearer_token: None,
+(B[m[32m+        })
+(B[m[32m+        .expect("add server");
+(B[m 
+[31m-        let mut injected = BTreeMap::new();
+(B[m[31m-        injected.insert("MCP_STDIO_INJECT_E6".into(), "yes".into());
+(B[m[32m+    let runtime = manager.runtime_server("local").expect("runtime server");
+(B[m[32m+    assert_eq!(runtime.name, "local");
+(B[m[32m+    assert_eq!(runtime.description.as_deref(), Some("local mcp"));
+(B[m[32m+    assert_eq!(runtime.tags, vec!["dev".to_string(), "local".to_string()]);
+(B[m 
+[31m-        manager
+(B[m[31m-            .add_server(AddServerRequest {
+(B[m[31m-                name: "local".into(),
+(B[m[31m-                definition,
+(B[m[31m-                overwrite: false,
+(B[m[31m-                env: injected,
+(B[m[31m-                bearer_token: None,
+(B[m[31m-            })
+(B[m[31m-            .expect("add server");
+(B[m[32m+    let tools = runtime.tools.as_ref().expect("tool hints");
+(B[m[32m+    assert_eq!(tools.enabled, vec!["tool-a".to_string()]);
+(B[m[32m+    assert_eq!(tools.disabled, vec!["tool-b".to_string()]);
+(B[m 
+[31m-        let runtime = manager.runtime_server("local").expect("runtime server");
+(B[m[31m-        assert_eq!(runtime.name, "local");
+(B[m[31m-        assert_eq!(runtime.description.as_deref(), Some("local mcp"));
+(B[m[31m-        assert_eq!(runtime.tags, vec!["dev".to_string(), "local".to_string()]);
+(B[m[32m+    match &runtime.transport {
+(B[m[32m+        McpRuntimeTransport::Stdio(def) => {
+(B[m[32m+            assert_eq!(def.command, "my-mcp");
+(B[m[32m+            assert_eq!(def.args, vec!["--flag".to_string()]);
+(B[m[32m+            assert_eq!(def.timeout_ms, Some(2500));
+(B[m[32m+            assert_eq!(def.env.get("EXAMPLE").map(String::as_str), Some("value"));
+(B[m[32m+            assert_eq!(
+(B[m[32m+                def.env.get("MCP_STDIO_INJECT_E6").map(String::as_str),
+(B[m[32m+                Some("yes")
+(B[m[32m+            );
+(B[m[32m+        }
+(B[m[32m+        other => panic!("expected stdio transport, got {other:?}"),
+(B[m[32m+    }
+(B[m 
+[31m-        let tools = runtime.tools.as_ref().expect("tool hints");
+(B[m[31m-        assert_eq!(tools.enabled, vec!["tool-a".to_string()]);
+(B[m[31m-        assert_eq!(tools.disabled, vec!["tool-b".to_string()]);
+(B[m[32m+    serde_json::to_string(&runtime).expect("serialize runtime");
+(B[m[32m+    env::remove_var("MCP_STDIO_INJECT_E6");
+(B[m[32m+}
+(B[m 
+[31m-        match &runtime.transport {
+(B[m[31m-            McpRuntimeTransport::Stdio(def) => {
+(B[m[31m-                assert_eq!(def.command, "my-mcp");
+(B[m[31m-                assert_eq!(def.args, vec!["--flag".to_string()]);
+(B[m[31m-                assert_eq!(def.timeout_ms, Some(2500));
+(B[m[31m-                assert_eq!(def.env.get("EXAMPLE").map(String::as_str), Some("value"));
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    def.env.get("MCP_STDIO_INJECT_E6").map(String::as_str),
+(B[m[31m-                    Some("yes")
+(B[m[31m-                );
+(B[m[31m-            }
+(B[m[31m-            other => panic!("expected stdio transport, got {other:?}"),
+(B[m[31m-        }
+(B[m[32m+#[test]
+(B[m[32m+fn runtime_http_resolves_bearer_and_sets_header() {
+(B[m[32m+    let (_dir, manager) = temp_config_manager();
+(B[m[32m+    let env_var = "MCP_HTTP_TOKEN_E6";
+(B[m[32m+    env::set_var(env_var, "token-123");
+(B[m 
+[31m-        serde_json::to_string(&runtime).expect("serialize runtime");
+(B[m[31m-        env::remove_var("MCP_STDIO_INJECT_E6");
+(B[m[32m+    let mut definition = streamable_definition("https://example.test/mcp", env_var);
+(B[m[32m+    if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
+(B[m[32m+        http.headers.insert("X-Test".into(), "true".into());
+(B[m[32m+        http.connect_timeout_ms = Some(1200);
+(B[m[32m+        http.request_timeout_ms = Some(3400);
+(B[m     }
+ 
+[31m-    #[test]
+(B[m[31m-    fn runtime_http_resolves_bearer_and_sets_header() {
+(B[m[31m-        let (_dir, manager) = temp_config_manager();
+(B[m[31m-        let env_var = "MCP_HTTP_TOKEN_E6";
+(B[m[31m-        env::set_var(env_var, "token-123");
+(B[m[32m+    manager
+(B[m[32m+        .add_server(AddServerRequest {
+(B[m[32m+            name: "remote".into(),
+(B[m[32m+            definition,
+(B[m[32m+            overwrite: false,
+(B[m[32m+            env: BTreeMap::new(),
+(B[m[32m+            bearer_token: None,
+(B[m[32m+        })
+(B[m[32m+        .expect("add server");
+(B[m 
+[31m-        let mut definition = streamable_definition("https://example.test/mcp", env_var);
+(B[m[31m-        if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
+(B[m[31m-            http.headers.insert("X-Test".into(), "true".into());
+(B[m[31m-            http.connect_timeout_ms = Some(1200);
+(B[m[31m-            http.request_timeout_ms = Some(3400);
+(B[m[32m+    let runtime = manager.runtime_server("remote").expect("runtime server");
+(B[m[32m+    match &runtime.transport {
+(B[m[32m+        McpRuntimeTransport::StreamableHttp(def) => {
+(B[m[32m+            assert_eq!(def.url, "https://example.test/mcp");
+(B[m[32m+            assert_eq!(def.bearer_env_var.as_deref(), Some(env_var));
+(B[m[32m+            assert_eq!(def.bearer_token.as_deref(), Some("token-123"));
+(B[m[32m+            assert_eq!(def.headers.get("X-Test").map(String::as_str), Some("true"));
+(B[m[32m+            assert_eq!(
+(B[m[32m+                def.headers.get("Authorization").map(String::as_str),
+(B[m[32m+                Some("Bearer token-123")
+(B[m[32m+            );
+(B[m[32m+            assert_eq!(def.connect_timeout_ms, Some(1200));
+(B[m[32m+            assert_eq!(def.request_timeout_ms, Some(3400));
+(B[m         }
+[32m+        other => panic!("expected streamable_http transport, got {other:?}"),
+(B[m[32m+    }
+(B[m 
+[31m-        manager
+(B[m[31m-            .add_server(AddServerRequest {
+(B[m[31m-                name: "remote".into(),
+(B[m[31m-                definition,
+(B[m[31m-                overwrite: false,
+(B[m[31m-                env: BTreeMap::new(),
+(B[m[31m-                bearer_token: None,
+(B[m[31m-            })
+(B[m[31m-            .expect("add server");
+(B[m[32m+    let serialized = serde_json::to_value(&runtime).expect("serialize runtime");
+(B[m[32m+    assert!(serialized.get("transport").is_some());
+(B[m 
+[31m-        let runtime = manager.runtime_server("remote").expect("runtime server");
+(B[m[31m-        match &runtime.transport {
+(B[m[31m-            McpRuntimeTransport::StreamableHttp(def) => {
+(B[m[31m-                assert_eq!(def.url, "https://example.test/mcp");
+(B[m[31m-                assert_eq!(def.bearer_env_var.as_deref(), Some(env_var));
+(B[m[31m-                assert_eq!(def.bearer_token.as_deref(), Some("token-123"));
+(B[m[31m-                assert_eq!(def.headers.get("X-Test").map(String::as_str), Some("true"));
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    def.headers.get("Authorization").map(String::as_str),
+(B[m[31m-                    Some("Bearer token-123")
+(B[m[31m-                );
+(B[m[31m-                assert_eq!(def.connect_timeout_ms, Some(1200));
+(B[m[31m-                assert_eq!(def.request_timeout_ms, Some(3400));
+(B[m[31m-            }
+(B[m[31m-            other => panic!("expected streamable_http transport, got {other:?}"),
+(B[m[31m-        }
+(B[m[32m+    env::remove_var(env_var);
+(B[m[32m+}
+(B[m 
+[31m-        let serialized = serde_json::to_value(&runtime).expect("serialize runtime");
+(B[m[31m-        assert!(serialized.get("transport").is_some());
+(B[m[32m+#[test]
+(B[m[32m+fn runtime_http_preserves_existing_auth_header() {
+(B[m[32m+    let (_dir, manager) = temp_config_manager();
+(B[m[32m+    let env_var = "MCP_HTTP_TOKEN_E6B";
+(B[m[32m+    env::set_var(env_var, "token-override");
+(B[m 
+[31m-        env::remove_var(env_var);
+(B[m[32m+    let mut definition = streamable_definition("https://example.test/custom", env_var);
+(B[m[32m+    if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
+(B[m[32m+        http.headers
+(B[m[32m+            .insert("Authorization".into(), "Custom 123".into());
+(B[m     }
+ 
+[31m-    #[test]
+(B[m[31m-    fn runtime_http_preserves_existing_auth_header() {
+(B[m[31m-        let (_dir, manager) = temp_config_manager();
+(B[m[31m-        let env_var = "MCP_HTTP_TOKEN_E6B";
+(B[m[31m-        env::set_var(env_var, "token-override");
+(B[m[32m+    manager
+(B[m[32m+        .add_server(AddServerRequest {
+(B[m[32m+            name: "remote-custom".into(),
+(B[m[32m+            definition,
+(B[m[32m+            overwrite: false,
+(B[m[32m+            env: BTreeMap::new(),
+(B[m[32m+            bearer_token: None,
+(B[m[32m+        })
+(B[m[32m+        .expect("add server");
+(B[m 
+[31m-        let mut definition = streamable_definition("https://example.test/custom", env_var);
+(B[m[31m-        if let McpTransport::StreamableHttp(ref mut http) = definition.transport {
+(B[m[31m-            http.headers
+(B[m[31m-                .insert("Authorization".into(), "Custom 123".into());
+(B[m[32m+    let runtime = manager
+(B[m[32m+        .runtime_server("remote-custom")
+(B[m[32m+        .expect("runtime server");
+(B[m[32m+    match &runtime.transport {
+(B[m[32m+        McpRuntimeTransport::StreamableHttp(def) => {
+(B[m[32m+            assert_eq!(def.bearer_token.as_deref(), Some("token-override"));
+(B[m[32m+            assert_eq!(
+(B[m[32m+                def.headers.get("Authorization").map(String::as_str),
+(B[m[32m+                Some("Custom 123")
+(B[m[32m+            );
+(B[m         }
+[31m-
+(B[m[31m-        manager
+(B[m[31m-            .add_server(AddServerRequest {
+(B[m[31m-                name: "remote-custom".into(),
+(B[m[31m-                definition,
+(B[m[31m-                overwrite: false,
+(B[m[31m-                env: BTreeMap::new(),
+(B[m[31m-                bearer_token: None,
+(B[m[31m-            })
+(B[m[31m-            .expect("add server");
+(B[m[31m-
+(B[m[31m-        let runtime = manager
+(B[m[31m-            .runtime_server("remote-custom")
+(B[m[31m-            .expect("runtime server");
+(B[m[31m-        match &runtime.transport {
+(B[m[31m-            McpRuntimeTransport::StreamableHttp(def) => {
+(B[m[31m-                assert_eq!(def.bearer_token.as_deref(), Some("token-override"));
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    def.headers.get("Authorization").map(String::as_str),
+(B[m[31m-                    Some("Custom 123")
+(B[m[31m-                );
+(B[m[31m-            }
+(B[m[31m-            other => panic!("expected streamable_http transport, got {other:?}"),
+(B[m[31m-        }
+(B[m[31m-
+(B[m[31m-        env::remove_var(env_var);
+(B[m[32m+        other => panic!("expected streamable_http transport, got {other:?}"),
+(B[m     }
+ 
+[31m-    #[test]
+(B[m[31m-    fn runtime_stdio_launcher_merges_env_timeout_and_tools() {
+(B[m[31m-        let base_dir = tempfile::tempdir().expect("tempdir");
+(B[m[31m-        let code_home = base_dir.path().join("code_home");
+(B[m[32m+    env::remove_var(env_var);
+(B[m[32m+}
+(B[m 
+[31m-        let defaults = StdioServerConfig {
+(B[m[31m-            binary: PathBuf::from("codex"),
+(B[m[31m-            code_home: Some(code_home.clone()),
+(B[m[31m-            current_dir: Some(base_dir.path().to_path_buf()),
+(B[m[31m-            env: vec![
+(B[m[31m-                (OsString::from("BASE_ONLY"), OsString::from("base")),
+(B[m[31m-                (OsString::from("OVERRIDE_ME"), OsString::from("base")),
+(B[m[31m-            ],
+(B[m[31m-            app_server_analytics_default_enabled: false,
+(B[m[31m-            mirror_stdio: true,
+(B[m[31m-            startup_timeout: Duration::from_secs(5),
+(B[m[31m-        };
+(B[m[32m+#[test]
+(B[m[32m+fn runtime_stdio_launcher_merges_env_timeout_and_tools() {
+(B[m[32m+    let base_dir = tempfile::tempdir().expect("tempdir");
+(B[m[32m+    let code_home = base_dir.path().join("code_home");
+(B[m 
+[31m-        let mut definition = StdioServerDefinition {
+(B[m[31m-            command: "my-mcp".into(),
+(B[m[31m-            args: vec!["--flag".into()],
+(B[m[31m-            env: BTreeMap::new(),
+(B[m[31m-            timeout_ms: Some(1500),
+(B[m[31m-        };
+(B[m[31m-        definition
+(B[m[31m-            .env
+(B[m[31m-            .insert("OVERRIDE_ME".into(), "runtime".into());
+(B[m[31m-        definition
+(B[m[31m-            .env
+(B[m[31m-            .insert("RUNTIME_ONLY".into(), "runtime-env".into());
+(B[m[32m+    let defaults = StdioServerConfig {
+(B[m[32m+        binary: PathBuf::from("codex"),
+(B[m[32m+        code_home: Some(code_home.clone()),
+(B[m[32m+        current_dir: Some(base_dir.path().to_path_buf()),
+(B[m[32m+        env: vec![
+(B[m[32m+            (OsString::from("BASE_ONLY"), OsString::from("base")),
+(B[m[32m+            (OsString::from("OVERRIDE_ME"), OsString::from("base")),
+(B[m[32m+        ],
+(B[m[32m+        app_server_analytics_default_enabled: false,
+(B[m[32m+        mirror_stdio: true,
+(B[m[32m+        startup_timeout: Duration::from_secs(5),
+(B[m[32m+    };
+(B[m 
+[31m-        let runtime = McpRuntimeServer {
+(B[m[31m-            name: "local".into(),
+(B[m[31m-            transport: McpRuntimeTransport::Stdio(definition),
+(B[m[31m-            description: Some("example".into()),
+(B[m[31m-            tags: vec!["dev".into()],
+(B[m[31m-            tools: Some(McpToolConfig {
+(B[m[31m-                enabled: vec!["tool-1".into()],
+(B[m[31m-                disabled: vec!["tool-2".into()],
+(B[m[31m-            }),
+(B[m[31m-        };
+(B[m[32m+    let mut definition = StdioServerDefinition {
+(B[m[32m+        command: "my-mcp".into(),
+(B[m[32m+        args: vec!["--flag".into()],
+(B[m[32m+        env: BTreeMap::new(),
+(B[m[32m+        timeout_ms: Some(1500),
+(B[m[32m+    };
+(B[m[32m+    definition
+(B[m[32m+        .env
+(B[m[32m+        .insert("OVERRIDE_ME".into(), "runtime".into());
+(B[m[32m+    definition
+(B[m[32m+        .env
+(B[m[32m+        .insert("RUNTIME_ONLY".into(), "runtime-env".into());
+(B[m 
+[31m-        let launcher = runtime.into_launcher(&defaults);
+(B[m[31m-        assert_eq!(launcher.name, "local");
+(B[m[31m-        assert_eq!(launcher.description.as_deref(), Some("example"));
+(B[m[31m-        assert_eq!(launcher.tags, vec!["dev".to_string()]);
+(B[m[32m+    let runtime = McpRuntimeServer {
+(B[m[32m+        name: "local".into(),
+(B[m[32m+        transport: McpRuntimeTransport::Stdio(definition),
+(B[m[32m+        description: Some("example".into()),
+(B[m[32m+        tags: vec!["dev".into()],
+(B[m[32m+        tools: Some(McpToolConfig {
+(B[m[32m+            enabled: vec!["tool-1".into()],
+(B[m[32m+            disabled: vec!["tool-2".into()],
+(B[m[32m+        }),
+(B[m[32m+    };
+(B[m 
+[31m-        let tools = launcher.tools.clone().expect("tool hints");
+(B[m[31m-        assert_eq!(tools.enabled, vec!["tool-1".to_string()]);
+(B[m[31m-        assert_eq!(tools.disabled, vec!["tool-2".to_string()]);
+(B[m[32m+    let launcher = runtime.into_launcher(&defaults);
+(B[m[32m+    assert_eq!(launcher.name, "local");
+(B[m[32m+    assert_eq!(launcher.description.as_deref(), Some("example"));
+(B[m[32m+    assert_eq!(launcher.tags, vec!["dev".to_string()]);
+(B[m 
+[31m-        match launcher.transport {
+(B[m[31m-            McpServerLauncherTransport::Stdio(launch) => {
+(B[m[31m-                assert_eq!(launch.command, PathBuf::from("my-mcp"));
+(B[m[31m-                assert_eq!(launch.args, vec!["--flag".to_string()]);
+(B[m[31m-                assert_eq!(launch.current_dir.as_ref(), defaults.current_dir.as_ref());
+(B[m[31m-                assert_eq!(launch.timeout, Duration::from_millis(1500));
+(B[m[31m-                assert!(launch.mirror_stdio);
+(B[m[32m+    let tools = launcher.tools.clone().expect("tool hints");
+(B[m[32m+    assert_eq!(tools.enabled, vec!["tool-1".to_string()]);
+(B[m[32m+    assert_eq!(tools.disabled, vec!["tool-2".to_string()]);
+(B[m 
+[31m-                let env_map: HashMap<OsString, OsString> = launch.env.into_iter().collect();
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    env_map.get(&OsString::from("BASE_ONLY")),
+(B[m[31m-                    Some(&OsString::from("base"))
+(B[m[31m-                );
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    env_map.get(&OsString::from("OVERRIDE_ME")),
+(B[m[31m-                    Some(&OsString::from("runtime"))
+(B[m[31m-                );
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    env_map.get(&OsString::from("RUNTIME_ONLY")),
+(B[m[31m-                    Some(&OsString::from("runtime-env"))
+(B[m[31m-                );
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    env_map.get(&OsString::from("CODEX_HOME")),
+(B[m[31m-                    Some(&code_home.as_os_str().to_os_string())
+(B[m[31m-                );
+(B[m[31m-            }
+(B[m[31m-            other => panic!("expected stdio launcher, got {other:?}"),
+(B[m[32m+    match launcher.transport {
+(B[m[32m+        McpServerLauncherTransport::Stdio(launch) => {
+(B[m[32m+            assert_eq!(launch.command, PathBuf::from("my-mcp"));
+(B[m[32m+            assert_eq!(launch.args, vec!["--flag".to_string()]);
+(B[m[32m+            assert_eq!(launch.current_dir.as_ref(), defaults.current_dir.as_ref());
+(B[m[32m+            assert_eq!(launch.timeout, Duration::from_millis(1500));
+(B[m[32m+            assert!(launch.mirror_stdio);
+(B[m[32m+
+(B[m[32m+            let env_map: HashMap<OsString, OsString> = launch.env.into_iter().collect();
+(B[m[32m+            assert_eq!(
+(B[m[32m+                env_map.get(&OsString::from("BASE_ONLY")),
+(B[m[32m+                Some(&OsString::from("base"))
+(B[m[32m+            );
+(B[m[32m+            assert_eq!(
+(B[m[32m+                env_map.get(&OsString::from("OVERRIDE_ME")),
+(B[m[32m+                Some(&OsString::from("runtime"))
+(B[m[32m+            );
+(B[m[32m+            assert_eq!(
+(B[m[32m+                env_map.get(&OsString::from("RUNTIME_ONLY")),
+(B[m[32m+                Some(&OsString::from("runtime-env"))
+(B[m[32m+            );
+(B[m[32m+            assert_eq!(
+(B[m[32m+                env_map.get(&OsString::from("CODEX_HOME")),
+(B[m[32m+                Some(&code_home.as_os_str().to_os_string())
+(B[m[32m+            );
+(B[m         }
+[32m+        other => panic!("expected stdio launcher, got {other:?}"),
+(B[m     }
+[32m+}
+(B[m 
+[31m-    #[test]
+(B[m[31m-    fn streamable_http_connector_converts_timeouts_and_headers() {
+(B[m[31m-        let env_var = "MCP_HTTP_TOKEN_E7";
+(B[m[31m-        env::set_var(env_var, "token-launcher");
+(B[m[32m+#[test]
+(B[m[32m+fn streamable_http_connector_converts_timeouts_and_headers() {
+(B[m[32m+    let env_var = "MCP_HTTP_TOKEN_E7";
+(B[m[32m+    env::set_var(env_var, "token-launcher");
+(B[m 
+[31m-        let mut definition = StreamableHttpDefinition {
+(B[m[31m-            url: "https://example.test/stream".into(),
+(B[m[31m-            headers: BTreeMap::new(),
+(B[m[31m-            bearer_env_var: Some(env_var.to_string()),
+(B[m[31m-            connect_timeout_ms: Some(1200),
+(B[m[31m-            request_timeout_ms: Some(3400),
+(B[m[31m-        };
+(B[m[31m-        definition.headers.insert("X-Test".into(), "true".into());
+(B[m[32m+    let mut definition = StreamableHttpDefinition {
+(B[m[32m+        url: "https://example.test/stream".into(),
+(B[m[32m+        headers: BTreeMap::new(),
+(B[m[32m+        bearer_env_var: Some(env_var.to_string()),
+(B[m[32m+        connect_timeout_ms: Some(1200),
+(B[m[32m+        request_timeout_ms: Some(3400),
+(B[m[32m+    };
+(B[m[32m+    definition.headers.insert("X-Test".into(), "true".into());
+(B[m 
+[31m-        let runtime = McpRuntimeServer::from_definition(
+(B[m[31m-            "remote",
+(B[m[31m-            McpServerDefinition {
+(B[m[31m-                transport: McpTransport::StreamableHttp(definition),
+(B[m[31m-                description: None,
+(B[m[31m-                tags: vec!["http".into()],
+(B[m[31m-                tools: Some(McpToolConfig {
+(B[m[31m-                    enabled: vec!["tool-a".into()],
+(B[m[31m-                    disabled: vec![],
+(B[m[31m-                }),
+(B[m[31m-            },
+(B[m[31m-        );
+(B[m[32m+    let runtime = McpRuntimeServer::from_definition(
+(B[m[32m+        "remote",
+(B[m[32m+        McpServerDefinition {
+(B[m[32m+            transport: McpTransport::StreamableHttp(definition),
+(B[m[32m+            description: None,
+(B[m[32m+            tags: vec!["http".into()],
+(B[m[32m+            tools: Some(McpToolConfig {
+(B[m[32m+                enabled: vec!["tool-a".into()],
+(B[m[32m+                disabled: vec![],
+(B[m[32m+            }),
+(B[m[32m+        },
+(B[m[32m+    );
+(B[m 
+[31m-        let defaults = StdioServerConfig {
+(B[m[31m-            binary: PathBuf::from("codex"),
+(B[m[31m-            code_home: None,
+(B[m[31m-            current_dir: None,
+(B[m[31m-            env: Vec::new(),
+(B[m[31m-            app_server_analytics_default_enabled: false,
+(B[m[31m-            mirror_stdio: false,
+(B[m[31m-            startup_timeout: Duration::from_secs(2),
+(B[m[31m-        };
+(B[m[32m+    let defaults = StdioServerConfig {
+(B[m[32m+        binary: PathBuf::from("codex"),
+(B[m[32m+        code_home: None,
+(B[m[32m+        current_dir: None,
+(B[m[32m+        env: Vec::new(),
+(B[m[32m+        app_server_analytics_default_enabled: false,
+(B[m[32m+        mirror_stdio: false,
+(B[m[32m+        startup_timeout: Duration::from_secs(2),
+(B[m[32m+    };
+(B[m 
+[31m-        let launcher = runtime.into_launcher(&defaults);
+(B[m[31m-        match launcher.transport {
+(B[m[31m-            McpServerLauncherTransport::StreamableHttp(connector) => {
+(B[m[31m-                assert_eq!(connector.url, "https://example.test/stream");
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    connector.headers.get("X-Test").map(String::as_str),
+(B[m[31m-                    Some("true")
+(B[m[31m-                );
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    connector.headers.get("Authorization").map(String::as_str),
+(B[m[31m-                    Some("Bearer token-launcher")
+(B[m[31m-                );
+(B[m[31m-                assert_eq!(connector.connect_timeout, Some(Duration::from_millis(1200)));
+(B[m[31m-                assert_eq!(connector.request_timeout, Some(Duration::from_millis(3400)));
+(B[m[31m-                assert_eq!(connector.bearer_env_var.as_deref(), Some(env_var));
+(B[m[31m-                assert_eq!(connector.bearer_token.as_deref(), Some("token-launcher"));
+(B[m[32m+    let launcher = runtime.into_launcher(&defaults);
+(B[m[32m+    match launcher.transport {
+(B[m[32m+        McpServerLauncherTransport::StreamableHttp(connector) => {
+(B[m[32m+            assert_eq!(connector.url, "https://example.test/stream");
+(B[m[32m+            assert_eq!(
+(B[m[32m+                connector.headers.get("X-Test").map(String::as_str),
+(B[m[32m+                Some("true")
+(B[m[32m+            );
+(B[m[32m+            assert_eq!(
+(B[m[32m+                connector.headers.get("Authorization").map(String::as_str),
+(B[m[32m+                Some("Bearer token-launcher")
+(B[m[32m+            );
+(B[m[32m+            assert_eq!(connector.connect_timeout, Some(Duration::from_millis(1200)));
+(B[m[32m+            assert_eq!(connector.request_timeout, Some(Duration::from_millis(3400)));
+(B[m[32m+            assert_eq!(connector.bearer_env_var.as_deref(), Some(env_var));
+(B[m[32m+            assert_eq!(connector.bearer_token.as_deref(), Some("token-launcher"));
+(B[m 
+[31m-                let tools = launcher.tools.as_ref().expect("tool hints present");
+(B[m[31m-                assert_eq!(tools.enabled, vec!["tool-a".to_string()]);
+(B[m[31m-                assert!(tools.disabled.is_empty());
+(B[m[31m-            }
+(B[m[31m-            other => panic!("expected http connector, got {other:?}"),
+(B[m[32m+            let tools = launcher.tools.as_ref().expect("tool hints present");
+(B[m[32m+            assert_eq!(tools.enabled, vec!["tool-a".to_string()]);
+(B[m[32m+            assert!(tools.disabled.is_empty());
+(B[m         }
+[31m-
+(B[m[31m-        env::remove_var(env_var);
+(B[m[32m+        other => panic!("expected http connector, got {other:?}"),
+(B[m     }
+ 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn codex_flow_streams_events_and_response() {
+(B[m[31m-        let (_dir, server) = start_fake_mcp_server().await;
+(B[m[32m+    env::remove_var(env_var);
+(B[m[32m+}
+(B[m 
+[31m-        let params = CodexCallParams {
+(B[m[31m-            prompt: "hello".into(),
+(B[m[31m-            model: None,
+(B[m[31m-            cwd: None,
+(B[m[31m-            sandbox: None,
+(B[m[31m-            approval_policy: None,
+(B[m[31m-            profile: None,
+(B[m[31m-            config: BTreeMap::new(),
+(B[m[31m-        };
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn codex_flow_streams_events_and_response() {
+(B[m[32m+    let (_dir, server) = start_fake_mcp_server().await;
+(B[m 
+[31m-        let mut handle = server.codex(params).await.expect("codex call");
+(B[m[32m+    let params = CodexCallParams {
+(B[m[32m+        prompt: "hello".into(),
+(B[m[32m+        model: None,
+(B[m[32m+        cwd: None,
+(B[m[32m+        sandbox: None,
+(B[m[32m+        approval_policy: None,
+(B[m[32m+        profile: None,
+(B[m[32m+        config: BTreeMap::new(),
+(B[m[32m+    };
+(B[m 
+[31m-        let first_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+(B[m[31m-            .await
+(B[m[31m-            .expect("event timeout")
+(B[m[31m-            .expect("event value");
+(B[m[31m-        match first_event {
+(B[m[31m-            CodexEvent::ApprovalRequired(req) => {
+(B[m[31m-                assert!(req.approval_id.starts_with("ap-"));
+(B[m[31m-                assert_eq!(req.kind, ApprovalKind::Exec);
+(B[m[31m-            }
+(B[m[31m-            other => panic!("unexpected event: {other:?}"),
+(B[m[32m+    let mut handle = server.codex(params).await.expect("codex call");
+(B[m[32m+
+(B[m[32m+    let first_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+(B[m[32m+        .await
+(B[m[32m+        .expect("event timeout")
+(B[m[32m+        .expect("event value");
+(B[m[32m+    match first_event {
+(B[m[32m+        CodexEvent::ApprovalRequired(req) => {
+(B[m[32m+            assert!(req.approval_id.starts_with("ap-"));
+(B[m[32m+            assert_eq!(req.kind, ApprovalKind::Exec);
+(B[m         }
+[32m+        other => panic!("unexpected event: {other:?}"),
+(B[m[32m+    }
+(B[m 
+[31m-        let second_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+(B[m[31m-            .await
+(B[m[31m-            .expect("event timeout")
+(B[m[31m-            .expect("event value");
+(B[m[31m-        let event_conversation = match second_event {
+(B[m[31m-            CodexEvent::TaskComplete {
+(B[m[31m-                conversation_id, ..
+(B[m[31m-            } => {
+(B[m[31m-                assert!(!conversation_id.is_empty());
+(B[m[31m-                conversation_id
+(B[m[31m-            }
+(B[m[31m-            other => panic!("unexpected event: {other:?}"),
+(B[m[31m-        };
+(B[m[32m+    let second_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+(B[m[32m+        .await
+(B[m[32m+        .expect("event timeout")
+(B[m[32m+        .expect("event value");
+(B[m[32m+    let event_conversation = match second_event {
+(B[m[32m+        CodexEvent::TaskComplete {
+(B[m[32m+            conversation_id, ..
+(B[m[32m+        } => {
+(B[m[32m+            assert!(!conversation_id.is_empty());
+(B[m[32m+            conversation_id
+(B[m[32m+        }
+(B[m[32m+        other => panic!("unexpected event: {other:?}"),
+(B[m[32m+    };
+(B[m 
+[31m-        let response = time::timeout(Duration::from_secs(2), handle.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("response timeout")
+(B[m[31m-            .expect("response recv");
+(B[m[31m-        let response = response.expect("response ok");
+(B[m[31m-        assert_eq!(
+(B[m[31m-            response.conversation_id.as_deref(),
+(B[m[31m-            Some(event_conversation.as_str())
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(response.output, serde_json::json!({ "ok": true }));
+(B[m[32m+    let response = time::timeout(Duration::from_secs(2), handle.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("response timeout")
+(B[m[32m+        .expect("response recv");
+(B[m[32m+    let response = response.expect("response ok");
+(B[m[32m+    assert_eq!(
+(B[m[32m+        response.conversation_id.as_deref(),
+(B[m[32m+        Some(event_conversation.as_str())
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(response.output, serde_json::json!({ "ok": true }));
+(B[m 
+[31m-        let _ = server.shutdown().await;
+(B[m[31m-    }
+(B[m[32m+    let _ = server.shutdown().await;
+(B[m[32m+}
+(B[m 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn canceling_request_returns_cancelled_error() {
+(B[m[31m-        let (_dir, server) = start_fake_mcp_server().await;
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn canceling_request_returns_cancelled_error() {
+(B[m[32m+    let (_dir, server) = start_fake_mcp_server().await;
+(B[m 
+[31m-        let params = CodexCallParams {
+(B[m[31m-            prompt: "cancel me".into(),
+(B[m[31m-            model: None,
+(B[m[31m-            cwd: None,
+(B[m[31m-            sandbox: None,
+(B[m[31m-            approval_policy: None,
+(B[m[31m-            profile: None,
+(B[m[31m-            config: BTreeMap::new(),
+(B[m[31m-        };
+(B[m[32m+    let params = CodexCallParams {
+(B[m[32m+        prompt: "cancel me".into(),
+(B[m[32m+        model: None,
+(B[m[32m+        cwd: None,
+(B[m[32m+        sandbox: None,
+(B[m[32m+        approval_policy: None,
+(B[m[32m+        profile: None,
+(B[m[32m+        config: BTreeMap::new(),
+(B[m[32m+    };
+(B[m 
+[31m-        let mut handle = server.codex(params).await.expect("codex call");
+(B[m[31m-        server.cancel(handle.request_id).expect("cancel send");
+(B[m[32m+    let mut handle = server.codex(params).await.expect("codex call");
+(B[m[32m+    server.cancel(handle.request_id).expect("cancel send");
+(B[m 
+[31m-        let expected_conversation = format!("conv-{}", handle.request_id);
+(B[m[31m-        let cancel_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+(B[m[31m-            .await
+(B[m[31m-            .expect("event timeout")
+(B[m[31m-            .expect("cancel notification");
+(B[m[31m-        match cancel_event {
+(B[m[31m-            CodexEvent::Cancelled {
+(B[m[31m-                conversation_id,
+(B[m[31m-                reason,
+(B[m[31m-            } => {
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    conversation_id.as_deref(),
+(B[m[31m-                    Some(expected_conversation.as_str())
+(B[m[31m-                );
+(B[m[31m-                assert_eq!(reason.as_deref(), Some("client_cancel"));
+(B[m[31m-            }
+(B[m[31m-            other => panic!("expected cancellation event, got {other:?}"),
+(B[m[32m+    let expected_conversation = format!("conv-{}", handle.request_id);
+(B[m[32m+    let cancel_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+(B[m[32m+        .await
+(B[m[32m+        .expect("event timeout")
+(B[m[32m+        .expect("cancel notification");
+(B[m[32m+    match cancel_event {
+(B[m[32m+        CodexEvent::Cancelled {
+(B[m[32m+            conversation_id,
+(B[m[32m+            reason,
+(B[m[32m+        } => {
+(B[m[32m+            assert_eq!(
+(B[m[32m+                conversation_id.as_deref(),
+(B[m[32m+                Some(expected_conversation.as_str())
+(B[m[32m+            );
+(B[m[32m+            assert_eq!(reason.as_deref(), Some("client_cancel"));
+(B[m         }
+[32m+        other => panic!("expected cancellation event, got {other:?}"),
+(B[m[32m+    }
+(B[m 
+[31m-        let response = time::timeout(Duration::from_secs(2), handle.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("response timeout")
+(B[m[31m-            .expect("recv");
+(B[m[31m-        assert!(matches!(response, Err(McpError::Cancelled)));
+(B[m[32m+    let response = time::timeout(Duration::from_secs(2), handle.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("response timeout")
+(B[m[32m+        .expect("recv");
+(B[m[32m+    assert!(matches!(response, Err(McpError::Cancelled)));
+(B[m 
+[31m-        let _ = server.shutdown().await;
+(B[m[31m-    }
+(B[m[32m+    let _ = server.shutdown().await;
+(B[m[32m+}
+(B[m 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn codex_reply_streams_follow_up_notifications() {
+(B[m[31m-        let (_dir, server) = start_fake_mcp_server().await;
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn codex_reply_streams_follow_up_notifications() {
+(B[m[32m+    let (_dir, server) = start_fake_mcp_server().await;
+(B[m 
+[31m-        let params = CodexCallParams {
+(B[m[31m-            prompt: "hello".into(),
+(B[m[31m-            model: None,
+(B[m[31m-            cwd: None,
+(B[m[31m-            sandbox: None,
+(B[m[31m-            approval_policy: None,
+(B[m[31m-            profile: None,
+(B[m[31m-            config: BTreeMap::new(),
+(B[m[31m-        };
+(B[m[31m-        let first = server.codex(params).await.expect("start codex");
+(B[m[31m-        let first_response = time::timeout(Duration::from_secs(2), first.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("response timeout")
+(B[m[31m-            .expect("recv")
+(B[m[31m-            .expect("ok");
+(B[m[31m-        let conversation_id = first_response.conversation_id.expect("conversation id set");
+(B[m[31m-        assert!(!conversation_id.is_empty());
+(B[m[32m+    let params = CodexCallParams {
+(B[m[32m+        prompt: "hello".into(),
+(B[m[32m+        model: None,
+(B[m[32m+        cwd: None,
+(B[m[32m+        sandbox: None,
+(B[m[32m+        approval_policy: None,
+(B[m[32m+        profile: None,
+(B[m[32m+        config: BTreeMap::new(),
+(B[m[32m+    };
+(B[m[32m+    let first = server.codex(params).await.expect("start codex");
+(B[m[32m+    let first_response = time::timeout(Duration::from_secs(2), first.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("response timeout")
+(B[m[32m+        .expect("recv")
+(B[m[32m+        .expect("ok");
+(B[m[32m+    let conversation_id = first_response.conversation_id.expect("conversation id set");
+(B[m[32m+    assert!(!conversation_id.is_empty());
+(B[m 
+[31m-        let reply_params = CodexReplyParams {
+(B[m[31m-            conversation_id: conversation_id.clone(),
+(B[m[31m-            prompt: "follow up".into(),
+(B[m[31m-        };
+(B[m[31m-        let mut reply = server.codex_reply(reply_params).await.expect("codex reply");
+(B[m[32m+    let reply_params = CodexReplyParams {
+(B[m[32m+        conversation_id: conversation_id.clone(),
+(B[m[32m+        prompt: "follow up".into(),
+(B[m[32m+    };
+(B[m[32m+    let mut reply = server.codex_reply(reply_params).await.expect("codex reply");
+(B[m 
+[31m-        let expected_approval = format!("ap-{}", reply.request_id);
+(B[m[31m-        let approval = time::timeout(Duration::from_secs(2), reply.events.recv())
+(B[m[31m-            .await
+(B[m[31m-            .expect("event timeout")
+(B[m[31m-            .expect("approval");
+(B[m[31m-        match approval {
+(B[m[31m-            CodexEvent::ApprovalRequired(req) => {
+(B[m[31m-                assert_eq!(req.approval_id, expected_approval);
+(B[m[31m-                assert_eq!(req.kind, ApprovalKind::Exec);
+(B[m[31m-            }
+(B[m[31m-            other => panic!("unexpected event: {other:?}"),
+(B[m[32m+    let expected_approval = format!("ap-{}", reply.request_id);
+(B[m[32m+    let approval = time::timeout(Duration::from_secs(2), reply.events.recv())
+(B[m[32m+        .await
+(B[m[32m+        .expect("event timeout")
+(B[m[32m+        .expect("approval");
+(B[m[32m+    match approval {
+(B[m[32m+        CodexEvent::ApprovalRequired(req) => {
+(B[m[32m+            assert_eq!(req.approval_id, expected_approval);
+(B[m[32m+            assert_eq!(req.kind, ApprovalKind::Exec);
+(B[m         }
+[32m+        other => panic!("unexpected event: {other:?}"),
+(B[m[32m+    }
+(B[m 
+[31m-        let complete = time::timeout(Duration::from_secs(2), reply.events.recv())
+(B[m[31m-            .await
+(B[m[31m-            .expect("event timeout")
+(B[m[31m-            .expect("task completion");
+(B[m[31m-        match complete {
+(B[m[31m-            CodexEvent::TaskComplete {
+(B[m[31m-                conversation_id: event_conv,
+(B[m[31m-                ..
+(B[m[31m-            } => assert_eq!(event_conv, conversation_id),
+(B[m[31m-            other => panic!("unexpected event: {other:?}"),
+(B[m[31m-        }
+(B[m[32m+    let complete = time::timeout(Duration::from_secs(2), reply.events.recv())
+(B[m[32m+        .await
+(B[m[32m+        .expect("event timeout")
+(B[m[32m+        .expect("task completion");
+(B[m[32m+    match complete {
+(B[m[32m+        CodexEvent::TaskComplete {
+(B[m[32m+            conversation_id: event_conv,
+(B[m[32m+            ..
+(B[m[32m+        } => assert_eq!(event_conv, conversation_id),
+(B[m[32m+        other => panic!("unexpected event: {other:?}"),
+(B[m[32m+    }
+(B[m 
+[31m-        let reply_response = time::timeout(Duration::from_secs(2), reply.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("response timeout")
+(B[m[31m-            .expect("recv")
+(B[m[31m-            .expect("ok");
+(B[m[31m-        assert_eq!(
+(B[m[31m-            reply_response.conversation_id.as_deref(),
+(B[m[31m-            Some(conversation_id.as_str())
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(reply_response.output, serde_json::json!({ "ok": true }));
+(B[m[32m+    let reply_response = time::timeout(Duration::from_secs(2), reply.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("response timeout")
+(B[m[32m+        .expect("recv")
+(B[m[32m+        .expect("ok");
+(B[m[32m+    assert_eq!(
+(B[m[32m+        reply_response.conversation_id.as_deref(),
+(B[m[32m+        Some(conversation_id.as_str())
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(reply_response.output, serde_json::json!({ "ok": true }));
+(B[m 
+[31m-        let _ = server.shutdown().await;
+(B[m[31m-    }
+(B[m[32m+    let _ = server.shutdown().await;
+(B[m[32m+}
+(B[m 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn app_flow_streams_notifications_and_response() {
+(B[m[31m-        let (_dir, server) = start_fake_app_server().await;
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn app_flow_streams_notifications_and_response() {
+(B[m[32m+    let (_dir, server) = start_fake_app_server().await;
+(B[m 
+[31m-        let thread_params = ThreadStartParams {
+(B[m[31m-            thread_id: None,
+(B[m[31m-            metadata: Value::Null,
+(B[m[31m-        };
+(B[m[31m-        let thread_handle = server
+(B[m[31m-            .thread_start(thread_params)
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread start");
+(B[m[31m-        let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread response timeout")
+(B[m[31m-            .expect("thread response recv")
+(B[m[31m-            .expect("thread response ok");
+(B[m[31m-        let thread_id = thread_response
+(B[m[31m-            .get("thread_id")
+(B[m[31m-            .and_then(Value::as_str)
+(B[m[31m-            .unwrap_or_default()
+(B[m[31m-            .to_string();
+(B[m[31m-        assert!(!thread_id.is_empty());
+(B[m[32m+    let thread_params = ThreadStartParams {
+(B[m[32m+        thread_id: None,
+(B[m[32m+        metadata: Value::Null,
+(B[m[32m+    };
+(B[m[32m+    let thread_handle = server
+(B[m[32m+        .thread_start(thread_params)
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread start");
+(B[m[32m+    let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread response timeout")
+(B[m[32m+        .expect("thread response recv")
+(B[m[32m+        .expect("thread response ok");
+(B[m[32m+    let thread_id = thread_response
+(B[m[32m+        .get("thread_id")
+(B[m[32m+        .and_then(Value::as_str)
+(B[m[32m+        .unwrap_or_default()
+(B[m[32m+        .to_string();
+(B[m[32m+    assert!(!thread_id.is_empty());
+(B[m 
+[31m-        let params = TurnStartParams {
+(B[m[31m-            thread_id: thread_id.clone(),
+(B[m[31m-            input: vec![TurnInput {
+(B[m[31m-                kind: "text".to_string(),
+(B[m[31m-                text: Some("hi".to_string()),
+(B[m[31m-            }],
+(B[m[31m-            model: None,
+(B[m[31m-            config: BTreeMap::new(),
+(B[m[31m-        };
+(B[m[31m-        let mut handle = server.turn_start(params).await.expect("turn start");
+(B[m[32m+    let params = TurnStartParams {
+(B[m[32m+        thread_id: thread_id.clone(),
+(B[m[32m+        input: vec![TurnInput {
+(B[m[32m+            kind: "text".to_string(),
+(B[m[32m+            text: Some("hi".to_string()),
+(B[m[32m+        }],
+(B[m[32m+        model: None,
+(B[m[32m+        config: BTreeMap::new(),
+(B[m[32m+    };
+(B[m[32m+    let mut handle = server.turn_start(params).await.expect("turn start");
+(B[m 
+[31m-        let first_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+(B[m[31m-            .await
+(B[m[31m-            .expect("event timeout")
+(B[m[31m-            .expect("event value");
+(B[m[31m-        let turn_id = match first_event {
+(B[m[31m-            AppNotification::Item {
+(B[m[31m-                thread_id: tid,
+(B[m[31m-                turn_id: Some(turn),
+(B[m[31m-                item,
+(B[m[31m-            } => {
+(B[m[31m-                assert_eq!(tid, thread_id);
+(B[m[31m-                assert!(item.get("message").is_some());
+(B[m[31m-                turn
+(B[m[31m-            }
+(B[m[31m-            other => panic!("unexpected event: {other:?}"),
+(B[m[31m-        };
+(B[m[32m+    let first_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+(B[m[32m+        .await
+(B[m[32m+        .expect("event timeout")
+(B[m[32m+        .expect("event value");
+(B[m[32m+    let turn_id = match first_event {
+(B[m[32m+        AppNotification::Item {
+(B[m[32m+            thread_id: tid,
+(B[m[32m+            turn_id: Some(turn),
+(B[m[32m+            item,
+(B[m[32m+        } => {
+(B[m[32m+            assert_eq!(tid, thread_id);
+(B[m[32m+            assert!(item.get("message").is_some());
+(B[m[32m+            turn
+(B[m[32m+        }
+(B[m[32m+        other => panic!("unexpected event: {other:?}"),
+(B[m[32m+    };
+(B[m 
+[31m-        let second_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+(B[m[31m-            .await
+(B[m[31m-            .expect("event timeout")
+(B[m[31m-            .expect("event value");
+(B[m[31m-        match second_event {
+(B[m[31m-            AppNotification::TaskComplete {
+(B[m[31m-                thread_id: tid,
+(B[m[31m-                turn_id: event_turn,
+(B[m[31m-                result,
+(B[m[31m-            } => {
+(B[m[31m-                assert_eq!(tid, thread_id);
+(B[m[31m-                assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
+(B[m[31m-                assert_eq!(result, serde_json::json!({ "ok": true }));
+(B[m[31m-            }
+(B[m[31m-            other => panic!("unexpected event: {other:?}"),
+(B[m[32m+    let second_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+(B[m[32m+        .await
+(B[m[32m+        .expect("event timeout")
+(B[m[32m+        .expect("event value");
+(B[m[32m+    match second_event {
+(B[m[32m+        AppNotification::TaskComplete {
+(B[m[32m+            thread_id: tid,
+(B[m[32m+            turn_id: event_turn,
+(B[m[32m+            result,
+(B[m[32m+        } => {
+(B[m[32m+            assert_eq!(tid, thread_id);
+(B[m[32m+            assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
+(B[m[32m+            assert_eq!(result, serde_json::json!({ "ok": true }));
+(B[m         }
+[32m+        other => panic!("unexpected event: {other:?}"),
+(B[m[32m+    }
+(B[m 
+[31m-        let response = time::timeout(Duration::from_secs(2), handle.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("response timeout")
+(B[m[31m-            .expect("response recv");
+(B[m[31m-        let response = response.expect("response ok");
+(B[m[31m-        assert_eq!(
+(B[m[31m-            response
+(B[m[31m-                .get("turn_id")
+(B[m[31m-                .and_then(Value::as_str)
+(B[m[31m-                .unwrap_or_default(),
+(B[m[31m-            turn_id
+(B[m[31m-        );
+(B[m[32m+    let response = time::timeout(Duration::from_secs(2), handle.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("response timeout")
+(B[m[32m+        .expect("response recv");
+(B[m[32m+    let response = response.expect("response ok");
+(B[m[32m+    assert_eq!(
+(B[m[32m+        response
+(B[m[32m+            .get("turn_id")
+(B[m[32m+            .and_then(Value::as_str)
+(B[m[32m+            .unwrap_or_default(),
+(B[m[32m+        turn_id
+(B[m[32m+    );
+(B[m 
+[31m-        let _ = server.shutdown().await;
+(B[m[31m-    }
+(B[m[32m+    let _ = server.shutdown().await;
+(B[m[32m+}
+(B[m 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn canceling_app_request_returns_cancelled_error() {
+(B[m[31m-        let (_dir, server) = start_fake_app_server().await;
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn canceling_app_request_returns_cancelled_error() {
+(B[m[32m+    let (_dir, server) = start_fake_app_server().await;
+(B[m 
+[31m-        let thread_params = ThreadStartParams {
+(B[m[31m-            thread_id: None,
+(B[m[31m-            metadata: Value::Null,
+(B[m[31m-        };
+(B[m[31m-        let thread_handle = server
+(B[m[31m-            .thread_start(thread_params)
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread start");
+(B[m[31m-        let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread response timeout")
+(B[m[31m-            .expect("thread response recv")
+(B[m[31m-            .expect("thread response ok");
+(B[m[31m-        let thread_id = thread_response
+(B[m[31m-            .get("thread_id")
+(B[m[31m-            .and_then(Value::as_str)
+(B[m[31m-            .unwrap_or_default()
+(B[m[31m-            .to_string();
+(B[m[32m+    let thread_params = ThreadStartParams {
+(B[m[32m+        thread_id: None,
+(B[m[32m+        metadata: Value::Null,
+(B[m[32m+    };
+(B[m[32m+    let thread_handle = server
+(B[m[32m+        .thread_start(thread_params)
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread start");
+(B[m[32m+    let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread response timeout")
+(B[m[32m+        .expect("thread response recv")
+(B[m[32m+        .expect("thread response ok");
+(B[m[32m+    let thread_id = thread_response
+(B[m[32m+        .get("thread_id")
+(B[m[32m+        .and_then(Value::as_str)
+(B[m[32m+        .unwrap_or_default()
+(B[m[32m+        .to_string();
+(B[m 
+[31m-        let params = TurnStartParams {
+(B[m[31m-            thread_id: thread_id.clone(),
+(B[m[31m-            input: vec![TurnInput {
+(B[m[31m-                kind: "text".to_string(),
+(B[m[31m-                text: Some("cancel me".to_string()),
+(B[m[31m-            }],
+(B[m[31m-            model: None,
+(B[m[31m-            config: BTreeMap::new(),
+(B[m[31m-        };
+(B[m[32m+    let params = TurnStartParams {
+(B[m[32m+        thread_id: thread_id.clone(),
+(B[m[32m+        input: vec![TurnInput {
+(B[m[32m+            kind: "text".to_string(),
+(B[m[32m+            text: Some("cancel me".to_string()),
+(B[m[32m+        }],
+(B[m[32m+        model: None,
+(B[m[32m+        config: BTreeMap::new(),
+(B[m[32m+    };
+(B[m 
+[31m-        let mut handle = server.turn_start(params).await.expect("turn start");
+(B[m[31m-        server.cancel(handle.request_id).expect("send cancel");
+(B[m[32m+    let mut handle = server.turn_start(params).await.expect("turn start");
+(B[m[32m+    server.cancel(handle.request_id).expect("send cancel");
+(B[m 
+[31m-        let cancel_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+(B[m[31m-            .await
+(B[m[31m-            .expect("event timeout")
+(B[m[31m-            .expect("cancel event");
+(B[m[31m-        match cancel_event {
+(B[m[31m-            AppNotification::TaskComplete {
+(B[m[31m-                thread_id: tid,
+(B[m[31m-                turn_id,
+(B[m[31m-                result,
+(B[m[31m-            } => {
+(B[m[31m-                assert_eq!(tid, thread_id);
+(B[m[31m-                assert!(turn_id.is_some());
+(B[m[31m-                assert_eq!(result.get("cancelled"), Some(&Value::Bool(true)));
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    result.get("reason"),
+(B[m[31m-                    Some(&Value::String("client_cancel".into()))
+(B[m[31m-                );
+(B[m[31m-            }
+(B[m[31m-            other => panic!("unexpected cancellation notification: {other:?}"),
+(B[m[32m+    let cancel_event = time::timeout(Duration::from_secs(2), handle.events.recv())
+(B[m[32m+        .await
+(B[m[32m+        .expect("event timeout")
+(B[m[32m+        .expect("cancel event");
+(B[m[32m+    match cancel_event {
+(B[m[32m+        AppNotification::TaskComplete {
+(B[m[32m+            thread_id: tid,
+(B[m[32m+            turn_id,
+(B[m[32m+            result,
+(B[m[32m+        } => {
+(B[m[32m+            assert_eq!(tid, thread_id);
+(B[m[32m+            assert!(turn_id.is_some());
+(B[m[32m+            assert_eq!(result.get("cancelled"), Some(&Value::Bool(true)));
+(B[m[32m+            assert_eq!(
+(B[m[32m+                result.get("reason"),
+(B[m[32m+                Some(&Value::String("client_cancel".into()))
+(B[m[32m+            );
+(B[m         }
+[32m+        other => panic!("unexpected cancellation notification: {other:?}"),
+(B[m[32m+    }
+(B[m 
+[31m-        let response = time::timeout(Duration::from_secs(2), handle.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("response timeout")
+(B[m[31m-            .expect("recv");
+(B[m[31m-        assert!(matches!(response, Err(McpError::Cancelled)));
+(B[m[32m+    let response = time::timeout(Duration::from_secs(2), handle.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("response timeout")
+(B[m[32m+        .expect("recv");
+(B[m[32m+    assert!(matches!(response, Err(McpError::Cancelled)));
+(B[m 
+[31m-        let _ = server.shutdown().await;
+(B[m[31m-    }
+(B[m[32m+    let _ = server.shutdown().await;
+(B[m[32m+}
+(B[m 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn thread_resume_allows_follow_up_turns() {
+(B[m[31m-        let (_dir, server) = start_fake_app_server().await;
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn thread_resume_allows_follow_up_turns() {
+(B[m[32m+    let (_dir, server) = start_fake_app_server().await;
+(B[m 
+[31m-        let thread_params = ThreadStartParams {
+(B[m[31m-            thread_id: None,
+(B[m[31m-            metadata: Value::Null,
+(B[m[31m-        };
+(B[m[31m-        let thread_handle = server
+(B[m[31m-            .thread_start(thread_params)
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread start");
+(B[m[31m-        let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread response timeout")
+(B[m[31m-            .expect("recv")
+(B[m[31m-            .expect("ok");
+(B[m[31m-        let thread_id = thread_response
+(B[m[32m+    let thread_params = ThreadStartParams {
+(B[m[32m+        thread_id: None,
+(B[m[32m+        metadata: Value::Null,
+(B[m[32m+    };
+(B[m[32m+    let thread_handle = server
+(B[m[32m+        .thread_start(thread_params)
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread start");
+(B[m[32m+    let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread response timeout")
+(B[m[32m+        .expect("recv")
+(B[m[32m+        .expect("ok");
+(B[m[32m+    let thread_id = thread_response
+(B[m[32m+        .get("thread_id")
+(B[m[32m+        .and_then(Value::as_str)
+(B[m[32m+        .unwrap_or_default()
+(B[m[32m+        .to_string();
+(B[m[32m+
+(B[m[32m+    let resume_params = ThreadResumeParams {
+(B[m[32m+        thread_id: thread_id.clone(),
+(B[m[32m+    };
+(B[m[32m+    let resume_handle = server
+(B[m[32m+        .thread_resume(resume_params)
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread resume");
+(B[m[32m+    let resume_response = time::timeout(Duration::from_secs(2), resume_handle.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("resume response timeout")
+(B[m[32m+        .expect("recv")
+(B[m[32m+        .expect("ok");
+(B[m[32m+    assert_eq!(
+(B[m[32m+        resume_response
+(B[m             .get("thread_id")
+             .and_then(Value::as_str)
+[31m-            .unwrap_or_default()
+(B[m[31m-            .to_string();
+(B[m[32m+            .unwrap_or_default(),
+(B[m[32m+        thread_id
+(B[m[32m+    );
+(B[m[32m+    assert!(resume_response
+(B[m[32m+        .get("resumed")
+(B[m[32m+        .and_then(Value::as_bool)
+(B[m[32m+        .unwrap_or(false));
+(B[m 
+[31m-        let resume_params = ThreadResumeParams {
+(B[m[31m-            thread_id: thread_id.clone(),
+(B[m[31m-        };
+(B[m[31m-        let resume_handle = server
+(B[m[31m-            .thread_resume(resume_params)
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread resume");
+(B[m[31m-        let resume_response = time::timeout(Duration::from_secs(2), resume_handle.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("resume response timeout")
+(B[m[31m-            .expect("recv")
+(B[m[31m-            .expect("ok");
+(B[m[31m-        assert_eq!(
+(B[m[31m-            resume_response
+(B[m[31m-                .get("thread_id")
+(B[m[31m-                .and_then(Value::as_str)
+(B[m[31m-                .unwrap_or_default(),
+(B[m[31m-            thread_id
+(B[m[31m-        );
+(B[m[31m-        assert!(resume_response
+(B[m[31m-            .get("resumed")
+(B[m[31m-            .and_then(Value::as_bool)
+(B[m[31m-            .unwrap_or(false));
+(B[m[32m+    let params = TurnStartParams {
+(B[m[32m+        thread_id: thread_id.clone(),
+(B[m[32m+        input: vec![TurnInput {
+(B[m[32m+            kind: "text".to_string(),
+(B[m[32m+            text: Some("resume flow".to_string()),
+(B[m[32m+        }],
+(B[m[32m+        model: None,
+(B[m[32m+        config: BTreeMap::new(),
+(B[m[32m+    };
+(B[m[32m+    let mut turn = server.turn_start(params).await.expect("turn start");
+(B[m 
+[31m-        let params = TurnStartParams {
+(B[m[31m-            thread_id: thread_id.clone(),
+(B[m[31m-            input: vec![TurnInput {
+(B[m[31m-                kind: "text".to_string(),
+(B[m[31m-                text: Some("resume flow".to_string()),
+(B[m[31m-            }],
+(B[m[31m-            model: None,
+(B[m[31m-            config: BTreeMap::new(),
+(B[m[31m-        };
+(B[m[31m-        let mut turn = server.turn_start(params).await.expect("turn start");
+(B[m[31m-
+(B[m[31m-        let item = time::timeout(Duration::from_secs(2), turn.events.recv())
+(B[m[31m-            .await
+(B[m[31m-            .expect("event timeout")
+(B[m[31m-            .expect("item event");
+(B[m[31m-        let turn_id = match item {
+(B[m[31m-            AppNotification::Item {
+(B[m[31m-                thread_id: tid,
+(B[m[31m-                turn_id: Some(turn_id),
+(B[m[31m-                ..
+(B[m[31m-            } => {
+(B[m[31m-                assert_eq!(tid, thread_id);
+(B[m[31m-                turn_id
+(B[m[31m-            }
+(B[m[31m-            other => panic!("unexpected event: {other:?}"),
+(B[m[31m-        };
+(B[m[31m-
+(B[m[31m-        let complete = time::timeout(Duration::from_secs(2), turn.events.recv())
+(B[m[31m-            .await
+(B[m[31m-            .expect("event timeout")
+(B[m[31m-            .expect("completion event");
+(B[m[31m-        match complete {
+(B[m[31m-            AppNotification::TaskComplete {
+(B[m[31m-                thread_id: tid,
+(B[m[31m-                turn_id: event_turn,
+(B[m[31m-                result,
+(B[m[31m-            } => {
+(B[m[31m-                assert_eq!(tid, thread_id);
+(B[m[31m-                assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
+(B[m[31m-                assert_eq!(result, serde_json::json!({ "ok": true }));
+(B[m[31m-            }
+(B[m[31m-            other => panic!("unexpected event: {other:?}"),
+(B[m[32m+    let item = time::timeout(Duration::from_secs(2), turn.events.recv())
+(B[m[32m+        .await
+(B[m[32m+        .expect("event timeout")
+(B[m[32m+        .expect("item event");
+(B[m[32m+    let turn_id = match item {
+(B[m[32m+        AppNotification::Item {
+(B[m[32m+            thread_id: tid,
+(B[m[32m+            turn_id: Some(turn_id),
+(B[m[32m+            ..
+(B[m[32m+        } => {
+(B[m[32m+            assert_eq!(tid, thread_id);
+(B[m[32m+            turn_id
+(B[m         }
+[32m+        other => panic!("unexpected event: {other:?}"),
+(B[m[32m+    };
+(B[m 
+[31m-        let turn_response = time::timeout(Duration::from_secs(2), turn.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("response timeout")
+(B[m[31m-            .expect("recv")
+(B[m[31m-            .expect("ok");
+(B[m[31m-        assert_eq!(
+(B[m[31m-            turn_response
+(B[m[31m-                .get("turn_id")
+(B[m[31m-                .and_then(Value::as_str)
+(B[m[31m-                .unwrap_or_default(),
+(B[m[31m-            turn_id
+(B[m[31m-        );
+(B[m[31m-
+(B[m[31m-        let _ = server.shutdown().await;
+(B[m[32m+    let complete = time::timeout(Duration::from_secs(2), turn.events.recv())
+(B[m[32m+        .await
+(B[m[32m+        .expect("event timeout")
+(B[m[32m+        .expect("completion event");
+(B[m[32m+    match complete {
+(B[m[32m+        AppNotification::TaskComplete {
+(B[m[32m+            thread_id: tid,
+(B[m[32m+            turn_id: event_turn,
+(B[m[32m+            result,
+(B[m[32m+        } => {
+(B[m[32m+            assert_eq!(tid, thread_id);
+(B[m[32m+            assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
+(B[m[32m+            assert_eq!(result, serde_json::json!({ "ok": true }));
+(B[m[32m+        }
+(B[m[32m+        other => panic!("unexpected event: {other:?}"),
+(B[m     }
+ 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn turn_interrupt_sends_cancel_notification() {
+(B[m[31m-        let (_dir, server) = start_fake_app_server().await;
+(B[m[31m-
+(B[m[31m-        let thread_params = ThreadStartParams {
+(B[m[31m-            thread_id: None,
+(B[m[31m-            metadata: Value::Null,
+(B[m[31m-        };
+(B[m[31m-        let thread_handle = server
+(B[m[31m-            .thread_start(thread_params)
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread start");
+(B[m[31m-        let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread response timeout")
+(B[m[31m-            .expect("recv")
+(B[m[31m-            .expect("ok");
+(B[m[31m-        let thread_id = thread_response
+(B[m[31m-            .get("thread_id")
+(B[m[32m+    let turn_response = time::timeout(Duration::from_secs(2), turn.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("response timeout")
+(B[m[32m+        .expect("recv")
+(B[m[32m+        .expect("ok");
+(B[m[32m+    assert_eq!(
+(B[m[32m+        turn_response
+(B[m[32m+            .get("turn_id")
+(B[m             .and_then(Value::as_str)
+[31m-            .unwrap_or_default()
+(B[m[31m-            .to_string();
+(B[m[32m+            .unwrap_or_default(),
+(B[m[32m+        turn_id
+(B[m[32m+    );
+(B[m 
+[31m-        let params = TurnStartParams {
+(B[m[31m-            thread_id: thread_id.clone(),
+(B[m[31m-            input: vec![TurnInput {
+(B[m[31m-                kind: "text".to_string(),
+(B[m[31m-                text: Some("please interrupt".to_string()),
+(B[m[31m-            }],
+(B[m[31m-            model: None,
+(B[m[31m-            config: BTreeMap::new(),
+(B[m[31m-        };
+(B[m[31m-        let mut turn = server.turn_start(params).await.expect("turn start");
+(B[m[32m+    let _ = server.shutdown().await;
+(B[m[32m+}
+(B[m 
+[31m-        let first_event = time::timeout(Duration::from_secs(2), turn.events.recv())
+(B[m[31m-            .await
+(B[m[31m-            .expect("event timeout")
+(B[m[31m-            .expect("event value");
+(B[m[31m-        let turn_id = match first_event {
+(B[m[31m-            AppNotification::Item {
+(B[m[31m-                thread_id: tid,
+(B[m[31m-                turn_id: Some(turn),
+(B[m[31m-                ..
+(B[m[31m-            } => {
+(B[m[31m-                assert_eq!(tid, thread_id);
+(B[m[31m-                turn
+(B[m[31m-            }
+(B[m[31m-            other => panic!("unexpected event: {other:?}"),
+(B[m[31m-        };
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn turn_interrupt_sends_cancel_notification() {
+(B[m[32m+    let (_dir, server) = start_fake_app_server().await;
+(B[m 
+[31m-        let interrupt = server
+(B[m[31m-            .turn_interrupt(TurnInterruptParams {
+(B[m[31m-                thread_id: Some(thread_id.clone()),
+(B[m[31m-                turn_id: turn_id.clone(),
+(B[m[31m-            })
+(B[m[31m-            .await
+(B[m[31m-            .expect("send interrupt");
+(B[m[32m+    let thread_params = ThreadStartParams {
+(B[m[32m+        thread_id: None,
+(B[m[32m+        metadata: Value::Null,
+(B[m[32m+    };
+(B[m[32m+    let thread_handle = server
+(B[m[32m+        .thread_start(thread_params)
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread start");
+(B[m[32m+    let thread_response = time::timeout(Duration::from_secs(2), thread_handle.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread response timeout")
+(B[m[32m+        .expect("recv")
+(B[m[32m+        .expect("ok");
+(B[m[32m+    let thread_id = thread_response
+(B[m[32m+        .get("thread_id")
+(B[m[32m+        .and_then(Value::as_str)
+(B[m[32m+        .unwrap_or_default()
+(B[m[32m+        .to_string();
+(B[m 
+[31m-        let cancel_event = time::timeout(Duration::from_secs(2), turn.events.recv())
+(B[m[31m-            .await
+(B[m[31m-            .expect("event timeout")
+(B[m[31m-            .expect("cancel event");
+(B[m[31m-        match cancel_event {
+(B[m[31m-            AppNotification::TaskComplete {
+(B[m[31m-                thread_id: tid,
+(B[m[31m-                turn_id: event_turn,
+(B[m[31m-                result,
+(B[m[31m-            } => {
+(B[m[31m-                assert_eq!(tid, thread_id);
+(B[m[31m-                assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
+(B[m[31m-                assert_eq!(result.get("cancelled"), Some(&Value::Bool(true)));
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    result.get("reason"),
+(B[m[31m-                    Some(&Value::String("interrupted".into()))
+(B[m[31m-                );
+(B[m[31m-            }
+(B[m[31m-            other => panic!("unexpected cancel notification: {other:?}"),
+(B[m[32m+    let params = TurnStartParams {
+(B[m[32m+        thread_id: thread_id.clone(),
+(B[m[32m+        input: vec![TurnInput {
+(B[m[32m+            kind: "text".to_string(),
+(B[m[32m+            text: Some("please interrupt".to_string()),
+(B[m[32m+        }],
+(B[m[32m+        model: None,
+(B[m[32m+        config: BTreeMap::new(),
+(B[m[32m+    };
+(B[m[32m+    let mut turn = server.turn_start(params).await.expect("turn start");
+(B[m[32m+
+(B[m[32m+    let first_event = time::timeout(Duration::from_secs(2), turn.events.recv())
+(B[m[32m+        .await
+(B[m[32m+        .expect("event timeout")
+(B[m[32m+        .expect("event value");
+(B[m[32m+    let turn_id = match first_event {
+(B[m[32m+        AppNotification::Item {
+(B[m[32m+            thread_id: tid,
+(B[m[32m+            turn_id: Some(turn),
+(B[m[32m+            ..
+(B[m[32m+        } => {
+(B[m[32m+            assert_eq!(tid, thread_id);
+(B[m[32m+            turn
+(B[m         }
+[32m+        other => panic!("unexpected event: {other:?}"),
+(B[m[32m+    };
+(B[m 
+[31m-        let turn_response = time::timeout(Duration::from_secs(2), turn.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("response timeout")
+(B[m[31m-            .expect("recv");
+(B[m[31m-        assert!(matches!(turn_response, Err(McpError::Cancelled)));
+(B[m[32m+    let interrupt = server
+(B[m[32m+        .turn_interrupt(TurnInterruptParams {
+(B[m[32m+            thread_id: Some(thread_id.clone()),
+(B[m[32m+            turn_id: turn_id.clone(),
+(B[m[32m+        })
+(B[m[32m+        .await
+(B[m[32m+        .expect("send interrupt");
+(B[m 
+[31m-        let interrupt_response = time::timeout(Duration::from_secs(2), interrupt.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("interrupt response timeout")
+(B[m[31m-            .expect("recv")
+(B[m[31m-            .expect("ok");
+(B[m[31m-        assert!(interrupt_response
+(B[m[31m-            .get("interrupted")
+(B[m[31m-            .and_then(Value::as_bool)
+(B[m[31m-            .unwrap_or(false));
+(B[m[31m-
+(B[m[31m-        let _ = server.shutdown().await;
+(B[m[32m+    let cancel_event = time::timeout(Duration::from_secs(2), turn.events.recv())
+(B[m[32m+        .await
+(B[m[32m+        .expect("event timeout")
+(B[m[32m+        .expect("cancel event");
+(B[m[32m+    match cancel_event {
+(B[m[32m+        AppNotification::TaskComplete {
+(B[m[32m+            thread_id: tid,
+(B[m[32m+            turn_id: event_turn,
+(B[m[32m+            result,
+(B[m[32m+        } => {
+(B[m[32m+            assert_eq!(tid, thread_id);
+(B[m[32m+            assert_eq!(event_turn.as_deref(), Some(turn_id.as_str()));
+(B[m[32m+            assert_eq!(result.get("cancelled"), Some(&Value::Bool(true)));
+(B[m[32m+            assert_eq!(
+(B[m[32m+                result.get("reason"),
+(B[m[32m+                Some(&Value::String("interrupted".into()))
+(B[m[32m+            );
+(B[m[32m+        }
+(B[m[32m+        other => panic!("unexpected cancel notification: {other:?}"),
+(B[m     }
+ 
+[32m+    let turn_response = time::timeout(Duration::from_secs(2), turn.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("response timeout")
+(B[m[32m+        .expect("recv");
+(B[m[32m+    assert!(matches!(turn_response, Err(McpError::Cancelled)));
+(B[m[32m+
+(B[m[32m+    let interrupt_response = time::timeout(Duration::from_secs(2), interrupt.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("interrupt response timeout")
+(B[m[32m+        .expect("recv")
+(B[m[32m+        .expect("ok");
+(B[m[32m+    assert!(interrupt_response
+(B[m[32m+        .get("interrupted")
+(B[m[32m+        .and_then(Value::as_bool)
+(B[m[32m+        .unwrap_or(false));
+(B[m[32m+
+(B[m[32m+    let _ = server.shutdown().await;
+(B[m[32m+}
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/mcp/tests_runtime_app.rs:1:
+[31m-use super::*;
+(B[m use super::test_support::{prelude::*, *};
+[32m+use super::*;
+(B[m 
+[31m-    #[test]
+(B[m[31m-    fn runtime_api_lists_launchers_without_changing_config() {
+(B[m[31m-        let (dir, manager) = temp_config_manager();
+(B[m[31m-        let stdio_env_key = "MCP_RUNTIME_API_STDIO_ENV";
+(B[m[31m-        let request_env_key = "MCP_RUNTIME_API_REQUEST_ENV";
+(B[m[31m-        let http_env_key = "MCP_RUNTIME_API_HTTP_ENV";
+(B[m[31m-        env::set_var(http_env_key, "token-api");
+(B[m[32m+#[test]
+(B[m[32m+fn runtime_api_lists_launchers_without_changing_config() {
+(B[m[32m+    let (dir, manager) = temp_config_manager();
+(B[m[32m+    let stdio_env_key = "MCP_RUNTIME_API_STDIO_ENV";
+(B[m[32m+    let request_env_key = "MCP_RUNTIME_API_REQUEST_ENV";
+(B[m[32m+    let http_env_key = "MCP_RUNTIME_API_HTTP_ENV";
+(B[m[32m+    env::set_var(http_env_key, "token-api");
+(B[m 
+[31m-        let mut stdio = stdio_definition("runtime-api-stdio");
+(B[m[31m-        stdio.description = Some("stdio runtime".into());
+(B[m[31m-        stdio.tags = vec!["local".into()];
+(B[m[31m-        stdio.tools = Some(McpToolConfig {
+(B[m[31m-            enabled: vec!["fmt".into()],
+(B[m[31m-            disabled: vec!["lint".into()],
+(B[m[31m-        });
+(B[m[31m-        if let McpTransport::Stdio(ref mut stdio_def) = stdio.transport {
+(B[m[31m-            stdio_def.args.push("--flag".into());
+(B[m[31m-            stdio_def
+(B[m[31m-                .env
+(B[m[31m-                .insert(stdio_env_key.into(), "runtime-env".into());
+(B[m[31m-            stdio_def.timeout_ms = Some(2400);
+(B[m[31m-        }
+(B[m[32m+    let mut stdio = stdio_definition("runtime-api-stdio");
+(B[m[32m+    stdio.description = Some("stdio runtime".into());
+(B[m[32m+    stdio.tags = vec!["local".into()];
+(B[m[32m+    stdio.tools = Some(McpToolConfig {
+(B[m[32m+        enabled: vec!["fmt".into()],
+(B[m[32m+        disabled: vec!["lint".into()],
+(B[m[32m+    });
+(B[m[32m+    if let McpTransport::Stdio(ref mut stdio_def) = stdio.transport {
+(B[m[32m+        stdio_def.args.push("--flag".into());
+(B[m[32m+        stdio_def
+(B[m[32m+            .env
+(B[m[32m+            .insert(stdio_env_key.into(), "runtime-env".into());
+(B[m[32m+        stdio_def.timeout_ms = Some(2400);
+(B[m[32m+    }
+(B[m 
+[31m-        let mut env_map = BTreeMap::new();
+(B[m[31m-        env_map.insert(request_env_key.to_string(), "injected".to_string());
+(B[m[32m+    let mut env_map = BTreeMap::new();
+(B[m[32m+    env_map.insert(request_env_key.to_string(), "injected".to_string());
+(B[m 
+[31m-        manager
+(B[m[31m-            .add_server(AddServerRequest {
+(B[m[31m-                name: "local-api".into(),
+(B[m[31m-                definition: stdio,
+(B[m[31m-                overwrite: false,
+(B[m[31m-                env: env_map,
+(B[m[31m-                bearer_token: None,
+(B[m[31m-            })
+(B[m[31m-            .expect("add stdio server");
+(B[m[32m+    manager
+(B[m[32m+        .add_server(AddServerRequest {
+(B[m[32m+            name: "local-api".into(),
+(B[m[32m+            definition: stdio,
+(B[m[32m+            overwrite: false,
+(B[m[32m+            env: env_map,
+(B[m[32m+            bearer_token: None,
+(B[m[32m+        })
+(B[m[32m+        .expect("add stdio server");
+(B[m 
+[31m-        let mut http = streamable_definition("https://example.test/runtime-api", http_env_key);
+(B[m[31m-        http.description = Some("http runtime".into());
+(B[m[31m-        http.tags = vec!["remote".into()];
+(B[m[31m-        http.tools = Some(McpToolConfig {
+(B[m[31m-            enabled: vec!["alpha".into()],
+(B[m[31m-            disabled: vec!["beta".into()],
+(B[m[31m-        });
+(B[m[31m-        if let McpTransport::StreamableHttp(ref mut http_def) = http.transport {
+(B[m[31m-            http_def.headers.insert("X-Req".into(), "true".into());
+(B[m[31m-            http_def.request_timeout_ms = Some(2200);
+(B[m[31m-        }
+(B[m[32m+    let mut http = streamable_definition("https://example.test/runtime-api", http_env_key);
+(B[m[32m+    http.description = Some("http runtime".into());
+(B[m[32m+    http.tags = vec!["remote".into()];
+(B[m[32m+    http.tools = Some(McpToolConfig {
+(B[m[32m+        enabled: vec!["alpha".into()],
+(B[m[32m+        disabled: vec!["beta".into()],
+(B[m[32m+    });
+(B[m[32m+    if let McpTransport::StreamableHttp(ref mut http_def) = http.transport {
+(B[m[32m+        http_def.headers.insert("X-Req".into(), "true".into());
+(B[m[32m+        http_def.request_timeout_ms = Some(2200);
+(B[m[32m+    }
+(B[m 
+[31m-        manager
+(B[m[31m-            .add_server(AddServerRequest {
+(B[m[31m-                name: "remote-api".into(),
+(B[m[31m-                definition: http,
+(B[m[31m-                overwrite: false,
+(B[m[31m-                env: BTreeMap::new(),
+(B[m[31m-                bearer_token: None,
+(B[m[31m-            })
+(B[m[31m-            .expect("add http server");
+(B[m[32m+    manager
+(B[m[32m+        .add_server(AddServerRequest {
+(B[m[32m+            name: "remote-api".into(),
+(B[m[32m+            definition: http,
+(B[m[32m+            overwrite: false,
+(B[m[32m+            env: BTreeMap::new(),
+(B[m[32m+            bearer_token: None,
+(B[m[32m+        })
+(B[m[32m+        .expect("add http server");
+(B[m 
+[31m-        let before = fs::read_to_string(manager.config_path()).expect("read config before");
+(B[m[31m-        let cwd = dir.path().join("cwd");
+(B[m[32m+    let before = fs::read_to_string(manager.config_path()).expect("read config before");
+(B[m[32m+    let cwd = dir.path().join("cwd");
+(B[m 
+[31m-        let defaults = StdioServerConfig {
+(B[m[31m-            binary: PathBuf::from("codex"),
+(B[m[31m-            code_home: Some(dir.path().to_path_buf()),
+(B[m[31m-            current_dir: Some(cwd.clone()),
+(B[m[31m-            env: vec![
+(B[m[31m-                (OsString::from("DEFAULT_ONLY"), OsString::from("default")),
+(B[m[31m-                (
+(B[m[31m-                    OsString::from(request_env_key),
+(B[m[31m-                    OsString::from("base-default"),
+(B[m[31m-                ),
+(B[m[31m-            ],
+(B[m[31m-            app_server_analytics_default_enabled: false,
+(B[m[31m-            mirror_stdio: true,
+(B[m[31m-            startup_timeout: Duration::from_secs(3),
+(B[m[31m-        };
+(B[m[32m+    let defaults = StdioServerConfig {
+(B[m[32m+        binary: PathBuf::from("codex"),
+(B[m[32m+        code_home: Some(dir.path().to_path_buf()),
+(B[m[32m+        current_dir: Some(cwd.clone()),
+(B[m[32m+        env: vec![
+(B[m[32m+            (OsString::from("DEFAULT_ONLY"), OsString::from("default")),
+(B[m[32m+            (
+(B[m[32m+                OsString::from(request_env_key),
+(B[m[32m+                OsString::from("base-default"),
+(B[m[32m+            ),
+(B[m[32m+        ],
+(B[m[32m+        app_server_analytics_default_enabled: false,
+(B[m[32m+        mirror_stdio: true,
+(B[m[32m+        startup_timeout: Duration::from_secs(3),
+(B[m[32m+    };
+(B[m 
+[31m-        let api = McpRuntimeApi::from_config(&manager, &defaults).expect("runtime api");
+(B[m[32m+    let api = McpRuntimeApi::from_config(&manager, &defaults).expect("runtime api");
+(B[m 
+[31m-        let available = api.available();
+(B[m[31m-        assert_eq!(available.len(), 2);
+(B[m[32m+    let available = api.available();
+(B[m[32m+    assert_eq!(available.len(), 2);
+(B[m 
+[31m-        let stdio_summary = available
+(B[m[31m-            .iter()
+(B[m[31m-            .find(|entry| entry.name == "local-api")
+(B[m[31m-            .expect("stdio summary");
+(B[m[31m-        assert_eq!(stdio_summary.transport, McpRuntimeSummaryTransport::Stdio);
+(B[m[31m-        let stdio_tools = stdio_summary.tools.as_ref().expect("stdio tools");
+(B[m[31m-        assert_eq!(stdio_tools.enabled, vec!["fmt".to_string()]);
+(B[m[31m-        assert_eq!(stdio_tools.disabled, vec!["lint".to_string()]);
+(B[m[32m+    let stdio_summary = available
+(B[m[32m+        .iter()
+(B[m[32m+        .find(|entry| entry.name == "local-api")
+(B[m[32m+        .expect("stdio summary");
+(B[m[32m+    assert_eq!(stdio_summary.transport, McpRuntimeSummaryTransport::Stdio);
+(B[m[32m+    let stdio_tools = stdio_summary.tools.as_ref().expect("stdio tools");
+(B[m[32m+    assert_eq!(stdio_tools.enabled, vec!["fmt".to_string()]);
+(B[m[32m+    assert_eq!(stdio_tools.disabled, vec!["lint".to_string()]);
+(B[m 
+[31m-        let stdio_launcher = api.stdio_launcher("local-api").expect("stdio launcher");
+(B[m[31m-        assert_eq!(stdio_launcher.args, vec!["--flag".to_string()]);
+(B[m[31m-        assert_eq!(stdio_launcher.timeout, Duration::from_millis(2400));
+(B[m[31m-        assert!(stdio_launcher.mirror_stdio);
+(B[m[31m-        assert_eq!(stdio_launcher.current_dir.as_deref(), Some(cwd.as_path()));
+(B[m[32m+    let stdio_launcher = api.stdio_launcher("local-api").expect("stdio launcher");
+(B[m[32m+    assert_eq!(stdio_launcher.args, vec!["--flag".to_string()]);
+(B[m[32m+    assert_eq!(stdio_launcher.timeout, Duration::from_millis(2400));
+(B[m[32m+    assert!(stdio_launcher.mirror_stdio);
+(B[m[32m+    assert_eq!(stdio_launcher.current_dir.as_deref(), Some(cwd.as_path()));
+(B[m 
+[31m-        let env_map: HashMap<OsString, OsString> = stdio_launcher.env.into_iter().collect();
+(B[m[31m-        assert_eq!(
+(B[m[31m-            env_map.get(&OsString::from("CODEX_HOME")),
+(B[m[31m-            Some(&dir.path().as_os_str().to_os_string())
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            env_map.get(&OsString::from("DEFAULT_ONLY")),
+(B[m[31m-            Some(&OsString::from("default"))
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            env_map.get(&OsString::from(request_env_key)),
+(B[m[31m-            Some(&OsString::from("injected"))
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            env_map.get(&OsString::from(stdio_env_key)),
+(B[m[31m-            Some(&OsString::from("runtime-env"))
+(B[m[31m-        );
+(B[m[32m+    let env_map: HashMap<OsString, OsString> = stdio_launcher.env.into_iter().collect();
+(B[m[32m+    assert_eq!(
+(B[m[32m+        env_map.get(&OsString::from("CODEX_HOME")),
+(B[m[32m+        Some(&dir.path().as_os_str().to_os_string())
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        env_map.get(&OsString::from("DEFAULT_ONLY")),
+(B[m[32m+        Some(&OsString::from("default"))
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        env_map.get(&OsString::from(request_env_key)),
+(B[m[32m+        Some(&OsString::from("injected"))
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        env_map.get(&OsString::from(stdio_env_key)),
+(B[m[32m+        Some(&OsString::from("runtime-env"))
+(B[m[32m+    );
+(B[m 
+[31m-        let http_connector = api.http_connector("remote-api").expect("http connector");
+(B[m[31m-        assert_eq!(http_connector.bearer_token.as_deref(), Some("token-api"));
+(B[m[31m-        assert_eq!(
+(B[m[31m-            http_connector
+(B[m[31m-                .headers
+(B[m[31m-                .get("Authorization")
+(B[m[31m-                .map(String::as_str),
+(B[m[31m-            Some("Bearer token-api")
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            http_connector.headers.get("X-Req").map(String::as_str),
+(B[m[31m-            Some("true")
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            http_connector.request_timeout,
+(B[m[31m-            Some(Duration::from_millis(2200))
+(B[m[31m-        );
+(B[m[32m+    let http_connector = api.http_connector("remote-api").expect("http connector");
+(B[m[32m+    assert_eq!(http_connector.bearer_token.as_deref(), Some("token-api"));
+(B[m[32m+    assert_eq!(
+(B[m[32m+        http_connector
+(B[m[32m+            .headers
+(B[m[32m+            .get("Authorization")
+(B[m[32m+            .map(String::as_str),
+(B[m[32m+        Some("Bearer token-api")
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        http_connector.headers.get("X-Req").map(String::as_str),
+(B[m[32m+        Some("true")
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        http_connector.request_timeout,
+(B[m[32m+        Some(Duration::from_millis(2200))
+(B[m[32m+    );
+(B[m 
+[31m-        let http_tools = available
+(B[m[31m-            .iter()
+(B[m[31m-            .find(|entry| entry.name == "remote-api")
+(B[m[31m-            .and_then(|entry| entry.tools.as_ref())
+(B[m[31m-            .expect("http tools");
+(B[m[31m-        assert_eq!(http_tools.enabled, vec!["alpha".to_string()]);
+(B[m[31m-        assert_eq!(http_tools.disabled, vec!["beta".to_string()]);
+(B[m[32m+    let http_tools = available
+(B[m[32m+        .iter()
+(B[m[32m+        .find(|entry| entry.name == "remote-api")
+(B[m[32m+        .and_then(|entry| entry.tools.as_ref())
+(B[m[32m+        .expect("http tools");
+(B[m[32m+    assert_eq!(http_tools.enabled, vec!["alpha".to_string()]);
+(B[m[32m+    assert_eq!(http_tools.disabled, vec!["beta".to_string()]);
+(B[m 
+[31m-        match api.stdio_launcher("remote-api") {
+(B[m[31m-            Err(McpRuntimeError::UnsupportedTransport {
+(B[m[31m-                name,
+(B[m[31m-                expected,
+(B[m[31m-                actual,
+(B[m[31m-            }) => {
+(B[m[31m-                assert_eq!(name, "remote-api");
+(B[m[31m-                assert_eq!(expected, "stdio");
+(B[m[31m-                assert_eq!(actual, "streamable_http");
+(B[m[31m-            }
+(B[m[31m-            other => panic!("unexpected result: {other:?}"),
+(B[m[32m+    match api.stdio_launcher("remote-api") {
+(B[m[32m+        Err(McpRuntimeError::UnsupportedTransport {
+(B[m[32m+            name,
+(B[m[32m+            expected,
+(B[m[32m+            actual,
+(B[m[32m+        }) => {
+(B[m[32m+            assert_eq!(name, "remote-api");
+(B[m[32m+            assert_eq!(expected, "stdio");
+(B[m[32m+            assert_eq!(actual, "streamable_http");
+(B[m         }
+[32m+        other => panic!("unexpected result: {other:?}"),
+(B[m[32m+    }
+(B[m 
+[31m-        match api.http_connector("local-api") {
+(B[m[31m-            Err(McpRuntimeError::UnsupportedTransport {
+(B[m[31m-                name,
+(B[m[31m-                expected,
+(B[m[31m-                actual,
+(B[m[31m-            }) => {
+(B[m[31m-                assert_eq!(name, "local-api");
+(B[m[31m-                assert_eq!(expected, "streamable_http");
+(B[m[31m-                assert_eq!(actual, "stdio");
+(B[m[31m-            }
+(B[m[31m-            other => panic!("unexpected http result: {other:?}"),
+(B[m[32m+    match api.http_connector("local-api") {
+(B[m[32m+        Err(McpRuntimeError::UnsupportedTransport {
+(B[m[32m+            name,
+(B[m[32m+            expected,
+(B[m[32m+            actual,
+(B[m[32m+        }) => {
+(B[m[32m+            assert_eq!(name, "local-api");
+(B[m[32m+            assert_eq!(expected, "streamable_http");
+(B[m[32m+            assert_eq!(actual, "stdio");
+(B[m         }
+[32m+        other => panic!("unexpected http result: {other:?}"),
+(B[m[32m+    }
+(B[m 
+[31m-        let after = fs::read_to_string(manager.config_path()).expect("read config after");
+(B[m[31m-        assert_eq!(before, after);
+(B[m[32m+    let after = fs::read_to_string(manager.config_path()).expect("read config after");
+(B[m[32m+    assert_eq!(before, after);
+(B[m 
+[31m-        env::remove_var(http_env_key);
+(B[m[31m-        env::remove_var(request_env_key);
+(B[m[31m-    }
+(B[m[32m+    env::remove_var(http_env_key);
+(B[m[32m+    env::remove_var(request_env_key);
+(B[m[32m+}
+(B[m 
+[31m-    #[test]
+(B[m[31m-    fn runtime_api_prepare_http_is_non_destructive() {
+(B[m[31m-        let (dir, manager) = temp_config_manager();
+(B[m[31m-        let env_var = "MCP_RUNTIME_API_PREPARE";
+(B[m[31m-        env::set_var(env_var, "prepare-token");
+(B[m[32m+#[test]
+(B[m[32m+fn runtime_api_prepare_http_is_non_destructive() {
+(B[m[32m+    let (dir, manager) = temp_config_manager();
+(B[m[32m+    let env_var = "MCP_RUNTIME_API_PREPARE";
+(B[m[32m+    env::set_var(env_var, "prepare-token");
+(B[m 
+[31m-        let mut http = streamable_definition("https://example.test/prepare", env_var);
+(B[m[31m-        http.tags = vec!["prepare".into()];
+(B[m[31m-        http.tools = Some(McpToolConfig {
+(B[m[31m-            enabled: vec!["delta".into()],
+(B[m[31m-            disabled: vec![],
+(B[m[31m-        });
+(B[m[32m+    let mut http = streamable_definition("https://example.test/prepare", env_var);
+(B[m[32m+    http.tags = vec!["prepare".into()];
+(B[m[32m+    http.tools = Some(McpToolConfig {
+(B[m[32m+        enabled: vec!["delta".into()],
+(B[m[32m+        disabled: vec![],
+(B[m[32m+    });
+(B[m 
+[31m-        manager
+(B[m[31m-            .add_server(AddServerRequest {
+(B[m[31m-                name: "prepare-http".into(),
+(B[m[31m-                definition: http,
+(B[m[31m-                overwrite: false,
+(B[m[31m-                env: BTreeMap::new(),
+(B[m[31m-                bearer_token: None,
+(B[m[31m-            })
+(B[m[31m-            .expect("add http server");
+(B[m[32m+    manager
+(B[m[32m+        .add_server(AddServerRequest {
+(B[m[32m+            name: "prepare-http".into(),
+(B[m[32m+            definition: http,
+(B[m[32m+            overwrite: false,
+(B[m[32m+            env: BTreeMap::new(),
+(B[m[32m+            bearer_token: None,
+(B[m[32m+        })
+(B[m[32m+        .expect("add http server");
+(B[m 
+[31m-        let before = fs::read_to_string(manager.config_path()).expect("read config before");
+(B[m[32m+    let before = fs::read_to_string(manager.config_path()).expect("read config before");
+(B[m 
+[31m-        let defaults = StdioServerConfig {
+(B[m[31m-            binary: PathBuf::from("codex"),
+(B[m[31m-            code_home: Some(dir.path().to_path_buf()),
+(B[m[31m-            current_dir: None,
+(B[m[31m-            env: Vec::new(),
+(B[m[31m-            app_server_analytics_default_enabled: false,
+(B[m[31m-            mirror_stdio: false,
+(B[m[31m-            startup_timeout: Duration::from_secs(2),
+(B[m[31m-        };
+(B[m[32m+    let defaults = StdioServerConfig {
+(B[m[32m+        binary: PathBuf::from("codex"),
+(B[m[32m+        code_home: Some(dir.path().to_path_buf()),
+(B[m[32m+        current_dir: None,
+(B[m[32m+        env: Vec::new(),
+(B[m[32m+        app_server_analytics_default_enabled: false,
+(B[m[32m+        mirror_stdio: false,
+(B[m[32m+        startup_timeout: Duration::from_secs(2),
+(B[m[32m+    };
+(B[m 
+[31m-        let api = McpRuntimeApi::from_config(&manager, &defaults).expect("runtime api");
+(B[m[31m-        let handle = api.prepare("prepare-http").expect("prepare http");
+(B[m[32m+    let api = McpRuntimeApi::from_config(&manager, &defaults).expect("runtime api");
+(B[m[32m+    let handle = api.prepare("prepare-http").expect("prepare http");
+(B[m 
+[31m-        match handle {
+(B[m[31m-            McpRuntimeHandle::StreamableHttp(http_handle) => {
+(B[m[31m-                assert_eq!(http_handle.name, "prepare-http");
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    http_handle.connector.bearer_token.as_deref(),
+(B[m[31m-                    Some("prepare-token")
+(B[m[31m-                );
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    http_handle
+(B[m[31m-                        .connector
+(B[m[31m-                        .headers
+(B[m[31m-                        .get("Authorization")
+(B[m[31m-                        .map(String::as_str),
+(B[m[31m-                    Some("Bearer prepare-token")
+(B[m[31m-                );
+(B[m[31m-                let tools = http_handle.tools.expect("tool hints");
+(B[m[31m-                assert_eq!(tools.enabled, vec!["delta".to_string()]);
+(B[m[31m-            }
+(B[m[31m-            other => panic!("expected http handle, got {other:?}"),
+(B[m[32m+    match handle {
+(B[m[32m+        McpRuntimeHandle::StreamableHttp(http_handle) => {
+(B[m[32m+            assert_eq!(http_handle.name, "prepare-http");
+(B[m[32m+            assert_eq!(
+(B[m[32m+                http_handle.connector.bearer_token.as_deref(),
+(B[m[32m+                Some("prepare-token")
+(B[m[32m+            );
+(B[m[32m+            assert_eq!(
+(B[m[32m+                http_handle
+(B[m[32m+                    .connector
+(B[m[32m+                    .headers
+(B[m[32m+                    .get("Authorization")
+(B[m[32m+                    .map(String::as_str),
+(B[m[32m+                Some("Bearer prepare-token")
+(B[m[32m+            );
+(B[m[32m+            let tools = http_handle.tools.expect("tool hints");
+(B[m[32m+            assert_eq!(tools.enabled, vec!["delta".to_string()]);
+(B[m         }
+[32m+        other => panic!("expected http handle, got {other:?}"),
+(B[m[32m+    }
+(B[m 
+[31m-        let after = fs::read_to_string(manager.config_path()).expect("read config after");
+(B[m[31m-        assert_eq!(before, after);
+(B[m[32m+    let after = fs::read_to_string(manager.config_path()).expect("read config after");
+(B[m[32m+    assert_eq!(before, after);
+(B[m 
+[31m-        env::remove_var(env_var);
+(B[m[31m-    }
+(B[m[32m+    env::remove_var(env_var);
+(B[m[32m+}
+(B[m 
+[31m-    #[test]
+(B[m[31m-    fn app_runtime_api_lists_and_merges_without_writes() {
+(B[m[31m-        let (dir, manager) = temp_config_manager();
+(B[m[32m+#[test]
+(B[m[32m+fn app_runtime_api_lists_and_merges_without_writes() {
+(B[m[32m+    let (dir, manager) = temp_config_manager();
+(B[m 
+[31m-        let alpha_home = dir.path().join("app-home-a");
+(B[m[31m-        let alpha_cwd = dir.path().join("app-cwd-a");
+(B[m[31m-        let mut alpha_env = BTreeMap::new();
+(B[m[31m-        alpha_env.insert("APP_RUNTIME_ENV".into(), "alpha".into());
+(B[m[31m-        alpha_env.insert("OVERRIDE_ME".into(), "runtime".into());
+(B[m[32m+    let alpha_home = dir.path().join("app-home-a");
+(B[m[32m+    let alpha_cwd = dir.path().join("app-cwd-a");
+(B[m[32m+    let mut alpha_env = BTreeMap::new();
+(B[m[32m+    alpha_env.insert("APP_RUNTIME_ENV".into(), "alpha".into());
+(B[m[32m+    alpha_env.insert("OVERRIDE_ME".into(), "runtime".into());
+(B[m 
+[31m-        manager
+(B[m[31m-            .add_app_runtime(AddAppRuntimeRequest {
+(B[m[31m-                name: "alpha".into(),
+(B[m[31m-                definition: AppRuntimeDefinition {
+(B[m[31m-                    description: Some("local app".into()),
+(B[m[31m-                    tags: vec!["local".into()],
+(B[m[31m-                    env: alpha_env,
+(B[m[31m-                    code_home: Some(alpha_home.clone()),
+(B[m[31m-                    current_dir: Some(alpha_cwd.clone()),
+(B[m[31m-                    mirror_stdio: Some(true),
+(B[m[31m-                    startup_timeout_ms: Some(4200),
+(B[m[31m-                    binary: Some(PathBuf::from("/bin/app-alpha")),
+(B[m[31m-                    metadata: serde_json::json!({"thread": "t-alpha"}),
+(B[m[31m-                },
+(B[m[31m-                overwrite: false,
+(B[m[31m-            })
+(B[m[31m-            .expect("add alpha app runtime");
+(B[m[32m+    manager
+(B[m[32m+        .add_app_runtime(AddAppRuntimeRequest {
+(B[m[32m+            name: "alpha".into(),
+(B[m[32m+            definition: AppRuntimeDefinition {
+(B[m[32m+                description: Some("local app".into()),
+(B[m[32m+                tags: vec!["local".into()],
+(B[m[32m+                env: alpha_env,
+(B[m[32m+                code_home: Some(alpha_home.clone()),
+(B[m[32m+                current_dir: Some(alpha_cwd.clone()),
+(B[m[32m+                mirror_stdio: Some(true),
+(B[m[32m+                startup_timeout_ms: Some(4200),
+(B[m[32m+                binary: Some(PathBuf::from("/bin/app-alpha")),
+(B[m[32m+                metadata: serde_json::json!({"thread": "t-alpha"}),
+(B[m[32m+            },
+(B[m[32m+            overwrite: false,
+(B[m[32m+        })
+(B[m[32m+        .expect("add alpha app runtime");
+(B[m 
+[31m-        let mut beta_env = BTreeMap::new();
+(B[m[31m-        beta_env.insert("APP_RUNTIME_ENV".into(), "beta".into());
+(B[m[32m+    let mut beta_env = BTreeMap::new();
+(B[m[32m+    beta_env.insert("APP_RUNTIME_ENV".into(), "beta".into());
+(B[m 
+[31m-        manager
+(B[m[31m-            .add_app_runtime(AddAppRuntimeRequest {
+(B[m[31m-                name: "beta".into(),
+(B[m[31m-                definition: AppRuntimeDefinition {
+(B[m[31m-                    description: None,
+(B[m[31m-                    tags: vec!["default".into()],
+(B[m[31m-                    env: beta_env,
+(B[m[31m-                    code_home: None,
+(B[m[31m-                    current_dir: None,
+(B[m[31m-                    mirror_stdio: None,
+(B[m[31m-                    startup_timeout_ms: None,
+(B[m[31m-                    binary: None,
+(B[m[31m-                    metadata: serde_json::json!({"resume": true}),
+(B[m[31m-                },
+(B[m[31m-                overwrite: false,
+(B[m[31m-            })
+(B[m[31m-            .expect("add beta app runtime");
+(B[m[32m+    manager
+(B[m[32m+        .add_app_runtime(AddAppRuntimeRequest {
+(B[m[32m+            name: "beta".into(),
+(B[m[32m+            definition: AppRuntimeDefinition {
+(B[m[32m+                description: None,
+(B[m[32m+                tags: vec!["default".into()],
+(B[m[32m+                env: beta_env,
+(B[m[32m+                code_home: None,
+(B[m[32m+                current_dir: None,
+(B[m[32m+                mirror_stdio: None,
+(B[m[32m+                startup_timeout_ms: None,
+(B[m[32m+                binary: None,
+(B[m[32m+                metadata: serde_json::json!({"resume": true}),
+(B[m[32m+            },
+(B[m[32m+            overwrite: false,
+(B[m[32m+        })
+(B[m[32m+        .expect("add beta app runtime");
+(B[m 
+[31m-        let before = fs::read_to_string(manager.config_path()).expect("read config before");
+(B[m[32m+    let before = fs::read_to_string(manager.config_path()).expect("read config before");
+(B[m 
+[31m-        let default_home = dir.path().join("default-home");
+(B[m[31m-        let default_cwd = dir.path().join("default-cwd");
+(B[m[31m-        let defaults = StdioServerConfig {
+(B[m[31m-            binary: PathBuf::from("codex"),
+(B[m[31m-            code_home: Some(default_home.clone()),
+(B[m[31m-            current_dir: Some(default_cwd.clone()),
+(B[m[31m-            env: vec![
+(B[m[31m-                (OsString::from("DEFAULT_ONLY"), OsString::from("base")),
+(B[m[31m-                (OsString::from("OVERRIDE_ME"), OsString::from("base")),
+(B[m[31m-            ],
+(B[m[31m-            app_server_analytics_default_enabled: false,
+(B[m[31m-            mirror_stdio: false,
+(B[m[31m-            startup_timeout: Duration::from_secs(3),
+(B[m[31m-        };
+(B[m[32m+    let default_home = dir.path().join("default-home");
+(B[m[32m+    let default_cwd = dir.path().join("default-cwd");
+(B[m[32m+    let defaults = StdioServerConfig {
+(B[m[32m+        binary: PathBuf::from("codex"),
+(B[m[32m+        code_home: Some(default_home.clone()),
+(B[m[32m+        current_dir: Some(default_cwd.clone()),
+(B[m[32m+        env: vec![
+(B[m[32m+            (OsString::from("DEFAULT_ONLY"), OsString::from("base")),
+(B[m[32m+            (OsString::from("OVERRIDE_ME"), OsString::from("base")),
+(B[m[32m+        ],
+(B[m[32m+        app_server_analytics_default_enabled: false,
+(B[m[32m+        mirror_stdio: false,
+(B[m[32m+        startup_timeout: Duration::from_secs(3),
+(B[m[32m+    };
+(B[m 
+[31m-        let api = AppRuntimeApi::from_config(&manager, &defaults).expect("app runtime api");
+(B[m[32m+    let api = AppRuntimeApi::from_config(&manager, &defaults).expect("app runtime api");
+(B[m 
+[31m-        let available = api.available();
+(B[m[31m-        assert_eq!(available.len(), 2);
+(B[m[32m+    let available = api.available();
+(B[m[32m+    assert_eq!(available.len(), 2);
+(B[m 
+[31m-        let alpha_summary = available
+(B[m[31m-            .iter()
+(B[m[31m-            .find(|entry| entry.name == "alpha")
+(B[m[31m-            .expect("alpha summary");
+(B[m[31m-        assert_eq!(alpha_summary.description.as_deref(), Some("local app"));
+(B[m[31m-        assert_eq!(alpha_summary.tags, vec!["local".to_string()]);
+(B[m[31m-        assert_eq!(
+(B[m[31m-            alpha_summary.metadata,
+(B[m[31m-            serde_json::json!({"thread": "t-alpha"})
+(B[m[31m-        );
+(B[m[32m+    let alpha_summary = available
+(B[m[32m+        .iter()
+(B[m[32m+        .find(|entry| entry.name == "alpha")
+(B[m[32m+        .expect("alpha summary");
+(B[m[32m+    assert_eq!(alpha_summary.description.as_deref(), Some("local app"));
+(B[m[32m+    assert_eq!(alpha_summary.tags, vec!["local".to_string()]);
+(B[m[32m+    assert_eq!(
+(B[m[32m+        alpha_summary.metadata,
+(B[m[32m+        serde_json::json!({"thread": "t-alpha"})
+(B[m[32m+    );
+(B[m 
+[31m-        let alpha = api.prepare("alpha").expect("prepare alpha");
+(B[m[31m-        assert_eq!(alpha.name, "alpha");
+(B[m[31m-        assert_eq!(alpha.metadata, serde_json::json!({"thread": "t-alpha"}));
+(B[m[31m-        assert_eq!(alpha.config.binary, PathBuf::from("/bin/app-alpha"));
+(B[m[31m-        assert_eq!(
+(B[m[31m-            alpha.config.code_home.as_deref(),
+(B[m[31m-            Some(alpha_home.as_path())
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            alpha.config.current_dir.as_deref(),
+(B[m[31m-            Some(alpha_cwd.as_path())
+(B[m[31m-        );
+(B[m[31m-        assert!(alpha.config.mirror_stdio);
+(B[m[31m-        assert_eq!(alpha.config.startup_timeout, Duration::from_millis(4200));
+(B[m[32m+    let alpha = api.prepare("alpha").expect("prepare alpha");
+(B[m[32m+    assert_eq!(alpha.name, "alpha");
+(B[m[32m+    assert_eq!(alpha.metadata, serde_json::json!({"thread": "t-alpha"}));
+(B[m[32m+    assert_eq!(alpha.config.binary, PathBuf::from("/bin/app-alpha"));
+(B[m[32m+    assert_eq!(
+(B[m[32m+        alpha.config.code_home.as_deref(),
+(B[m[32m+        Some(alpha_home.as_path())
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        alpha.config.current_dir.as_deref(),
+(B[m[32m+        Some(alpha_cwd.as_path())
+(B[m[32m+    );
+(B[m[32m+    assert!(alpha.config.mirror_stdio);
+(B[m[32m+    assert_eq!(alpha.config.startup_timeout, Duration::from_millis(4200));
+(B[m 
+[31m-        let alpha_env: HashMap<OsString, OsString> = alpha.config.env.into_iter().collect();
+(B[m[31m-        assert_eq!(
+(B[m[31m-            alpha_env.get(&OsString::from("CODEX_HOME")),
+(B[m[31m-            Some(&alpha_home.as_os_str().to_os_string())
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            alpha_env.get(&OsString::from("DEFAULT_ONLY")),
+(B[m[31m-            Some(&OsString::from("base"))
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            alpha_env.get(&OsString::from("OVERRIDE_ME")),
+(B[m[31m-            Some(&OsString::from("runtime"))
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            alpha_env.get(&OsString::from("APP_RUNTIME_ENV")),
+(B[m[31m-            Some(&OsString::from("alpha"))
+(B[m[31m-        );
+(B[m[32m+    let alpha_env: HashMap<OsString, OsString> = alpha.config.env.into_iter().collect();
+(B[m[32m+    assert_eq!(
+(B[m[32m+        alpha_env.get(&OsString::from("CODEX_HOME")),
+(B[m[32m+        Some(&alpha_home.as_os_str().to_os_string())
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        alpha_env.get(&OsString::from("DEFAULT_ONLY")),
+(B[m[32m+        Some(&OsString::from("base"))
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        alpha_env.get(&OsString::from("OVERRIDE_ME")),
+(B[m[32m+        Some(&OsString::from("runtime"))
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        alpha_env.get(&OsString::from("APP_RUNTIME_ENV")),
+(B[m[32m+        Some(&OsString::from("alpha"))
+(B[m[32m+    );
+(B[m 
+[31m-        let beta = api.stdio_config("beta").expect("beta config");
+(B[m[31m-        assert_eq!(beta.binary, PathBuf::from("codex"));
+(B[m[31m-        assert_eq!(beta.code_home.as_deref(), Some(default_home.as_path()));
+(B[m[31m-        assert_eq!(beta.current_dir.as_deref(), Some(default_cwd.as_path()));
+(B[m[31m-        assert!(!beta.mirror_stdio);
+(B[m[31m-        assert_eq!(beta.startup_timeout, Duration::from_secs(3));
+(B[m[32m+    let beta = api.stdio_config("beta").expect("beta config");
+(B[m[32m+    assert_eq!(beta.binary, PathBuf::from("codex"));
+(B[m[32m+    assert_eq!(beta.code_home.as_deref(), Some(default_home.as_path()));
+(B[m[32m+    assert_eq!(beta.current_dir.as_deref(), Some(default_cwd.as_path()));
+(B[m[32m+    assert!(!beta.mirror_stdio);
+(B[m[32m+    assert_eq!(beta.startup_timeout, Duration::from_secs(3));
+(B[m 
+[31m-        let beta_env: HashMap<OsString, OsString> = beta.env.into_iter().collect();
+(B[m[31m-        assert_eq!(
+(B[m[31m-            beta_env.get(&OsString::from("CODEX_HOME")),
+(B[m[31m-            Some(&default_home.as_os_str().to_os_string())
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            beta_env.get(&OsString::from("DEFAULT_ONLY")),
+(B[m[31m-            Some(&OsString::from("base"))
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            beta_env.get(&OsString::from("OVERRIDE_ME")),
+(B[m[31m-            Some(&OsString::from("base"))
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            beta_env.get(&OsString::from("APP_RUNTIME_ENV")),
+(B[m[31m-            Some(&OsString::from("beta"))
+(B[m[31m-        );
+(B[m[32m+    let beta_env: HashMap<OsString, OsString> = beta.env.into_iter().collect();
+(B[m[32m+    assert_eq!(
+(B[m[32m+        beta_env.get(&OsString::from("CODEX_HOME")),
+(B[m[32m+        Some(&default_home.as_os_str().to_os_string())
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        beta_env.get(&OsString::from("DEFAULT_ONLY")),
+(B[m[32m+        Some(&OsString::from("base"))
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        beta_env.get(&OsString::from("OVERRIDE_ME")),
+(B[m[32m+        Some(&OsString::from("base"))
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        beta_env.get(&OsString::from("APP_RUNTIME_ENV")),
+(B[m[32m+        Some(&OsString::from("beta"))
+(B[m[32m+    );
+(B[m 
+[31m-        let beta_summary = available
+(B[m[31m-            .iter()
+(B[m[31m-            .find(|entry| entry.name == "beta")
+(B[m[31m-            .expect("beta summary");
+(B[m[31m-        assert_eq!(beta_summary.metadata, serde_json::json!({"resume": true}));
+(B[m[32m+    let beta_summary = available
+(B[m[32m+        .iter()
+(B[m[32m+        .find(|entry| entry.name == "beta")
+(B[m[32m+        .expect("beta summary");
+(B[m[32m+    assert_eq!(beta_summary.metadata, serde_json::json!({"resume": true}));
+(B[m 
+[31m-        let after = fs::read_to_string(manager.config_path()).expect("read config after");
+(B[m[31m-        assert_eq!(before, after);
+(B[m[31m-    }
+(B[m[32m+    let after = fs::read_to_string(manager.config_path()).expect("read config after");
+(B[m[32m+    assert_eq!(before, after);
+(B[m[32m+}
+(B[m 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn app_runtime_lifecycle_starts_and_stops_without_mutation() {
+(B[m[31m-        let (config_dir, manager) = temp_config_manager();
+(B[m[31m-        let (_server_dir, server_path) = write_fake_app_server();
+(B[m[31m-        let code_home = config_dir.path().join("app-lifecycle-home");
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn app_runtime_lifecycle_starts_and_stops_without_mutation() {
+(B[m[32m+    let (config_dir, manager) = temp_config_manager();
+(B[m[32m+    let (_server_dir, server_path) = write_fake_app_server();
+(B[m[32m+    let code_home = config_dir.path().join("app-lifecycle-home");
+(B[m 
+[31m-        let mut env_map = BTreeMap::new();
+(B[m[31m-        env_map.insert("APP_RUNTIME_LIFECYCLE".into(), "runtime-env".into());
+(B[m[32m+    let mut env_map = BTreeMap::new();
+(B[m[32m+    env_map.insert("APP_RUNTIME_LIFECYCLE".into(), "runtime-env".into());
+(B[m 
+[31m-        let metadata = serde_json::json!({"resume_thread": "thread-lifecycle"});
+(B[m[31m-        manager
+(B[m[31m-            .add_app_runtime(AddAppRuntimeRequest {
+(B[m[31m-                name: "lifecycle".into(),
+(B[m[31m-                definition: AppRuntimeDefinition {
+(B[m[31m-                    description: Some("app lifecycle".into()),
+(B[m[31m-                    tags: vec!["app".into()],
+(B[m[31m-                    env: env_map,
+(B[m[31m-                    code_home: None,
+(B[m[31m-                    current_dir: None,
+(B[m[31m-                    mirror_stdio: Some(true),
+(B[m[31m-                    startup_timeout_ms: Some(1500),
+(B[m[31m-                    binary: None,
+(B[m[31m-                    metadata: metadata.clone(),
+(B[m[31m-                },
+(B[m[31m-                overwrite: false,
+(B[m[31m-            })
+(B[m[31m-            .expect("add app runtime");
+(B[m[32m+    let metadata = serde_json::json!({"resume_thread": "thread-lifecycle"});
+(B[m[32m+    manager
+(B[m[32m+        .add_app_runtime(AddAppRuntimeRequest {
+(B[m[32m+            name: "lifecycle".into(),
+(B[m[32m+            definition: AppRuntimeDefinition {
+(B[m[32m+                description: Some("app lifecycle".into()),
+(B[m[32m+                tags: vec!["app".into()],
+(B[m[32m+                env: env_map,
+(B[m[32m+                code_home: None,
+(B[m[32m+                current_dir: None,
+(B[m[32m+                mirror_stdio: Some(true),
+(B[m[32m+                startup_timeout_ms: Some(1500),
+(B[m[32m+                binary: None,
+(B[m[32m+                metadata: metadata.clone(),
+(B[m[32m+            },
+(B[m[32m+            overwrite: false,
+(B[m[32m+        })
+(B[m[32m+        .expect("add app runtime");
+(B[m 
+[31m-        let defaults = StdioServerConfig {
+(B[m[31m-            binary: server_path.clone(),
+(B[m[31m-            code_home: Some(code_home.clone()),
+(B[m[31m-            current_dir: None,
+(B[m[31m-            env: vec![(
+(B[m[31m-                OsString::from("APP_RUNTIME_LIFECYCLE"),
+(B[m[31m-                OsString::from("default"),
+(B[m[31m-            )],
+(B[m[31m-            app_server_analytics_default_enabled: false,
+(B[m[31m-            mirror_stdio: false,
+(B[m[31m-            startup_timeout: Duration::from_secs(3),
+(B[m[31m-        };
+(B[m[32m+    let defaults = StdioServerConfig {
+(B[m[32m+        binary: server_path.clone(),
+(B[m[32m+        code_home: Some(code_home.clone()),
+(B[m[32m+        current_dir: None,
+(B[m[32m+        env: vec![(
+(B[m[32m+            OsString::from("APP_RUNTIME_LIFECYCLE"),
+(B[m[32m+            OsString::from("default"),
+(B[m[32m+        )],
+(B[m[32m+        app_server_analytics_default_enabled: false,
+(B[m[32m+        mirror_stdio: false,
+(B[m[32m+        startup_timeout: Duration::from_secs(3),
+(B[m[32m+    };
+(B[m 
+[31m-        let before = fs::read_to_string(manager.config_path()).expect("read config before");
+(B[m[31m-        let api = AppRuntimeApi::from_config(&manager, &defaults).expect("build api");
+(B[m[31m-        let client = test_client();
+(B[m[32m+    let before = fs::read_to_string(manager.config_path()).expect("read config before");
+(B[m[32m+    let api = AppRuntimeApi::from_config(&manager, &defaults).expect("build api");
+(B[m[32m+    let client = test_client();
+(B[m 
+[31m-        let runtime = api
+(B[m[31m-            .start("lifecycle", client.clone())
+(B[m[31m-            .await
+(B[m[31m-            .expect("start runtime");
+(B[m[31m-        assert_eq!(runtime.name, "lifecycle");
+(B[m[31m-        assert_eq!(runtime.metadata, metadata);
+(B[m[32m+    let runtime = api
+(B[m[32m+        .start("lifecycle", client.clone())
+(B[m[32m+        .await
+(B[m[32m+        .expect("start runtime");
+(B[m[32m+    assert_eq!(runtime.name, "lifecycle");
+(B[m[32m+    assert_eq!(runtime.metadata, metadata);
+(B[m 
+[31m-        let env_values: HashMap<OsString, OsString> = runtime.config.env.iter().cloned().collect();
+(B[m[31m-        assert_eq!(
+(B[m[31m-            env_values.get(&OsString::from("CODEX_HOME")),
+(B[m[31m-            Some(&code_home.as_os_str().to_os_string())
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            env_values.get(&OsString::from("APP_RUNTIME_LIFECYCLE")),
+(B[m[31m-            Some(&OsString::from("runtime-env"))
+(B[m[31m-        );
+(B[m[32m+    let env_values: HashMap<OsString, OsString> = runtime.config.env.iter().cloned().collect();
+(B[m[32m+    assert_eq!(
+(B[m[32m+        env_values.get(&OsString::from("CODEX_HOME")),
+(B[m[32m+        Some(&code_home.as_os_str().to_os_string())
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        env_values.get(&OsString::from("APP_RUNTIME_LIFECYCLE")),
+(B[m[32m+        Some(&OsString::from("runtime-env"))
+(B[m[32m+    );
+(B[m 
+[31m-        let thread = runtime
+(B[m[31m-            .server
+(B[m[31m-            .thread_start(ThreadStartParams {
+(B[m[31m-                thread_id: None,
+(B[m[31m-                metadata: serde_json::json!({"from": "lifecycle"}),
+(B[m[31m-            })
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread start");
+(B[m[31m-        let thread_response = time::timeout(Duration::from_secs(2), thread.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread response timeout")
+(B[m[31m-            .expect("recv thread response")
+(B[m[31m-            .expect("thread response ok");
+(B[m[31m-        let thread_id = thread_response
+(B[m[31m-            .get("thread_id")
+(B[m[31m-            .and_then(Value::as_str)
+(B[m[31m-            .unwrap_or_default()
+(B[m[31m-            .to_string();
+(B[m[31m-        assert!(!thread_id.is_empty());
+(B[m[32m+    let thread = runtime
+(B[m[32m+        .server
+(B[m[32m+        .thread_start(ThreadStartParams {
+(B[m[32m+            thread_id: None,
+(B[m[32m+            metadata: serde_json::json!({"from": "lifecycle"}),
+(B[m[32m+        })
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread start");
+(B[m[32m+    let thread_response = time::timeout(Duration::from_secs(2), thread.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread response timeout")
+(B[m[32m+        .expect("recv thread response")
+(B[m[32m+        .expect("thread response ok");
+(B[m[32m+    let thread_id = thread_response
+(B[m[32m+        .get("thread_id")
+(B[m[32m+        .and_then(Value::as_str)
+(B[m[32m+        .unwrap_or_default()
+(B[m[32m+        .to_string();
+(B[m[32m+    assert!(!thread_id.is_empty());
+(B[m 
+[31m-        runtime.stop().await.expect("shutdown runtime");
+(B[m[32m+    runtime.stop().await.expect("shutdown runtime");
+(B[m 
+[31m-        let after = fs::read_to_string(manager.config_path()).expect("read config after");
+(B[m[31m-        assert_eq!(before, after);
+(B[m[32m+    let after = fs::read_to_string(manager.config_path()).expect("read config after");
+(B[m[32m+    assert_eq!(before, after);
+(B[m 
+[31m-        let prepared = api.prepare("lifecycle").expect("prepare after stop");
+(B[m[31m-        assert_eq!(prepared.metadata, metadata);
+(B[m[32m+    let prepared = api.prepare("lifecycle").expect("prepare after stop");
+(B[m[32m+    assert_eq!(prepared.metadata, metadata);
+(B[m[32m+}
+(B[m[32m+
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn app_runtime_api_not_found_errors() {
+(B[m[32m+    let api = AppRuntimeApi::new(Vec::new());
+(B[m[32m+    match api.prepare("missing") {
+(B[m[32m+        Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "missing"),
+(B[m[32m+        other => panic!("unexpected result: {other:?}"),
+(B[m     }
+ 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn app_runtime_api_not_found_errors() {
+(B[m[31m-        let api = AppRuntimeApi::new(Vec::new());
+(B[m[31m-        match api.prepare("missing") {
+(B[m[31m-            Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "missing"),
+(B[m[31m-            other => panic!("unexpected result: {other:?}"),
+(B[m[31m-        }
+(B[m[31m-
+(B[m[31m-        let client = test_client();
+(B[m[31m-        match api.start("missing", client).await {
+(B[m[31m-            Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "missing"),
+(B[m[31m-            other => panic!("unexpected start result: {other:?}"),
+(B[m[31m-        }
+(B[m[32m+    let client = test_client();
+(B[m[32m+    match api.start("missing", client).await {
+(B[m[32m+        Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "missing"),
+(B[m[32m+        other => panic!("unexpected start result: {other:?}"),
+(B[m     }
+[32m+}
+(B[m 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn app_runtime_pool_api_reuses_and_restarts_stdio() {
+(B[m[31m-        let (config_dir, manager) = temp_config_manager();
+(B[m[31m-        let (_server_dir, server_path) = write_fake_app_server();
+(B[m[31m-        let code_home = config_dir.path().join("app-pool-home");
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn app_runtime_pool_api_reuses_and_restarts_stdio() {
+(B[m[32m+    let (config_dir, manager) = temp_config_manager();
+(B[m[32m+    let (_server_dir, server_path) = write_fake_app_server();
+(B[m[32m+    let code_home = config_dir.path().join("app-pool-home");
+(B[m 
+[31m-        let mut env_map = BTreeMap::new();
+(B[m[31m-        env_map.insert("APP_POOL_ENV".into(), "runtime".into());
+(B[m[32m+    let mut env_map = BTreeMap::new();
+(B[m[32m+    env_map.insert("APP_POOL_ENV".into(), "runtime".into());
+(B[m 
+[31m-        let metadata = serde_json::json!({"resume_thread": "thread-pool"});
+(B[m[31m-        manager
+(B[m[31m-            .add_app_runtime(AddAppRuntimeRequest {
+(B[m[31m-                name: "pooled".into(),
+(B[m[31m-                definition: AppRuntimeDefinition {
+(B[m[31m-                    description: Some("pooled app".into()),
+(B[m[31m-                    tags: vec!["pool".into()],
+(B[m[31m-                    env: env_map,
+(B[m[31m-                    code_home: None,
+(B[m[31m-                    current_dir: None,
+(B[m[31m-                    mirror_stdio: Some(true),
+(B[m[31m-                    startup_timeout_ms: Some(2000),
+(B[m[31m-                    binary: None,
+(B[m[31m-                    metadata: metadata.clone(),
+(B[m[31m-                },
+(B[m[31m-                overwrite: false,
+(B[m[31m-            })
+(B[m[31m-            .expect("add app runtime");
+(B[m[32m+    let metadata = serde_json::json!({"resume_thread": "thread-pool"});
+(B[m[32m+    manager
+(B[m[32m+        .add_app_runtime(AddAppRuntimeRequest {
+(B[m[32m+            name: "pooled".into(),
+(B[m[32m+            definition: AppRuntimeDefinition {
+(B[m[32m+                description: Some("pooled app".into()),
+(B[m[32m+                tags: vec!["pool".into()],
+(B[m[32m+                env: env_map,
+(B[m[32m+                code_home: None,
+(B[m[32m+                current_dir: None,
+(B[m[32m+                mirror_stdio: Some(true),
+(B[m[32m+                startup_timeout_ms: Some(2000),
+(B[m[32m+                binary: None,
+(B[m[32m+                metadata: metadata.clone(),
+(B[m[32m+            },
+(B[m[32m+            overwrite: false,
+(B[m[32m+        })
+(B[m[32m+        .expect("add app runtime");
+(B[m 
+[31m-        let defaults = StdioServerConfig {
+(B[m[31m-            binary: server_path.clone(),
+(B[m[31m-            code_home: Some(code_home.clone()),
+(B[m[31m-            current_dir: None,
+(B[m[31m-            env: vec![
+(B[m[31m-                (OsString::from("APP_POOL_ENV"), OsString::from("default")),
+(B[m[31m-                (OsString::from("POOL_ONLY"), OsString::from("base")),
+(B[m[31m-            ],
+(B[m[31m-            app_server_analytics_default_enabled: false,
+(B[m[31m-            mirror_stdio: false,
+(B[m[31m-            startup_timeout: Duration::from_secs(3),
+(B[m[31m-        };
+(B[m[32m+    let defaults = StdioServerConfig {
+(B[m[32m+        binary: server_path.clone(),
+(B[m[32m+        code_home: Some(code_home.clone()),
+(B[m[32m+        current_dir: None,
+(B[m[32m+        env: vec![
+(B[m[32m+            (OsString::from("APP_POOL_ENV"), OsString::from("default")),
+(B[m[32m+            (OsString::from("POOL_ONLY"), OsString::from("base")),
+(B[m[32m+        ],
+(B[m[32m+        app_server_analytics_default_enabled: false,
+(B[m[32m+        mirror_stdio: false,
+(B[m[32m+        startup_timeout: Duration::from_secs(3),
+(B[m[32m+    };
+(B[m 
+[31m-        let before = fs::read_to_string(manager.config_path()).expect("read config before");
+(B[m[31m-        let api = AppRuntimePoolApi::from_config(&manager, &defaults).expect("build pool api");
+(B[m[31m-        let client = test_client();
+(B[m[32m+    let before = fs::read_to_string(manager.config_path()).expect("read config before");
+(B[m[32m+    let api = AppRuntimePoolApi::from_config(&manager, &defaults).expect("build pool api");
+(B[m[32m+    let client = test_client();
+(B[m 
+[31m-        let available = api.available();
+(B[m[31m-        assert_eq!(available.len(), 1);
+(B[m[31m-        let pooled_summary = &available[0];
+(B[m[31m-        assert_eq!(pooled_summary.name, "pooled");
+(B[m[31m-        assert_eq!(pooled_summary.metadata, metadata);
+(B[m[32m+    let available = api.available();
+(B[m[32m+    assert_eq!(available.len(), 1);
+(B[m[32m+    let pooled_summary = &available[0];
+(B[m[32m+    assert_eq!(pooled_summary.name, "pooled");
+(B[m[32m+    assert_eq!(pooled_summary.metadata, metadata);
+(B[m 
+[31m-        let launcher = api.launcher("pooled").expect("pooled launcher");
+(B[m[31m-        assert_eq!(launcher.description.as_deref(), Some("pooled app"));
+(B[m[31m-        assert_eq!(launcher.metadata, metadata);
+(B[m[32m+    let launcher = api.launcher("pooled").expect("pooled launcher");
+(B[m[32m+    assert_eq!(launcher.description.as_deref(), Some("pooled app"));
+(B[m[32m+    assert_eq!(launcher.metadata, metadata);
+(B[m 
+[31m-        let launcher_config = launcher.config.clone();
+(B[m[31m-        assert_eq!(launcher_config.binary, server_path);
+(B[m[31m-        assert_eq!(
+(B[m[31m-            launcher_config.code_home.as_deref(),
+(B[m[31m-            Some(code_home.as_path())
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(launcher_config.startup_timeout, Duration::from_secs(2));
+(B[m[32m+    let launcher_config = launcher.config.clone();
+(B[m[32m+    assert_eq!(launcher_config.binary, server_path);
+(B[m[32m+    assert_eq!(
+(B[m[32m+        launcher_config.code_home.as_deref(),
+(B[m[32m+        Some(code_home.as_path())
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(launcher_config.startup_timeout, Duration::from_secs(2));
+(B[m 
+[31m-        let launcher_env: HashMap<OsString, OsString> = launcher_config.env.into_iter().collect();
+(B[m[31m-        assert_eq!(
+(B[m[31m-            launcher_env.get(&OsString::from("CODEX_HOME")),
+(B[m[31m-            Some(&code_home.as_os_str().to_os_string())
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            launcher_env.get(&OsString::from("POOL_ONLY")),
+(B[m[31m-            Some(&OsString::from("base"))
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            launcher_env.get(&OsString::from("APP_POOL_ENV")),
+(B[m[31m-            Some(&OsString::from("runtime"))
+(B[m[31m-        );
+(B[m[32m+    let launcher_env: HashMap<OsString, OsString> = launcher_config.env.into_iter().collect();
+(B[m[32m+    assert_eq!(
+(B[m[32m+        launcher_env.get(&OsString::from("CODEX_HOME")),
+(B[m[32m+        Some(&code_home.as_os_str().to_os_string())
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        launcher_env.get(&OsString::from("POOL_ONLY")),
+(B[m[32m+        Some(&OsString::from("base"))
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        launcher_env.get(&OsString::from("APP_POOL_ENV")),
+(B[m[32m+        Some(&OsString::from("runtime"))
+(B[m[32m+    );
+(B[m 
+[31m-        let stdio_config = api
+(B[m[31m-            .stdio_config("pooled")
+(B[m[31m-            .expect("pooled stdio config without starting");
+(B[m[31m-        assert_eq!(stdio_config.binary, server_path);
+(B[m[31m-        assert_eq!(stdio_config.code_home.as_deref(), Some(code_home.as_path()));
+(B[m[31m-        let stdio_env: HashMap<OsString, OsString> = stdio_config.env.into_iter().collect();
+(B[m[31m-        assert_eq!(
+(B[m[31m-            stdio_env.get(&OsString::from("POOL_ONLY")),
+(B[m[31m-            Some(&OsString::from("base"))
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            stdio_env.get(&OsString::from("CODEX_HOME")),
+(B[m[31m-            Some(&code_home.as_os_str().to_os_string())
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            stdio_env.get(&OsString::from("APP_POOL_ENV")),
+(B[m[31m-            Some(&OsString::from("runtime"))
+(B[m[31m-        );
+(B[m[32m+    let stdio_config = api
+(B[m[32m+        .stdio_config("pooled")
+(B[m[32m+        .expect("pooled stdio config without starting");
+(B[m[32m+    assert_eq!(stdio_config.binary, server_path);
+(B[m[32m+    assert_eq!(stdio_config.code_home.as_deref(), Some(code_home.as_path()));
+(B[m[32m+    let stdio_env: HashMap<OsString, OsString> = stdio_config.env.into_iter().collect();
+(B[m[32m+    assert_eq!(
+(B[m[32m+        stdio_env.get(&OsString::from("POOL_ONLY")),
+(B[m[32m+        Some(&OsString::from("base"))
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        stdio_env.get(&OsString::from("CODEX_HOME")),
+(B[m[32m+        Some(&code_home.as_os_str().to_os_string())
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        stdio_env.get(&OsString::from("APP_POOL_ENV")),
+(B[m[32m+        Some(&OsString::from("runtime"))
+(B[m[32m+    );
+(B[m 
+[31m-        assert!(api.running().await.is_empty());
+(B[m[32m+    assert!(api.running().await.is_empty());
+(B[m 
+[31m-        let runtime = api
+(B[m[31m-            .start("pooled", client.clone())
+(B[m[31m-            .await
+(B[m[31m-            .expect("start pooled runtime");
+(B[m[31m-        assert_eq!(runtime.name, "pooled");
+(B[m[31m-        assert_eq!(runtime.metadata, metadata);
+(B[m[32m+    let runtime = api
+(B[m[32m+        .start("pooled", client.clone())
+(B[m[32m+        .await
+(B[m[32m+        .expect("start pooled runtime");
+(B[m[32m+    assert_eq!(runtime.name, "pooled");
+(B[m[32m+    assert_eq!(runtime.metadata, metadata);
+(B[m 
+[31m-        let env_values: HashMap<OsString, OsString> = runtime.config.env.iter().cloned().collect();
+(B[m[31m-        assert_eq!(
+(B[m[31m-            env_values.get(&OsString::from("CODEX_HOME")),
+(B[m[31m-            Some(&code_home.as_os_str().to_os_string())
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            env_values.get(&OsString::from("POOL_ONLY")),
+(B[m[31m-            Some(&OsString::from("base"))
+(B[m[31m-        );
+(B[m[31m-        assert_eq!(
+(B[m[31m-            env_values.get(&OsString::from("APP_POOL_ENV")),
+(B[m[31m-            Some(&OsString::from("runtime"))
+(B[m[31m-        );
+(B[m[32m+    let env_values: HashMap<OsString, OsString> = runtime.config.env.iter().cloned().collect();
+(B[m[32m+    assert_eq!(
+(B[m[32m+        env_values.get(&OsString::from("CODEX_HOME")),
+(B[m[32m+        Some(&code_home.as_os_str().to_os_string())
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        env_values.get(&OsString::from("POOL_ONLY")),
+(B[m[32m+        Some(&OsString::from("base"))
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        env_values.get(&OsString::from("APP_POOL_ENV")),
+(B[m[32m+        Some(&OsString::from("runtime"))
+(B[m[32m+    );
+(B[m 
+[31m-        let thread = runtime
+(B[m[31m-            .server
+(B[m[31m-            .thread_start(ThreadStartParams {
+(B[m[31m-                thread_id: None,
+(B[m[31m-                metadata: serde_json::json!({"from": "pool"}),
+(B[m[31m-            })
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread start");
+(B[m[31m-        let response = time::timeout(Duration::from_secs(2), thread.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("thread response timeout")
+(B[m[31m-            .expect("recv thread response")
+(B[m[31m-            .expect("thread response ok");
+(B[m[31m-        let thread_id = response
+(B[m[31m-            .get("thread_id")
+(B[m[31m-            .and_then(Value::as_str)
+(B[m[31m-            .unwrap_or_default()
+(B[m[31m-            .to_string();
+(B[m[31m-        assert!(!thread_id.is_empty());
+(B[m[32m+    let thread = runtime
+(B[m[32m+        .server
+(B[m[32m+        .thread_start(ThreadStartParams {
+(B[m[32m+            thread_id: None,
+(B[m[32m+            metadata: serde_json::json!({"from": "pool"}),
+(B[m[32m+        })
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread start");
+(B[m[32m+    let response = time::timeout(Duration::from_secs(2), thread.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("thread response timeout")
+(B[m[32m+        .expect("recv thread response")
+(B[m[32m+        .expect("thread response ok");
+(B[m[32m+    let thread_id = response
+(B[m[32m+        .get("thread_id")
+(B[m[32m+        .and_then(Value::as_str)
+(B[m[32m+        .unwrap_or_default()
+(B[m[32m+        .to_string();
+(B[m[32m+    assert!(!thread_id.is_empty());
+(B[m 
+[31m-        let running = api.running().await;
+(B[m[31m-        let running_summary = running
+(B[m[31m-            .iter()
+(B[m[31m-            .find(|summary| summary.name == "pooled")
+(B[m[31m-            .expect("running summary present");
+(B[m[31m-        assert_eq!(running_summary.metadata, metadata);
+(B[m[32m+    let running = api.running().await;
+(B[m[32m+    let running_summary = running
+(B[m[32m+        .iter()
+(B[m[32m+        .find(|summary| summary.name == "pooled")
+(B[m[32m+        .expect("running summary present");
+(B[m[32m+    assert_eq!(running_summary.metadata, metadata);
+(B[m 
+[31m-        let reused = api
+(B[m[31m-            .start("pooled", client.clone())
+(B[m[31m-            .await
+(B[m[31m-            .expect("reuse pooled runtime");
+(B[m[31m-        assert!(Arc::ptr_eq(&runtime, &reused));
+(B[m[32m+    let reused = api
+(B[m[32m+        .start("pooled", client.clone())
+(B[m[32m+        .await
+(B[m[32m+        .expect("reuse pooled runtime");
+(B[m[32m+    assert!(Arc::ptr_eq(&runtime, &reused));
+(B[m 
+[31m-        api.stop("pooled").await.expect("stop pooled runtime");
+(B[m[31m-        match api.stop("pooled").await {
+(B[m[31m-            Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "pooled"),
+(B[m[31m-            other => panic!("expected not found on second stop, got {other:?}"),
+(B[m[31m-        }
+(B[m[32m+    api.stop("pooled").await.expect("stop pooled runtime");
+(B[m[32m+    match api.stop("pooled").await {
+(B[m[32m+        Err(AppRuntimeError::NotFound(name)) => assert_eq!(name, "pooled"),
+(B[m[32m+        other => panic!("expected not found on second stop, got {other:?}"),
+(B[m[32m+    }
+(B[m 
+[31m-        assert!(api.running().await.is_empty());
+(B[m[32m+    assert!(api.running().await.is_empty());
+(B[m 
+[31m-        let restarted = api
+(B[m[31m-            .start("pooled", client)
+(B[m[31m-            .await
+(B[m[31m-            .expect("restart pooled runtime");
+(B[m[31m-        assert!(!Arc::ptr_eq(&runtime, &restarted));
+(B[m[31m-        assert_eq!(restarted.metadata, metadata);
+(B[m[32m+    let restarted = api
+(B[m[32m+        .start("pooled", client)
+(B[m[32m+        .await
+(B[m[32m+        .expect("restart pooled runtime");
+(B[m[32m+    assert!(!Arc::ptr_eq(&runtime, &restarted));
+(B[m[32m+    assert_eq!(restarted.metadata, metadata);
+(B[m 
+[31m-        let prepared = api.prepare("pooled").expect("prepare after restart");
+(B[m[31m-        assert_eq!(prepared.metadata, metadata);
+(B[m[32m+    let prepared = api.prepare("pooled").expect("prepare after restart");
+(B[m[32m+    assert_eq!(prepared.metadata, metadata);
+(B[m 
+[31m-        let after = fs::read_to_string(manager.config_path()).expect("read config after");
+(B[m[31m-        assert_eq!(before, after);
+(B[m[31m-    }
+(B[m[32m+    let after = fs::read_to_string(manager.config_path()).expect("read config after");
+(B[m[32m+    assert_eq!(before, after);
+(B[m[32m+}
+(B[m 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn app_runtime_pool_api_stop_all_shuts_down_runtimes() {
+(B[m[31m-        let (config_dir, manager) = temp_config_manager();
+(B[m[31m-        let (_server_dir, server_path) = write_fake_app_server();
+(B[m[31m-        let code_home = config_dir.path().join("app-pool-stop-home");
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn app_runtime_pool_api_stop_all_shuts_down_runtimes() {
+(B[m[32m+    let (config_dir, manager) = temp_config_manager();
+(B[m[32m+    let (_server_dir, server_path) = write_fake_app_server();
+(B[m[32m+    let code_home = config_dir.path().join("app-pool-stop-home");
+(B[m 
+[31m-        let alpha_metadata = serde_json::json!({"resume_thread": "alpha"});
+(B[m[31m-        manager
+(B[m[31m-            .add_app_runtime(AddAppRuntimeRequest {
+(B[m[31m-                name: "alpha".into(),
+(B[m[31m-                definition: AppRuntimeDefinition {
+(B[m[31m-                    description: Some("alpha runtime".into()),
+(B[m[31m-                    tags: vec!["pool".into()],
+(B[m[31m-                    env: BTreeMap::new(),
+(B[m[31m-                    code_home: None,
+(B[m[31m-                    current_dir: None,
+(B[m[31m-                    mirror_stdio: Some(false),
+(B[m[31m-                    startup_timeout_ms: Some(2000),
+(B[m[31m-                    binary: None,
+(B[m[31m-                    metadata: alpha_metadata.clone(),
+(B[m[31m-                },
+(B[m[31m-                overwrite: false,
+(B[m[31m-            })
+(B[m[31m-            .expect("add alpha runtime");
+(B[m[32m+    let alpha_metadata = serde_json::json!({"resume_thread": "alpha"});
+(B[m[32m+    manager
+(B[m[32m+        .add_app_runtime(AddAppRuntimeRequest {
+(B[m[32m+            name: "alpha".into(),
+(B[m[32m+            definition: AppRuntimeDefinition {
+(B[m[32m+                description: Some("alpha runtime".into()),
+(B[m[32m+                tags: vec!["pool".into()],
+(B[m[32m+                env: BTreeMap::new(),
+(B[m[32m+                code_home: None,
+(B[m[32m+                current_dir: None,
+(B[m[32m+                mirror_stdio: Some(false),
+(B[m[32m+                startup_timeout_ms: Some(2000),
+(B[m[32m+                binary: None,
+(B[m[32m+                metadata: alpha_metadata.clone(),
+(B[m[32m+            },
+(B[m[32m+            overwrite: false,
+(B[m[32m+        })
+(B[m[32m+        .expect("add alpha runtime");
+(B[m 
+[31m-        let beta_metadata = serde_json::json!({"resume_thread": "beta"});
+(B[m[31m-        manager
+(B[m[31m-            .add_app_runtime(AddAppRuntimeRequest {
+(B[m[31m-                name: "beta".into(),
+(B[m[31m-                definition: AppRuntimeDefinition {
+(B[m[31m-                    description: Some("beta runtime".into()),
+(B[m[31m-                    tags: vec!["pool".into()],
+(B[m[31m-                    env: BTreeMap::new(),
+(B[m[31m-                    code_home: None,
+(B[m[31m-                    current_dir: None,
+(B[m[31m-                    mirror_stdio: Some(false),
+(B[m[31m-                    startup_timeout_ms: Some(2000),
+(B[m[31m-                    binary: None,
+(B[m[31m-                    metadata: beta_metadata.clone(),
+(B[m[31m-                },
+(B[m[31m-                overwrite: false,
+(B[m[31m-            })
+(B[m[31m-            .expect("add beta runtime");
+(B[m[32m+    let beta_metadata = serde_json::json!({"resume_thread": "beta"});
+(B[m[32m+    manager
+(B[m[32m+        .add_app_runtime(AddAppRuntimeRequest {
+(B[m[32m+            name: "beta".into(),
+(B[m[32m+            definition: AppRuntimeDefinition {
+(B[m[32m+                description: Some("beta runtime".into()),
+(B[m[32m+                tags: vec!["pool".into()],
+(B[m[32m+                env: BTreeMap::new(),
+(B[m[32m+                code_home: None,
+(B[m[32m+                current_dir: None,
+(B[m[32m+                mirror_stdio: Some(false),
+(B[m[32m+                startup_timeout_ms: Some(2000),
+(B[m[32m+                binary: None,
+(B[m[32m+                metadata: beta_metadata.clone(),
+(B[m[32m+            },
+(B[m[32m+            overwrite: false,
+(B[m[32m+        })
+(B[m[32m+        .expect("add beta runtime");
+(B[m 
+[31m-        let defaults = StdioServerConfig {
+(B[m[31m-            binary: server_path.clone(),
+(B[m[31m-            code_home: Some(code_home.clone()),
+(B[m[31m-            current_dir: None,
+(B[m[31m-            env: Vec::new(),
+(B[m[31m-            app_server_analytics_default_enabled: false,
+(B[m[31m-            mirror_stdio: false,
+(B[m[31m-            startup_timeout: Duration::from_secs(3),
+(B[m[31m-        };
+(B[m[32m+    let defaults = StdioServerConfig {
+(B[m[32m+        binary: server_path.clone(),
+(B[m[32m+        code_home: Some(code_home.clone()),
+(B[m[32m+        current_dir: None,
+(B[m[32m+        env: Vec::new(),
+(B[m[32m+        app_server_analytics_default_enabled: false,
+(B[m[32m+        mirror_stdio: false,
+(B[m[32m+        startup_timeout: Duration::from_secs(3),
+(B[m[32m+    };
+(B[m 
+[31m-        let before = fs::read_to_string(manager.config_path()).expect("read config before");
+(B[m[31m-        let api = AppRuntimePoolApi::from_config(&manager, &defaults).expect("build pool api");
+(B[m[31m-        let client = test_client();
+(B[m[32m+    let before = fs::read_to_string(manager.config_path()).expect("read config before");
+(B[m[32m+    let api = AppRuntimePoolApi::from_config(&manager, &defaults).expect("build pool api");
+(B[m[32m+    let client = test_client();
+(B[m 
+[31m-        assert!(api.running().await.is_empty());
+(B[m[32m+    assert!(api.running().await.is_empty());
+(B[m 
+[31m-        let alpha = api
+(B[m[31m-            .start("alpha", client.clone())
+(B[m[31m-            .await
+(B[m[31m-            .expect("start alpha runtime");
+(B[m[31m-        let beta = api
+(B[m[31m-            .start("beta", client.clone())
+(B[m[31m-            .await
+(B[m[31m-            .expect("start beta runtime");
+(B[m[32m+    let alpha = api
+(B[m[32m+        .start("alpha", client.clone())
+(B[m[32m+        .await
+(B[m[32m+        .expect("start alpha runtime");
+(B[m[32m+    let beta = api
+(B[m[32m+        .start("beta", client.clone())
+(B[m[32m+        .await
+(B[m[32m+        .expect("start beta runtime");
+(B[m 
+[31m-        assert_eq!(alpha.metadata, alpha_metadata);
+(B[m[31m-        assert_eq!(beta.metadata, beta_metadata);
+(B[m[32m+    assert_eq!(alpha.metadata, alpha_metadata);
+(B[m[32m+    assert_eq!(beta.metadata, beta_metadata);
+(B[m 
+[31m-        let mut running = api.running().await;
+(B[m[31m-        running.sort_by(|a, b| a.name.cmp(&b.name));
+(B[m[31m-        assert_eq!(running.len(), 2);
+(B[m[31m-        assert_eq!(running[0].name, "alpha");
+(B[m[31m-        assert_eq!(running[0].metadata, alpha_metadata);
+(B[m[31m-        assert_eq!(running[1].name, "beta");
+(B[m[31m-        assert_eq!(running[1].metadata, beta_metadata);
+(B[m[32m+    let mut running = api.running().await;
+(B[m[32m+    running.sort_by(|a, b| a.name.cmp(&b.name));
+(B[m[32m+    assert_eq!(running.len(), 2);
+(B[m[32m+    assert_eq!(running[0].name, "alpha");
+(B[m[32m+    assert_eq!(running[0].metadata, alpha_metadata);
+(B[m[32m+    assert_eq!(running[1].name, "beta");
+(B[m[32m+    assert_eq!(running[1].metadata, beta_metadata);
+(B[m 
+[31m-        let alpha_thread = alpha
+(B[m[31m-            .server
+(B[m[31m-            .thread_start(ThreadStartParams {
+(B[m[31m-                thread_id: None,
+(B[m[31m-                metadata: serde_json::json!({"from": "alpha"}),
+(B[m[31m-            })
+(B[m[31m-            .await
+(B[m[31m-            .expect("alpha thread start");
+(B[m[31m-        let _ = time::timeout(Duration::from_secs(2), alpha_thread.response)
+(B[m[31m-            .await
+(B[m[31m-            .expect("alpha thread response timeout")
+(B[m[31m-            .expect("alpha response recv")
+(B[m[31m-            .expect("alpha ok");
+(B[m[32m+    let alpha_thread = alpha
+(B[m[32m+        .server
+(B[m[32m+        .thread_start(ThreadStartParams {
+(B[m[32m+            thread_id: None,
+(B[m[32m+            metadata: serde_json::json!({"from": "alpha"}),
+(B[m[32m+        })
+(B[m[32m+        .await
+(B[m[32m+        .expect("alpha thread start");
+(B[m[32m+    let _ = time::timeout(Duration::from_secs(2), alpha_thread.response)
+(B[m[32m+        .await
+(B[m[32m+        .expect("alpha thread response timeout")
+(B[m[32m+        .expect("alpha response recv")
+(B[m[32m+        .expect("alpha ok");
+(B[m 
+[31m-        api.stop_all().await.expect("stop all runtimes");
+(B[m[31m-        assert!(api.running().await.is_empty());
+(B[m[32m+    api.stop_all().await.expect("stop all runtimes");
+(B[m[32m+    assert!(api.running().await.is_empty());
+(B[m 
+[31m-        let restarted_alpha = api
+(B[m[31m-            .start("alpha", client.clone())
+(B[m[31m-            .await
+(B[m[31m-            .expect("restart alpha");
+(B[m[31m-        assert!(!Arc::ptr_eq(&alpha, &restarted_alpha));
+(B[m[31m-        assert_eq!(restarted_alpha.metadata, alpha_metadata);
+(B[m[32m+    let restarted_alpha = api
+(B[m[32m+        .start("alpha", client.clone())
+(B[m[32m+        .await
+(B[m[32m+        .expect("restart alpha");
+(B[m[32m+    assert!(!Arc::ptr_eq(&alpha, &restarted_alpha));
+(B[m[32m+    assert_eq!(restarted_alpha.metadata, alpha_metadata);
+(B[m 
+[31m-        let restarted_beta = api.start("beta", client).await.expect("restart beta");
+(B[m[31m-        assert!(!Arc::ptr_eq(&beta, &restarted_beta));
+(B[m[31m-        assert_eq!(restarted_beta.metadata, beta_metadata);
+(B[m[32m+    let restarted_beta = api.start("beta", client).await.expect("restart beta");
+(B[m[32m+    assert!(!Arc::ptr_eq(&beta, &restarted_beta));
+(B[m[32m+    assert_eq!(restarted_beta.metadata, beta_metadata);
+(B[m 
+[31m-        let prepared_alpha = api.prepare("alpha").expect("prepare alpha");
+(B[m[31m-        assert_eq!(prepared_alpha.metadata, alpha_metadata);
+(B[m[31m-        let prepared_beta = api.prepare("beta").expect("prepare beta");
+(B[m[31m-        assert_eq!(prepared_beta.metadata, beta_metadata);
+(B[m[32m+    let prepared_alpha = api.prepare("alpha").expect("prepare alpha");
+(B[m[32m+    assert_eq!(prepared_alpha.metadata, alpha_metadata);
+(B[m[32m+    let prepared_beta = api.prepare("beta").expect("prepare beta");
+(B[m[32m+    assert_eq!(prepared_beta.metadata, beta_metadata);
+(B[m 
+[31m-        let after = fs::read_to_string(manager.config_path()).expect("read config after");
+(B[m[31m-        assert_eq!(before, after);
+(B[m[31m-    }
+(B[m[32m+    let after = fs::read_to_string(manager.config_path()).expect("read config after");
+(B[m[32m+    assert_eq!(before, after);
+(B[m[32m+}
+(B[m 
+[31m-    #[tokio::test]
+(B[m[31m-    async fn runtime_manager_starts_and_stops_stdio() {
+(B[m[31m-        let (_dir, script) = write_env_probe_server("MCP_RUNTIME_ENV_E8");
+(B[m[31m-        let code_home = tempfile::tempdir().expect("code_home");
+(B[m[32m+#[tokio::test]
+(B[m[32m+async fn runtime_manager_starts_and_stops_stdio() {
+(B[m[32m+    let (_dir, script) = write_env_probe_server("MCP_RUNTIME_ENV_E8");
+(B[m[32m+    let code_home = tempfile::tempdir().expect("code_home");
+(B[m 
+[31m-        let defaults = StdioServerConfig {
+(B[m[31m-            binary: PathBuf::from("codex"),
+(B[m[31m-            code_home: Some(code_home.path().to_path_buf()),
+(B[m[31m-            current_dir: None,
+(B[m[31m-            env: vec![(
+(B[m[31m-                OsString::from("MCP_RUNTIME_ENV_E8"),
+(B[m[31m-                OsString::from("manager-ok"),
+(B[m[31m-            )],
+(B[m[31m-            app_server_analytics_default_enabled: false,
+(B[m[31m-            mirror_stdio: false,
+(B[m[31m-            startup_timeout: Duration::from_secs(5),
+(B[m[31m-        };
+(B[m[32m+    let defaults = StdioServerConfig {
+(B[m[32m+        binary: PathBuf::from("codex"),
+(B[m[32m+        code_home: Some(code_home.path().to_path_buf()),
+(B[m[32m+        current_dir: None,
+(B[m[32m+        env: vec![(
+(B[m[32m+            OsString::from("MCP_RUNTIME_ENV_E8"),
+(B[m[32m+            OsString::from("manager-ok"),
+(B[m[32m+        )],
+(B[m[32m+        app_server_analytics_default_enabled: false,
+(B[m[32m+        mirror_stdio: false,
+(B[m[32m+        startup_timeout: Duration::from_secs(5),
+(B[m[32m+    };
+(B[m 
+[31m-        let runtime = McpRuntimeServer {
+(B[m[31m-            name: "env-probe".into(),
+(B[m[31m-            transport: McpRuntimeTransport::Stdio(StdioServerDefinition {
+(B[m[31m-                command: script.to_string_lossy().to_string(),
+(B[m[31m-                args: Vec::new(),
+(B[m[31m-                env: BTreeMap::new(),
+(B[m[31m-                timeout_ms: Some(1500),
+(B[m[31m-            }),
+(B[m[31m-            description: None,
+(B[m[31m-            tags: vec!["local".into()],
+(B[m[31m-            tools: Some(McpToolConfig {
+(B[m[31m-                enabled: vec!["tool-x".into()],
+(B[m[31m-                disabled: vec![],
+(B[m[31m-            }),
+(B[m[31m-        };
+(B[m[32m+    let runtime = McpRuntimeServer {
+(B[m[32m+        name: "env-probe".into(),
+(B[m[32m+        transport: McpRuntimeTransport::Stdio(StdioServerDefinition {
+(B[m[32m+            command: script.to_string_lossy().to_string(),
+(B[m[32m+            args: Vec::new(),
+(B[m[32m+            env: BTreeMap::new(),
+(B[m[32m+            timeout_ms: Some(1500),
+(B[m[32m+        }),
+(B[m[32m+        description: None,
+(B[m[32m+        tags: vec!["local".into()],
+(B[m[32m+        tools: Some(McpToolConfig {
+(B[m[32m+            enabled: vec!["tool-x".into()],
+(B[m[32m+            disabled: vec![],
+(B[m[32m+        }),
+(B[m[32m+    };
+(B[m 
+[31m-        let launcher = runtime.into_launcher(&defaults);
+(B[m[31m-        let manager = McpRuntimeManager::new(vec![launcher]);
+(B[m[32m+    let launcher = runtime.into_launcher(&defaults);
+(B[m[32m+    let manager = McpRuntimeManager::new(vec![launcher]);
+(B[m 
+[31m-        let mut handle = match manager.prepare("env-probe").expect("prepare stdio") {
+(B[m[31m-            McpRuntimeHandle::Stdio(handle) => handle,
+(B[m[31m-            other => panic!("expected stdio handle, got {other:?}"),
+(B[m[31m-        };
+(B[m[32m+    let mut handle = match manager.prepare("env-probe").expect("prepare stdio") {
+(B[m[32m+        McpRuntimeHandle::Stdio(handle) => handle,
+(B[m[32m+        other => panic!("expected stdio handle, got {other:?}"),
+(B[m[32m+    };
+(B[m 
+[31m-        let mut reader = BufReader::new(handle.stdout_mut());
+(B[m[31m-        let mut line = String::new();
+(B[m[31m-        let _ = time::timeout(Duration::from_secs(2), reader.read_line(&mut line))
+(B[m[31m-            .await
+(B[m[31m-            .expect("read timeout")
+(B[m[31m-            .expect("read env line");
+(B[m[31m-        assert_eq!(line.trim(), "manager-ok");
+(B[m[32m+    let mut reader = BufReader::new(handle.stdout_mut());
+(B[m[32m+    let mut line = String::new();
+(B[m[32m+    let _ = time::timeout(Duration::from_secs(2), reader.read_line(&mut line))
+(B[m[32m+        .await
+(B[m[32m+        .expect("read timeout")
+(B[m[32m+        .expect("read env line");
+(B[m[32m+    assert_eq!(line.trim(), "manager-ok");
+(B[m 
+[31m-        let tools = handle.tools().expect("tool hints");
+(B[m[31m-        assert_eq!(tools.enabled, vec!["tool-x".to_string()]);
+(B[m[32m+    let tools = handle.tools().expect("tool hints");
+(B[m[32m+    assert_eq!(tools.enabled, vec!["tool-x".to_string()]);
+(B[m 
+[31m-        handle.stop().await.expect("stop server");
+(B[m[31m-    }
+(B[m[32m+    handle.stop().await.expect("stop server");
+(B[m[32m+}
+(B[m 
+[31m-    #[test]
+(B[m[31m-    fn runtime_manager_propagates_tool_hints_for_http() {
+(B[m[31m-        let env_var = "MCP_HTTP_TOKEN_E8_HINTS";
+(B[m[31m-        env::set_var(env_var, "token-hints");
+(B[m[32m+#[test]
+(B[m[32m+fn runtime_manager_propagates_tool_hints_for_http() {
+(B[m[32m+    let env_var = "MCP_HTTP_TOKEN_E8_HINTS";
+(B[m[32m+    env::set_var(env_var, "token-hints");
+(B[m 
+[31m-        let mut http = StreamableHttpDefinition {
+(B[m[31m-            url: "https://example.test/hints".into(),
+(B[m[31m-            headers: BTreeMap::new(),
+(B[m[31m-            bearer_env_var: Some(env_var.to_string()),
+(B[m[31m-            connect_timeout_ms: Some(1200),
+(B[m[31m-            request_timeout_ms: Some(2400),
+(B[m[31m-        };
+(B[m[31m-        http.headers.insert("X-Test".into(), "true".into());
+(B[m[32m+    let mut http = StreamableHttpDefinition {
+(B[m[32m+        url: "https://example.test/hints".into(),
+(B[m[32m+        headers: BTreeMap::new(),
+(B[m[32m+        bearer_env_var: Some(env_var.to_string()),
+(B[m[32m+        connect_timeout_ms: Some(1200),
+(B[m[32m+        request_timeout_ms: Some(2400),
+(B[m[32m+    };
+(B[m[32m+    http.headers.insert("X-Test".into(), "true".into());
+(B[m 
+[31m-        let runtime = McpRuntimeServer::from_definition(
+(B[m[31m-            "remote-http",
+(B[m[31m-            McpServerDefinition {
+(B[m[31m-                transport: McpTransport::StreamableHttp(http),
+(B[m[31m-                description: Some("http runtime".into()),
+(B[m[31m-                tags: vec!["http".into()],
+(B[m[31m-                tools: Some(McpToolConfig {
+(B[m[31m-                    enabled: vec!["alpha".into()],
+(B[m[31m-                    disabled: vec!["beta".into()],
+(B[m[31m-                }),
+(B[m[31m-            },
+(B[m[31m-        );
+(B[m[32m+    let runtime = McpRuntimeServer::from_definition(
+(B[m[32m+        "remote-http",
+(B[m[32m+        McpServerDefinition {
+(B[m[32m+            transport: McpTransport::StreamableHttp(http),
+(B[m[32m+            description: Some("http runtime".into()),
+(B[m[32m+            tags: vec!["http".into()],
+(B[m[32m+            tools: Some(McpToolConfig {
+(B[m[32m+                enabled: vec!["alpha".into()],
+(B[m[32m+                disabled: vec!["beta".into()],
+(B[m[32m+            }),
+(B[m[32m+        },
+(B[m[32m+    );
+(B[m 
+[31m-        let defaults = StdioServerConfig {
+(B[m[31m-            binary: PathBuf::from("codex"),
+(B[m[31m-            code_home: None,
+(B[m[31m-            current_dir: None,
+(B[m[31m-            env: Vec::new(),
+(B[m[31m-            app_server_analytics_default_enabled: false,
+(B[m[31m-            mirror_stdio: false,
+(B[m[31m-            startup_timeout: Duration::from_secs(2),
+(B[m[31m-        };
+(B[m[32m+    let defaults = StdioServerConfig {
+(B[m[32m+        binary: PathBuf::from("codex"),
+(B[m[32m+        code_home: None,
+(B[m[32m+        current_dir: None,
+(B[m[32m+        env: Vec::new(),
+(B[m[32m+        app_server_analytics_default_enabled: false,
+(B[m[32m+        mirror_stdio: false,
+(B[m[32m+        startup_timeout: Duration::from_secs(2),
+(B[m[32m+    };
+(B[m 
+[31m-        let launcher = runtime.into_launcher(&defaults);
+(B[m[31m-        let manager = McpRuntimeManager::new(vec![launcher]);
+(B[m[32m+    let launcher = runtime.into_launcher(&defaults);
+(B[m[32m+    let manager = McpRuntimeManager::new(vec![launcher]);
+(B[m 
+[31m-        let available = manager.available();
+(B[m[31m-        assert_eq!(available.len(), 1);
+(B[m[31m-        let summary = &available[0];
+(B[m[31m-        assert_eq!(summary.name, "remote-http");
+(B[m[31m-        assert_eq!(
+(B[m[31m-            summary.transport,
+(B[m[31m-            McpRuntimeSummaryTransport::StreamableHttp
+(B[m[31m-        );
+(B[m[31m-        let summary_tools = summary.tools.as_ref().expect("tool hints present");
+(B[m[31m-        assert_eq!(summary_tools.enabled, vec!["alpha".to_string()]);
+(B[m[31m-        assert_eq!(summary_tools.disabled, vec!["beta".to_string()]);
+(B[m[32m+    let available = manager.available();
+(B[m[32m+    assert_eq!(available.len(), 1);
+(B[m[32m+    let summary = &available[0];
+(B[m[32m+    assert_eq!(summary.name, "remote-http");
+(B[m[32m+    assert_eq!(
+(B[m[32m+        summary.transport,
+(B[m[32m+        McpRuntimeSummaryTransport::StreamableHttp
+(B[m[32m+    );
+(B[m[32m+    let summary_tools = summary.tools.as_ref().expect("tool hints present");
+(B[m[32m+    assert_eq!(summary_tools.enabled, vec!["alpha".to_string()]);
+(B[m[32m+    assert_eq!(summary_tools.disabled, vec!["beta".to_string()]);
+(B[m 
+[31m-        match manager.prepare("remote-http").expect("prepare http") {
+(B[m[31m-            McpRuntimeHandle::StreamableHttp(http_handle) => {
+(B[m[31m-                let tools = http_handle.tools.as_ref().expect("tool hints on handle");
+(B[m[31m-                assert_eq!(tools.enabled, vec!["alpha".to_string()]);
+(B[m[31m-                assert_eq!(tools.disabled, vec!["beta".to_string()]);
+(B[m[31m-                assert_eq!(
+(B[m[31m-                    http_handle.connector.bearer_token.as_deref(),
+(B[m[31m-                    Some("token-hints")
+(B[m[31m-                );
+(B[m[31m-            }
+(B[m[31m-            other => panic!("expected http handle, got {other:?}"),
+(B[m[32m+    match manager.prepare("remote-http").expect("prepare http") {
+(B[m[32m+        McpRuntimeHandle::StreamableHttp(http_handle) => {
+(B[m[32m+            let tools = http_handle.tools.as_ref().expect("tool hints on handle");
+(B[m[32m+            assert_eq!(tools.enabled, vec!["alpha".to_string()]);
+(B[m[32m+            assert_eq!(tools.disabled, vec!["beta".to_string()]);
+(B[m[32m+            assert_eq!(
+(B[m[32m+                http_handle.connector.bearer_token.as_deref(),
+(B[m[32m+                Some("token-hints")
+(B[m[32m+            );
+(B[m         }
+[31m-
+(B[m[31m-        env::remove_var(env_var);
+(B[m[32m+        other => panic!("expected http handle, got {other:?}"),
+(B[m     }
+ 
+[31m-    #[test]
+(B[m[31m-    fn http_connector_retrieval_is_non_destructive() {
+(B[m[31m-        let env_var = "MCP_HTTP_TOKEN_E8_REUSE";
+(B[m[31m-        env::set_var(env_var, "token-reuse");
+(B[m[32m+    env::remove_var(env_var);
+(B[m[32m+}
+(B[m 
+[31m-        let runtime = McpRuntimeServer::from_definition(
+(B[m[31m-            "remote-reuse",
+(B[m[31m-            McpServerDefinition {
+(B[m[31m-                transport: McpTransport::StreamableHttp(StreamableHttpDefinition {
+(B[m[31m-                    url: "https://example.test/reuse".into(),
+(B[m[31m-                    headers: BTreeMap::new(),
+(B[m[31m-                    bearer_env_var: Some(env_var.to_string()),
+(B[m[31m-                    connect_timeout_ms: Some(1500),
+(B[m[31m-                    request_timeout_ms: Some(3200),
+(B[m[31m-                }),
+(B[m[31m-                description: None,
+(B[m[31m-                tags: vec!["http".into()],
+(B[m[31m-                tools: Some(McpToolConfig {
+(B[m[31m-                    enabled: vec!["one".into()],
+(B[m[31m-                    disabled: vec![],
+(B[m[31m-                }),
+(B[m[31m-            },
+(B[m[31m-        );
+(B[m[32m+#[test]
+(B[m[32m+fn http_connector_retrieval_is_non_destructive() {
+(B[m[32m+    let env_var = "MCP_HTTP_TOKEN_E8_REUSE";
+(B[m[32m+    env::set_var(env_var, "token-reuse");
+(B[m 
+[31m-        let defaults = StdioServerConfig {
+(B[m[31m-            binary: PathBuf::from("codex"),
+(B[m[31m-            code_home: None,
+(B[m[31m-            current_dir: None,
+(B[m[31m-            env: Vec::new(),
+(B[m[31m-            app_server_analytics_default_enabled: false,
+(B[m[31m-            mirror_stdio: false,
+(B[m[31m-            startup_timeout: Duration::from_secs(2),
+(B[m[31m-        };
+(B[m[32m+    let runtime = McpRuntimeServer::from_definition(
+(B[m[32m+        "remote-reuse",
+(B[m[32m+        McpServerDefinition {
+(B[m[32m+            transport: McpTransport::StreamableHttp(StreamableHttpDefinition {
+(B[m[32m+                url: "https://example.test/reuse".into(),
+(B[m[32m+                headers: BTreeMap::new(),
+(B[m[32m+                bearer_env_var: Some(env_var.to_string()),
+(B[m[32m+                connect_timeout_ms: Some(1500),
+(B[m[32m+                request_timeout_ms: Some(3200),
+(B[m[32m+            }),
+(B[m[32m+            description: None,
+(B[m[32m+            tags: vec!["http".into()],
+(B[m[32m+            tools: Some(McpToolConfig {
+(B[m[32m+                enabled: vec!["one".into()],
+(B[m[32m+                disabled: vec![],
+(B[m[32m+            }),
+(B[m[32m+        },
+(B[m[32m+    );
+(B[m 
+[31m-        let launcher = runtime.into_launcher(&defaults);
+(B[m[31m-        let manager = McpRuntimeManager::new(vec![launcher]);
+(B[m[32m+    let defaults = StdioServerConfig {
+(B[m[32m+        binary: PathBuf::from("codex"),
+(B[m[32m+        code_home: None,
+(B[m[32m+        current_dir: None,
+(B[m[32m+        env: Vec::new(),
+(B[m[32m+        app_server_analytics_default_enabled: false,
+(B[m[32m+        mirror_stdio: false,
+(B[m[32m+        startup_timeout: Duration::from_secs(2),
+(B[m[32m+    };
+(B[m 
+[31m-        let first = manager.prepare("remote-reuse").expect("first prepare");
+(B[m[31m-        let second = manager.prepare("remote-reuse").expect("second prepare");
+(B[m[32m+    let launcher = runtime.into_launcher(&defaults);
+(B[m[32m+    let manager = McpRuntimeManager::new(vec![launcher]);
+(B[m 
+[31m-        let first_token = match first {
+(B[m[31m-            McpRuntimeHandle::StreamableHttp(handle) => handle.connector.bearer_token,
+(B[m[31m-            other => panic!("expected http handle, got {other:?}"),
+(B[m[31m-        };
+(B[m[31m-        let second_token = match second {
+(B[m[31m-            McpRuntimeHandle::StreamableHttp(handle) => handle.connector.bearer_token,
+(B[m[31m-            other => panic!("expected http handle, got {other:?}"),
+(B[m[31m-        };
+(B[m[32m+    let first = manager.prepare("remote-reuse").expect("first prepare");
+(B[m[32m+    let second = manager.prepare("remote-reuse").expect("second prepare");
+(B[m 
+[31m-        assert_eq!(first_token.as_deref(), Some("token-reuse"));
+(B[m[31m-        assert_eq!(second_token.as_deref(), Some("token-reuse"));
+(B[m[32m+    let first_token = match first {
+(B[m[32m+        McpRuntimeHandle::StreamableHttp(handle) => handle.connector.bearer_token,
+(B[m[32m+        other => panic!("expected http handle, got {other:?}"),
+(B[m[32m+    };
+(B[m[32m+    let second_token = match second {
+(B[m[32m+        McpRuntimeHandle::StreamableHttp(handle) => handle.connector.bearer_token,
+(B[m[32m+        other => panic!("expected http handle, got {other:?}"),
+(B[m[32m+    };
+(B[m 
+[31m-        let summary = manager
+(B[m[31m-            .available()
+(B[m[31m-            .into_iter()
+(B[m[31m-            .find(|s| s.name == "remote-reuse")
+(B[m[31m-            .expect("summary present");
+(B[m[31m-        assert_eq!(
+(B[m[31m-            summary.transport,
+(B[m[31m-            McpRuntimeSummaryTransport::StreamableHttp
+(B[m[31m-        );
+(B[m[31m-        let tools = summary.tools.as_ref().expect("tool hints preserved");
+(B[m[31m-        assert_eq!(tools.enabled, vec!["one".to_string()]);
+(B[m[32m+    assert_eq!(first_token.as_deref(), Some("token-reuse"));
+(B[m[32m+    assert_eq!(second_token.as_deref(), Some("token-reuse"));
+(B[m 
+[31m-        env::remove_var(env_var);
+(B[m[31m-    }
+(B[m[32m+    let summary = manager
+(B[m[32m+        .available()
+(B[m[32m+        .into_iter()
+(B[m[32m+        .find(|s| s.name == "remote-reuse")
+(B[m[32m+        .expect("summary present");
+(B[m[32m+    assert_eq!(
+(B[m[32m+        summary.transport,
+(B[m[32m+        McpRuntimeSummaryTransport::StreamableHttp
+(B[m[32m+    );
+(B[m[32m+    let tools = summary.tools.as_ref().expect("tool hints preserved");
+(B[m[32m+    assert_eq!(tools.enabled, vec!["one".to_string()]);
+(B[m[32m+
+(B[m[32m+    env::remove_var(env_var);
+(B[m[32m+}
+(B[m 

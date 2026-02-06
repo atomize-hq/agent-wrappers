@@ -1,0 +1,2620 @@
+diff --git a/crates/xtask/src/codex_snapshot.rs b/crates/xtask/src/codex_snapshot.rs
+index 6b6a9d5..09b4bf1 100644
+--- a/crates/xtask/src/codex_snapshot.rs
++++ b/crates/xtask/src/codex_snapshot.rs
+@@ -1,19 +1,16 @@
+-use std::{
+-    collections::{BTreeMap, BTreeSet},
+-    fs, io,
+-    path::{Path, PathBuf},
+-    process::{Command, Output},
+-};
++use std::{fs, io, path::PathBuf};
+ 
+ use clap::Parser;
+-use regex::Regex;
+-use serde::{Deserialize, Serialize};
+-use sha2::{Digest, Sha256};
+ use thiserror::Error;
+ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
+ 
++mod discovery;
++mod layout;
++mod probes;
+ mod schema;
+-use schema::SupplementV1;
++mod supplements;
++mod util;
++
+ pub(crate) use schema::{
+     ArgSnapshot, BinaryPlatform, BinarySnapshot, CommandSnapshot, FlagSnapshot, SnapshotV1,
+ };
+@@ -81,24 +78,6 @@ pub enum Error {
+     CollectedAt(String),
+ }
+ 
+-#[derive(Debug, Deserialize)]
+-struct RulesFile {
+-    union: RulesUnion,
+-    sorting: RulesSorting,
+-}
+-
+-#[derive(Debug, Deserialize)]
+-struct RulesUnion {
+-    expected_targets: Vec<String>,
+-}
+-
+-#[derive(Debug, Deserialize)]
+-struct RulesSorting {
+-    commands: String,
+-    flags: String,
+-    args: String,
+-}
+-
+ pub fn run(args: Args) -> Result<(), Error> {
+     let codex_binary = fs::canonicalize(&args.codex_binary)
+         .map_err(|_| Error::InvalidCodexBinary(args.codex_binary.clone()))?;
+@@ -110,11 +89,11 @@ pub fn run(args: Args) -> Result<(), Error> {
+         OffsetDateTime::parse(s, &Rfc3339).map_err(|_| Error::CollectedAt(s.clone()))?;
+         s.clone()
+     } else {
+-        deterministic_rfc3339_now()
++        probes::deterministic_rfc3339_now()
+     };
+ 
+-    let binary_meta = BinaryMetadata::collect(&codex_binary)?;
+-    let (version_output, semantic_version, channel, commit) = probe_version(&codex_binary)?;
++    let binary_meta = probes::BinaryMetadata::collect(&codex_binary)?;
++    let (version_output, semantic_version, channel, commit) = probes::probe_version(&codex_binary)?;
+ 
+     let version_dir = match (&args.out_file, &semantic_version) {
+         (Some(_), None) => return Err(Error::MissingSemanticVersion),
+@@ -123,8 +102,8 @@ pub fn run(args: Args) -> Result<(), Error> {
+     };
+ 
+     let (snapshot_out_path, raw_help_dir, inferred_target_triple) =
+-        resolve_outputs(&args, &version_dir)?;
+-    let (features_list, features_probe_error) = probe_features(&codex_binary);
++        layout::resolve_outputs(&args, &version_dir)?;
++    let (features_list, features_probe_error) = probes::probe_features(&codex_binary);
+     let enabled_feature_names = features_list
+         .as_ref()
+         .map(|f| f.iter().map(|x| x.name.clone()).collect::<Vec<_>>())
+@@ -136,16 +115,17 @@ pub fn run(args: Args) -> Result<(), Error> {
+ 
+     // Always snapshot the default surface. If we can probe features, do a second discovery pass
+     // with all known features enabled and merge results for maximum coverage.
+-    let default_entries = discover_commands(&codex_binary, raw_help_dir.as_deref(), false, &[])?;
++    let default_entries =
++        discovery::discover_commands(&codex_binary, raw_help_dir.as_deref(), false, &[])?;
+ 
+     let (mut command_entries, commands_added_when_all_enabled) = if enable_args.is_empty() {
+         if args.capture_raw_help {
+             // If we can't enable features, capture raw help for the default surface.
+-            let _ = discover_commands(&codex_binary, raw_help_dir.as_deref(), true, &[]);
++            let _ = discovery::discover_commands(&codex_binary, raw_help_dir.as_deref(), true, &[]);
+         }
+         (default_entries, None)
+     } else {
+-        let enabled_entries = discover_commands(
++        let enabled_entries = discovery::discover_commands(
+             &codex_binary,
+             raw_help_dir.as_deref(),
+             args.capture_raw_help,
+@@ -157,19 +137,19 @@ pub fn run(args: Args) -> Result<(), Error> {
+             .cloned()
+             .collect::<Vec<_>>();
+         let mut merged = default_entries;
+-        merge_command_entries(&mut merged, enabled_entries);
++        discovery::merge_command_entries(&mut merged, enabled_entries);
+         (merged, Some(added))
+     };
+ 
+     let (known_omissions, supplemented) =
+-        apply_supplements(args.supplement.as_deref(), &mut command_entries)?;
++        supplements::apply_supplements(args.supplement.as_deref(), &mut command_entries)?;
+ 
+-    normalize_command_entries(&mut command_entries);
++    supplements::normalize_command_entries(&mut command_entries);
+ 
+     let mut commands: Vec<CommandSnapshot> = command_entries.into_values().collect();
+-    commands.sort_by(|a, b| cmp_path(&a.path, &b.path));
++    commands.sort_by(|a, b| supplements::cmp_path(&a.path, &b.path));
+ 
+-    let features = build_features_metadata(
++    let features = probes::build_features_metadata(
+         features_list,
+         features_probe_error,
+         enabled_feature_names,
+@@ -209,1204 +189,3 @@ pub fn run(args: Args) -> Result<(), Error> {
+     fs::write(snapshot_out_path, format!("{json}\n"))?;
+     Ok(())
+ }
+-
+-fn resolve_outputs(
+-    args: &Args,
+-    version_dir: &str,
+-) -> Result<(PathBuf, Option<PathBuf>, String), Error> {
+-    let snapshot_out_path = if let Some(path) = args.out_file.as_ref() {
+-        path.clone()
+-    } else {
+-        args.out_dir
+-            .as_ref()
+-            .expect("clap enforces one of out_dir/out_file")
+-            .join("current.json")
+-    };
+-
+-    let (codex_root, target_triple) = if let Some(out_file) = args.out_file.as_ref() {
+-        let version_path = out_file.parent().ok_or_else(|| {
+-            Error::InvalidOutFileLayout("could not infer snapshots/<version> directory".to_string())
+-        })?;
+-        let got_version = version_path
+-            .file_name()
+-            .and_then(|s| s.to_str())
+-            .unwrap_or("<unknown>");
+-        if got_version != version_dir {
+-            return Err(Error::InvalidOutFileLayout(format!(
+-                "expected parent dir name {version_dir}, got {got_version}"
+-            )));
+-        }
+-
+-        let snapshots_path = version_path.parent().ok_or_else(|| {
+-            Error::InvalidOutFileLayout("could not infer snapshots directory".to_string())
+-        })?;
+-        let got_snapshots = snapshots_path
+-            .file_name()
+-            .and_then(|s| s.to_str())
+-            .unwrap_or("<unknown>");
+-        if got_snapshots != "snapshots" {
+-            return Err(Error::InvalidOutFileLayout(format!(
+-                "expected snapshots/<version> layout, got .../{got_snapshots}/{got_version}"
+-            )));
+-        }
+-
+-        let inferred_from_out_file = out_file
+-            .file_name()
+-            .and_then(|s| s.to_str())
+-            .and_then(|s| s.strip_suffix(".json"))
+-            .ok_or_else(|| {
+-                Error::InvalidOutFileLayout(
+-                    "expected out-file name like <target_triple>.json".into(),
+-                )
+-            })?
+-            .to_string();
+-        let target = args
+-            .raw_help_target
+-            .as_ref()
+-            .cloned()
+-            .unwrap_or(inferred_from_out_file);
+-
+-        let expected = format!("{target}.json");
+-        let got = out_file
+-            .file_name()
+-            .and_then(|s| s.to_str())
+-            .unwrap_or("<unknown>");
+-        if got != expected {
+-            return Err(Error::InvalidOutFileLayout(format!(
+-                "expected filename {expected}, got {got}"
+-            )));
+-        }
+-
+-        let codex_root = snapshots_path
+-            .parent()
+-            .ok_or_else(|| Error::InvalidOutFileLayout("could not infer codex root".to_string()))?;
+-        (codex_root.to_path_buf(), target)
+-    } else {
+-        (
+-            args.out_dir
+-                .as_ref()
+-                .expect("clap enforces one of out_dir/out_file")
+-                .clone(),
+-            args.raw_help_target
+-                .clone()
+-                .unwrap_or_else(|| "unknown".to_string()),
+-        )
+-    };
+-
+-    let raw_help_dir = if args.capture_raw_help {
+-        let base = codex_root.join("raw_help").join(version_dir);
+-        if args.raw_help_target.is_some() || args.out_file.is_some() {
+-            if target_triple == "unknown" {
+-                return Err(Error::MissingRawHelpTarget);
+-            }
+-            Some(base.join(&target_triple))
+-        } else {
+-            Some(base)
+-        }
+-    } else {
+-        None
+-    };
+-
+-    if args.out_file.is_some() {
+-        let rules_path = codex_root.join("RULES.json");
+-        let rules: RulesFile = serde_json::from_slice(
+-            &fs::read(&rules_path)
+-                .map_err(|err| Error::RulesRead(format!("{}: {err}", rules_path.display())))?,
+-        )?;
+-        assert_supported_sorting(&rules.sorting)?;
+-
+-        if !rules
+-            .union
+-            .expected_targets
+-            .iter()
+-            .any(|t| t == &target_triple)
+-        {
+-            return Err(Error::RawHelpTargetNotExpected(target_triple));
+-        }
+-    }
+-
+-    Ok((snapshot_out_path, raw_help_dir, target_triple))
+-}
+-
+-fn assert_supported_sorting(sorting: &RulesSorting) -> Result<(), Error> {
+-    let mut unsupported = Vec::new();
+-
+-    if sorting.commands != "lexicographic_path" {
+-        unsupported.push(format!("sorting.commands={}", sorting.commands));
+-    }
+-    if sorting.flags != "by_key_then_long_then_short" {
+-        unsupported.push(format!("sorting.flags={}", sorting.flags));
+-    }
+-    if sorting.args != "by_name" {
+-        unsupported.push(format!("sorting.args={}", sorting.args));
+-    }
+-
+-    if unsupported.is_empty() {
+-        Ok(())
+-    } else {
+-        Err(Error::RulesUnsupported(unsupported.join(", ")))
+-    }
+-}
+-
+-fn normalize_command_entries(entries: &mut BTreeMap<Vec<String>, CommandSnapshot>) {
+-    for cmd in entries.values_mut() {
+-        if let Some(args) = cmd.args.as_mut() {
+-            args.sort_by(|a, b| a.name.cmp(&b.name));
+-        }
+-        if let Some(flags) = cmd.flags.as_mut() {
+-            flags.sort_by(flag_sort_key);
+-        }
+-    }
+-}
+-
+-fn deterministic_rfc3339_now() -> String {
+-    if let Ok(v) = std::env::var("SOURCE_DATE_EPOCH") {
+-        if let Ok(secs) = v.parse::<i64>() {
+-            if let Ok(ts) = OffsetDateTime::from_unix_timestamp(secs) {
+-                return ts
+-                    .format(&Rfc3339)
+-                    .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string());
+-            }
+-        }
+-    }
+-    OffsetDateTime::now_utc()
+-        .format(&Rfc3339)
+-        .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
+-}
+-
+-fn discover_commands(
+-    codex_binary: &Path,
+-    raw_help_dir: Option<&Path>,
+-    capture_raw_help: bool,
+-    global_args: &[String],
+-) -> Result<BTreeMap<Vec<String>, CommandSnapshot>, Error> {
+-    let mut out = BTreeMap::<Vec<String>, CommandSnapshot>::new();
+-    let mut visited = BTreeSet::<Vec<String>>::new();
+-
+-    let root_help = run_codex_help(codex_binary, global_args, &[])?;
+-    let root_parsed = parse_help(&root_help);
+-
+-    if capture_raw_help {
+-        if let Some(dir) = raw_help_dir {
+-            write_raw_help(dir, &[], &root_help)?;
+-        }
+-    }
+-
+-    let mut root_args = root_parsed.args;
+-    if let Some(usage) = root_parsed.usage.as_deref() {
+-        merge_inferred_args(
+-            &mut root_args,
+-            infer_args_from_usage(usage, &[], !root_parsed.subcommands.is_empty()),
+-        );
+-    }
+-    if !root_args.is_empty() {
+-        root_args.sort_by(|a, b| a.name.cmp(&b.name));
+-    }
+-
+-    let mut root_flags = root_parsed.flags;
+-    if !root_flags.is_empty() {
+-        root_flags.sort_by(flag_sort_key);
+-    }
+-
+-    out.insert(
+-        Vec::new(),
+-        CommandSnapshot {
+-            path: Vec::new(),
+-            about: root_parsed.about,
+-            usage: root_parsed.usage,
+-            stability: None,
+-            platforms: None,
+-            args: if root_args.is_empty() {
+-                None
+-            } else {
+-                Some(root_args)
+-            },
+-            flags: if root_flags.is_empty() {
+-                None
+-            } else {
+-                Some(root_flags)
+-            },
+-        },
+-    );
+-
+-    let ctx = HelpCtx {
+-        codex_binary,
+-        global_args,
+-        raw_help_dir,
+-        capture_raw_help,
+-    };
+-
+-    for token in root_parsed.subcommands {
+-        collect_command_recursive(&ctx, vec![token], &mut visited, &mut out)?;
+-    }
+-
+-    Ok(out)
+-}
+-
+-struct HelpCtx<'a> {
+-    codex_binary: &'a Path,
+-    global_args: &'a [String],
+-    raw_help_dir: Option<&'a Path>,
+-    capture_raw_help: bool,
+-}
+-
+-fn collect_command_recursive(
+-    ctx: &HelpCtx<'_>,
+-    path: Vec<String>,
+-    visited: &mut BTreeSet<Vec<String>>,
+-    out: &mut BTreeMap<Vec<String>, CommandSnapshot>,
+-) -> Result<(), Error> {
+-    if !visited.insert(path.clone()) {
+-        return Ok(());
+-    }
+-
+-    let help = run_codex_help(ctx.codex_binary, ctx.global_args, &path)?;
+-    let parsed = parse_help(&help);
+-
+-    if ctx.capture_raw_help {
+-        if let Some(dir) = ctx.raw_help_dir {
+-            write_raw_help(dir, &path, &help)?;
+-        }
+-    }
+-
+-    let mut args = parsed.args;
+-    if let Some(usage) = parsed.usage.as_deref() {
+-        merge_inferred_args(
+-            &mut args,
+-            infer_args_from_usage(usage, &path, !parsed.subcommands.is_empty()),
+-        );
+-    }
+-    if !args.is_empty() {
+-        args.sort_by(|a, b| a.name.cmp(&b.name));
+-    }
+-
+-    let mut flags = parsed.flags;
+-    if !flags.is_empty() {
+-        flags.sort_by(flag_sort_key);
+-    }
+-
+-    let entry = CommandSnapshot {
+-        path: path.clone(),
+-        about: parsed.about,
+-        usage: parsed.usage,
+-        stability: None,
+-        platforms: None,
+-        args: if args.is_empty() { None } else { Some(args) },
+-        flags: if flags.is_empty() { None } else { Some(flags) },
+-    };
+-
+-    out.insert(path.clone(), entry);
+-
+-    for sub in parsed.subcommands {
+-        let mut next = path.clone();
+-        next.push(sub);
+-        collect_command_recursive(ctx, next, visited, out)?;
+-    }
+-
+-    Ok(())
+-}
+-
+-fn run_codex_help(
+-    codex_binary: &Path,
+-    global_args: &[String],
+-    path: &[String],
+-) -> Result<String, Error> {
+-    let mut cmd = Command::new(codex_binary);
+-    cmd.args(global_args);
+-    // Prefer `codex help <path...>` for non-root commands. Some Codex CLI versions define
+-    // subcommands with free positional args (e.g., `codex exec [PROMPT] [COMMAND]`), which can
+-    // accidentally consume the token `help` and cause `--help` to be parsed as a subcommand.
+-    //
+-    // `codex help <path...>` avoids that ambiguity and is how Codex CLI itself recommends
+-    // requesting help for a subcommand.
+-    if path.is_empty() {
+-        cmd.arg("--help");
+-    } else {
+-        cmd.arg("help");
+-        cmd.args(path);
+-    }
+-    cmd.env("NO_COLOR", "1");
+-    cmd.env("CLICOLOR", "0");
+-    cmd.env("TERM", "dumb");
+-
+-    let output = cmd.output()?;
+-    if !output.status.success() {
+-        return Err(Error::CommandFailed(command_failed_message(&cmd, &output)));
+-    }
+-    Ok(normalize_text(&output.stdout, &output.stderr))
+-}
+-
+-type VersionProbe = (String, Option<String>, Option<String>, Option<String>);
+-
+-fn probe_version(codex_binary: &Path) -> Result<VersionProbe, Error> {
+-    let mut cmd = Command::new(codex_binary);
+-    cmd.arg("--version");
+-    cmd.env("NO_COLOR", "1");
+-    cmd.env("CLICOLOR", "0");
+-    cmd.env("TERM", "dumb");
+-
+-    let output = cmd.output()?;
+-    if !output.status.success() {
+-        return Err(Error::CommandFailed(command_failed_message(&cmd, &output)));
+-    }
+-    let version_output = normalize_text(&output.stdout, &output.stderr)
+-        .trim()
+-        .to_string();
+-
+-    let re_semver = Regex::new(r"(?P<v>\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)").unwrap();
+-    let semantic_version = re_semver
+-        .captures(&version_output)
+-        .and_then(|c| c.name("v").map(|m| m.as_str().to_string()));
+-
+-    let channel = semantic_version.as_ref().map(|v| {
+-        if v.contains("nightly") {
+-            "nightly".to_string()
+-        } else if v.contains("beta") {
+-            "beta".to_string()
+-        } else {
+-            "stable".to_string()
+-        }
+-    });
+-
+-    let re_commit = Regex::new(r"(?i)\b([0-9a-f]{7,40})\b").unwrap();
+-    let commit = re_commit
+-        .captures(&version_output)
+-        .and_then(|c| c.get(1).map(|m| m.as_str().to_string()));
+-
+-    Ok((version_output, semantic_version, channel, commit))
+-}
+-
+-#[derive(Debug, Clone, Serialize)]
+-struct FeatureInfo {
+-    name: String,
+-    stage: String,
+-    effective: bool,
+-}
+-
+-fn probe_features(codex_binary: &Path) -> (Option<Vec<FeatureInfo>>, Option<String>) {
+-    let mut cmd = Command::new(codex_binary);
+-    cmd.args(["features", "list"]);
+-    cmd.env("NO_COLOR", "1");
+-    cmd.env("CLICOLOR", "0");
+-    cmd.env("TERM", "dumb");
+-
+-    let output = match cmd.output() {
+-        Ok(o) => o,
+-        Err(e) => return (None, Some(format!("spawn failed: {e}"))),
+-    };
+-    if !output.status.success() {
+-        return (
+-            None,
+-            Some(command_failed_message(&cmd, &output).trim().to_string()),
+-        );
+-    }
+-
+-    let text = normalize_text(&output.stdout, &output.stderr);
+-    let mut features = Vec::new();
+-    for line in text.lines() {
+-        let t = line.trim();
+-        if t.is_empty() {
+-            continue;
+-        }
+-        let parts = t.split_whitespace().collect::<Vec<_>>();
+-        if parts.len() < 3 {
+-            continue;
+-        }
+-        let effective = match parts[2].to_ascii_lowercase().as_str() {
+-            "true" => true,
+-            "false" => false,
+-            _ => continue,
+-        };
+-        features.push(FeatureInfo {
+-            name: parts[0].to_string(),
+-            stage: parts[1].to_string(),
+-            effective,
+-        });
+-    }
+-    features.sort_by(|a, b| a.name.cmp(&b.name));
+-    (Some(features), None)
+-}
+-
+-fn build_features_metadata(
+-    listed: Option<Vec<FeatureInfo>>,
+-    probe_error: Option<String>,
+-    enabled_feature_names: Vec<String>,
+-    commands_added: Option<Vec<Vec<String>>>,
+-) -> Option<serde_json::Value> {
+-    if listed.is_none() && probe_error.is_none() {
+-        return None;
+-    }
+-
+-    let mut obj = serde_json::Map::new();
+-    obj.insert(
+-        "mode".to_string(),
+-        serde_json::Value::String("default_plus_all_enabled".to_string()),
+-    );
+-    if let Some(err) = probe_error {
+-        obj.insert("probe_error".to_string(), serde_json::Value::String(err));
+-    }
+-    if let Some(list) = listed {
+-        obj.insert(
+-            "listed".to_string(),
+-            serde_json::to_value(list).unwrap_or(serde_json::Value::Null),
+-        );
+-    }
+-    if !enabled_feature_names.is_empty() {
+-        obj.insert(
+-            "enabled_for_snapshot".to_string(),
+-            serde_json::to_value(enabled_feature_names).unwrap_or(serde_json::Value::Null),
+-        );
+-    }
+-    if let Some(added) = commands_added {
+-        obj.insert(
+-            "commands_added_when_all_enabled".to_string(),
+-            serde_json::to_value(added).unwrap_or(serde_json::Value::Null),
+-        );
+-    }
+-
+-    Some(serde_json::Value::Object(obj))
+-}
+-
+-fn command_failed_message(cmd: &Command, output: &Output) -> String {
+-    let mut s = String::new();
+-    s.push_str(&format!(
+-        "{} (exit {})",
+-        format_command(cmd),
+-        output.status.code().unwrap_or(-1)
+-    ));
+-    let stdout = String::from_utf8_lossy(&output.stdout);
+-    let stderr = String::from_utf8_lossy(&output.stderr);
+-    if !stdout.trim().is_empty() {
+-        s.push_str(&format!("\nstdout:\n{stdout}"));
+-    }
+-    if !stderr.trim().is_empty() {
+-        s.push_str(&format!("\nstderr:\n{stderr}"));
+-    }
+-    s
+-}
+-
+-fn format_command(cmd: &Command) -> String {
+-    let program = cmd.get_program().to_string_lossy();
+-    let args = cmd
+-        .get_args()
+-        .map(|a| shell_escape(a.to_string_lossy().as_ref()))
+-        .collect::<Vec<_>>()
+-        .join(" ");
+-    if args.is_empty() {
+-        program.to_string()
+-    } else {
+-        format!("{program} {args}")
+-    }
+-}
+-
+-fn shell_escape(s: &str) -> String {
+-    if s.bytes().all(
+-        |b| matches!(b, b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'-' | b'.' | b'/' | b':'),
+-    ) {
+-        s.to_string()
+-    } else {
+-        format!("{s:?}")
+-    }
+-}
+-
+-fn normalize_text(stdout: &[u8], stderr: &[u8]) -> String {
+-    let stdout = String::from_utf8_lossy(stdout);
+-    if !stdout.trim().is_empty() {
+-        stdout.replace("\r\n", "\n")
+-    } else {
+-        String::from_utf8_lossy(stderr).replace("\r\n", "\n")
+-    }
+-}
+-
+-#[derive(Debug)]
+-struct ParsedHelp {
+-    about: Option<String>,
+-    usage: Option<String>,
+-    subcommands: Vec<String>,
+-    flags: Vec<FlagSnapshot>,
+-    args: Vec<ArgSnapshot>,
+-}
+-
+-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+-enum Section {
+-    Commands,
+-    Options,
+-    Args,
+-}
+-
+-fn parse_help(help: &str) -> ParsedHelp {
+-    let lines: Vec<&str> = help.lines().collect();
+-
+-    let mut usage: Option<String> = None;
+-    let mut usage_lines: Vec<String> = Vec::new();
+-    let mut usage_started = false;
+-    for (idx, line) in lines.iter().enumerate() {
+-        let trimmed = line.trim_start();
+-        if trimmed.to_ascii_lowercase().starts_with("usage:") {
+-            usage_started = true;
+-            let rest = trimmed["usage:".len()..].trim();
+-            if !rest.is_empty() {
+-                usage_lines.push(rest.to_string());
+-            }
+-            for cont in lines.iter().skip(idx + 1) {
+-                if cont.trim().is_empty() {
+-                    break;
+-                }
+-                if cont.starts_with(' ') || cont.starts_with('\t') {
+-                    let t = cont.trim();
+-                    if t.ends_with(':') && is_section_header(t) {
+-                        break;
+-                    }
+-                    usage_lines.push(t.to_string());
+-                } else {
+-                    break;
+-                }
+-            }
+-            break;
+-        }
+-    }
+-    if usage_started && !usage_lines.is_empty() {
+-        usage = Some(usage_lines.join("\n"));
+-    }
+-
+-    let about = {
+-        let mut nonempty_indices = lines
+-            .iter()
+-            .enumerate()
+-            .filter_map(|(i, l)| if l.trim().is_empty() { None } else { Some(i) })
+-            .collect::<Vec<_>>();
+-        if nonempty_indices.is_empty() {
+-            None
+-        } else {
+-            let title_idx = nonempty_indices.remove(0);
+-            let usage_idx = lines
+-                .iter()
+-                .position(|l| l.trim_start().to_ascii_lowercase().starts_with("usage:"))
+-                .unwrap_or(lines.len());
+-            let mut about_lines = Vec::new();
+-            for l in lines.iter().take(usage_idx).skip(title_idx + 1) {
+-                let t = l.trim();
+-                if t.is_empty() {
+-                    continue;
+-                }
+-                about_lines.push(t.to_string());
+-            }
+-            if about_lines.is_empty() {
+-                None
+-            } else {
+-                Some(about_lines.join("\n"))
+-            }
+-        }
+-    };
+-
+-    let mut subcommands = Vec::new();
+-    let mut flags = Vec::new();
+-    let mut args = Vec::new();
+-
+-    let mut section: Option<Section> = None;
+-
+-    for line in lines {
+-        let t = line.trim();
+-        if t.is_empty() {
+-            continue;
+-        }
+-
+-        if let Some(s) = parse_section_header(t) {
+-            section = Some(s);
+-            continue;
+-        }
+-
+-        match section {
+-            Some(Section::Commands) => {
+-                if let Some(token) = parse_command_token(line) {
+-                    subcommands.push(token);
+-                }
+-            }
+-            Some(Section::Options) => {
+-                if let Some(flag) = parse_flag_line(line) {
+-                    flags.push(flag);
+-                }
+-            }
+-            Some(Section::Args) => {
+-                if let Some(arg) = parse_arg_line(line) {
+-                    args.push(arg);
+-                } else if let Some(last) = args.last_mut() {
+-                    // Clap frequently wraps argument descriptions onto continuation lines with
+-                    // deeper indentation. Preserve these as part of the argument note so snapshots
+-                    // capture positional semantics with useful context.
+-                    let cont = line.trim();
+-                    if !cont.is_empty() {
+-                        match last.note.as_mut() {
+-                            Some(note) => {
+-                                note.push('\n');
+-                                note.push_str(cont);
+-                            }
+-                            None => last.note = Some(cont.to_string()),
+-                        }
+-                    }
+-                }
+-            }
+-            None => {}
+-        }
+-    }
+-
+-    ParsedHelp {
+-        about,
+-        usage,
+-        subcommands,
+-        flags,
+-        args,
+-    }
+-}
+-
+-fn is_section_header(t: &str) -> bool {
+-    matches!(
+-        t.trim_end_matches(':').to_ascii_lowercase().as_str(),
+-        "commands" | "subcommands" | "options" | "flags" | "arguments"
+-    )
+-}
+-
+-fn parse_section_header(t: &str) -> Option<Section> {
+-    let header = t.trim_end_matches(':').to_ascii_lowercase();
+-    match header.as_str() {
+-        "commands" | "subcommands" => Some(Section::Commands),
+-        "options" | "flags" => Some(Section::Options),
+-        "arguments" => Some(Section::Args),
+-        _ => None,
+-    }
+-}
+-
+-fn parse_command_token(line: &str) -> Option<String> {
+-    if !line.starts_with(' ') && !line.starts_with('\t') {
+-        return None;
+-    }
+-    let trimmed = line.trim_start();
+-    if trimmed.starts_with('-') {
+-        return None;
+-    }
+-    // Only treat "command list" entries as subcommands when the help output includes an
+-    // on-the-same-line description. Wrapped descriptions (continuation lines) should not be
+-    // interpreted as additional command tokens.
+-    let (head, desc) = split_tokens_and_desc(trimmed);
+-    let token = head.split_whitespace().next()?;
+-    if desc.is_empty() && head.trim() != token {
+-        return None;
+-    }
+-    if token
+-        .chars()
+-        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+-    {
+-        Some(token.to_string())
+-    } else {
+-        None
+-    }
+-}
+-
+-fn parse_flag_line(line: &str) -> Option<FlagSnapshot> {
+-    if !line.starts_with(' ') && !line.starts_with('\t') {
+-        return None;
+-    }
+-    let trimmed = line.trim_start();
+-    if !trimmed.starts_with('-') {
+-        return None;
+-    }
+-
+-    let (tokens_part, _) = split_tokens_and_desc(trimmed);
+-    let mut long: Option<String> = None;
+-    let mut short: Option<String> = None;
+-    let mut value_name: Option<String> = None;
+-    let mut repeatable: Option<bool> = None;
+-
+-    for tok in tokens_part.split_whitespace() {
+-        let tok = tok.trim_end_matches(',').trim();
+-        if tok.is_empty() {
+-            continue;
+-        }
+-
+-        if let Some(stripped) = tok.strip_prefix("--") {
+-            if long.is_none()
+-                && !stripped.is_empty()
+-                && stripped
+-                    .chars()
+-                    .all(|c| c.is_ascii_alphanumeric() || c == '-')
+-            {
+-                long = Some(format!("--{stripped}"));
+-            }
+-            continue;
+-        }
+-
+-        if tok.starts_with('-') && !tok.starts_with("--") {
+-            if short.is_none()
+-                && tok.len() == 2
+-                && tok
+-                    .chars()
+-                    .nth(1)
+-                    .is_some_and(|c| c.is_ascii_alphanumeric())
+-            {
+-                short = Some(tok.to_string());
+-            }
+-            continue;
+-        }
+-
+-        if value_name.is_none() {
+-            // clap formats variadic value placeholders like `<FILE>...`
+-            if tok.starts_with('<') {
+-                if let Some(end) = tok.find('>') {
+-                    if end > 1 {
+-                        value_name = Some(tok[1..end].to_string());
+-                        if tok[end + 1..].contains("...") {
+-                            repeatable = Some(true);
+-                        }
+-                        continue;
+-                    }
+-                }
+-                continue;
+-            }
+-
+-            if tok
+-                .chars()
+-                .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_' || c == '-')
+-            {
+-                value_name = Some(tok.to_string());
+-                continue;
+-            }
+-        }
+-    }
+-
+-    // Reject help text bullets/continuations like `- untrusted: ...` that are not real flags.
+-    if long.is_none() && short.is_none() {
+-        return None;
+-    }
+-
+-    let takes_value = value_name.is_some();
+-
+-    Some(FlagSnapshot {
+-        long,
+-        short,
+-        takes_value,
+-        value_name,
+-        repeatable,
+-        stability: None,
+-        platforms: None,
+-    })
+-}
+-
+-fn split_tokens_and_desc(s: &str) -> (&str, &str) {
+-    let bytes = s.as_bytes();
+-    for i in 0..bytes.len().saturating_sub(1) {
+-        if bytes[i] == b' ' && bytes[i + 1] == b' ' {
+-            let tokens = s[..i].trim_end();
+-            let desc = s[i..].trim();
+-            return (tokens, desc);
+-        }
+-    }
+-    (s.trim_end(), "")
+-}
+-
+-fn parse_arg_line(line: &str) -> Option<ArgSnapshot> {
+-    if !line.starts_with(' ') && !line.starts_with('\t') {
+-        return None;
+-    }
+-    let trimmed = line.trim_start();
+-    if trimmed.starts_with('-') {
+-        return None;
+-    }
+-    let (head, desc) = split_tokens_and_desc(trimmed);
+-    let token = head.split_whitespace().next()?;
+-
+-    let (token, token_is_variadic) = token
+-        .strip_suffix("...")
+-        .map(|t| (t, true))
+-        .unwrap_or((token, false));
+-
+-    let (required, mut name) = if token.starts_with('<') && token.ends_with('>') {
+-        (
+-            true,
+-            token
+-                .trim_start_matches('<')
+-                .trim_end_matches('>')
+-                .to_string(),
+-        )
+-    } else if token.starts_with('[') && token.ends_with(']') {
+-        (
+-            false,
+-            token
+-                .trim_start_matches('[')
+-                .trim_end_matches(']')
+-                .to_string(),
+-        )
+-    } else if token
+-        .chars()
+-        .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_' || c == '-')
+-    {
+-        // Be conservative: treat bare ALLCAPS tokens as positional args (common in some help
+-        // formats) but avoid mis-parsing wrapped description lines as arguments.
+-        (false, token.to_string())
+-    } else {
+-        return None;
+-    };
+-
+-    let mut variadic = token_is_variadic;
+-    if let Some(stripped) = name.strip_suffix("...") {
+-        variadic = true;
+-        name = stripped.to_string();
+-    }
+-
+-    if name.is_empty() {
+-        return None;
+-    }
+-
+-    Some(ArgSnapshot {
+-        name,
+-        required,
+-        variadic,
+-        note: if desc.is_empty() {
+-            None
+-        } else {
+-            Some(desc.to_string())
+-        },
+-    })
+-}
+-
+-fn merge_inferred_args(args: &mut Vec<ArgSnapshot>, inferred: Vec<ArgSnapshot>) {
+-    for inf in inferred {
+-        if let Some(existing) = args.iter_mut().find(|a| a.name == inf.name) {
+-            existing.required |= inf.required;
+-            existing.variadic |= inf.variadic;
+-            if existing.note.is_none() {
+-                existing.note = inf.note;
+-            }
+-            continue;
+-        }
+-        args.push(inf);
+-    }
+-}
+-
+-fn infer_args_from_usage(
+-    usage: &str,
+-    cmd_path: &[String],
+-    has_subcommands: bool,
+-) -> Vec<ArgSnapshot> {
+-    let mut out = Vec::new();
+-
+-    for line in usage.lines() {
+-        let tokens: Vec<&str> = line.split_whitespace().collect();
+-        if tokens.is_empty() {
+-            continue;
+-        }
+-
+-        // A clap "usage" line typically looks like: `codex <subcommands...> [OPTIONS] [ARGS...]`.
+-        // Only infer args when this usage line matches the command path we’re snapshotting.
+-        let mut idx = 0usize;
+-        if tokens.first().is_some_and(|t| *t == "codex") {
+-            idx += 1;
+-        }
+-
+-        let mut matches = true;
+-        for p in cmd_path {
+-            if tokens.get(idx).is_some_and(|t| *t == p) {
+-                idx += 1;
+-            } else {
+-                matches = false;
+-                break;
+-            }
+-        }
+-        if !matches {
+-            continue;
+-        }
+-
+-        let mut prev_was_flag = false;
+-        let mut after_double_dash = false;
+-        for tok in tokens.into_iter().skip(idx) {
+-            let tok = tok.trim_matches(|c| matches!(c, '(' | ')' | '|'));
+-            if tok.is_empty() {
+-                continue;
+-            }
+-
+-            if !after_double_dash {
+-                if tok == "--" {
+-                    after_double_dash = true;
+-                    prev_was_flag = false;
+-                    continue;
+-                }
+-
+-                // Some clap usage lines embed flags inside grouping tokens (e.g.
+-                // `<COMMAND|--url <URL>>`). Treat any token that contains a flag marker as a flag
+-                // so its value name is not mis-inferred as a positional argument.
+-                if tok.starts_with('-') || tok.contains("--") {
+-                    prev_was_flag = true;
+-                    continue;
+-                }
+-
+-                if prev_was_flag {
+-                    // Likely a value name for the previous flag (e.g., `--out <DIR>`). Don’t treat it
+-                    // as a positional argument.
+-                    prev_was_flag = false;
+-                    continue;
+-                }
+-            }
+-
+-            if tok.eq_ignore_ascii_case("[options]") || tok.eq_ignore_ascii_case("options") {
+-                continue;
+-            }
+-
+-            let (name, required, variadic) = match parse_usage_arg_token(tok) {
+-                Some(v) => v,
+-                None => continue,
+-            };
+-
+-            // Clap often represents subcommand dispatch using `[COMMAND]` and `[ARGS]` in usage lines
+-            // even when the help output includes an explicit `Commands:` section. Treat these as
+-            // implementation details, not stable positional args, and avoid inferring them.
+-            if has_subcommands && matches!(name.as_str(), "COMMAND" | "ARGS") {
+-                continue;
+-            }
+-
+-            // Avoid duplicates across multiple usage variants.
+-            if out.iter().any(|a: &ArgSnapshot| a.name == name) {
+-                continue;
+-            }
+-
+-            out.push(ArgSnapshot {
+-                name,
+-                required,
+-                variadic,
+-                note: Some("inferred from usage".to_string()),
+-            });
+-        }
+-    }
+-
+-    out
+-}
+-
+-fn parse_usage_arg_token(token: &str) -> Option<(String, bool, bool)> {
+-    let token = token.trim().trim_matches(',');
+-    if token.is_empty() {
+-        return None;
+-    }
+-
+-    let (token, token_is_variadic) = token
+-        .strip_suffix("...")
+-        .map(|t| (t, true))
+-        .unwrap_or((token, false));
+-
+-    if token == "[OPTIONS]" || token.eq_ignore_ascii_case("options") {
+-        return None;
+-    }
+-
+-    if token.starts_with('<') && token.ends_with('>') {
+-        let name = token
+-            .trim_start_matches('<')
+-            .trim_end_matches('>')
+-            .to_string();
+-        if name.is_empty() {
+-            return None;
+-        }
+-        return Some((name, true, token_is_variadic));
+-    }
+-
+-    if token.starts_with('[') && token.ends_with(']') {
+-        let name = token
+-            .trim_start_matches('[')
+-            .trim_end_matches(']')
+-            .to_string();
+-        if name.is_empty() {
+-            return None;
+-        }
+-        return Some((name, false, token_is_variadic));
+-    }
+-
+-    None
+-}
+-
+-fn merge_command_entries(
+-    base: &mut BTreeMap<Vec<String>, CommandSnapshot>,
+-    extra: BTreeMap<Vec<String>, CommandSnapshot>,
+-) {
+-    for (path, mut entry) in extra {
+-        match base.get_mut(&path) {
+-            None => {
+-                base.insert(path, entry);
+-            }
+-            Some(existing) => {
+-                if existing.about.is_none() {
+-                    existing.about = entry.about.take();
+-                }
+-                if existing.usage.is_none() {
+-                    existing.usage = entry.usage.take();
+-                }
+-
+-                if let Some(extra_args) = entry.args.take() {
+-                    let mut args = existing.args.take().unwrap_or_default();
+-                    merge_inferred_args(&mut args, extra_args);
+-                    if !args.is_empty() {
+-                        args.sort_by(|a, b| a.name.cmp(&b.name));
+-                    }
+-                    existing.args = if args.is_empty() { None } else { Some(args) };
+-                }
+-
+-                if let Some(extra_flags) = entry.flags.take() {
+-                    let mut flags = existing.flags.take().unwrap_or_default();
+-                    merge_flags(&mut flags, extra_flags);
+-                    if !flags.is_empty() {
+-                        flags.sort_by(flag_sort_key);
+-                    }
+-                    existing.flags = if flags.is_empty() { None } else { Some(flags) };
+-                }
+-            }
+-        }
+-    }
+-}
+-
+-fn merge_flags(dst: &mut Vec<FlagSnapshot>, src: Vec<FlagSnapshot>) {
+-    for f in src {
+-        let idx = if let Some(long) = f.long.as_deref() {
+-            dst.iter().position(|e| e.long.as_deref() == Some(long))
+-        } else if let Some(short) = f.short.as_deref() {
+-            dst.iter().position(|e| e.short.as_deref() == Some(short))
+-        } else {
+-            None
+-        };
+-
+-        match idx {
+-            Some(i) => {
+-                let e = &mut dst[i];
+-                if e.long.is_none() {
+-                    e.long = f.long;
+-                }
+-                if e.short.is_none() {
+-                    e.short = f.short;
+-                }
+-                e.takes_value |= f.takes_value;
+-                if e.value_name.is_none() {
+-                    e.value_name = f.value_name;
+-                }
+-                if e.repeatable.is_none() {
+-                    e.repeatable = f.repeatable;
+-                }
+-                if e.stability.is_none() {
+-                    e.stability = f.stability;
+-                }
+-                if e.platforms.is_none() {
+-                    e.platforms = f.platforms;
+-                }
+-            }
+-            None => dst.push(f),
+-        }
+-    }
+-}
+-
+-fn flag_sort_key(a: &FlagSnapshot, b: &FlagSnapshot) -> std::cmp::Ordering {
+-    cmp_opt_str(&a.long, &b.long).then_with(|| cmp_opt_str(&a.short, &b.short))
+-}
+-
+-fn cmp_opt_str(a: &Option<String>, b: &Option<String>) -> std::cmp::Ordering {
+-    match (a, b) {
+-        (Some(a), Some(b)) => a.cmp(b),
+-        (Some(_), None) => std::cmp::Ordering::Less,
+-        (None, Some(_)) => std::cmp::Ordering::Greater,
+-        (None, None) => std::cmp::Ordering::Equal,
+-    }
+-}
+-
+-fn cmp_path(a: &[String], b: &[String]) -> std::cmp::Ordering {
+-    let mut i = 0usize;
+-    while i < a.len() && i < b.len() {
+-        match a[i].cmp(&b[i]) {
+-            std::cmp::Ordering::Equal => i += 1,
+-            non_eq => return non_eq,
+-        }
+-    }
+-    a.len().cmp(&b.len())
+-}
+-
+-fn write_raw_help(raw_help_dir: &Path, path: &[String], help: &str) -> Result<(), Error> {
+-    let rel = if path.is_empty() {
+-        PathBuf::from("help.txt")
+-    } else {
+-        let mut p = PathBuf::from("commands");
+-        for token in path {
+-            p.push(token);
+-        }
+-        p.join("help.txt")
+-    };
+-    let full = raw_help_dir.join(rel);
+-    if let Some(parent) = full.parent() {
+-        fs::create_dir_all(parent)?;
+-    }
+-    fs::write(full, help)?;
+-    Ok(())
+-}
+-
+-#[derive(Debug)]
+-struct BinaryMetadata {
+-    sha256: String,
+-    size_bytes: u64,
+-}
+-
+-impl BinaryMetadata {
+-    fn collect(path: &Path) -> Result<Self, Error> {
+-        let bytes = fs::read(path)?;
+-        let mut hasher = Sha256::new();
+-        hasher.update(&bytes);
+-        let sha256 = hex::encode(hasher.finalize());
+-        let size_bytes = bytes.len() as u64;
+-        Ok(Self { sha256, size_bytes })
+-    }
+-}
+-
+-fn apply_supplements(
+-    supplement_path: Option<&Path>,
+-    commands: &mut BTreeMap<Vec<String>, CommandSnapshot>,
+-) -> Result<(Vec<String>, bool), Error> {
+-    let Some(path) = supplement_path else {
+-        return Ok((Vec::new(), false));
+-    };
+-    let text = fs::read_to_string(path)?;
+-    let supplement: SupplementV1 = serde_json::from_str(&text)?;
+-    if supplement.version != 1 {
+-        return Err(Error::SupplementVersion(supplement.version));
+-    }
+-
+-    let mut known_omissions = Vec::new();
+-    let mut any_applied = false;
+-
+-    for item in supplement.commands {
+-        let mut applied = false;
+-        let existed = commands.contains_key(&item.path);
+-        let entry = commands
+-            .entry(item.path.clone())
+-            .or_insert_with(|| CommandSnapshot {
+-                path: item.path.clone(),
+-                about: None,
+-                usage: None,
+-                stability: None,
+-                platforms: None,
+-                args: None,
+-                flags: None,
+-            });
+-
+-        if !existed {
+-            applied = true;
+-        }
+-
+-        if let Some(platforms) = item.platforms {
+-            if entry.platforms.as_ref() != Some(&platforms) {
+-                entry.platforms = Some(platforms);
+-                applied = true;
+-            }
+-        }
+-
+-        if applied {
+-            any_applied = true;
+-            known_omissions.push(format!(
+-                "supplement/commands.json:v1:{}",
+-                item.path.join(" ")
+-            ));
+-        }
+-    }
+-
+-    known_omissions.sort();
+-    known_omissions.dedup();
+-    Ok((known_omissions, any_applied))
+-}
+diff --git a/crates/xtask/src/codex_snapshot/discovery.rs b/crates/xtask/src/codex_snapshot/discovery.rs
+new file mode 100644
+index 0000000..6618c95
+--- /dev/null
++++ b/crates/xtask/src/codex_snapshot/discovery.rs
+@@ -0,0 +1,711 @@
++use std::{
++    collections::{BTreeMap, BTreeSet},
++    path::Path,
++    process::Command,
++};
++
++use super::{layout, supplements, util, ArgSnapshot, CommandSnapshot, Error, FlagSnapshot};
++
++pub(super) fn discover_commands(
++    codex_binary: &Path,
++    raw_help_dir: Option<&Path>,
++    capture_raw_help: bool,
++    global_args: &[String],
++) -> Result<BTreeMap<Vec<String>, CommandSnapshot>, Error> {
++    let mut out = BTreeMap::<Vec<String>, CommandSnapshot>::new();
++    let mut visited = BTreeSet::<Vec<String>>::new();
++
++    let root_help = run_codex_help(codex_binary, global_args, &[])?;
++    let root_parsed = parse_help(&root_help);
++
++    if capture_raw_help {
++        if let Some(dir) = raw_help_dir {
++            layout::write_raw_help(dir, &[], &root_help)?;
++        }
++    }
++
++    let mut root_args = root_parsed.args;
++    if let Some(usage) = root_parsed.usage.as_deref() {
++        merge_inferred_args(
++            &mut root_args,
++            infer_args_from_usage(usage, &[], !root_parsed.subcommands.is_empty()),
++        );
++    }
++    if !root_args.is_empty() {
++        root_args.sort_by(|a, b| a.name.cmp(&b.name));
++    }
++
++    let mut root_flags = root_parsed.flags;
++    if !root_flags.is_empty() {
++        root_flags.sort_by(supplements::flag_sort_key);
++    }
++
++    out.insert(
++        Vec::new(),
++        CommandSnapshot {
++            path: Vec::new(),
++            about: root_parsed.about,
++            usage: root_parsed.usage,
++            stability: None,
++            platforms: None,
++            args: if root_args.is_empty() {
++                None
++            } else {
++                Some(root_args)
++            },
++            flags: if root_flags.is_empty() {
++                None
++            } else {
++                Some(root_flags)
++            },
++        },
++    );
++
++    let ctx = HelpCtx {
++        codex_binary,
++        global_args,
++        raw_help_dir,
++        capture_raw_help,
++    };
++
++    for token in root_parsed.subcommands {
++        collect_command_recursive(&ctx, vec![token], &mut visited, &mut out)?;
++    }
++
++    Ok(out)
++}
++
++pub(super) fn merge_command_entries(
++    base: &mut BTreeMap<Vec<String>, CommandSnapshot>,
++    extra: BTreeMap<Vec<String>, CommandSnapshot>,
++) {
++    for (path, mut entry) in extra {
++        match base.get_mut(&path) {
++            None => {
++                base.insert(path, entry);
++            }
++            Some(existing) => {
++                if existing.about.is_none() {
++                    existing.about = entry.about.take();
++                }
++                if existing.usage.is_none() {
++                    existing.usage = entry.usage.take();
++                }
++
++                if let Some(extra_args) = entry.args.take() {
++                    let mut args = existing.args.take().unwrap_or_default();
++                    merge_inferred_args(&mut args, extra_args);
++                    if !args.is_empty() {
++                        args.sort_by(|a, b| a.name.cmp(&b.name));
++                    }
++                    existing.args = if args.is_empty() { None } else { Some(args) };
++                }
++
++                if let Some(extra_flags) = entry.flags.take() {
++                    let mut flags = existing.flags.take().unwrap_or_default();
++                    supplements::merge_flags(&mut flags, extra_flags);
++                    if !flags.is_empty() {
++                        flags.sort_by(supplements::flag_sort_key);
++                    }
++                    existing.flags = if flags.is_empty() { None } else { Some(flags) };
++                }
++            }
++        }
++    }
++}
++
++struct HelpCtx<'a> {
++    codex_binary: &'a Path,
++    global_args: &'a [String],
++    raw_help_dir: Option<&'a Path>,
++    capture_raw_help: bool,
++}
++
++fn collect_command_recursive(
++    ctx: &HelpCtx<'_>,
++    path: Vec<String>,
++    visited: &mut BTreeSet<Vec<String>>,
++    out: &mut BTreeMap<Vec<String>, CommandSnapshot>,
++) -> Result<(), Error> {
++    if !visited.insert(path.clone()) {
++        return Ok(());
++    }
++
++    let help = run_codex_help(ctx.codex_binary, ctx.global_args, &path)?;
++    let parsed = parse_help(&help);
++
++    if ctx.capture_raw_help {
++        if let Some(dir) = ctx.raw_help_dir {
++            layout::write_raw_help(dir, &path, &help)?;
++        }
++    }
++
++    let mut args = parsed.args;
++    if let Some(usage) = parsed.usage.as_deref() {
++        merge_inferred_args(
++            &mut args,
++            infer_args_from_usage(usage, &path, !parsed.subcommands.is_empty()),
++        );
++    }
++    if !args.is_empty() {
++        args.sort_by(|a, b| a.name.cmp(&b.name));
++    }
++
++    let mut flags = parsed.flags;
++    if !flags.is_empty() {
++        flags.sort_by(supplements::flag_sort_key);
++    }
++
++    let entry = CommandSnapshot {
++        path: path.clone(),
++        about: parsed.about,
++        usage: parsed.usage,
++        stability: None,
++        platforms: None,
++        args: if args.is_empty() { None } else { Some(args) },
++        flags: if flags.is_empty() { None } else { Some(flags) },
++    };
++
++    out.insert(path.clone(), entry);
++
++    for sub in parsed.subcommands {
++        let mut next = path.clone();
++        next.push(sub);
++        collect_command_recursive(ctx, next, visited, out)?;
++    }
++
++    Ok(())
++}
++
++fn run_codex_help(
++    codex_binary: &Path,
++    global_args: &[String],
++    path: &[String],
++) -> Result<String, Error> {
++    let mut cmd = Command::new(codex_binary);
++    cmd.args(global_args);
++    // Prefer `codex help <path...>` for non-root commands. Some Codex CLI versions define
++    // subcommands with free positional args (e.g., `codex exec [PROMPT] [COMMAND]`), which can
++    // accidentally consume the token `help` and cause `--help` to be parsed as a subcommand.
++    //
++    // `codex help <path...>` avoids that ambiguity and is how Codex CLI itself recommends
++    // requesting help for a subcommand.
++    if path.is_empty() {
++        cmd.arg("--help");
++    } else {
++        cmd.arg("help");
++        cmd.args(path);
++    }
++    cmd.env("NO_COLOR", "1");
++    cmd.env("CLICOLOR", "0");
++    cmd.env("TERM", "dumb");
++
++    let output = cmd.output()?;
++    if !output.status.success() {
++        return Err(Error::CommandFailed(util::command_failed_message(
++            &cmd, &output,
++        )));
++    }
++    Ok(util::normalize_text(&output.stdout, &output.stderr))
++}
++
++#[derive(Debug)]
++struct ParsedHelp {
++    about: Option<String>,
++    usage: Option<String>,
++    subcommands: Vec<String>,
++    flags: Vec<FlagSnapshot>,
++    args: Vec<ArgSnapshot>,
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++enum Section {
++    Commands,
++    Options,
++    Args,
++}
++
++fn parse_help(help: &str) -> ParsedHelp {
++    let lines: Vec<&str> = help.lines().collect();
++
++    let mut usage: Option<String> = None;
++    let mut usage_lines: Vec<String> = Vec::new();
++    let mut usage_started = false;
++    for (idx, line) in lines.iter().enumerate() {
++        let trimmed = line.trim_start();
++        if trimmed.to_ascii_lowercase().starts_with("usage:") {
++            usage_started = true;
++            let rest = trimmed["usage:".len()..].trim();
++            if !rest.is_empty() {
++                usage_lines.push(rest.to_string());
++            }
++            for cont in lines.iter().skip(idx + 1) {
++                if cont.trim().is_empty() {
++                    break;
++                }
++                if cont.starts_with(' ') || cont.starts_with('\t') {
++                    let t = cont.trim();
++                    if t.ends_with(':') && is_section_header(t) {
++                        break;
++                    }
++                    usage_lines.push(t.to_string());
++                } else {
++                    break;
++                }
++            }
++            break;
++        }
++    }
++    if usage_started && !usage_lines.is_empty() {
++        usage = Some(usage_lines.join("\n"));
++    }
++
++    let about = {
++        let mut nonempty_indices = lines
++            .iter()
++            .enumerate()
++            .filter_map(|(i, l)| if l.trim().is_empty() { None } else { Some(i) })
++            .collect::<Vec<_>>();
++        if nonempty_indices.is_empty() {
++            None
++        } else {
++            let title_idx = nonempty_indices.remove(0);
++            let usage_idx = lines
++                .iter()
++                .position(|l| l.trim_start().to_ascii_lowercase().starts_with("usage:"))
++                .unwrap_or(lines.len());
++            let mut about_lines = Vec::new();
++            for l in lines.iter().take(usage_idx).skip(title_idx + 1) {
++                let t = l.trim();
++                if t.is_empty() {
++                    continue;
++                }
++                about_lines.push(t.to_string());
++            }
++            if about_lines.is_empty() {
++                None
++            } else {
++                Some(about_lines.join("\n"))
++            }
++        }
++    };
++
++    let mut subcommands = Vec::new();
++    let mut flags = Vec::new();
++    let mut args = Vec::new();
++
++    let mut section: Option<Section> = None;
++
++    for line in lines {
++        let t = line.trim();
++        if t.is_empty() {
++            continue;
++        }
++
++        if let Some(s) = parse_section_header(t) {
++            section = Some(s);
++            continue;
++        }
++
++        match section {
++            Some(Section::Commands) => {
++                if let Some(token) = parse_command_token(line) {
++                    subcommands.push(token);
++                }
++            }
++            Some(Section::Options) => {
++                if let Some(flag) = parse_flag_line(line) {
++                    flags.push(flag);
++                }
++            }
++            Some(Section::Args) => {
++                if let Some(arg) = parse_arg_line(line) {
++                    args.push(arg);
++                } else if let Some(last) = args.last_mut() {
++                    // Clap frequently wraps argument descriptions onto continuation lines with
++                    // deeper indentation. Preserve these as part of the argument note so snapshots
++                    // capture positional semantics with useful context.
++                    let cont = line.trim();
++                    if !cont.is_empty() {
++                        match last.note.as_mut() {
++                            Some(note) => {
++                                note.push('\n');
++                                note.push_str(cont);
++                            }
++                            None => last.note = Some(cont.to_string()),
++                        }
++                    }
++                }
++            }
++            None => {}
++        }
++    }
++
++    ParsedHelp {
++        about,
++        usage,
++        subcommands,
++        flags,
++        args,
++    }
++}
++
++fn is_section_header(t: &str) -> bool {
++    matches!(
++        t.trim_end_matches(':').to_ascii_lowercase().as_str(),
++        "commands" | "subcommands" | "options" | "flags" | "arguments"
++    )
++}
++
++fn parse_section_header(t: &str) -> Option<Section> {
++    let header = t.trim_end_matches(':').to_ascii_lowercase();
++    match header.as_str() {
++        "commands" | "subcommands" => Some(Section::Commands),
++        "options" | "flags" => Some(Section::Options),
++        "arguments" => Some(Section::Args),
++        _ => None,
++    }
++}
++
++fn parse_command_token(line: &str) -> Option<String> {
++    if !line.starts_with(' ') && !line.starts_with('\t') {
++        return None;
++    }
++    let trimmed = line.trim_start();
++    if trimmed.starts_with('-') {
++        return None;
++    }
++    // Only treat "command list" entries as subcommands when the help output includes an
++    // on-the-same-line description. Wrapped descriptions (continuation lines) should not be
++    // interpreted as additional command tokens.
++    let (head, desc) = split_tokens_and_desc(trimmed);
++    let token = head.split_whitespace().next()?;
++    if desc.is_empty() && head.trim() != token {
++        return None;
++    }
++    if token
++        .chars()
++        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
++    {
++        Some(token.to_string())
++    } else {
++        None
++    }
++}
++
++fn parse_flag_line(line: &str) -> Option<FlagSnapshot> {
++    if !line.starts_with(' ') && !line.starts_with('\t') {
++        return None;
++    }
++    let trimmed = line.trim_start();
++    if !trimmed.starts_with('-') {
++        return None;
++    }
++
++    let (tokens_part, _) = split_tokens_and_desc(trimmed);
++    let mut long: Option<String> = None;
++    let mut short: Option<String> = None;
++    let mut value_name: Option<String> = None;
++    let mut repeatable: Option<bool> = None;
++
++    for tok in tokens_part.split_whitespace() {
++        let tok = tok.trim_end_matches(',').trim();
++        if tok.is_empty() {
++            continue;
++        }
++
++        if let Some(stripped) = tok.strip_prefix("--") {
++            if long.is_none()
++                && !stripped.is_empty()
++                && stripped
++                    .chars()
++                    .all(|c| c.is_ascii_alphanumeric() || c == '-')
++            {
++                long = Some(format!("--{stripped}"));
++            }
++            continue;
++        }
++
++        if tok.starts_with('-') && !tok.starts_with("--") {
++            if short.is_none()
++                && tok.len() == 2
++                && tok
++                    .chars()
++                    .nth(1)
++                    .is_some_and(|c| c.is_ascii_alphanumeric())
++            {
++                short = Some(tok.to_string());
++            }
++            continue;
++        }
++
++        if value_name.is_none() {
++            // clap formats variadic value placeholders like `<FILE>...`
++            if tok.starts_with('<') {
++                if let Some(end) = tok.find('>') {
++                    if end > 1 {
++                        value_name = Some(tok[1..end].to_string());
++                        if tok[end + 1..].contains("...") {
++                            repeatable = Some(true);
++                        }
++                        continue;
++                    }
++                }
++                continue;
++            }
++
++            if tok
++                .chars()
++                .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_' || c == '-')
++            {
++                value_name = Some(tok.to_string());
++                continue;
++            }
++        }
++    }
++
++    // Reject help text bullets/continuations like `- untrusted: ...` that are not real flags.
++    if long.is_none() && short.is_none() {
++        return None;
++    }
++
++    let takes_value = value_name.is_some();
++
++    Some(FlagSnapshot {
++        long,
++        short,
++        takes_value,
++        value_name,
++        repeatable,
++        stability: None,
++        platforms: None,
++    })
++}
++
++fn split_tokens_and_desc(s: &str) -> (&str, &str) {
++    let bytes = s.as_bytes();
++    for i in 0..bytes.len().saturating_sub(1) {
++        if bytes[i] == b' ' && bytes[i + 1] == b' ' {
++            let tokens = s[..i].trim_end();
++            let desc = s[i..].trim();
++            return (tokens, desc);
++        }
++    }
++    (s.trim_end(), "")
++}
++
++fn parse_arg_line(line: &str) -> Option<ArgSnapshot> {
++    if !line.starts_with(' ') && !line.starts_with('\t') {
++        return None;
++    }
++    let trimmed = line.trim_start();
++    if trimmed.starts_with('-') {
++        return None;
++    }
++    let (head, desc) = split_tokens_and_desc(trimmed);
++    let token = head.split_whitespace().next()?;
++
++    let (token, token_is_variadic) = token
++        .strip_suffix("...")
++        .map(|t| (t, true))
++        .unwrap_or((token, false));
++
++    let (required, mut name) = if token.starts_with('<') && token.ends_with('>') {
++        (
++            true,
++            token
++                .trim_start_matches('<')
++                .trim_end_matches('>')
++                .to_string(),
++        )
++    } else if token.starts_with('[') && token.ends_with(']') {
++        (
++            false,
++            token
++                .trim_start_matches('[')
++                .trim_end_matches(']')
++                .to_string(),
++        )
++    } else if token
++        .chars()
++        .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_' || c == '-')
++    {
++        // Be conservative: treat bare ALLCAPS tokens as positional args (common in some help
++        // formats) but avoid mis-parsing wrapped description lines as arguments.
++        (false, token.to_string())
++    } else {
++        return None;
++    };
++
++    let mut variadic = token_is_variadic;
++    if let Some(stripped) = name.strip_suffix("...") {
++        variadic = true;
++        name = stripped.to_string();
++    }
++
++    if name.is_empty() {
++        return None;
++    }
++
++    Some(ArgSnapshot {
++        name,
++        required,
++        variadic,
++        note: if desc.is_empty() {
++            None
++        } else {
++            Some(desc.to_string())
++        },
++    })
++}
++
++fn merge_inferred_args(args: &mut Vec<ArgSnapshot>, inferred: Vec<ArgSnapshot>) {
++    for inf in inferred {
++        if let Some(existing) = args.iter_mut().find(|a| a.name == inf.name) {
++            existing.required |= inf.required;
++            existing.variadic |= inf.variadic;
++            if existing.note.is_none() {
++                existing.note = inf.note;
++            }
++            continue;
++        }
++        args.push(inf);
++    }
++}
++
++fn infer_args_from_usage(
++    usage: &str,
++    cmd_path: &[String],
++    has_subcommands: bool,
++) -> Vec<ArgSnapshot> {
++    let mut out = Vec::new();
++
++    for line in usage.lines() {
++        let tokens: Vec<&str> = line.split_whitespace().collect();
++        if tokens.is_empty() {
++            continue;
++        }
++
++        // A clap "usage" line typically looks like: `codex <subcommands...> [OPTIONS] [ARGS...]`.
++        // Only infer args when this usage line matches the command path we’re snapshotting.
++        let mut idx = 0usize;
++        if tokens.first().is_some_and(|t| *t == "codex") {
++            idx += 1;
++        }
++
++        let mut matches = true;
++        for p in cmd_path {
++            if tokens.get(idx).is_some_and(|t| *t == p) {
++                idx += 1;
++            } else {
++                matches = false;
++                break;
++            }
++        }
++        if !matches {
++            continue;
++        }
++
++        let mut prev_was_flag = false;
++        let mut after_double_dash = false;
++        for tok in tokens.into_iter().skip(idx) {
++            let tok = tok.trim_matches(|c| matches!(c, '(' | ')' | '|'));
++            if tok.is_empty() {
++                continue;
++            }
++
++            if !after_double_dash {
++                if tok == "--" {
++                    after_double_dash = true;
++                    prev_was_flag = false;
++                    continue;
++                }
++
++                // Some clap usage lines embed flags inside grouping tokens (e.g.
++                // `<COMMAND|--url <URL>>`). Treat any token that contains a flag marker as a flag
++                // so its value name is not mis-inferred as a positional argument.
++                if tok.starts_with('-') || tok.contains("--") {
++                    prev_was_flag = true;
++                    continue;
++                }
++
++                if prev_was_flag {
++                    // Likely a value name for the previous flag (e.g., `--out <DIR>`). Don’t treat it
++                    // as a positional argument.
++                    prev_was_flag = false;
++                    continue;
++                }
++            }
++
++            if tok.eq_ignore_ascii_case("[options]") || tok.eq_ignore_ascii_case("options") {
++                continue;
++            }
++
++            let (name, required, variadic) = match parse_usage_arg_token(tok) {
++                Some(v) => v,
++                None => continue,
++            };
++
++            // Clap often represents subcommand dispatch using `[COMMAND]` and `[ARGS]` in usage lines
++            // even when the help output includes an explicit `Commands:` section. Treat these as
++            // implementation details, not stable positional args, and avoid inferring them.
++            if has_subcommands && matches!(name.as_str(), "COMMAND" | "ARGS") {
++                continue;
++            }
++
++            // Avoid duplicates across multiple usage variants.
++            if out.iter().any(|a: &ArgSnapshot| a.name == name) {
++                continue;
++            }
++
++            out.push(ArgSnapshot {
++                name,
++                required,
++                variadic,
++                note: Some("inferred from usage".to_string()),
++            });
++        }
++    }
++
++    out
++}
++
++fn parse_usage_arg_token(token: &str) -> Option<(String, bool, bool)> {
++    let token = token.trim().trim_matches(',');
++    if token.is_empty() {
++        return None;
++    }
++
++    let (token, token_is_variadic) = token
++        .strip_suffix("...")
++        .map(|t| (t, true))
++        .unwrap_or((token, false));
++
++    if token == "[OPTIONS]" || token.eq_ignore_ascii_case("options") {
++        return None;
++    }
++
++    if token.starts_with('<') && token.ends_with('>') {
++        let name = token
++            .trim_start_matches('<')
++            .trim_end_matches('>')
++            .to_string();
++        if name.is_empty() {
++            return None;
++        }
++        return Some((name, true, token_is_variadic));
++    }
++
++    if token.starts_with('[') && token.ends_with(']') {
++        let name = token
++            .trim_start_matches('[')
++            .trim_end_matches(']')
++            .to_string();
++        if name.is_empty() {
++            return None;
++        }
++        return Some((name, false, token_is_variadic));
++    }
++
++    None
++}
+diff --git a/crates/xtask/src/codex_snapshot/layout.rs b/crates/xtask/src/codex_snapshot/layout.rs
+new file mode 100644
+index 0000000..caebfb1
+--- /dev/null
++++ b/crates/xtask/src/codex_snapshot/layout.rs
+@@ -0,0 +1,186 @@
++use std::{
++    fs,
++    path::{Path, PathBuf},
++};
++
++use serde::Deserialize;
++
++use super::{Args, Error};
++
++#[derive(Debug, Deserialize)]
++struct RulesFile {
++    union: RulesUnion,
++    sorting: RulesSorting,
++}
++
++#[derive(Debug, Deserialize)]
++struct RulesUnion {
++    expected_targets: Vec<String>,
++}
++
++#[derive(Debug, Deserialize)]
++struct RulesSorting {
++    commands: String,
++    flags: String,
++    args: String,
++}
++
++pub(super) fn resolve_outputs(
++    args: &Args,
++    version_dir: &str,
++) -> Result<(PathBuf, Option<PathBuf>, String), Error> {
++    let snapshot_out_path = if let Some(path) = args.out_file.as_ref() {
++        path.clone()
++    } else {
++        args.out_dir
++            .as_ref()
++            .expect("clap enforces one of out_dir/out_file")
++            .join("current.json")
++    };
++
++    let (codex_root, target_triple) = if let Some(out_file) = args.out_file.as_ref() {
++        let version_path = out_file.parent().ok_or_else(|| {
++            Error::InvalidOutFileLayout("could not infer snapshots/<version> directory".to_string())
++        })?;
++        let got_version = version_path
++            .file_name()
++            .and_then(|s| s.to_str())
++            .unwrap_or("<unknown>");
++        if got_version != version_dir {
++            return Err(Error::InvalidOutFileLayout(format!(
++                "expected parent dir name {version_dir}, got {got_version}"
++            )));
++        }
++
++        let snapshots_path = version_path.parent().ok_or_else(|| {
++            Error::InvalidOutFileLayout("could not infer snapshots directory".to_string())
++        })?;
++        let got_snapshots = snapshots_path
++            .file_name()
++            .and_then(|s| s.to_str())
++            .unwrap_or("<unknown>");
++        if got_snapshots != "snapshots" {
++            return Err(Error::InvalidOutFileLayout(format!(
++                "expected snapshots/<version> layout, got .../{got_snapshots}/{got_version}"
++            )));
++        }
++
++        let inferred_from_out_file = out_file
++            .file_name()
++            .and_then(|s| s.to_str())
++            .and_then(|s| s.strip_suffix(".json"))
++            .ok_or_else(|| {
++                Error::InvalidOutFileLayout(
++                    "expected out-file name like <target_triple>.json".into(),
++                )
++            })?
++            .to_string();
++        let target = args
++            .raw_help_target
++            .as_ref()
++            .cloned()
++            .unwrap_or(inferred_from_out_file);
++
++        let expected = format!("{target}.json");
++        let got = out_file
++            .file_name()
++            .and_then(|s| s.to_str())
++            .unwrap_or("<unknown>");
++        if got != expected {
++            return Err(Error::InvalidOutFileLayout(format!(
++                "expected filename {expected}, got {got}"
++            )));
++        }
++
++        let codex_root = snapshots_path
++            .parent()
++            .ok_or_else(|| Error::InvalidOutFileLayout("could not infer codex root".to_string()))?;
++        (codex_root.to_path_buf(), target)
++    } else {
++        (
++            args.out_dir
++                .as_ref()
++                .expect("clap enforces one of out_dir/out_file")
++                .clone(),
++            args.raw_help_target
++                .clone()
++                .unwrap_or_else(|| "unknown".to_string()),
++        )
++    };
++
++    let raw_help_dir = if args.capture_raw_help {
++        let base = codex_root.join("raw_help").join(version_dir);
++        if args.raw_help_target.is_some() || args.out_file.is_some() {
++            if target_triple == "unknown" {
++                return Err(Error::MissingRawHelpTarget);
++            }
++            Some(base.join(&target_triple))
++        } else {
++            Some(base)
++        }
++    } else {
++        None
++    };
++
++    if args.out_file.is_some() {
++        let rules_path = codex_root.join("RULES.json");
++        let rules: RulesFile = serde_json::from_slice(
++            &fs::read(&rules_path)
++                .map_err(|err| Error::RulesRead(format!("{}: {err}", rules_path.display())))?,
++        )?;
++        assert_supported_sorting(&rules.sorting)?;
++
++        if !rules
++            .union
++            .expected_targets
++            .iter()
++            .any(|t| t == &target_triple)
++        {
++            return Err(Error::RawHelpTargetNotExpected(target_triple));
++        }
++    }
++
++    Ok((snapshot_out_path, raw_help_dir, target_triple))
++}
++
++fn assert_supported_sorting(sorting: &RulesSorting) -> Result<(), Error> {
++    let mut unsupported = Vec::new();
++
++    if sorting.commands != "lexicographic_path" {
++        unsupported.push(format!("sorting.commands={}", sorting.commands));
++    }
++    if sorting.flags != "by_key_then_long_then_short" {
++        unsupported.push(format!("sorting.flags={}", sorting.flags));
++    }
++    if sorting.args != "by_name" {
++        unsupported.push(format!("sorting.args={}", sorting.args));
++    }
++
++    if unsupported.is_empty() {
++        Ok(())
++    } else {
++        Err(Error::RulesUnsupported(unsupported.join(", ")))
++    }
++}
++
++pub(super) fn write_raw_help(
++    raw_help_dir: &Path,
++    path: &[String],
++    help: &str,
++) -> Result<(), Error> {
++    let rel = if path.is_empty() {
++        PathBuf::from("help.txt")
++    } else {
++        let mut p = PathBuf::from("commands");
++        for token in path {
++            p.push(token);
++        }
++        p.join("help.txt")
++    };
++    let full = raw_help_dir.join(rel);
++    if let Some(parent) = full.parent() {
++        fs::create_dir_all(parent)?;
++    }
++    fs::write(full, help)?;
++    Ok(())
++}
+diff --git a/crates/xtask/src/codex_snapshot/probes.rs b/crates/xtask/src/codex_snapshot/probes.rs
+new file mode 100644
+index 0000000..579a9a2
+--- /dev/null
++++ b/crates/xtask/src/codex_snapshot/probes.rs
+@@ -0,0 +1,176 @@
++use std::{fs, path::Path, process::Command};
++
++use regex::Regex;
++use serde::Serialize;
++use sha2::{Digest, Sha256};
++use time::{format_description::well_known::Rfc3339, OffsetDateTime};
++
++use super::{util, Error};
++
++pub(super) fn deterministic_rfc3339_now() -> String {
++    if let Ok(v) = std::env::var("SOURCE_DATE_EPOCH") {
++        if let Ok(secs) = v.parse::<i64>() {
++            if let Ok(ts) = OffsetDateTime::from_unix_timestamp(secs) {
++                return ts
++                    .format(&Rfc3339)
++                    .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string());
++            }
++        }
++    }
++    OffsetDateTime::now_utc()
++        .format(&Rfc3339)
++        .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
++}
++
++pub(super) struct BinaryMetadata {
++    pub(super) sha256: String,
++    pub(super) size_bytes: u64,
++}
++
++impl BinaryMetadata {
++    pub(super) fn collect(path: &Path) -> Result<Self, Error> {
++        let bytes = fs::read(path)?;
++        let mut hasher = Sha256::new();
++        hasher.update(&bytes);
++        let sha256 = hex::encode(hasher.finalize());
++        let size_bytes = bytes.len() as u64;
++        Ok(Self { sha256, size_bytes })
++    }
++}
++
++type VersionProbe = (String, Option<String>, Option<String>, Option<String>);
++
++pub(super) fn probe_version(codex_binary: &Path) -> Result<VersionProbe, Error> {
++    let mut cmd = Command::new(codex_binary);
++    cmd.arg("--version");
++    cmd.env("NO_COLOR", "1");
++    cmd.env("CLICOLOR", "0");
++    cmd.env("TERM", "dumb");
++
++    let output = cmd.output()?;
++    if !output.status.success() {
++        return Err(Error::CommandFailed(util::command_failed_message(
++            &cmd, &output,
++        )));
++    }
++    let version_output = util::normalize_text(&output.stdout, &output.stderr)
++        .trim()
++        .to_string();
++
++    let re_semver = Regex::new(r"(?P<v>\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)").unwrap();
++    let semantic_version = re_semver
++        .captures(&version_output)
++        .and_then(|c| c.name("v").map(|m| m.as_str().to_string()));
++
++    let channel = semantic_version.as_ref().map(|v| {
++        if v.contains("nightly") {
++            "nightly".to_string()
++        } else if v.contains("beta") {
++            "beta".to_string()
++        } else {
++            "stable".to_string()
++        }
++    });
++
++    let re_commit = Regex::new(r"(?i)\b([0-9a-f]{7,40})\b").unwrap();
++    let commit = re_commit
++        .captures(&version_output)
++        .and_then(|c| c.get(1).map(|m| m.as_str().to_string()));
++
++    Ok((version_output, semantic_version, channel, commit))
++}
++
++#[derive(Debug, Clone, Serialize)]
++pub(super) struct FeatureInfo {
++    pub(super) name: String,
++    pub(super) stage: String,
++    pub(super) effective: bool,
++}
++
++pub(super) fn probe_features(codex_binary: &Path) -> (Option<Vec<FeatureInfo>>, Option<String>) {
++    let mut cmd = Command::new(codex_binary);
++    cmd.args(["features", "list"]);
++    cmd.env("NO_COLOR", "1");
++    cmd.env("CLICOLOR", "0");
++    cmd.env("TERM", "dumb");
++
++    let output = match cmd.output() {
++        Ok(o) => o,
++        Err(e) => return (None, Some(format!("spawn failed: {e}"))),
++    };
++    if !output.status.success() {
++        return (
++            None,
++            Some(
++                util::command_failed_message(&cmd, &output)
++                    .trim()
++                    .to_string(),
++            ),
++        );
++    }
++
++    let text = util::normalize_text(&output.stdout, &output.stderr);
++    let mut features = Vec::new();
++    for line in text.lines() {
++        let t = line.trim();
++        if t.is_empty() {
++            continue;
++        }
++        let parts = t.split_whitespace().collect::<Vec<_>>();
++        if parts.len() < 3 {
++            continue;
++        }
++        let effective = match parts[2].to_ascii_lowercase().as_str() {
++            "true" => true,
++            "false" => false,
++            _ => continue,
++        };
++        features.push(FeatureInfo {
++            name: parts[0].to_string(),
++            stage: parts[1].to_string(),
++            effective,
++        });
++    }
++    features.sort_by(|a, b| a.name.cmp(&b.name));
++    (Some(features), None)
++}
++
++pub(super) fn build_features_metadata(
++    listed: Option<Vec<FeatureInfo>>,
++    probe_error: Option<String>,
++    enabled_feature_names: Vec<String>,
++    commands_added: Option<Vec<Vec<String>>>,
++) -> Option<serde_json::Value> {
++    if listed.is_none() && probe_error.is_none() {
++        return None;
++    }
++
++    let mut obj = serde_json::Map::new();
++    obj.insert(
++        "mode".to_string(),
++        serde_json::Value::String("default_plus_all_enabled".to_string()),
++    );
++    if let Some(err) = probe_error {
++        obj.insert("probe_error".to_string(), serde_json::Value::String(err));
++    }
++    if let Some(list) = listed {
++        obj.insert(
++            "listed".to_string(),
++            serde_json::to_value(list).unwrap_or(serde_json::Value::Null),
++        );
++    }
++    if !enabled_feature_names.is_empty() {
++        obj.insert(
++            "enabled_for_snapshot".to_string(),
++            serde_json::to_value(enabled_feature_names).unwrap_or(serde_json::Value::Null),
++        );
++    }
++    if let Some(added) = commands_added {
++        obj.insert(
++            "commands_added_when_all_enabled".to_string(),
++            serde_json::to_value(added).unwrap_or(serde_json::Value::Null),
++        );
++    }
++
++    Some(serde_json::Value::Object(obj))
++}
+diff --git a/crates/xtask/src/codex_snapshot/supplements.rs b/crates/xtask/src/codex_snapshot/supplements.rs
+new file mode 100644
+index 0000000..6a1e93e
+--- /dev/null
++++ b/crates/xtask/src/codex_snapshot/supplements.rs
+@@ -0,0 +1,132 @@
++use std::{collections::BTreeMap, fs, path::Path};
++
++use super::{schema::SupplementV1, CommandSnapshot, Error, FlagSnapshot};
++
++pub(super) fn normalize_command_entries(entries: &mut BTreeMap<Vec<String>, CommandSnapshot>) {
++    for cmd in entries.values_mut() {
++        if let Some(args) = cmd.args.as_mut() {
++            args.sort_by(|a, b| a.name.cmp(&b.name));
++        }
++        if let Some(flags) = cmd.flags.as_mut() {
++            flags.sort_by(flag_sort_key);
++        }
++    }
++}
++
++pub(super) fn merge_flags(dst: &mut Vec<FlagSnapshot>, src: Vec<FlagSnapshot>) {
++    for f in src {
++        let idx = if let Some(long) = f.long.as_deref() {
++            dst.iter().position(|e| e.long.as_deref() == Some(long))
++        } else if let Some(short) = f.short.as_deref() {
++            dst.iter().position(|e| e.short.as_deref() == Some(short))
++        } else {
++            None
++        };
++
++        match idx {
++            Some(i) => {
++                let e = &mut dst[i];
++                if e.long.is_none() {
++                    e.long = f.long;
++                }
++                if e.short.is_none() {
++                    e.short = f.short;
++                }
++                e.takes_value |= f.takes_value;
++                if e.value_name.is_none() {
++                    e.value_name = f.value_name;
++                }
++                if e.repeatable.is_none() {
++                    e.repeatable = f.repeatable;
++                }
++                if e.stability.is_none() {
++                    e.stability = f.stability;
++                }
++                if e.platforms.is_none() {
++                    e.platforms = f.platforms;
++                }
++            }
++            None => dst.push(f),
++        }
++    }
++}
++
++pub(super) fn flag_sort_key(a: &FlagSnapshot, b: &FlagSnapshot) -> std::cmp::Ordering {
++    cmp_opt_str(&a.long, &b.long).then_with(|| cmp_opt_str(&a.short, &b.short))
++}
++
++fn cmp_opt_str(a: &Option<String>, b: &Option<String>) -> std::cmp::Ordering {
++    match (a, b) {
++        (Some(a), Some(b)) => a.cmp(b),
++        (Some(_), None) => std::cmp::Ordering::Less,
++        (None, Some(_)) => std::cmp::Ordering::Greater,
++        (None, None) => std::cmp::Ordering::Equal,
++    }
++}
++
++pub(super) fn cmp_path(a: &[String], b: &[String]) -> std::cmp::Ordering {
++    let mut i = 0usize;
++    while i < a.len() && i < b.len() {
++        match a[i].cmp(&b[i]) {
++            std::cmp::Ordering::Equal => i += 1,
++            non_eq => return non_eq,
++        }
++    }
++    a.len().cmp(&b.len())
++}
++
++pub(super) fn apply_supplements(
++    supplement_path: Option<&Path>,
++    commands: &mut BTreeMap<Vec<String>, CommandSnapshot>,
++) -> Result<(Vec<String>, bool), Error> {
++    let Some(path) = supplement_path else {
++        return Ok((Vec::new(), false));
++    };
++    let text = fs::read_to_string(path)?;
++    let supplement: SupplementV1 = serde_json::from_str(&text)?;
++    if supplement.version != 1 {
++        return Err(Error::SupplementVersion(supplement.version));
++    }
++
++    let mut known_omissions = Vec::new();
++    let mut any_applied = false;
++
++    for item in supplement.commands {
++        let mut applied = false;
++        let existed = commands.contains_key(&item.path);
++        let entry = commands
++            .entry(item.path.clone())
++            .or_insert_with(|| CommandSnapshot {
++                path: item.path.clone(),
++                about: None,
++                usage: None,
++                stability: None,
++                platforms: None,
++                args: None,
++                flags: None,
++            });
++
++        if !existed {
++            applied = true;
++        }
++
++        if let Some(platforms) = item.platforms {
++            if entry.platforms.as_ref() != Some(&platforms) {
++                entry.platforms = Some(platforms);
++                applied = true;
++            }
++        }
++
++        if applied {
++            any_applied = true;
++            known_omissions.push(format!(
++                "supplement/commands.json:v1:{}",
++                item.path.join(" ")
++            ));
++        }
++    }
++
++    known_omissions.sort();
++    known_omissions.dedup();
++    Ok((known_omissions, any_applied))
++}
+diff --git a/crates/xtask/src/codex_snapshot/util.rs b/crates/xtask/src/codex_snapshot/util.rs
+new file mode 100644
+index 0000000..eca3f02
+--- /dev/null
++++ b/crates/xtask/src/codex_snapshot/util.rs
+@@ -0,0 +1,52 @@
++use std::process::{Command, Output};
++
++pub(super) fn command_failed_message(cmd: &Command, output: &Output) -> String {
++    let mut s = String::new();
++    s.push_str(&format!(
++        "{} (exit {})",
++        format_command(cmd),
++        output.status.code().unwrap_or(-1)
++    ));
++    let stdout = String::from_utf8_lossy(&output.stdout);
++    let stderr = String::from_utf8_lossy(&output.stderr);
++    if !stdout.trim().is_empty() {
++        s.push_str(&format!("\nstdout:\n{stdout}"));
++    }
++    if !stderr.trim().is_empty() {
++        s.push_str(&format!("\nstderr:\n{stderr}"));
++    }
++    s
++}
++
++fn format_command(cmd: &Command) -> String {
++    let program = cmd.get_program().to_string_lossy();
++    let args = cmd
++        .get_args()
++        .map(|a| shell_escape(a.to_string_lossy().as_ref()))
++        .collect::<Vec<_>>()
++        .join(" ");
++    if args.is_empty() {
++        program.to_string()
++    } else {
++        format!("{program} {args}")
++    }
++}
++
++fn shell_escape(s: &str) -> String {
++    if s.bytes().all(
++        |b| matches!(b, b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'-' | b'.' | b'/' | b':'),
++    ) {
++        s.to_string()
++    } else {
++        format!("{s:?}")
++    }
++}
++
++pub(super) fn normalize_text(stdout: &[u8], stderr: &[u8]) -> String {
++    let stdout = String::from_utf8_lossy(stdout);
++    if !stdout.trim().is_empty() {
++        stdout.replace("\r\n", "\n")
++    } else {
++        String::from_utf8_lossy(stderr).replace("\r\n", "\n")
++    }
++}

@@ -1,0 +1,1271 @@
+diff --git a/crates/codex/src/commands/app_server.rs b/crates/codex/src/commands/app_server.rs
+new file mode 100644
+index 0000000..04fa1b7
+--- /dev/null
++++ b/crates/codex/src/commands/app_server.rs
+@@ -0,0 +1,113 @@
++use std::fs as std_fs;
++
++use tokio::{process::Command, time};
++
++use crate::{
++    builder::{apply_cli_overrides, resolve_cli_overrides},
++    process::{spawn_with_retry, tee_stream, ConsoleTarget},
++    AppServerCodegenOutput, AppServerCodegenRequest, CodexClient, CodexError,
++};
++
++impl CodexClient {
++    /// Generates app-server bindings via `codex app-server generate-ts` or `generate-json-schema`.
++    ///
++    /// Ensures the output directory exists, mirrors stdout/stderr according to the builder
++    /// (`mirror_stdout` / `quiet`), and returns captured output plus the exit status. Non-zero
++    /// exits bubble up as [`CodexError::NonZeroExit`] with stderr attached. Use
++    /// [`AppServerCodegenRequest::prettier`] to format TypeScript output with a specific
++    /// Prettier binary and request-level overrides for config/profile toggles.
++    pub async fn generate_app_server_bindings(
++        &self,
++        request: AppServerCodegenRequest,
++    ) -> Result<AppServerCodegenOutput, CodexError> {
++        let AppServerCodegenRequest {
++            target,
++            out_dir,
++            overrides,
++        } = request;
++
++        std_fs::create_dir_all(&out_dir).map_err(|source| CodexError::PrepareOutputDirectory {
++            path: out_dir.clone(),
++            source,
++        })?;
++
++        let dir_ctx = self.directory_context()?;
++        let resolved_overrides =
++            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
++
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("app-server")
++            .arg(target.subcommand())
++            .arg("--out")
++            .arg(&out_dir)
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(dir_ctx.path());
++
++        apply_cli_overrides(&mut command, &resolved_overrides, true);
++
++        if let Some(prettier) = target.prettier() {
++            command.arg("--prettier").arg(prettier);
++        }
++
++        self.command_env.apply(&mut command)?;
++
++        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
++
++        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
++        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
++
++        let stdout_task = tokio::spawn(tee_stream(
++            stdout,
++            ConsoleTarget::Stdout,
++            self.mirror_stdout,
++        ));
++        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
++
++        let wait_task = async move {
++            let status = child
++                .wait()
++                .await
++                .map_err(|source| CodexError::Wait { source })?;
++            let stdout_bytes = stdout_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            let stderr_bytes = stderr_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
++        };
++
++        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
++            wait_task.await?
++        } else {
++            match time::timeout(self.timeout, wait_task).await {
++                Ok(result) => result?,
++                Err(_) => {
++                    return Err(CodexError::Timeout {
++                        timeout: self.timeout,
++                    });
++                }
++            }
++        };
++
++        if !status.success() {
++            return Err(CodexError::NonZeroExit {
++                status,
++                stderr: String::from_utf8(stderr_bytes)?,
++            });
++        }
++
++        Ok(AppServerCodegenOutput {
++            status,
++            stdout: String::from_utf8(stdout_bytes)?,
++            stderr: String::from_utf8(stderr_bytes)?,
++            out_dir,
++        })
++    }
++}
++
+diff --git a/crates/codex/src/commands/apply_diff.rs b/crates/codex/src/commands/apply_diff.rs
+new file mode 100644
+index 0000000..c199311
+--- /dev/null
++++ b/crates/codex/src/commands/apply_diff.rs
+@@ -0,0 +1,160 @@
++use std::{env, ffi::OsString};
++
++use tokio::{process::Command, time};
++
++use crate::{
++    builder::{apply_cli_overrides, resolve_cli_overrides},
++    process::{spawn_with_retry, tee_stream, ConsoleTarget},
++    ApplyDiffArtifacts, CliOverridesPatch, CodexClient, CodexError,
++};
++
++impl CodexClient {
++    /// Applies a Codex diff by invoking `codex apply <TASK_ID>`.
++    ///
++    /// Stdout mirrors to the console when `mirror_stdout` is enabled; stderr mirrors unless `quiet`
++    /// is set. Output and exit status are always captured and returned, and `RUST_LOG=error` is
++    /// injected for the child process when the environment variable is unset.
++    ///
++    /// Convenience behavior: if `CODEX_TASK_ID` is set, it is appended as `<TASK_ID>`. When the
++    /// environment variable is missing, the subprocess is still spawned and will typically exit
++    /// non-zero with a "missing TASK_ID" error from the CLI.
++    pub async fn apply(&self) -> Result<ApplyDiffArtifacts, CodexError> {
++        let task_id = env::var_os("CODEX_TASK_ID")
++            .and_then(|v| crate::normalize_non_empty(&v.to_string_lossy()).map(OsString::from));
++        self.apply_task_inner(task_id).await
++    }
++
++    /// Applies a Codex diff by task id via `codex apply <TASK_ID>`.
++    pub async fn apply_task(
++        &self,
++        task_id: impl AsRef<str>,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let task_id = task_id.as_ref().trim();
++        if task_id.is_empty() {
++            return Err(CodexError::EmptyTaskId);
++        }
++        self.apply_task_inner(Some(OsString::from(task_id))).await
++    }
++
++    /// Shows a Codex Cloud task diff by invoking `codex cloud diff <TASK_ID>`.
++    ///
++    /// Mirrors stdout/stderr using the same `mirror_stdout`/`quiet` defaults as `apply`, but always
++    /// returns the captured output alongside the child exit status. Applies the same `RUST_LOG`
++    /// defaulting behavior when the variable is unset.
++    ///
++    /// Convenience behavior: if `CODEX_TASK_ID` is set, it is appended as `<TASK_ID>`. When the
++    /// environment variable is missing, the subprocess is still spawned and will typically exit
++    /// non-zero with a "missing TASK_ID" error from the CLI.
++    pub async fn diff(&self) -> Result<ApplyDiffArtifacts, CodexError> {
++        let task_id = env::var_os("CODEX_TASK_ID")
++            .and_then(|v| crate::normalize_non_empty(&v.to_string_lossy()).map(OsString::from));
++        self.cloud_diff_task_inner(task_id).await
++    }
++
++    /// Shows a Codex Cloud task diff by task id via `codex cloud diff <TASK_ID>`.
++    pub async fn cloud_diff_task(
++        &self,
++        task_id: impl AsRef<str>,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let task_id = task_id.as_ref().trim();
++        if task_id.is_empty() {
++            return Err(CodexError::EmptyTaskId);
++        }
++        self.cloud_diff_task_inner(Some(OsString::from(task_id)))
++            .await
++    }
++
++    async fn apply_task_inner(
++        &self,
++        task_id: Option<OsString>,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let mut args = vec![OsString::from("apply")];
++        if let Some(task_id) = task_id {
++            args.push(task_id);
++        }
++        self.capture_codex_command(args, false).await
++    }
++
++    async fn cloud_diff_task_inner(
++        &self,
++        task_id: Option<OsString>,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let mut args = vec![OsString::from("cloud"), OsString::from("diff")];
++        if let Some(task_id) = task_id {
++            args.push(task_id);
++        }
++        self.capture_codex_command(args, false).await
++    }
++
++    async fn capture_codex_command(
++        &self,
++        args: Vec<OsString>,
++        include_search: bool,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        let dir_ctx = self.directory_context()?;
++        let resolved_overrides = resolve_cli_overrides(
++            &self.cli_overrides,
++            &CliOverridesPatch::default(),
++            self.model.as_deref(),
++        );
++
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .args(&args)
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(dir_ctx.path());
++
++        apply_cli_overrides(&mut command, &resolved_overrides, include_search);
++        self.command_env.apply(&mut command)?;
++
++        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
++
++        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
++        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
++
++        let stdout_task = tokio::spawn(tee_stream(
++            stdout,
++            ConsoleTarget::Stdout,
++            self.mirror_stdout,
++        ));
++        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
++
++        let wait_task = async move {
++            let status = child
++                .wait()
++                .await
++                .map_err(|source| CodexError::Wait { source })?;
++            let stdout_bytes = stdout_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            let stderr_bytes = stderr_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
++        };
++
++        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
++            wait_task.await?
++        } else {
++            match time::timeout(self.timeout, wait_task).await {
++                Ok(result) => result?,
++                Err(_) => {
++                    return Err(CodexError::Timeout {
++                        timeout: self.timeout,
++                    });
++                }
++            }
++        };
++
++        Ok(ApplyDiffArtifacts {
++            status,
++            stdout: String::from_utf8(stdout_bytes)?,
++            stderr: String::from_utf8(stderr_bytes)?,
++        })
++    }
++}
++
+diff --git a/crates/codex/src/commands/features.rs b/crates/codex/src/commands/features.rs
+new file mode 100644
+index 0000000..a6a9d93
+--- /dev/null
++++ b/crates/codex/src/commands/features.rs
+@@ -0,0 +1,110 @@
++use tokio::{process::Command, time};
++
++use crate::{
++    builder::{apply_cli_overrides, resolve_cli_overrides},
++    process::{spawn_with_retry, tee_stream, ConsoleTarget},
++    CodexClient, CodexError, FeaturesListOutput, FeaturesListRequest,
++};
++
++impl CodexClient {
++    /// Lists CLI features via `codex features list`.
++    ///
++    /// Requests JSON output when `json(true)` is set and falls back to parsing the text table when
++    /// JSON is unavailable. Shared config/profile/search/approval overrides flow through via the
++    /// request/builder, stdout/stderr are mirrored according to the builder, and non-zero exits
++    /// surface as [`CodexError::NonZeroExit`].
++    pub async fn list_features(
++        &self,
++        request: FeaturesListRequest,
++    ) -> Result<FeaturesListOutput, CodexError> {
++        let FeaturesListRequest { json, overrides } = request;
++
++        let dir_ctx = self.directory_context()?;
++        let resolved_overrides =
++            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
++
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("features")
++            .arg("list")
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(dir_ctx.path());
++
++        apply_cli_overrides(&mut command, &resolved_overrides, true);
++
++        if json {
++            command.arg("--json");
++        }
++
++        self.command_env.apply(&mut command)?;
++
++        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
++
++        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
++        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
++
++        let stdout_task = tokio::spawn(tee_stream(
++            stdout,
++            ConsoleTarget::Stdout,
++            self.mirror_stdout,
++        ));
++        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
++
++        let wait_task = async move {
++            let status = child
++                .wait()
++                .await
++                .map_err(|source| CodexError::Wait { source })?;
++            let stdout_bytes = stdout_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            let stderr_bytes = stderr_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
++        };
++
++        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
++            wait_task.await?
++        } else {
++            match time::timeout(self.timeout, wait_task).await {
++                Ok(result) => result?,
++                Err(_) => {
++                    return Err(CodexError::Timeout {
++                        timeout: self.timeout,
++                    });
++                }
++            }
++        };
++
++        if !status.success() {
++            return Err(CodexError::NonZeroExit {
++                status,
++                stderr: String::from_utf8(stderr_bytes)?,
++            });
++        }
++
++        let stdout_string = String::from_utf8(stdout_bytes)?;
++        let stderr_string = String::from_utf8(stderr_bytes)?;
++        let (features, format) =
++            crate::version::parse_feature_list_output(&stdout_string, json).map_err(|reason| {
++                CodexError::FeatureListParse {
++                    reason,
++                    stdout: stdout_string.clone(),
++                }
++            })?;
++
++        Ok(FeaturesListOutput {
++            status,
++            stdout: stdout_string,
++            stderr: stderr_string,
++            features,
++            format,
++        })
++    }
++}
++
+diff --git a/crates/codex/src/commands/mod.rs b/crates/codex/src/commands/mod.rs
+new file mode 100644
+index 0000000..a579a41
+--- /dev/null
++++ b/crates/codex/src/commands/mod.rs
+@@ -0,0 +1,6 @@
++mod apply_diff;
++mod app_server;
++mod features;
++mod proxy;
++mod sandbox;
++
+diff --git a/crates/codex/src/commands/proxy.rs b/crates/codex/src/commands/proxy.rs
+new file mode 100644
+index 0000000..b82ae04
+--- /dev/null
++++ b/crates/codex/src/commands/proxy.rs
+@@ -0,0 +1,81 @@
++use tokio::{io::AsyncWriteExt, process::Command};
++
++use crate::{
++    process::spawn_with_retry, CodexClient, CodexError, ResponsesApiProxyHandle,
++    ResponsesApiProxyRequest,
++};
++
++impl CodexClient {
++    /// Starts the `codex responses-api-proxy` helper with a supplied API key.
++    ///
++    /// Forwards optional `--port`, `--server-info`, `--http-shutdown`, and `--upstream-url` flags.
++    /// The API key is written to stdin immediately after spawn, stdout/stderr remain piped for callers
++    /// to drain, and the returned handle owns the child process plus any `--server-info` path used.
++    pub async fn start_responses_api_proxy(
++        &self,
++        request: ResponsesApiProxyRequest,
++    ) -> Result<ResponsesApiProxyHandle, CodexError> {
++        let ResponsesApiProxyRequest {
++            api_key,
++            port,
++            server_info_path,
++            http_shutdown,
++            upstream_url,
++        } = request;
++
++        let api_key = api_key.trim().to_string();
++        if api_key.is_empty() {
++            return Err(CodexError::EmptyApiKey);
++        }
++
++        let working_dir = self.sandbox_working_dir(None)?;
++
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("responses-api-proxy")
++            .stdin(std::process::Stdio::piped())
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(&working_dir);
++
++        if let Some(port) = port {
++            command.arg("--port").arg(port.to_string());
++        }
++
++        if let Some(path) = server_info_path.as_ref() {
++            command.arg("--server-info").arg(path);
++        }
++
++        if http_shutdown {
++            command.arg("--http-shutdown");
++        }
++
++        if let Some(url) = upstream_url.as_ref() {
++            if !url.trim().is_empty() {
++                command.arg("--upstream-url").arg(url);
++            }
++        }
++
++        self.command_env.apply(&mut command)?;
++
++        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
++
++        let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
++        stdin
++            .write_all(api_key.as_bytes())
++            .await
++            .map_err(CodexError::StdinWrite)?;
++        stdin
++            .write_all(b"\n")
++            .await
++            .map_err(CodexError::StdinWrite)?;
++        stdin.shutdown().await.map_err(CodexError::StdinWrite)?;
++
++        Ok(ResponsesApiProxyHandle {
++            child,
++            server_info_path,
++        })
++    }
++}
++
+diff --git a/crates/codex/src/commands/sandbox.rs b/crates/codex/src/commands/sandbox.rs
+new file mode 100644
+index 0000000..c97e1e0
+--- /dev/null
++++ b/crates/codex/src/commands/sandbox.rs
+@@ -0,0 +1,155 @@
++use tokio::{process::Command, time};
++
++use crate::{
++    process::{spawn_with_retry, tee_stream, ConsoleTarget},
++    CodexClient, CodexError, SandboxCommandRequest, SandboxPlatform, SandboxRun, StdioToUdsRequest,
++};
++
++impl CodexClient {
++    /// Spawns `codex stdio-to-uds <SOCKET_PATH>` with piped stdio for manual relays.
++    ///
++    /// Returns the child process so callers can write to stdin/read from stdout (e.g., to bridge a
++    /// JSON-RPC transport over a Unix domain socket). Fails fast on empty socket paths and inherits
++    /// the builder working directory when none is provided on the request.
++    pub fn stdio_to_uds(
++        &self,
++        request: StdioToUdsRequest,
++    ) -> Result<tokio::process::Child, CodexError> {
++        let StdioToUdsRequest {
++            socket_path,
++            working_dir,
++        } = request;
++
++        if socket_path.as_os_str().is_empty() {
++            return Err(CodexError::EmptySocketPath);
++        }
++
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("stdio-to-uds")
++            .arg(&socket_path)
++            .stdin(std::process::Stdio::piped())
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(self.sandbox_working_dir(working_dir)?);
++
++        self.command_env.apply(&mut command)?;
++
++        spawn_with_retry(&mut command, self.command_env.binary_path())
++    }
++
++    /// Runs `codex sandbox <platform> [--full-auto|--log-denials] [--config/--enable/--disable] -- <COMMAND...>`.
++    ///
++    /// Captures stdout/stderr and mirrors them according to the builder (`mirror_stdout` / `quiet`). Unlike
++    /// `apply`/`diff`, non-zero exit codes are returned in [`SandboxRun::status`] without being wrapped in
++    /// [`CodexError::NonZeroExit`]. macOS denial logging is enabled via [`SandboxCommandRequest::log_denials`]
++    /// and ignored on other platforms. Linux uses the bundled `codex-linux-sandbox` helper; Windows sandboxing
++    /// is experimental and relies on the upstream helper. The wrapper does not gate availability—unsupported
++    /// installs will surface as non-zero statuses.
++    pub async fn run_sandbox(
++        &self,
++        request: SandboxCommandRequest,
++    ) -> Result<SandboxRun, CodexError> {
++        if request.command.is_empty() {
++            return Err(CodexError::EmptySandboxCommand);
++        }
++
++        let SandboxCommandRequest {
++            platform,
++            command,
++            full_auto,
++            log_denials,
++            config_overrides,
++            feature_toggles,
++            working_dir,
++        } = request;
++
++        let working_dir = self.sandbox_working_dir(working_dir)?;
++
++        let mut process = Command::new(self.command_env.binary_path());
++        process
++            .arg("sandbox")
++            .arg(platform.subcommand())
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(&working_dir);
++
++        if full_auto {
++            process.arg("--full-auto");
++        }
++
++        if log_denials && matches!(platform, SandboxPlatform::Macos) {
++            process.arg("--log-denials");
++        }
++
++        for override_ in config_overrides {
++            process.arg("--config");
++            process.arg(format!("{}={}", override_.key, override_.value));
++        }
++
++        for feature in feature_toggles.enable {
++            process.arg("--enable");
++            process.arg(feature);
++        }
++
++        for feature in feature_toggles.disable {
++            process.arg("--disable");
++            process.arg(feature);
++        }
++
++        process.arg("--");
++        process.args(&command);
++
++        self.command_env.apply(&mut process)?;
++
++        let mut child = spawn_with_retry(&mut process, self.command_env.binary_path())?;
++
++        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
++        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
++
++        let stdout_task = tokio::spawn(tee_stream(
++            stdout,
++            ConsoleTarget::Stdout,
++            self.mirror_stdout,
++        ));
++        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
++
++        let wait_task = async move {
++            let status = child
++                .wait()
++                .await
++                .map_err(|source| CodexError::Wait { source })?;
++            let stdout_bytes = stdout_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            let stderr_bytes = stderr_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
++        };
++
++        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
++            wait_task.await?
++        } else {
++            match time::timeout(self.timeout, wait_task).await {
++                Ok(result) => result?,
++                Err(_) => {
++                    return Err(CodexError::Timeout {
++                        timeout: self.timeout,
++                    });
++                }
++            }
++        };
++
++        Ok(SandboxRun {
++            status,
++            stdout: String::from_utf8(stdout_bytes)?,
++            stderr: String::from_utf8(stderr_bytes)?,
++        })
++    }
++}
++
+diff --git a/crates/codex/src/lib.rs b/crates/codex/src/lib.rs
+index aba6d68..543f906 100644
+--- a/crates/codex/src/lib.rs
++++ b/crates/codex/src/lib.rs
+@@ -72,6 +72,7 @@ mod auth;
+ mod builder;
+ mod bundled_binary;
+ mod cli;
++mod commands;
+ mod events;
+ mod exec;
+ mod execpolicy;
+@@ -126,7 +127,6 @@ pub use jsonl::{
+ use std::{
+     env,
+     ffi::{OsStr, OsString},
+-    fs as std_fs,
+     path::{Path, PathBuf},
+     process::ExitStatus,
+     time::{Duration, SystemTime},
+@@ -137,7 +137,7 @@ use home::CommandEnvironment;
+ use process::{command_output_text, spawn_with_retry, tee_stream, CommandOutput, ConsoleTarget};
+ use tempfile::TempDir;
+ use thiserror::Error;
+-use tokio::{io::AsyncWriteExt, process::Command, time};
++use tokio::{process::Command, time};
+ use tracing::warn;
+ 
+ #[cfg(test)]
+@@ -208,355 +208,6 @@ impl CodexClient {
+         self.command_env.codex_home_layout()
+     }
+ 
+-    /// Applies a Codex diff by invoking `codex apply <TASK_ID>`.
+-    ///
+-    /// Stdout mirrors to the console when `mirror_stdout` is enabled; stderr mirrors unless `quiet`
+-    /// is set. Output and exit status are always captured and returned, and `RUST_LOG=error` is
+-    /// injected for the child process when the environment variable is unset.
+-    ///
+-    /// Convenience behavior: if `CODEX_TASK_ID` is set, it is appended as `<TASK_ID>`. When the
+-    /// environment variable is missing, the subprocess is still spawned and will typically exit
+-    /// non-zero with a "missing TASK_ID" error from the CLI.
+-    pub async fn apply(&self) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let task_id = env::var_os("CODEX_TASK_ID")
+-            .and_then(|v| normalize_non_empty(&v.to_string_lossy()).map(OsString::from));
+-        self.apply_task_inner(task_id).await
+-    }
+-
+-    /// Applies a Codex diff by task id via `codex apply <TASK_ID>`.
+-    pub async fn apply_task(
+-        &self,
+-        task_id: impl AsRef<str>,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let task_id = task_id.as_ref().trim();
+-        if task_id.is_empty() {
+-            return Err(CodexError::EmptyTaskId);
+-        }
+-        self.apply_task_inner(Some(OsString::from(task_id))).await
+-    }
+-
+-    /// Shows a Codex Cloud task diff by invoking `codex cloud diff <TASK_ID>`.
+-    ///
+-    /// Mirrors stdout/stderr using the same `mirror_stdout`/`quiet` defaults as `apply`, but always
+-    /// returns the captured output alongside the child exit status. Applies the same `RUST_LOG`
+-    /// defaulting behavior when the variable is unset.
+-    ///
+-    /// Convenience behavior: if `CODEX_TASK_ID` is set, it is appended as `<TASK_ID>`. When the
+-    /// environment variable is missing, the subprocess is still spawned and will typically exit
+-    /// non-zero with a "missing TASK_ID" error from the CLI.
+-    pub async fn diff(&self) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let task_id = env::var_os("CODEX_TASK_ID")
+-            .and_then(|v| normalize_non_empty(&v.to_string_lossy()).map(OsString::from));
+-        self.cloud_diff_task_inner(task_id).await
+-    }
+-
+-    /// Shows a Codex Cloud task diff by task id via `codex cloud diff <TASK_ID>`.
+-    pub async fn cloud_diff_task(
+-        &self,
+-        task_id: impl AsRef<str>,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let task_id = task_id.as_ref().trim();
+-        if task_id.is_empty() {
+-            return Err(CodexError::EmptyTaskId);
+-        }
+-        self.cloud_diff_task_inner(Some(OsString::from(task_id)))
+-            .await
+-    }
+-
+-    async fn apply_task_inner(
+-        &self,
+-        task_id: Option<OsString>,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let mut args = vec![OsString::from("apply")];
+-        if let Some(task_id) = task_id {
+-            args.push(task_id);
+-        }
+-        self.capture_codex_command(args, false).await
+-    }
+-
+-    async fn cloud_diff_task_inner(
+-        &self,
+-        task_id: Option<OsString>,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let mut args = vec![OsString::from("cloud"), OsString::from("diff")];
+-        if let Some(task_id) = task_id {
+-            args.push(task_id);
+-        }
+-        self.capture_codex_command(args, false).await
+-    }
+-
+-    async fn capture_codex_command(
+-        &self,
+-        args: Vec<OsString>,
+-        include_search: bool,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        let dir_ctx = self.directory_context()?;
+-        let resolved_overrides = resolve_cli_overrides(
+-            &self.cli_overrides,
+-            &CliOverridesPatch::default(),
+-            self.model.as_deref(),
+-        );
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .args(&args)
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(dir_ctx.path());
+-
+-        apply_cli_overrides(&mut command, &resolved_overrides, include_search);
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let stdout_task = tokio::spawn(tee_stream(
+-            stdout,
+-            ConsoleTarget::Stdout,
+-            self.mirror_stdout,
+-        ));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+-
+-        let wait_task = async move {
+-            let status = child
+-                .wait()
+-                .await
+-                .map_err(|source| CodexError::Wait { source })?;
+-            let stdout_bytes = stdout_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            let stderr_bytes = stderr_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+-        };
+-
+-        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+-            wait_task.await?
+-        } else {
+-            match time::timeout(self.timeout, wait_task).await {
+-                Ok(result) => result?,
+-                Err(_) => {
+-                    return Err(CodexError::Timeout {
+-                        timeout: self.timeout,
+-                    });
+-                }
+-            }
+-        };
+-
+-        Ok(ApplyDiffArtifacts {
+-            status,
+-            stdout: String::from_utf8(stdout_bytes)?,
+-            stderr: String::from_utf8(stderr_bytes)?,
+-        })
+-    }
+-
+-    /// Generates app-server bindings via `codex app-server generate-ts` or `generate-json-schema`.
+-    ///
+-    /// Ensures the output directory exists, mirrors stdout/stderr according to the builder
+-    /// (`mirror_stdout` / `quiet`), and returns captured output plus the exit status. Non-zero
+-    /// exits bubble up as [`CodexError::NonZeroExit`] with stderr attached. Use
+-    /// [`AppServerCodegenRequest::prettier`] to format TypeScript output with a specific
+-    /// Prettier binary and request-level overrides for config/profile toggles.
+-    pub async fn generate_app_server_bindings(
+-        &self,
+-        request: AppServerCodegenRequest,
+-    ) -> Result<AppServerCodegenOutput, CodexError> {
+-        let AppServerCodegenRequest {
+-            target,
+-            out_dir,
+-            overrides,
+-        } = request;
+-
+-        std_fs::create_dir_all(&out_dir).map_err(|source| CodexError::PrepareOutputDirectory {
+-            path: out_dir.clone(),
+-            source,
+-        })?;
+-
+-        let dir_ctx = self.directory_context()?;
+-        let resolved_overrides =
+-            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("app-server")
+-            .arg(target.subcommand())
+-            .arg("--out")
+-            .arg(&out_dir)
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(dir_ctx.path());
+-
+-        apply_cli_overrides(&mut command, &resolved_overrides, true);
+-
+-        if let Some(prettier) = target.prettier() {
+-            command.arg("--prettier").arg(prettier);
+-        }
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let stdout_task = tokio::spawn(tee_stream(
+-            stdout,
+-            ConsoleTarget::Stdout,
+-            self.mirror_stdout,
+-        ));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+-
+-        let wait_task = async move {
+-            let status = child
+-                .wait()
+-                .await
+-                .map_err(|source| CodexError::Wait { source })?;
+-            let stdout_bytes = stdout_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            let stderr_bytes = stderr_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+-        };
+-
+-        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+-            wait_task.await?
+-        } else {
+-            match time::timeout(self.timeout, wait_task).await {
+-                Ok(result) => result?,
+-                Err(_) => {
+-                    return Err(CodexError::Timeout {
+-                        timeout: self.timeout,
+-                    });
+-                }
+-            }
+-        };
+-
+-        if !status.success() {
+-            return Err(CodexError::NonZeroExit {
+-                status,
+-                stderr: String::from_utf8(stderr_bytes)?,
+-            });
+-        }
+-
+-        Ok(AppServerCodegenOutput {
+-            status,
+-            stdout: String::from_utf8(stdout_bytes)?,
+-            stderr: String::from_utf8(stderr_bytes)?,
+-            out_dir,
+-        })
+-    }
+-
+-    /// Lists CLI features via `codex features list`.
+-    ///
+-    /// Requests JSON output when `json(true)` is set and falls back to parsing the text table when
+-    /// JSON is unavailable. Shared config/profile/search/approval overrides flow through via the
+-    /// request/builder, stdout/stderr are mirrored according to the builder, and non-zero exits
+-    /// surface as [`CodexError::NonZeroExit`].
+-    pub async fn list_features(
+-        &self,
+-        request: FeaturesListRequest,
+-    ) -> Result<FeaturesListOutput, CodexError> {
+-        let FeaturesListRequest { json, overrides } = request;
+-
+-        let dir_ctx = self.directory_context()?;
+-        let resolved_overrides =
+-            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("features")
+-            .arg("list")
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(dir_ctx.path());
+-
+-        apply_cli_overrides(&mut command, &resolved_overrides, true);
+-
+-        if json {
+-            command.arg("--json");
+-        }
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let stdout_task = tokio::spawn(tee_stream(
+-            stdout,
+-            ConsoleTarget::Stdout,
+-            self.mirror_stdout,
+-        ));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+-
+-        let wait_task = async move {
+-            let status = child
+-                .wait()
+-                .await
+-                .map_err(|source| CodexError::Wait { source })?;
+-            let stdout_bytes = stdout_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            let stderr_bytes = stderr_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+-        };
+-
+-        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+-            wait_task.await?
+-        } else {
+-            match time::timeout(self.timeout, wait_task).await {
+-                Ok(result) => result?,
+-                Err(_) => {
+-                    return Err(CodexError::Timeout {
+-                        timeout: self.timeout,
+-                    });
+-                }
+-            }
+-        };
+-
+-        if !status.success() {
+-            return Err(CodexError::NonZeroExit {
+-                status,
+-                stderr: String::from_utf8(stderr_bytes)?,
+-            });
+-        }
+-
+-        let stdout_string = String::from_utf8(stdout_bytes)?;
+-        let stderr_string = String::from_utf8(stderr_bytes)?;
+-        let (features, format) =
+-            version::parse_feature_list_output(&stdout_string, json).map_err(|reason| {
+-                CodexError::FeatureListParse {
+-                    reason,
+-                    stdout: stdout_string.clone(),
+-                }
+-            })?;
+-
+-        Ok(FeaturesListOutput {
+-            status,
+-            stdout: stdout_string,
+-            stderr: stderr_string,
+-            features,
+-            format,
+-        })
+-    }
+-
+     /// Runs `codex features` and returns captured output.
+     pub async fn features(
+         &self,
+@@ -1063,224 +714,6 @@ impl CodexClient {
+         spawn_with_retry(&mut command, self.command_env.binary_path())
+     }
+ 
+-    /// Starts the `codex responses-api-proxy` helper with a supplied API key.
+-    ///
+-    /// Forwards optional `--port`, `--server-info`, `--http-shutdown`, and `--upstream-url` flags.
+-    /// The API key is written to stdin immediately after spawn, stdout/stderr remain piped for callers
+-    /// to drain, and the returned handle owns the child process plus any `--server-info` path used.
+-    pub async fn start_responses_api_proxy(
+-        &self,
+-        request: ResponsesApiProxyRequest,
+-    ) -> Result<ResponsesApiProxyHandle, CodexError> {
+-        let ResponsesApiProxyRequest {
+-            api_key,
+-            port,
+-            server_info_path,
+-            http_shutdown,
+-            upstream_url,
+-        } = request;
+-
+-        let api_key = api_key.trim().to_string();
+-        if api_key.is_empty() {
+-            return Err(CodexError::EmptyApiKey);
+-        }
+-
+-        let working_dir = self.sandbox_working_dir(None)?;
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("responses-api-proxy")
+-            .stdin(std::process::Stdio::piped())
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(&working_dir);
+-
+-        if let Some(port) = port {
+-            command.arg("--port").arg(port.to_string());
+-        }
+-
+-        if let Some(path) = server_info_path.as_ref() {
+-            command.arg("--server-info").arg(path);
+-        }
+-
+-        if http_shutdown {
+-            command.arg("--http-shutdown");
+-        }
+-
+-        if let Some(url) = upstream_url.as_ref() {
+-            if !url.trim().is_empty() {
+-                command.arg("--upstream-url").arg(url);
+-            }
+-        }
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
+-        stdin
+-            .write_all(api_key.as_bytes())
+-            .await
+-            .map_err(CodexError::StdinWrite)?;
+-        stdin
+-            .write_all(b"\n")
+-            .await
+-            .map_err(CodexError::StdinWrite)?;
+-        stdin.shutdown().await.map_err(CodexError::StdinWrite)?;
+-
+-        Ok(ResponsesApiProxyHandle {
+-            child,
+-            server_info_path,
+-        })
+-    }
+-
+-    /// Spawns `codex stdio-to-uds <SOCKET_PATH>` with piped stdio for manual relays.
+-    ///
+-    /// Returns the child process so callers can write to stdin/read from stdout (e.g., to bridge a
+-    /// JSON-RPC transport over a Unix domain socket). Fails fast on empty socket paths and inherits
+-    /// the builder working directory when none is provided on the request.
+-    pub fn stdio_to_uds(
+-        &self,
+-        request: StdioToUdsRequest,
+-    ) -> Result<tokio::process::Child, CodexError> {
+-        let StdioToUdsRequest {
+-            socket_path,
+-            working_dir,
+-        } = request;
+-
+-        if socket_path.as_os_str().is_empty() {
+-            return Err(CodexError::EmptySocketPath);
+-        }
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("stdio-to-uds")
+-            .arg(&socket_path)
+-            .stdin(std::process::Stdio::piped())
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(self.sandbox_working_dir(working_dir)?);
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        spawn_with_retry(&mut command, self.command_env.binary_path())
+-    }
+-
+-    /// Runs `codex sandbox <platform> [--full-auto|--log-denials] [--config/--enable/--disable] -- <COMMAND...>`.
+-    ///
+-    /// Captures stdout/stderr and mirrors them according to the builder (`mirror_stdout` / `quiet`). Unlike
+-    /// `apply`/`diff`, non-zero exit codes are returned in [`SandboxRun::status`] without being wrapped in
+-    /// [`CodexError::NonZeroExit`]. macOS denial logging is enabled via [`SandboxCommandRequest::log_denials`]
+-    /// and ignored on other platforms. Linux uses the bundled `codex-linux-sandbox` helper; Windows sandboxing
+-    /// is experimental and relies on the upstream helper. The wrapper does not gate availability—unsupported
+-    /// installs will surface as non-zero statuses.
+-    pub async fn run_sandbox(
+-        &self,
+-        request: SandboxCommandRequest,
+-    ) -> Result<SandboxRun, CodexError> {
+-        if request.command.is_empty() {
+-            return Err(CodexError::EmptySandboxCommand);
+-        }
+-
+-        let SandboxCommandRequest {
+-            platform,
+-            command,
+-            full_auto,
+-            log_denials,
+-            config_overrides,
+-            feature_toggles,
+-            working_dir,
+-        } = request;
+-
+-        let working_dir = self.sandbox_working_dir(working_dir)?;
+-
+-        let mut process = Command::new(self.command_env.binary_path());
+-        process
+-            .arg("sandbox")
+-            .arg(platform.subcommand())
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(&working_dir);
+-
+-        if full_auto {
+-            process.arg("--full-auto");
+-        }
+-
+-        if log_denials && matches!(platform, SandboxPlatform::Macos) {
+-            process.arg("--log-denials");
+-        }
+-
+-        for override_ in config_overrides {
+-            process.arg("--config");
+-            process.arg(format!("{}={}", override_.key, override_.value));
+-        }
+-
+-        for feature in feature_toggles.enable {
+-            process.arg("--enable");
+-            process.arg(feature);
+-        }
+-
+-        for feature in feature_toggles.disable {
+-            process.arg("--disable");
+-            process.arg(feature);
+-        }
+-
+-        process.arg("--");
+-        process.args(&command);
+-
+-        self.command_env.apply(&mut process)?;
+-
+-        let mut child = spawn_with_retry(&mut process, self.command_env.binary_path())?;
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let stdout_task = tokio::spawn(tee_stream(
+-            stdout,
+-            ConsoleTarget::Stdout,
+-            self.mirror_stdout,
+-        ));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+-
+-        let wait_task = async move {
+-            let status = child
+-                .wait()
+-                .await
+-                .map_err(|source| CodexError::Wait { source })?;
+-            let stdout_bytes = stdout_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            let stderr_bytes = stderr_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+-        };
+-
+-        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+-            wait_task.await?
+-        } else {
+-            match time::timeout(self.timeout, wait_task).await {
+-                Ok(result) => result?,
+-                Err(_) => {
+-                    return Err(CodexError::Timeout {
+-                        timeout: self.timeout,
+-                    });
+-                }
+-            }
+-        };
+-
+-        Ok(SandboxRun {
+-            status,
+-            stdout: String::from_utf8(stdout_bytes)?,
+-            stderr: String::from_utf8(stderr_bytes)?,
+-        })
+-    }
+-
+     /// Probes the configured binary for version/build metadata and supported feature flags.
+     ///
+     /// Results are cached per canonical binary path and invalidated when file metadata changes.

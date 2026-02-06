@@ -1,0 +1,39 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:5562:
+ 
+         let (mut writer, reader) = tokio::io::duplex(2048);
+         let (tx, rx) = mpsc::channel(4);
+[31m-        let log_sink = crate::jsonl::JsonLogSink::new(log_path.clone()).await.unwrap();
+(B[m[31m-        let forward_handle =
+(B[m[31m-            tokio::spawn(crate::jsonl::forward_json_events(reader, tx, false, Some(log_sink)));
+(B[m[32m+        let log_sink = crate::jsonl::JsonLogSink::new(log_path.clone())
+(B[m[32m+            .await
+(B[m[32m+            .unwrap();
+(B[m[32m+        let forward_handle = tokio::spawn(crate::jsonl::forward_json_events(
+(B[m[32m+            reader,
+(B[m[32m+            tx,
+(B[m[32m+            false,
+(B[m[32m+            Some(log_sink),
+(B[m[32m+        ));
+(B[m 
+         let stream = crate::jsonl::EventChannelStream::new(rx, None);
+         pin_mut!(stream);
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:5643:
+ 
+         let (mut writer, reader) = tokio::io::duplex(4096);
+         let (tx, rx) = mpsc::channel(8);
+[31m-        let log_sink = crate::jsonl::JsonLogSink::new(log_path.clone()).await.unwrap();
+(B[m[31m-        let forward_handle =
+(B[m[31m-            tokio::spawn(crate::jsonl::forward_json_events(reader, tx, false, Some(log_sink)));
+(B[m[32m+        let log_sink = crate::jsonl::JsonLogSink::new(log_path.clone())
+(B[m[32m+            .await
+(B[m[32m+            .unwrap();
+(B[m[32m+        let forward_handle = tokio::spawn(crate::jsonl::forward_json_events(
+(B[m[32m+            reader,
+(B[m[32m+            tx,
+(B[m[32m+            false,
+(B[m[32m+            Some(log_sink),
+(B[m[32m+        ));
+(B[m 
+         for line in &lines {
+             writer.write_all(line.as_bytes()).await.unwrap();
+cargo fmt --check: FAIL

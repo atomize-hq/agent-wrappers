@@ -1,0 +1,54 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/defaults.rs:1:
+[31m-use std::{
+(B[m[31m-    env,
+(B[m[31m-    path::PathBuf,
+(B[m[31m-    time::Duration,
+(B[m[31m-};
+(B[m[32m+use std::{env, path::PathBuf, time::Duration};
+(B[m 
+ pub(crate) const DEFAULT_TIMEOUT: Duration = Duration::from_secs(120);
+ pub(crate) const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/defaults.rs:21:
+         .map(PathBuf::from)
+         .unwrap_or_else(|| PathBuf::from("codex"))
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/error.rs:1:
+[31m-use std::{
+(B[m[31m-    path::PathBuf,
+(B[m[31m-    process::ExitStatus,
+(B[m[31m-    time::Duration,
+(B[m[31m-};
+(B[m[32m+use std::{path::PathBuf, process::ExitStatus, time::Duration};
+(B[m 
+ use thiserror::Error;
+ 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/error.rs:105:
+     #[error("failed to join codex output task: {0}")]
+     Join(#[from] tokio::task::JoinError),
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:85:
+ mod process;
+ pub mod wrapper_coverage_manifest;
+ 
+[32m+pub use crate::error::CodexError;
+(B[m pub use apply_diff::{ApplyDiffArtifacts, CloudApplyRequest, CloudDiffRequest};
+ pub use auth::{AuthSessionHelper, CodexAuthMethod, CodexAuthStatus, CodexLogoutStatus};
+ pub use builder::{
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:126:
+     thread_event_jsonl_file, thread_event_jsonl_reader, JsonlThreadEventParser,
+     ThreadEventJsonlFileReader, ThreadEventJsonlReader, ThreadEventJsonlRecord,
+ };
+[31m-pub use crate::error::CodexError;
+(B[m 
+ pub(crate) use crate::defaults::{
+[31m-    default_binary_path, default_rust_log_value, CODEX_BINARY_ENV, CODEX_HOME_ENV, DEFAULT_RUST_LOG,
+(B[m[31m-    DEFAULT_TIMEOUT, RUST_LOG_ENV,
+(B[m[32m+    default_binary_path, default_rust_log_value, CODEX_BINARY_ENV, CODEX_HOME_ENV,
+(B[m[32m+    DEFAULT_RUST_LOG, DEFAULT_TIMEOUT, RUST_LOG_ENV,
+(B[m };
+ 
+ use std::{

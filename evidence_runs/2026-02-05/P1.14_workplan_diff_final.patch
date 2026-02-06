@@ -1,0 +1,57 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 6dfdddf..08380df 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -509,8 +509,8 @@ Last Updated: 2026-02-05
+ 
+ ##### P1.14 — Seam extraction: spawn/process plumbing (`process.rs`) (API preserved)
+ 
+-Status: [ ] Not Started  [ ] In Progress  [ ] Done  
+-Last Updated: YYYY-MM-DD
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
++Last Updated: 2026-02-05
+ 
+ - Goal: Extract the internal, cross-cutting subprocess spawning + stdio handling helpers from `crates/codex/src/lib.rs` into `crates/codex/src/process.rs` (or `process/*` if it grows), preserving public APIs by keeping these helpers private to the crate (or re-exporting only if already publicly reachable).
+ - Candidate contents (keep cohesive; move mechanically):
+@@ -1730,6 +1730,27 @@ Add entries as work lands. Format:
+ - Commit:
+   - 6fce405c4adcf03ec211655033a1dd4fe2bb1dcd
+ 
++### 2026-02-05 — P1.14 Seam extraction: spawn/process plumbing (`process.rs`) (API preserved)
++
++- Scope/step: P1.14
++- Why: Reduce `crates/codex/src/lib.rs` bulk by extracting shared subprocess spawn + stdio/capture helpers into a single internal module, keeping public APIs stable.
++- What changed:
++  - Added internal `crates/codex/src/process.rs` and moved `spawn_with_retry`, stdout/stderr tee/capture helpers, and output formatting helpers.
++  - Wired `mod process;` in `crates/codex/src/lib.rs` and updated internal references mechanically (no behavior changes).
++- Validation results (§4.1): PASS (with offline/no-fetch workaround for supply-chain checks due to sandbox networking + advisory DB locks)
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.14_cargo_fmt_check_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.14_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P1.14_cargo_fmt_apply.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P1.14_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.14_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P1.14_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P1.14_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.14_cargo_audit.txt`; fetch FAIL: `evidence_runs/2026-02-05/P1.14_cargo_audit_after_fetch_fail.txt`; workaround: `CARGO_HOME=/tmp/cargo_home_p1_14` + `--db /home/dev/.cargo/advisory-db --no-fetch --stale`)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P1.14_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.14_cargo_deny_advisories.txt`; network FAIL: `evidence_runs/2026-02-05/P1.14_cargo_deny_advisories_after_network_fail.txt`; offline cache miss: `evidence_runs/2026-02-05/P1.14_cargo_deny_advisories_after_offline_cache_miss.txt`; workaround: `CARGO_HOME=/tmp/cargo_home_p1_14` seeded via symlinks to `/home/dev/.cargo` + `--offline --locked --disable-fetch`)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P1.14_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P1.14_cargo_fmt_check_final.txt`) (initial FAIL: `evidence_runs/2026-02-05/P1.14_cargo_fmt_check_final_fail.txt`; applied: `evidence_runs/2026-02-05/P1.14_cargo_fmt_apply_final.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P1.14_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P1.14_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.
+@@ -1751,8 +1772,8 @@ Use this table for decisions that affect policy, public APIs, or exceptions to s
+ 
+ Selection rule (orchestrator): Execute tasks in the order listed below (top-to-bottom). Reorder this list to change cross-phase priority; do not infer priority from Phase 1/2/3 sections.
+ 
+-1) P1.14 — Seam extraction: spawn/process plumbing (`process.rs`) (API preserved)
+-2) P1.15 — Seam extraction: exec streaming + resume types + helpers (`exec/*`) (API preserved)
+-3) P1.16 — Seam extraction: auth/login helpers (`auth.rs`) (API preserved)
+-4) P1.17 — Seam extraction: remaining client subcommand wrappers (`commands/*`) (API preserved)
+-5) P1.18 — Plan next Phase 1 seams after P1.17 (no code moves)
++1) P1.15 — Seam extraction: exec streaming + resume types + helpers (`exec/*`) (API preserved)
++2) P1.16 — Seam extraction: auth/login helpers (`auth.rs`) (API preserved)
++3) P1.17 — Seam extraction: remaining client subcommand wrappers (`commands/*`) (API preserved)
++4) P1.18 — Plan next Phase 1 seams after P1.17 (no code moves)
++5) P2.0 — Define the `mcp.rs` seam map (no code moves yet)

@@ -1,0 +1,54 @@
+crates/codex/src/lib.rs:7://! - Isolate state with [`CodexClientBuilder::codex_home`] (config/auth/history/logs live under that directory) and optionally create the layout with [`CodexClientBuilder::create_home_dirs`]. [`CodexHomeLayout`] inspects `config.toml`, `auth.json`, `.credentials.json`, `history.jsonl`, `conversations/`, and `logs/`.
+crates/codex/src/lib.rs:36://! - [`CodexClient::stream_exec`] for typed, real-time JSONL events from `codex exec --json`, returning an [`ExecStream`] with an event stream plus a completion future.
+crates/codex/src/lib.rs:46://! - `.json(true)` requests JSONL streaming. Expect `thread.started`/`thread.resumed`, `turn.started`/`turn.completed`/`turn.failed`, and `item.created`/`item.updated` with `item.type` such as `agent_message`, `reasoning`, `command_execution`, `file_change`, `mcp_tool_call`, `web_search`, or `todo_list` plus optional `status`/`content`/`input`. Errors surface as `{"type":"error","message":...}`.
+crates/codex/src/lib.rs:48://! - Disable `mirror_stdout` when parsing JSON so stdout stays under caller control; `quiet` controls stderr mirroring. `json_event_log` tees raw JSONL lines to disk before parsing; `idle_timeout`, `output_last_message`, and `output_schema` cover artifact handling.
+crates/codex/src/lib.rs:52://! - `codex exec --json resume --last [-]` streams the same `thread/turn/item` events as `codex exec --json` but starts from an existing session (`thread.resumed`).
+crates/codex/src/lib.rs:75:pub mod jsonl;
+crates/codex/src/lib.rs:94:pub use jsonl::{
+crates/codex/src/lib.rs:95:    thread_event_jsonl_file, thread_event_jsonl_reader, JsonlThreadEventParser,
+crates/codex/src/lib.rs:292:    /// When `.json(true)` is enabled the CLI emits JSONL events (`thread.started` or
+crates/codex/src/lib.rs:303:    /// let jsonl = client.send_prompt("Stream repo status").await?;
+crates/codex/src/lib.rs:304:    /// println!("{jsonl}");
+crates/codex/src/lib.rs:321:    /// Streams structured JSONL events from `codex exec --json`.
+crates/codex/src/lib.rs:334:    /// Streams JSONL events with per-request CLI overrides.
+crates/codex/src/lib.rs:443:        let json_log = jsonl::prepare_json_log(
+crates/codex/src/lib.rs:449:        let stdout_task = tokio::spawn(jsonl::forward_json_events(
+crates/codex/src/lib.rs:457:        let events = jsonl::EventChannelStream::new(rx, idle_timeout);
+crates/codex/src/lib.rs:505:    /// Streams structured events from `codex exec --json resume ...`.
+crates/codex/src/lib.rs:638:        let json_log = jsonl::prepare_json_log(
+crates/codex/src/lib.rs:644:        let stdout_task = tokio::spawn(jsonl::forward_json_events(
+crates/codex/src/lib.rs:652:        let events = jsonl::EventChannelStream::new(rx, idle_timeout);
+crates/codex/src/lib.rs:2618:/// Single JSONL event emitted by `codex exec --json`.
+crates/codex/src/lib.rs:3111:    /// Optional file path that receives a tee of every raw JSONL event line as it streams in.
+crates/codex/src/lib.rs:4536:/// `events` yields parsed [`ThreadEvent`] values as soon as each JSONL line arrives from the CLI.
+crates/codex/src/lib.rs:4564:/// Errors that may occur while consuming the JSONL stream.
+crates/codex/src/lib.rs:4569:    #[error("failed to parse codex JSONL event: {source}: `{line}`")]
+crates/codex/src/lib.rs:4575:    #[error("codex JSONL event missing required context: {message}: `{line}`")]
+crates/codex/src/lib.rs:5254:            tokio::spawn(crate::jsonl::forward_json_events(reader, tx, false, None));
+crates/codex/src/lib.rs:5262:        let stream = crate::jsonl::EventChannelStream::new(rx, None);
+crates/codex/src/lib.rs:5316:            tokio::spawn(crate::jsonl::forward_json_events(reader, tx, false, None));
+crates/codex/src/lib.rs:5325:        let stream = crate::jsonl::EventChannelStream::new(rx, None);
+crates/codex/src/lib.rs:5354:        let log_sink = crate::jsonl::JsonLogSink::new(log_path.clone())
+crates/codex/src/lib.rs:5357:        let forward_handle = tokio::spawn(crate::jsonl::forward_json_events(
+crates/codex/src/lib.rs:5364:        let stream = crate::jsonl::EventChannelStream::new(rx, None);
+crates/codex/src/lib.rs:5441:        let log_sink = crate::jsonl::JsonLogSink::new(log_path.clone())
+crates/codex/src/lib.rs:5444:        let forward_handle = tokio::spawn(crate::jsonl::forward_json_events(
+crates/codex/src/lib.rs:5457:        let stream = crate::jsonl::EventChannelStream::new(rx, None);
+crates/codex/src/lib.rs:5471:        let stream = crate::jsonl::EventChannelStream::new(rx, Some(Duration::from_millis(5)));
+crates/codex/src/lib.rs:7034:        assert_eq!(layout.history_path(), root.join("history.jsonl"));
+crates/codex/src/lib.rs:7170:        let mut context = crate::jsonl::StreamContext::default();
+crates/codex/src/lib.rs:7173:        let thread_event = crate::jsonl::normalize_thread_event(thread_line, &mut context).unwrap();
+crates/codex/src/lib.rs:7180:        let turn_event = crate::jsonl::normalize_thread_event(turn_line, &mut context).unwrap();
+crates/codex/src/lib.rs:7191:        let item_event = crate::jsonl::normalize_thread_event(item_line, &mut context).unwrap();
+crates/codex/src/lib.rs:7204:        let mut context = crate::jsonl::StreamContext::default();
+crates/codex/src/lib.rs:7206:        let err = crate::jsonl::normalize_thread_event(line, &mut context).unwrap_err();
+crates/codex/src/home.rs:76:/// `history.jsonl`; `conversations/` holds transcript JSONL files and `logs/`
+crates/codex/src/home.rs:110:    /// Path to `history.jsonl` under `CODEX_HOME`.
+crates/codex/src/home.rs:112:        self.root.join("history.jsonl")
+crates/codex/src/jsonl.rs:27:/// Parses Codex `--json` JSONL logs into typed [`ThreadEvent`] values.
+crates/codex/src/jsonl.rs:46:    /// Parses a single logical JSONL line.
+crates/codex/src/jsonl.rs:265:pub fn thread_event_jsonl_reader<R: BufRead>(reader: R) -> ThreadEventJsonlReader<R> {
+crates/codex/src/jsonl.rs:270:pub fn thread_event_jsonl_file(
+crates/codex/src/builder/mod.rs:175:    /// Enables Codex's JSONL output mode (`--json`).
+crates/codex/src/builder/mod.rs:201:    /// also being captured. Disable this when you plan to parse JSONL output or
+crates/codex/src/builder/mod.rs:208:    /// Tees each JSONL event line from [`crate::CodexClient::stream_exec`] into a log file.

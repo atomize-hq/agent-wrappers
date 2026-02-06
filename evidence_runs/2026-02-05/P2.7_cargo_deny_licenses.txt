@@ -1,0 +1,2 @@
+$ cargo deny check licenses
+licenses ok

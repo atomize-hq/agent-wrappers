@@ -1,0 +1,901 @@
+  2700	
+  2701	    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+  2702	        self.prompt = Some(prompt.into());
+  2703	        self
+  2704	    }
+  2705	
+  2706	    pub fn idle_timeout(mut self, idle_timeout: Duration) -> Self {
+  2707	        self.idle_timeout = Some(idle_timeout);
+  2708	        self
+  2709	    }
+  2710	
+  2711	    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+  2712	        self.overrides
+  2713	            .config_overrides
+  2714	            .push(ConfigOverride::new(key, value));
+  2715	        self
+  2716	    }
+  2717	
+  2718	    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+  2719	        self.overrides
+  2720	            .config_overrides
+  2721	            .push(ConfigOverride::from_raw(raw));
+  2722	        self
+  2723	    }
+  2724	
+  2725	    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+  2726	        let profile = profile.into();
+  2727	        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+  2728	        self
+  2729	    }
+  2730	
+  2731	    pub fn oss(mut self, enable: bool) -> Self {
+  2732	        self.overrides.oss = if enable {
+  2733	            FlagState::Enable
+  2734	        } else {
+  2735	            FlagState::Disable
+  2736	        };
+  2737	        self
+  2738	    }
+  2739	
+  2740	    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+  2741	        self.overrides.feature_toggles.enable.push(name.into());
+  2742	        self
+  2743	    }
+  2744	
+  2745	    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+  2746	        self.overrides.feature_toggles.disable.push(name.into());
+  2747	        self
+  2748	    }
+  2749	
+  2750	    pub fn search(mut self, enable: bool) -> Self {
+  2751	        self.overrides.search = if enable {
+  2752	            FlagState::Enable
+  2753	        } else {
+  2754	            FlagState::Disable
+  2755	        };
+  2756	        self
+  2757	    }
+  2758	}
+  2759	
+  2760	/// Ergonomic container for the streaming surface; produced by `stream_exec` (implemented in D2).
+  2761	///
+  2762	/// `events` yields parsed [`ThreadEvent`] values as soon as each JSONL line arrives from the CLI.
+  2763	/// `completion` resolves once the Codex process exits and is the place to surface `--output-last-message`
+  2764	/// and `--output-schema` paths after streaming finishes.
+  2765	pub struct ExecStream {
+  2766	    pub events: DynThreadEventStream,
+  2767	    pub completion: DynExecCompletion,
+  2768	}
+  2769	
+  2770	/// Type-erased stream of events from the Codex CLI.
+  2771	pub type DynThreadEventStream =
+  2772	    Pin<Box<dyn Stream<Item = Result<ThreadEvent, ExecStreamError>> + Send>>;
+  2773	
+  2774	/// Type-erased completion future that resolves when streaming stops.
+  2775	pub type DynExecCompletion =
+  2776	    Pin<Box<dyn Future<Output = Result<ExecCompletion, ExecStreamError>> + Send>>;
+  2777	
+  2778	/// Summary returned when the codex child process exits.
+  2779	#[derive(Clone, Debug)]
+  2780	pub struct ExecCompletion {
+  2781	    pub status: ExitStatus,
+  2782	    /// Path that codex wrote when `--output-last-message` was enabled. The wrapper may eagerly
+  2783	    /// read the file and populate `last_message` when feasible.
+  2784	    pub last_message_path: Option<PathBuf>,
+  2785	    pub last_message: Option<String>,
+  2786	    /// Path to the JSON schema requested via `--output-schema`, if provided by the caller.
+  2787	    pub schema_path: Option<PathBuf>,
+  2788	}
+  2789	
+  2790	/// Errors that may occur while consuming the JSONL stream.
+  2791	#[derive(Debug, Error)]
+  2792	pub enum ExecStreamError {
+  2793	    #[error(transparent)]
+  2794	    Codex(#[from] CodexError),
+  2795	    #[error("failed to parse codex JSONL event: {source}: `{line}`")]
+  2796	    Parse {
+  2797	        line: String,
+  2798	        #[source]
+  2799	        source: serde_json::Error,
+  2800	    },
+  2801	    #[error("codex JSONL event missing required context: {message}: `{line}`")]
+  2802	    Normalize { line: String, message: String },
+  2803	    #[error("codex JSON stream idle for {idle_for:?}")]
+  2804	    IdleTimeout { idle_for: Duration },
+  2805	    #[error("codex JSON stream closed unexpectedly")]
+  2806	    ChannelClosed,
+  2807	}
+  2808	
+  2809	async fn read_last_message(path: &Path) -> Option<String> {
+  2810	    (fs::read_to_string(path).await).ok()
+  2811	}
+  2812	
+  2813	fn unique_temp_path(prefix: &str, extension: &str) -> PathBuf {
+  2814	    let mut path = env::temp_dir();
+  2815	    let timestamp = SystemTime::now()
+  2816	        .duration_since(UNIX_EPOCH)
+  2817	        .unwrap_or_else(|_| Duration::from_secs(0))
+  2818	        .as_nanos();
+  2819	    path.push(format!(
+  2820	        "{prefix}{timestamp}_{}.{}",
+  2821	        std::process::id(),
+  2822	        extension
+  2823	    ));
+  2824	    path
+  2825	}
+  2826	
+  2827	enum DirectoryContext {
+  2828	    Fixed(PathBuf),
+  2829	    Ephemeral(TempDir),
+  2830	}
+  2831	
+  2832	impl DirectoryContext {
+  2833	    fn path(&self) -> &Path {
+  2834	        match self {
+  2835	            DirectoryContext::Fixed(path) => path.as_path(),
+  2836	            DirectoryContext::Ephemeral(dir) => dir.path(),
+  2837	        }
+  2838	    }
+  2839	}
+  2840	
+  2841	fn command_output_text(output: &CommandOutput) -> String {
+  2842	    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+  2843	    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+  2844	    let stdout = stdout.trim_end();
+  2845	    let stderr = stderr.trim_end();
+  2846	    if stdout.is_empty() {
+  2847	        stderr.to_string()
+  2848	    } else if stderr.is_empty() {
+  2849	        stdout.to_string()
+  2850	    } else {
+  2851	        format!("{stdout}\n{stderr}")
+  2852	    }
+  2853	}
+  2854	
+  2855	fn parse_semver_from_raw(raw: &str) -> Option<Version> {
+  2856	    for token in raw.split_whitespace() {
+  2857	        let candidate = token
+  2858	            .trim_matches(|c: char| matches!(c, '(' | ')' | ',' | ';'))
+  2859	            .trim_start_matches('v');
+  2860	        if let Ok(version) = Version::parse(candidate) {
+  2861	            return Some(version);
+  2862	        }
+  2863	    }
+  2864	    None
+  2865	}
+  2866	
+  2867	fn parse_version_output(output: &str) -> CodexVersionInfo {
+  2868	    let raw = output.trim().to_string();
+  2869	    let parsed_version = parse_semver_from_raw(&raw);
+  2870	    let semantic = parsed_version
+  2871	        .as_ref()
+  2872	        .map(|version| (version.major, version.minor, version.patch));
+  2873	    let mut commit = extract_commit_hash(&raw);
+  2874	    if commit.is_none() {
+  2875	        for token in raw.split_whitespace() {
+  2876	            let candidate = token
+  2877	                .trim_matches(|c: char| matches!(c, '(' | ')' | ',' | ';'))
+  2878	                .trim_start_matches('v');
+  2879	            if let Some(cleaned) = cleaned_hex(candidate) {
+  2880	                commit = Some(cleaned);
+  2881	                break;
+  2882	            }
+  2883	        }
+  2884	    }
+  2885	    let channel = parsed_version
+  2886	        .as_ref()
+  2887	        .map(release_channel_for_version)
+  2888	        .unwrap_or_else(|| infer_release_channel(&raw));
+  2889	
+  2890	    CodexVersionInfo {
+  2891	        raw,
+  2892	        semantic,
+  2893	        commit,
+  2894	        channel,
+  2895	    }
+  2896	}
+  2897	
+  2898	fn release_channel_for_version(version: &Version) -> CodexReleaseChannel {
+  2899	    if version.pre.is_empty() {
+  2900	        CodexReleaseChannel::Stable
+  2901	    } else {
+  2902	        let prerelease = version.pre.as_str().to_ascii_lowercase();
+  2903	        if prerelease.contains("beta") {
+  2904	            CodexReleaseChannel::Beta
+  2905	        } else if prerelease.contains("nightly") {
+  2906	            CodexReleaseChannel::Nightly
+  2907	        } else {
+  2908	            CodexReleaseChannel::Custom
+  2909	        }
+  2910	    }
+  2911	}
+  2912	
+  2913	fn infer_release_channel(raw: &str) -> CodexReleaseChannel {
+  2914	    let lower = raw.to_ascii_lowercase();
+  2915	    if lower.contains("beta") {
+  2916	        CodexReleaseChannel::Beta
+  2917	    } else if lower.contains("nightly") {
+  2918	        CodexReleaseChannel::Nightly
+  2919	    } else {
+  2920	        CodexReleaseChannel::Custom
+  2921	    }
+  2922	}
+  2923	
+  2924	fn codex_semver(info: &CodexVersionInfo) -> Option<Version> {
+  2925	    if let Some(parsed) = parse_semver_from_raw(&info.raw) {
+  2926	        return Some(parsed);
+  2927	    }
+  2928	    let (major, minor, patch) = info.semantic?;
+  2929	    let mut version = Version::new(major, minor, patch);
+  2930	    if version.pre.is_empty() {
+  2931	        match info.channel {
+  2932	            CodexReleaseChannel::Beta => {
+  2933	                version.pre = Prerelease::new("beta").ok()?;
+  2934	            }
+  2935	            CodexReleaseChannel::Nightly => {
+  2936	                version.pre = Prerelease::new("nightly").ok()?;
+  2937	            }
+  2938	            CodexReleaseChannel::Stable | CodexReleaseChannel::Custom => {}
+  2939	        }
+  2940	    }
+  2941	    Some(version)
+  2942	}
+  2943	
+  2944	fn codex_release_from_info(info: &CodexVersionInfo) -> Option<CodexRelease> {
+  2945	    let version = codex_semver(info)?;
+  2946	    Some(CodexRelease {
+  2947	        channel: info.channel,
+  2948	        version,
+  2949	    })
+  2950	}
+  2951	
+  2952	fn extract_commit_hash(raw: &str) -> Option<String> {
+  2953	    let tokens: Vec<&str> = raw.split_whitespace().collect();
+  2954	    for window in tokens.windows(2) {
+  2955	        if window[0].eq_ignore_ascii_case("commit") {
+  2956	            if let Some(cleaned) = cleaned_hex(window[1]) {
+  2957	                return Some(cleaned);
+  2958	            }
+  2959	        }
+  2960	    }
+  2961	
+  2962	    for token in tokens {
+  2963	        if let Some(cleaned) = cleaned_hex(token) {
+  2964	            return Some(cleaned);
+  2965	        }
+  2966	    }
+  2967	    None
+  2968	}
+  2969	
+  2970	fn cleaned_hex(token: &str) -> Option<String> {
+  2971	    let trimmed = token
+  2972	        .trim_matches(|c: char| matches!(c, '(' | ')' | ',' | ';'))
+  2973	        .trim_start_matches("commit")
+  2974	        .trim_start_matches(':')
+  2975	        .trim_start_matches('g');
+  2976	    if trimmed.len() >= 7 && trimmed.chars().all(|c| c.is_ascii_hexdigit()) {
+  2977	        Some(trimmed.to_string())
+  2978	    } else {
+  2979	        None
+  2980	    }
+  2981	}
+  2982	
+  2983	fn parse_features_from_json(output: &str) -> Option<CodexFeatureFlags> {
+  2984	    let parsed: Value = serde_json::from_str(output).ok()?;
+  2985	    let mut tokens = HashSet::new();
+  2986	    collect_feature_tokens(&parsed, &mut tokens);
+  2987	    if tokens.is_empty() {
+  2988	        return None;
+  2989	    }
+  2990	
+  2991	    let mut flags = CodexFeatureFlags::default();
+  2992	    for token in tokens {
+  2993	        apply_feature_token(&mut flags, &token);
+  2994	    }
+  2995	    Some(flags)
+  2996	}
+  2997	
+  2998	fn collect_feature_tokens(value: &Value, tokens: &mut HashSet<String>) {
+  2999	    match value {
+  3000	        Value::String(value) => {
+  3001	            if !value.trim().is_empty() {
+  3002	                tokens.insert(value.clone());
+  3003	            }
+  3004	        }
+  3005	        Value::Array(items) => {
+  3006	            for item in items {
+  3007	                collect_feature_tokens(item, tokens);
+  3008	            }
+  3009	        }
+  3010	        Value::Object(map) => {
+  3011	            for (key, value) in map {
+  3012	                if let Value::Bool(true) = value {
+  3013	                    tokens.insert(key.clone());
+  3014	                }
+  3015	                collect_feature_tokens(value, tokens);
+  3016	            }
+  3017	        }
+  3018	        _ => {}
+  3019	    }
+  3020	}
+  3021	
+  3022	fn parse_features_from_text(output: &str) -> CodexFeatureFlags {
+  3023	    let mut flags = CodexFeatureFlags::default();
+  3024	    let lower = output.to_ascii_lowercase();
+  3025	    if lower.contains("features list") {
+  3026	        flags.supports_features_list = true;
+  3027	    }
+  3028	    if lower.contains("--output-schema") || lower.contains("output schema") {
+  3029	        flags.supports_output_schema = true;
+  3030	    }
+  3031	    if lower.contains("add-dir") || lower.contains("add dir") {
+  3032	        flags.supports_add_dir = true;
+  3033	    }
+  3034	    if lower.contains("login --mcp") || lower.contains("mcp login") {
+  3035	        flags.supports_mcp_login = true;
+  3036	    }
+  3037	    if lower.contains("login") && lower.contains("mcp") {
+  3038	        flags.supports_mcp_login = true;
+  3039	    }
+  3040	
+  3041	    for token in lower
+  3042	        .split(|c: char| c.is_ascii_whitespace() || c == ',' || c == ';' || c == '|')
+  3043	        .filter(|token| !token.is_empty())
+  3044	    {
+  3045	        apply_feature_token(&mut flags, token);
+  3046	    }
+  3047	    flags
+  3048	}
+  3049	
+  3050	fn parse_help_output(output: &str) -> CodexFeatureFlags {
+  3051	    let mut flags = parse_features_from_text(output);
+  3052	    let lower = output.to_ascii_lowercase();
+  3053	    if lower.contains("features list") {
+  3054	        flags.supports_features_list = true;
+  3055	    }
+  3056	    flags
+  3057	}
+  3058	
+  3059	fn merge_feature_flags(target: &mut CodexFeatureFlags, update: CodexFeatureFlags) {
+  3060	    target.supports_features_list |= update.supports_features_list;
+  3061	    target.supports_output_schema |= update.supports_output_schema;
+  3062	    target.supports_add_dir |= update.supports_add_dir;
+  3063	    target.supports_mcp_login |= update.supports_mcp_login;
+  3064	}
+  3065	
+  3066	fn detected_feature_flags(flags: &CodexFeatureFlags) -> bool {
+  3067	    flags.supports_output_schema || flags.supports_add_dir || flags.supports_mcp_login
+  3068	}
+  3069	
+  3070	fn should_run_help_fallback(flags: &CodexFeatureFlags) -> bool {
+  3071	    !flags.supports_features_list
+  3072	        || !flags.supports_output_schema
+  3073	        || !flags.supports_add_dir
+  3074	        || !flags.supports_mcp_login
+  3075	}
+  3076	
+  3077	fn normalize_feature_token(token: &str) -> String {
+  3078	    token
+  3079	        .chars()
+  3080	        .map(|c| {
+  3081	            if c.is_ascii_alphanumeric() {
+  3082	                c.to_ascii_lowercase()
+  3083	            } else {
+  3084	                '_'
+  3085	            }
+  3086	        })
+  3087	        .collect()
+  3088	}
+  3089	
+  3090	fn apply_feature_token(flags: &mut CodexFeatureFlags, token: &str) {
+  3091	    let normalized = normalize_feature_token(token);
+  3092	    let compact = normalized.replace('_', "");
+  3093	    if normalized.contains("features_list") || compact.contains("featureslist") {
+  3094	        flags.supports_features_list = true;
+  3095	    }
+  3096	    if normalized.contains("output_schema") || compact.contains("outputschema") {
+  3097	        flags.supports_output_schema = true;
+  3098	    }
+  3099	    if normalized.contains("add_dir") || compact.contains("adddir") {
+  3100	        flags.supports_add_dir = true;
+  3101	    }
+  3102	    if normalized.contains("mcp_login")
+  3103	        || (normalized.contains("login") && normalized.contains("mcp"))
+  3104	    {
+  3105	        flags.supports_mcp_login = true;
+  3106	    }
+  3107	}
+  3108	
+  3109	fn parse_feature_list_output(
+  3110	    stdout: &str,
+  3111	    prefer_json: bool,
+  3112	) -> Result<(Vec<CodexFeature>, FeaturesListFormat), String> {
+  3113	    let trimmed = stdout.trim();
+  3114	    if trimmed.is_empty() {
+  3115	        return Err("features list output was empty".to_string());
+  3116	    }
+  3117	
+  3118	    if prefer_json {
+  3119	        if let Some(features) = parse_feature_list_json(trimmed) {
+  3120	            if !features.is_empty() {
+  3121	                return Ok((features, FeaturesListFormat::Json));
+  3122	            }
+  3123	        }
+  3124	        if let Some(features) = parse_feature_list_text(trimmed) {
+  3125	            if !features.is_empty() {
+  3126	                return Ok((features, FeaturesListFormat::Text));
+  3127	            }
+  3128	        }
+  3129	    } else {
+  3130	        if let Some(features) = parse_feature_list_text(trimmed) {
+  3131	            if !features.is_empty() {
+  3132	                return Ok((features, FeaturesListFormat::Text));
+  3133	            }
+  3134	        }
+  3135	        if let Some(features) = parse_feature_list_json(trimmed) {
+  3136	            if !features.is_empty() {
+  3137	                return Ok((features, FeaturesListFormat::Json));
+  3138	            }
+  3139	        }
+  3140	    }
+  3141	
+  3142	    Err("could not parse JSON or text feature rows".to_string())
+  3143	}
+  3144	
+  3145	fn parse_feature_list_json(output: &str) -> Option<Vec<CodexFeature>> {
+  3146	    let parsed: Value = serde_json::from_str(output).ok()?;
+  3147	    parse_feature_list_json_value(&parsed)
+  3148	}
+  3149	
+  3150	fn parse_feature_list_json_value(value: &Value) -> Option<Vec<CodexFeature>> {
+  3151	    match value {
+  3152	        Value::Array(items) => Some(
+  3153	            items
+  3154	                .iter()
+  3155	                .filter_map(|item| match item {
+  3156	                    Value::Object(map) => feature_from_json_fields(None, map),
+  3157	                    Value::String(name) => Some(CodexFeature {
+  3158	                        name: name.clone(),
+  3159	                        stage: None,
+  3160	                        enabled: true,
+  3161	                        extra: BTreeMap::new(),
+  3162	                    }),
+  3163	                    _ => None,
+  3164	                })
+  3165	                .collect(),
+  3166	        ),
+  3167	        Value::Object(map) => {
+  3168	            if let Some(features) = map.get("features") {
+  3169	                return parse_feature_list_json_value(features);
+  3170	            }
+  3171	            if map.contains_key("name") || map.contains_key("enabled") || map.contains_key("stage")
+  3172	            {
+  3173	                return feature_from_json_fields(None, map).map(|feature| vec![feature]);
+  3174	            }
+  3175	            Some(
+  3176	                map.iter()
+  3177	                    .filter_map(|(name, value)| match value {
+  3178	                        Value::Object(inner) => {
+  3179	                            feature_from_json_fields(Some(name.as_str()), inner)
+  3180	                        }
+  3181	                        Value::Bool(flag) => Some(CodexFeature {
+  3182	                            name: name.clone(),
+  3183	                            stage: None,
+  3184	                            enabled: *flag,
+  3185	                            extra: BTreeMap::new(),
+  3186	                        }),
+  3187	                        Value::String(flag) => parse_feature_enabled_str(flag)
+  3188	                            .map(|enabled| CodexFeature {
+  3189	                                name: name.clone(),
+  3190	                                stage: None,
+  3191	                                enabled,
+  3192	                                extra: BTreeMap::new(),
+  3193	                            })
+  3194	                            .or_else(|| {
+  3195	                                Some(CodexFeature {
+  3196	                                    name: name.clone(),
+  3197	                                    stage: Some(CodexFeatureStage::parse(flag)),
+  3198	                                    enabled: true,
+  3199	                                    extra: BTreeMap::new(),
+  3200	                                })
+  3201	                            }),
+  3202	                        _ => None,
+  3203	                    })
+  3204	                    .collect(),
+  3205	            )
+  3206	        }
+  3207	        _ => None,
+  3208	    }
+  3209	}
+  3210	
+  3211	fn parse_feature_list_text(output: &str) -> Option<Vec<CodexFeature>> {
+  3212	    let mut features = Vec::new();
+  3213	    for line in output.lines() {
+  3214	        let trimmed = line.trim();
+  3215	        if trimmed.is_empty() {
+  3216	            continue;
+  3217	        }
+  3218	        if trimmed
+  3219	            .chars()
+  3220	            .all(|c| matches!(c, '-' | '=' | '+' | '*' | '|'))
+  3221	        {
+  3222	            continue;
+  3223	        }
+  3224	
+  3225	        let tokens: Vec<&str> = trimmed.split_whitespace().collect();
+  3226	        if tokens.len() < 3 {
+  3227	            continue;
+  3228	        }
+  3229	        if tokens[0].eq_ignore_ascii_case("feature")
+  3230	            && tokens[1].eq_ignore_ascii_case("stage")
+  3231	            && tokens[2].eq_ignore_ascii_case("enabled")
+  3232	        {
+  3233	            continue;
+  3234	        }
+  3235	
+  3236	        let enabled_token = tokens.last().copied().unwrap_or_default();
+  3237	        let enabled = match parse_feature_enabled_str(enabled_token) {
+  3238	            Some(value) => value,
+  3239	            None => continue,
+  3240	        };
+  3241	        let stage_token = tokens.get(tokens.len() - 2).copied().unwrap_or_default();
+  3242	        let name = tokens[..tokens.len() - 2].join(" ");
+  3243	        if name.is_empty() {
+  3244	            continue;
+  3245	        }
+  3246	        let stage = (!stage_token.is_empty()).then(|| CodexFeatureStage::parse(stage_token));
+  3247	        features.push(CodexFeature {
+  3248	            name,
+  3249	            stage,
+  3250	            enabled,
+  3251	            extra: BTreeMap::new(),
+  3252	        });
+  3253	    }
+  3254	
+  3255	    if features.is_empty() {
+  3256	        None
+  3257	    } else {
+  3258	        Some(features)
+  3259	    }
+  3260	}
+  3261	
+  3262	fn parse_feature_enabled_value(value: &Value) -> Option<bool> {
+  3263	    match value {
+  3264	        Value::Bool(flag) => Some(*flag),
+  3265	        Value::String(raw) => parse_feature_enabled_str(raw),
+  3266	        _ => None,
+  3267	    }
+  3268	}
+  3269	
+  3270	fn parse_feature_enabled_str(raw: &str) -> Option<bool> {
+  3271	    match raw.trim().to_ascii_lowercase().as_str() {
+  3272	        "true" | "yes" | "y" | "on" | "1" | "enabled" => Some(true),
+  3273	        "false" | "no" | "n" | "off" | "0" | "disabled" => Some(false),
+  3274	        _ => None,
+  3275	    }
+  3276	}
+  3277	
+  3278	fn feature_from_json_fields(
+  3279	    name_hint: Option<&str>,
+  3280	    map: &serde_json::Map<String, Value>,
+  3281	) -> Option<CodexFeature> {
+  3282	    let name = map
+  3283	        .get("name")
+  3284	        .and_then(Value::as_str)
+  3285	        .map(str::to_string)
+  3286	        .or_else(|| name_hint.map(str::to_string))?;
+  3287	    let enabled = map
+  3288	        .get("enabled")
+  3289	        .and_then(parse_feature_enabled_value)
+  3290	        .or_else(|| map.get("value").and_then(parse_feature_enabled_value))?;
+  3291	    let stage = map
+  3292	        .get("stage")
+  3293	        .or_else(|| map.get("status"))
+  3294	        .and_then(Value::as_str)
+  3295	        .map(CodexFeatureStage::parse);
+  3296	
+  3297	    let mut extra = BTreeMap::new();
+  3298	    for (key, value) in map {
+  3299	        if matches!(
+  3300	            key.as_str(),
+  3301	            "name" | "stage" | "status" | "enabled" | "value"
+  3302	        ) {
+  3303	            continue;
+  3304	        }
+  3305	        extra.insert(key.clone(), value.clone());
+  3306	    }
+  3307	
+  3308	    Some(CodexFeature {
+  3309	        name,
+  3310	        stage,
+  3311	        enabled,
+  3312	        extra,
+  3313	    })
+  3314	}
+  3315	
+  3316	/// Computes an update advisory for a previously probed binary.
+  3317	///
+  3318	/// Callers that already have a [`CodexCapabilities`] snapshot can use this
+  3319	/// helper to avoid re-running `codex --version`. Provide a [`CodexLatestReleases`]
+  3320	/// table sourced from your preferred distribution channel.
+  3321	pub fn update_advisory_from_capabilities(
+  3322	    capabilities: &CodexCapabilities,
+  3323	    latest_releases: &CodexLatestReleases,
+  3324	) -> CodexUpdateAdvisory {
+  3325	    let local_release = capabilities
+  3326	        .version
+  3327	        .as_ref()
+  3328	        .and_then(codex_release_from_info);
+  3329	    let preferred_channel = local_release
+  3330	        .as_ref()
+  3331	        .map(|release| release.channel)
+  3332	        .unwrap_or(CodexReleaseChannel::Stable);
+  3333	    let (latest_release, comparison_channel, fell_back) =
+  3334	        latest_releases.select_for_channel(preferred_channel);
+  3335	    let mut notes = Vec::new();
+  3336	
+  3337	    if fell_back {
+  3338	        notes.push(format!(
+  3339	            "No latest {preferred_channel} release provided; comparing against {comparison_channel}."
+  3340	        ));
+  3341	    }
+  3342	
+  3343	    let status = match (local_release.as_ref(), latest_release.as_ref()) {
+  3344	        (None, None) => CodexUpdateStatus::UnknownLatestVersion,
+  3345	        (None, Some(_)) => CodexUpdateStatus::UnknownLocalVersion,
+  3346	        (Some(_), None) => CodexUpdateStatus::UnknownLatestVersion,
+  3347	        (Some(local), Some(latest)) => {
+  3348	            if local.version < latest.version {
+  3349	                CodexUpdateStatus::UpdateRecommended
+  3350	            } else if local.version > latest.version {
+  3351	                CodexUpdateStatus::LocalNewerThanKnown
+  3352	            } else {
+  3353	                CodexUpdateStatus::UpToDate
+  3354	            }
+  3355	        }
+  3356	    };
+  3357	
+  3358	    match status {
+  3359	        CodexUpdateStatus::UpdateRecommended => {
+  3360	            if let (Some(local), Some(latest)) = (local_release.as_ref(), latest_release.as_ref()) {
+  3361	                notes.push(format!(
+  3362	                    "Local codex {local_version} is behind latest {comparison_channel} {latest_version}.",
+  3363	                    local_version = local.version,
+  3364	                    latest_version = latest.version
+  3365	                ));
+  3366	            }
+  3367	        }
+  3368	        CodexUpdateStatus::LocalNewerThanKnown => {
+  3369	            if let Some(local) = local_release.as_ref() {
+  3370	                let known = latest_release
+  3371	                    .as_ref()
+  3372	                    .map(|release| release.version.to_string())
+  3373	                    .unwrap_or_else(|| "unknown".to_string());
+  3374	                notes.push(format!(
+  3375	                    "Local codex {local_version} is newer than provided {comparison_channel} metadata (latest table: {known}).",
+  3376	                    local_version = local.version
+  3377	                ));
+  3378	            }
+  3379	        }
+  3380	        CodexUpdateStatus::UnknownLocalVersion => {
+  3381	            if let Some(latest) = latest_release.as_ref() {
+  3382	                notes.push(format!(
+  3383	                    "Latest known {comparison_channel} release is {latest_version}; local version could not be parsed.",
+  3384	                    latest_version = latest.version
+  3385	                ));
+  3386	            } else {
+  3387	                notes.push(
+  3388	                    "Local version could not be parsed and no latest release was provided."
+  3389	                        .to_string(),
+  3390	                );
+  3391	            }
+  3392	        }
+  3393	        CodexUpdateStatus::UnknownLatestVersion => notes.push(
+  3394	            "No latest Codex release information provided; update advisory unavailable."
+  3395	                .to_string(),
+  3396	        ),
+  3397	        CodexUpdateStatus::UpToDate => {
+  3398	            if let Some(latest) = latest_release.as_ref() {
+  3399	                notes.push(format!(
+  3400	                    "Local codex matches latest {comparison_channel} release {latest_version}.",
+  3401	                    latest_version = latest.version
+  3402	                ));
+  3403	            }
+  3404	        }
+  3405	    }
+  3406	
+  3407	    CodexUpdateAdvisory {
+  3408	        local_release,
+  3409	        latest_release,
+  3410	        comparison_channel,
+  3411	        status,
+  3412	        notes,
+  3413	    }
+  3414	}
+  3415	
+  3416	#[cfg(test)]
+  3417	mod tests {
+  3418	    use super::*;
+  3419	    use crate::builder::ResolvedCliOverrides;
+  3420	    use futures_util::{pin_mut, StreamExt};
+  3421	    use serde_json::json;
+  3422	    use std::collections::HashMap;
+  3423	    use std::fs as std_fs;
+  3424	    #[cfg(unix)]
+  3425	    use std::os::unix::fs::PermissionsExt;
+  3426	    use std::sync::OnceLock;
+  3427	    use std::time::{Duration, SystemTime};
+  3428	    use tokio::{
+  3429	        fs,
+  3430	        io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+  3431	    };
+  3432	
+  3433	    fn env_mutex() -> &'static tokio::sync::Mutex<()> {
+  3434	        static ENV_MUTEX: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
+  3435	        ENV_MUTEX.get_or_init(|| tokio::sync::Mutex::new(()))
+  3436	    }
+  3437	
+  3438	    fn env_guard() -> tokio::sync::MutexGuard<'static, ()> {
+  3439	        env_mutex().blocking_lock()
+  3440	    }
+  3441	
+  3442	    async fn env_guard_async() -> tokio::sync::MutexGuard<'static, ()> {
+  3443	        env_mutex().lock().await
+  3444	    }
+  3445	
+  3446	    #[tokio::test]
+  3447	    async fn json_stream_preserves_order_and_parses_tool_calls() {
+  3448	        let lines = [
+  3449	            r#"{"type":"thread.started","thread_id":"thread-1"}"#.to_string(),
+  3450	            serde_json::to_string(&json!({
+  3451	                "type": "item.started",
+  3452	                "thread_id": "thread-1",
+  3453	                "turn_id": "turn-1",
+  3454	                "item_id": "item-1",
+  3455	                "item_type": "mcp_tool_call",
+  3456	                "content": {
+  3457	                    "server_name": "files",
+  3458	                    "tool_name": "list",
+  3459	                    "status": "running"
+  3460	                }
+  3461	            }))
+  3462	            .unwrap(),
+  3463	            serde_json::to_string(&json!({
+  3464	                "type": "item.delta",
+  3465	                "thread_id": "thread-1",
+  3466	                "turn_id": "turn-1",
+  3467	                "item_id": "item-1",
+  3468	                "item_type": "mcp_tool_call",
+  3469	                "delta": {
+  3470	                    "result": {"paths": ["foo.rs"]},
+  3471	                    "status": "completed"
+  3472	                }
+  3473	            }))
+  3474	            .unwrap(),
+  3475	        ];
+  3476	
+  3477	        let (mut writer, reader) = tokio::io::duplex(4096);
+  3478	        let (tx, rx) = mpsc::channel(8);
+  3479	        let forward_handle =
+  3480	            tokio::spawn(crate::jsonl::forward_json_events(reader, tx, false, None));
+  3481	
+  3482	        for line in &lines {
+  3483	            writer.write_all(line.as_bytes()).await.unwrap();
+  3484	            writer.write_all(b"\n").await.unwrap();
+  3485	        }
+  3486	        writer.shutdown().await.unwrap();
+  3487	
+  3488	        let stream = crate::jsonl::EventChannelStream::new(rx, None);
+  3489	        pin_mut!(stream);
+  3490	        let events: Vec<_> = stream.collect().await;
+  3491	        forward_handle.await.unwrap().unwrap();
+  3492	
+  3493	        assert_eq!(events.len(), lines.len(), "events: {events:?}");
+  3494	
+  3495	        match &events[0] {
+  3496	            Ok(ThreadEvent::ThreadStarted(event)) => {
+  3497	                assert_eq!(event.thread_id, "thread-1");
+  3498	            }
+  3499	            other => panic!("unexpected first event: {other:?}"),
+  3500	        }
+  3501	
+  3502	        match &events[1] {
+  3503	            Ok(ThreadEvent::ItemStarted(envelope)) => {
+  3504	                assert_eq!(envelope.thread_id, "thread-1");
+  3505	                assert_eq!(envelope.turn_id, "turn-1");
+  3506	                match &envelope.item.payload {
+  3507	                    ItemPayload::McpToolCall(state) => {
+  3508	                        assert_eq!(state.server_name, "files");
+  3509	                        assert_eq!(state.tool_name, "list");
+  3510	                        assert_eq!(state.status, ToolCallStatus::Running);
+  3511	                    }
+  3512	                    other => panic!("unexpected payload: {other:?}"),
+  3513	                }
+  3514	            }
+  3515	            other => panic!("unexpected second event: {other:?}"),
+  3516	        }
+  3517	
+  3518	        match &events[2] {
+  3519	            Ok(ThreadEvent::ItemDelta(delta)) => {
+  3520	                assert_eq!(delta.item_id, "item-1");
+  3521	                match &delta.delta {
+  3522	                    ItemDeltaPayload::McpToolCall(call_delta) => {
+  3523	                        assert_eq!(call_delta.status, ToolCallStatus::Completed);
+  3524	                        let result = call_delta
+  3525	                            .result
+  3526	                            .as_ref()
+  3527	                            .expect("tool call delta result is captured");
+  3528	                        assert_eq!(result["paths"][0], "foo.rs");
+  3529	                    }
+  3530	                    other => panic!("unexpected delta payload: {other:?}"),
+  3531	                }
+  3532	            }
+  3533	            other => panic!("unexpected third event: {other:?}"),
+  3534	        }
+  3535	    }
+  3536	
+  3537	    #[tokio::test]
+  3538	    async fn json_stream_propagates_parse_errors() {
+  3539	        let (mut writer, reader) = tokio::io::duplex(1024);
+  3540	        let (tx, rx) = mpsc::channel(4);
+  3541	        let forward_handle =
+  3542	            tokio::spawn(crate::jsonl::forward_json_events(reader, tx, false, None));
+  3543	
+  3544	        writer
+  3545	            .write_all(br#"{"type":"thread.started","thread_id":"thread-err"}"#)
+  3546	            .await
+  3547	            .unwrap();
+  3548	        writer.write_all(b"\nthis is not json\n").await.unwrap();
+  3549	        writer.shutdown().await.unwrap();
+  3550	
+  3551	        let stream = crate::jsonl::EventChannelStream::new(rx, None);
+  3552	        pin_mut!(stream);
+  3553	        let events: Vec<_> = stream.collect().await;
+  3554	        forward_handle.await.unwrap().unwrap();
+  3555	
+  3556	        assert_eq!(events.len(), 2);
+  3557	        assert!(matches!(
+  3558	            events[0],
+  3559	            Ok(ThreadEvent::ThreadStarted(ThreadStarted { ref thread_id, .. }))
+  3560	                if thread_id == "thread-err"
+  3561	        ));
+  3562	        match &events[1] {
+  3563	            Err(ExecStreamError::Parse { line, .. }) => assert_eq!(line, "this is not json"),
+  3564	            other => panic!("expected parse error, got {other:?}"),
+  3565	        }
+  3566	    }
+  3567	
+  3568	    #[tokio::test]
+  3569	    async fn json_stream_tees_logs_before_forwarding() {
+  3570	        let lines = [
+  3571	            r#"{"type":"thread.started","thread_id":"tee-thread"}"#.to_string(),
+  3572	            r#"{"type":"turn.started","thread_id":"tee-thread","turn_id":"turn-tee"}"#.to_string(),
+  3573	        ];
+  3574	
+  3575	        let dir = tempfile::tempdir().unwrap();
+  3576	        let log_path = dir.path().join("events.log");
+  3577	
+  3578	        let (mut writer, reader) = tokio::io::duplex(2048);
+  3579	        let (tx, rx) = mpsc::channel(4);
+  3580	        let log_sink = crate::jsonl::JsonLogSink::new(log_path.clone())
+  3581	            .await
+  3582	            .unwrap();
+  3583	        let forward_handle = tokio::spawn(crate::jsonl::forward_json_events(
+  3584	            reader,
+  3585	            tx,
+  3586	            false,
+  3587	            Some(log_sink),
+  3588	        ));
+  3589	
+  3590	        let stream = crate::jsonl::EventChannelStream::new(rx, None);
+  3591	        pin_mut!(stream);
+  3592	
+  3593	        writer.write_all(lines[0].as_bytes()).await.unwrap();
+  3594	        writer.write_all(b"\n").await.unwrap();
+  3595	
+  3596	        let first = stream.next().await.unwrap().unwrap();
+  3597	        assert!(matches!(first, ThreadEvent::ThreadStarted(_)));
+  3598	
+  3599	        let logged = fs::read_to_string(&log_path).await.unwrap();
+  3600	        assert_eq!(logged, format!("{}\n", lines[0]));

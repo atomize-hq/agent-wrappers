@@ -1,0 +1,326 @@
+  3440	    pub fn base(mut self, branch: impl Into<String>) -> Self {
+  3441	        let branch = branch.into();
+  3442	        self.base = (!branch.trim().is_empty()).then_some(branch);
+  3443	        self
+  3444	    }
+  3445	
+  3446	    pub fn commit(mut self, sha: impl Into<String>) -> Self {
+  3447	        let sha = sha.into();
+  3448	        self.commit = (!sha.trim().is_empty()).then_some(sha);
+  3449	        self
+  3450	    }
+  3451	
+  3452	    pub fn title(mut self, title: impl Into<String>) -> Self {
+  3453	        let title = title.into();
+  3454	        self.title = (!title.trim().is_empty()).then_some(title);
+  3455	        self
+  3456	    }
+  3457	
+  3458	    pub fn uncommitted(mut self, enable: bool) -> Self {
+  3459	        self.uncommitted = enable;
+  3460	        self
+  3461	    }
+  3462	
+  3463	    pub fn json(mut self, enable: bool) -> Self {
+  3464	        self.json = enable;
+  3465	        self
+  3466	    }
+  3467	
+  3468	    pub fn skip_git_repo_check(mut self, enable: bool) -> Self {
+  3469	        self.skip_git_repo_check = enable;
+  3470	        self
+  3471	    }
+  3472	
+  3473	    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+  3474	        self.overrides = overrides;
+  3475	        self
+  3476	    }
+  3477	}
+  3478	
+  3479	impl Default for ExecReviewCommandRequest {
+  3480	    fn default() -> Self {
+  3481	        Self::new()
+  3482	    }
+  3483	}
+  3484	
+  3485	/// Request for `codex resume [OPTIONS] [SESSION_ID] [PROMPT]`.
+  3486	#[derive(Clone, Debug, Eq, PartialEq)]
+  3487	pub struct ResumeSessionRequest {
+  3488	    pub session_id: Option<String>,
+  3489	    pub prompt: Option<String>,
+  3490	    pub all: bool,
+  3491	    pub last: bool,
+  3492	    /// Per-call CLI overrides layered on top of the builder.
+  3493	    pub overrides: CliOverridesPatch,
+  3494	}
+  3495	
+  3496	impl ResumeSessionRequest {
+  3497	    pub fn new() -> Self {
+  3498	        Self {
+  3499	            session_id: None,
+  3500	            prompt: None,
+  3501	            all: false,
+  3502	            last: false,
+  3503	            overrides: CliOverridesPatch::default(),
+  3504	        }
+  3505	    }
+  3506	
+  3507	    pub fn session_id(mut self, session_id: impl Into<String>) -> Self {
+  3508	        let session_id = session_id.into();
+  3509	        self.session_id = (!session_id.trim().is_empty()).then_some(session_id);
+  3510	        self
+  3511	    }
+  3512	
+  3513	    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+  3514	        let prompt = prompt.into();
+  3515	        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
+  3516	        self
+  3517	    }
+  3518	
+  3519	    pub fn all(mut self, enable: bool) -> Self {
+  3520	        self.all = enable;
+  3521	        self
+  3522	    }
+  3523	
+  3524	    pub fn last(mut self, enable: bool) -> Self {
+  3525	        self.last = enable;
+  3526	        self
+  3527	    }
+  3528	
+  3529	    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+  3530	        self.overrides = overrides;
+  3531	        self
+  3532	    }
+  3533	}
+  3534	
+  3535	impl Default for ResumeSessionRequest {
+  3536	    fn default() -> Self {
+  3537	        Self::new()
+  3538	    }
+  3539	}
+  3540	
+  3541	/// Request for `codex fork [OPTIONS] [SESSION_ID] [PROMPT]`.
+  3542	#[derive(Clone, Debug, Eq, PartialEq)]
+  3543	pub struct ForkSessionRequest {
+  3544	    pub session_id: Option<String>,
+  3545	    pub prompt: Option<String>,
+  3546	    pub all: bool,
+  3547	    pub last: bool,
+  3548	    /// Per-call CLI overrides layered on top of the builder.
+  3549	    pub overrides: CliOverridesPatch,
+  3550	}
+  3551	
+  3552	impl ForkSessionRequest {
+  3553	    pub fn new() -> Self {
+  3554	        Self {
+  3555	            session_id: None,
+  3556	            prompt: None,
+  3557	            all: false,
+  3558	            last: false,
+  3559	            overrides: CliOverridesPatch::default(),
+  3560	        }
+  3561	    }
+  3562	
+  3563	    pub fn session_id(mut self, session_id: impl Into<String>) -> Self {
+  3564	        let session_id = session_id.into();
+  3565	        self.session_id = (!session_id.trim().is_empty()).then_some(session_id);
+  3566	        self
+  3567	    }
+  3568	
+  3569	    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+  3570	        let prompt = prompt.into();
+  3571	        self.prompt = (!prompt.trim().is_empty()).then_some(prompt);
+  3572	        self
+  3573	    }
+  3574	
+  3575	    pub fn all(mut self, enable: bool) -> Self {
+  3576	        self.all = enable;
+  3577	        self
+  3578	    }
+  3579	
+  3580	    pub fn last(mut self, enable: bool) -> Self {
+  3581	        self.last = enable;
+  3582	        self
+  3583	    }
+  3584	
+  3585	    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+  3586	        self.overrides = overrides;
+  3587	        self
+  3588	    }
+  3589	}
+  3590	
+  3591	impl Default for ForkSessionRequest {
+  3592	    fn default() -> Self {
+  3593	        Self::new()
+  3594	    }
+  3595	}
+  3596	
+  3597	/// Request for `codex cloud` (overview/help).
+  3598	#[derive(Clone, Debug, Eq, PartialEq)]
+  3599	pub struct CloudOverviewRequest {
+  3600	    pub overrides: CliOverridesPatch,
+  3601	}
+  3602	
+  3603	impl CloudOverviewRequest {
+  3604	    pub fn new() -> Self {
+  3605	        Self {
+  3606	            overrides: CliOverridesPatch::default(),
+  3607	        }
+  3608	    }
+  3609	
+  3610	    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+  3611	        self.overrides = overrides;
+  3612	        self
+  3613	    }
+  3614	}
+  3615	
+  3616	impl Default for CloudOverviewRequest {
+  3617	    fn default() -> Self {
+  3618	        Self::new()
+  3619	    }
+  3620	}
+  3621	
+  3622	/// Request for `codex cloud list`.
+  3623	#[derive(Clone, Debug, Eq, PartialEq)]
+  3624	pub struct CloudListRequest {
+  3625	    pub json: bool,
+  3626	    pub env_id: Option<String>,
+  3627	    pub limit: Option<u32>,
+  3628	    pub cursor: Option<String>,
+  3629	    pub overrides: CliOverridesPatch,
+  3630	}
+  3631	
+  3632	impl CloudListRequest {
+  3633	    pub fn new() -> Self {
+  3634	        Self {
+  3635	            json: false,
+  3636	            env_id: None,
+  3637	            limit: None,
+  3638	            cursor: None,
+  3639	            overrides: CliOverridesPatch::default(),
+  3640	        }
+  3641	    }
+  3642	
+  3643	    pub fn json(mut self, enable: bool) -> Self {
+  3644	        self.json = enable;
+  3645	        self
+  3646	    }
+  3647	
+  3648	    pub fn env_id(mut self, env_id: impl Into<String>) -> Self {
+  3649	        let env_id = env_id.into();
+  3650	        self.env_id = (!env_id.trim().is_empty()).then_some(env_id);
+  3651	        self
+  3652	    }
+  3653	
+  3654	    pub fn limit(mut self, limit: u32) -> Self {
+  3655	        self.limit = Some(limit);
+  3656	        self
+  3657	    }
+  3658	
+  3659	    pub fn cursor(mut self, cursor: impl Into<String>) -> Self {
+  3660	        let cursor = cursor.into();
+  3661	        self.cursor = (!cursor.trim().is_empty()).then_some(cursor);
+  3662	        self
+  3663	    }
+  3664	
+  3665	    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+  3666	        self.overrides = overrides;
+  3667	        self
+  3668	    }
+  3669	}
+  3670	
+  3671	impl Default for CloudListRequest {
+  3672	    fn default() -> Self {
+  3673	        Self::new()
+  3674	    }
+  3675	}
+  3676	
+  3677	/// Output from `codex cloud list`.
+  3678	#[derive(Clone, Debug, PartialEq)]
+  3679	pub struct CloudListOutput {
+  3680	    pub status: ExitStatus,
+  3681	    pub stdout: String,
+  3682	    pub stderr: String,
+  3683	    /// Parsed JSON output when `--json` was requested.
+  3684	    pub json: Option<Value>,
+  3685	}
+  3686	
+  3687	/// Request for `codex cloud status <TASK_ID>`.
+  3688	#[derive(Clone, Debug, Eq, PartialEq)]
+  3689	pub struct CloudStatusRequest {
+  3690	    pub task_id: String,
+  3691	    pub overrides: CliOverridesPatch,
+  3692	}
+  3693	
+  3694	impl CloudStatusRequest {
+  3695	    pub fn new(task_id: impl Into<String>) -> Self {
+  3696	        Self {
+  3697	            task_id: task_id.into(),
+  3698	            overrides: CliOverridesPatch::default(),
+  3699	        }
+  3700	    }
+  3701	
+  3702	    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+  3703	        self.overrides = overrides;
+  3704	        self
+  3705	    }
+  3706	}
+  3707	
+  3708	/// Request for `codex cloud exec`.
+  3709	#[derive(Clone, Debug, Eq, PartialEq)]
+  3710	pub struct CloudExecRequest {
+  3711	    pub env_id: String,
+  3712	    pub query: Option<String>,
+  3713	    pub attempts: Option<u32>,
+  3714	    pub branch: Option<String>,
+  3715	    pub overrides: CliOverridesPatch,
+  3716	}
+  3717	
+  3718	impl CloudExecRequest {
+  3719	    pub fn new(env_id: impl Into<String>) -> Self {
+  3720	        Self {
+  3721	            env_id: env_id.into(),
+  3722	            query: None,
+  3723	            attempts: None,
+  3724	            branch: None,
+  3725	            overrides: CliOverridesPatch::default(),
+  3726	        }
+  3727	    }
+  3728	
+  3729	    pub fn query(mut self, query: impl Into<String>) -> Self {
+  3730	        let query = query.into();
+  3731	        self.query = (!query.trim().is_empty()).then_some(query);
+  3732	        self
+  3733	    }
+  3734	
+  3735	    pub fn attempts(mut self, attempts: u32) -> Self {
+  3736	        self.attempts = Some(attempts);
+  3737	        self
+  3738	    }
+  3739	
+  3740	    pub fn branch(mut self, branch: impl Into<String>) -> Self {
+  3741	        let branch = branch.into();
+  3742	        self.branch = (!branch.trim().is_empty()).then_some(branch);
+  3743	        self
+  3744	    }
+  3745	
+  3746	    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+  3747	        self.overrides = overrides;
+  3748	        self
+  3749	    }
+  3750	}
+  3751	
+  3752	/// Request for `codex mcp` (overview/help).
+  3753	#[derive(Clone, Debug, Eq, PartialEq)]
+  3754	pub struct McpOverviewRequest {
+  3755	    pub overrides: CliOverridesPatch,
+  3756	}
+  3757	
+  3758	impl McpOverviewRequest {
+  3759	    pub fn new() -> Self {
+  3760	        Self {
+  3761	            overrides: CliOverridesPatch::default(),
+  3762	        }
+  3763	    }
+  3764	
+  3765	    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {

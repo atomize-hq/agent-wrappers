@@ -1,0 +1,23 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/report/iu.rs:90:
+             continue;
+         }
+ 
+-        let overlap: BTreeSet<String> = relevant_targets.intersection(&root.targets).cloned().collect();
++        let overlap: BTreeSet<String> = relevant_targets
++            .intersection(&root.targets)
++            .cloned()
++            .collect();
+         if overlap.is_empty() {
+             continue;
+         }
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/report.rs:21:
+ pub(super) use parity::{build_parity_exclusions_index, ParityExclusionsIndex};
+ use schema::{
+     CoverageReportV1, PlatformFilterV1, ReportArgDeltaV1, ReportCommandDeltaV1, ReportDeltasV1,
+-    ReportFlagDeltaV1, ReportInputsV1, ReportIntentionallyUnsupportedDeltaV1,
+-    ReportRulesInputsV1, ReportUpstreamInputsV1, ReportWrapperInputsV1,
++    ReportFlagDeltaV1, ReportInputsV1, ReportIntentionallyUnsupportedDeltaV1, ReportRulesInputsV1,
++    ReportUpstreamInputsV1, ReportWrapperInputsV1,
+ };
+ 
+ pub(super) fn index_upstream(union: &UnionSnapshotV2) -> BTreeMap<Vec<String>, UnionCommandV2> {

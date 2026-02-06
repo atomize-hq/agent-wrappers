@@ -1,0 +1,88 @@
+## 8) Execution Journal (append-only)
+
+### 8.1 Execution evidence storage (future runs)
+
+Store future command outputs and diffs under `evidence_runs/YYYY-MM-DD/` using this naming convention:
+- `evidence_runs/YYYY-MM-DD/<step_id>_<command>.txt` (example: `evidence_runs/2026-02-04/P2.5_cargo_test.txt`)
+- `evidence_runs/YYYY-MM-DD/<step_id>_git_diff.txt`
+- `evidence_runs/YYYY-MM-DD/<step_id>_notes.md` (optional)
+
+Legacy note: Any prior evidence already stored under `audit_pack/execution/YYYY-MM-DD/` remains valid and must not be moved or deleted.
+
+Add entries as work lands. Format:
+
+### YYYY-MM-DD — <short title>
+
+- Scope/step: P?.? (<phase step id>)
+- Why: <reason / link to evidence>
+- What changed:
+  - <bullet list of changes; keep concise>
+- Validation results (paste concise results, not full logs):
+  - `cargo fmt --all -- --check`: PASS/FAIL (evidence: `evidence_runs/YYYY-MM-DD/<step_id>_cargo_fmt_check.txt`)
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS/FAIL (evidence: `evidence_runs/YYYY-MM-DD/<step_id>_cargo_clippy.txt`)
+  - `cargo test --all-targets --all-features`: PASS/FAIL (evidence: `evidence_runs/YYYY-MM-DD/<step_id>_cargo_test.txt`)
+  - `cargo audit`: PASS/FAIL (evidence: `evidence_runs/YYYY-MM-DD/<step_id>_cargo_audit.txt`)
+  - `cargo deny check advisories`: PASS/FAIL (evidence: `evidence_runs/YYYY-MM-DD/<step_id>_cargo_deny_advisories.txt`)
+  - `cargo deny check licenses`: PASS/FAIL (evidence: `evidence_runs/YYYY-MM-DD/<step_id>_cargo_deny_licenses.txt`)
+- Diffs/PRs:
+  - <link(s) or commit hash(es)>
+
+### 2026-02-04 — Create master workplan/status file
+
+- Scope/step: Planning baseline (establish tracking)
+- Why: Consolidate audit evidence and execution gates into a single status file; evidence inputs are enumerated in §2 (see `audit_pack/README.md` and `audit_pack/meta/commands.log`).
+- What changed:
+  - Added `refactor_workplan.md` with phases 0–3 checklists, quality gates, dependency triage tables, execution journal format, and decision log.
+- Validation results:
+  - `cargo fmt --all -- --check`: (not recorded here)
+  - `cargo clippy --all-targets --all-features -- -D warnings`: (not recorded here)
+  - `cargo test --all-targets --all-features`: (not recorded here)
+  - `cargo audit`: (not recorded here)
+  - `cargo deny check advisories`: (not recorded here)
+  - `cargo deny check licenses`: (not recorded here)
+- Diffs/PRs:
+  - TBD
+
+### 2026-02-04 — Phase 0 preflight: verify supply-chain remediation state
+
+- Scope/step: P0.0 (preflight verification); status updates for P0.1/P0.2 based on observed gates
+- Why: Audit pack recorded supply-chain gate failures (`audit_pack/supply_chain/cargo_audit.txt`, `audit_pack/supply_chain/cargo_deny_advisories.txt`, `audit_pack/supply_chain/cargo_deny_licenses.txt`); baseline summary claimed remediation already landed.
+- What changed:
+  - Verified current workspace passes all §4.1 gates (see Validation results).
+  - Confirmed `bytes` is at `1.11.1` in `Cargo.lock` (addresses RUSTSEC-2026-0007).
+  - Confirmed explicit `cargo-deny` policy exists (`deny.toml`) and licenses gate passes.
+  - (Observation for later P0.3) `cargo tree -d --target all` shows duplicates for `getrandom` and `windows-sys` even though `audit_pack/deps/cargo_tree_duplicates.txt` reported none (likely due to command flags/targets at audit time).
+- Validation results (paste concise results, not full logs):
+  - `cargo fmt --all -- --check`: PASS
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS
+  - `cargo test --all-targets --all-features`: PASS
+  - `cargo audit`: PASS
+  - `cargo deny check advisories`: PASS
+  - `cargo deny check licenses`: PASS
+- Diffs/PRs:
+  - None (verification-only; no code changes)
+
+### 2026-02-04 — Phase 0 duplicates triage (defer)
+
+- Scope/step: P0.3
+- Why: Baseline summary claimed duplicates existed, but audit evidence (`audit_pack/deps/cargo_tree_duplicates.txt`) printed none; current `cargo tree -d --target all` shows duplicates (target scoping likely explains the discrepancy).
+- What changed:
+  - Documented current duplicate versions for `getrandom` and `windows-sys` in §6.3 and captured the decision to defer consolidation in §9.
+- Validation results:
+  - `cargo tree -d --target all`: duplicates present (`getrandom`, `windows-sys`)
+  - §4.1 gates: unchanged (no code changes in this step)
+- Diffs/PRs:
+  - None
+
+### 2026-02-04 — Define Phase 1 seam map
+
+- Scope/step: P1.0
+- Why: Prepare PR-sized `lib.rs` seam extractions guided by the file-size policy derived from `audit_pack/metrics/loc_summary.txt`.
+- What changed:
+  - Updated §7.1 seam order and expanded Phase 1 checklist to include explicit P1.2 (capabilities) and P1.3 (apply/diff) steps.
+- Validation results:
+  - N/A (planning-only change)
+- Diffs/PRs:
+  - None
+
+### 2026-02-04 — Verify home seam extraction

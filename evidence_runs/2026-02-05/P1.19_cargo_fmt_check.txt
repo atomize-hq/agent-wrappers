@@ -1,0 +1,138 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/app_server.rs:110:
+         })
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/apply_diff.rs:157:
+         })
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/features.rs:90:
+ 
+         let stdout_string = String::from_utf8(stdout_bytes)?;
+         let stderr_string = String::from_utf8(stderr_bytes)?;
+[31m-        let (features, format) =
+(B[m[31m-            crate::version::parse_feature_list_output(&stdout_string, json).map_err(|reason| {
+(B[m[31m-                CodexError::FeatureListParse {
+(B[m[31m-                    reason,
+(B[m[31m-                    stdout: stdout_string.clone(),
+(B[m[31m-                }
+(B[m[32m+        let (features, format) = crate::version::parse_feature_list_output(&stdout_string, json)
+(B[m[32m+            .map_err(|reason| CodexError::FeatureListParse {
+(B[m[32m+                reason,
+(B[m[32m+                stdout: stdout_string.clone(),
+(B[m             })?;
+ 
+         Ok(FeaturesListOutput {
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/features.rs:107:
+         })
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/mod.rs:1:
+[31m-mod apply_diff;
+(B[m mod app_server;
+[32m+mod apply_diff;
+(B[m mod features;
+ mod proxy;
+ mod sandbox;
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/mod.rs:6:
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/proxy.rs:78:
+         })
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/sandbox.rs:152:
+         })
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/tests.rs:61:
+ 
+     let (mut writer, reader) = tokio::io::duplex(4096);
+     let (tx, rx) = mpsc::channel(8);
+[31m-    let forward_handle =
+(B[m[31m-        tokio::spawn(crate::jsonl::forward_json_events(reader, tx, false, None));
+(B[m[32m+    let forward_handle = tokio::spawn(crate::jsonl::forward_json_events(reader, tx, false, None));
+(B[m 
+     for line in &lines {
+         writer.write_all(line.as_bytes()).await.unwrap();
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/tests.rs:123:
+ async fn json_stream_propagates_parse_errors() {
+     let (mut writer, reader) = tokio::io::duplex(1024);
+     let (tx, rx) = mpsc::channel(4);
+[31m-    let forward_handle =
+(B[m[31m-        tokio::spawn(crate::jsonl::forward_json_events(reader, tx, false, None));
+(B[m[32m+    let forward_handle = tokio::spawn(crate::jsonl::forward_json_events(reader, tx, false, None));
+(B[m 
+     writer
+         .write_all(br#"{"type":"thread.started","thread_id":"thread-err"}"#)
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/tests.rs:318:
+     let version = "1.2.3";
+     let version_dir = temp.path().join(&platform).join(version);
+     std_fs::create_dir_all(&version_dir).unwrap();
+[31m-    let binary =
+(B[m[31m-        write_fake_bundled_codex(&version_dir, &platform, "#!/usr/bin/env bash\necho ok");
+(B[m[32m+    let binary = write_fake_bundled_codex(&version_dir, &platform, "#!/usr/bin/env bash\necho ok");
+(B[m 
+     let resolved = resolve_bundled_binary(BundledBinarySpec {
+         bundle_root: temp.path(),
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/tests.rs:340:
+     let version = "5.6.7";
+     let version_dir = temp.path().join(platform).join(version);
+     std_fs::create_dir_all(&version_dir).unwrap();
+[31m-    let binary =
+(B[m[31m-        write_fake_bundled_codex(&version_dir, platform, "#!/usr/bin/env bash\necho win");
+(B[m[32m+    let binary = write_fake_bundled_codex(&version_dir, platform, "#!/usr/bin/env bash\necho win");
+(B[m 
+     let resolved = resolve_bundled_binary(BundledBinarySpec {
+         bundle_root: temp.path(),
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/tests.rs:472:
+         .build();
+ 
+     let run = client
+[31m-        .run_sandbox(
+(B[m[31m-            SandboxCommandRequest::new(SandboxPlatform::Macos, ["ls"]).log_denials(true),
+(B[m[31m-        )
+(B[m[32m+        .run_sandbox(SandboxCommandRequest::new(SandboxPlatform::Macos, ["ls"]).log_denials(true))
+(B[m         .await
+         .unwrap();
+     let args: Vec<_> = run.stdout.lines().collect();
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/tests.rs:2626:
+ fi
+ 	"#;
+     let binary = write_fake_codex(temp.path(), script);
+[31m-    let version_override =
+(B[m[31m-        version::parse_version_output("codex 9.9.9-nightly (commit beefcafe)");
+(B[m[32m+    let version_override = version::parse_version_output("codex 9.9.9-nightly (commit beefcafe)");
+(B[m 
+     let client = CodexClient::builder()
+         .binary(&binary)
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/tests.rs:2940:
+         .config_overrides
+         .push(ConfigOverride::new("model_reasoning_effort", "high"));
+ 
+[31m-    let resolved =
+(B[m[31m-        resolve_cli_overrides(&builder, &CliOverridesPatch::default(), Some("gpt-5"));
+(B[m[32m+    let resolved = resolve_cli_overrides(&builder, &CliOverridesPatch::default(), Some("gpt-5"));
+(B[m     assert_eq!(resolved.config_overrides.len(), 1);
+     assert_eq!(resolved.config_overrides[0].value, "high");
+ }
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/tests.rs:3034:
+         ..Default::default()
+     };
+ 
+[31m-    let resolved =
+(B[m[31m-        resolve_cli_overrides(&builder_overrides, &CliOverridesPatch::default(), None);
+(B[m[32m+    let resolved = resolve_cli_overrides(&builder_overrides, &CliOverridesPatch::default(), None);
+(B[m     let args: Vec<_> = cli_override_args(&resolved, true)
+         .iter()
+         .map(|arg| arg.to_string_lossy().into_owned())

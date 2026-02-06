@@ -1,0 +1,1697 @@
+diff --git a/crates/codex/src/exec.rs b/crates/codex/src/exec.rs
+new file mode 100644
+index 0000000..bf520c0
+--- /dev/null
++++ b/crates/codex/src/exec.rs
+@@ -0,0 +1,817 @@
++use std::{
++    env,
++    ffi::OsString,
++    future::Future,
++    path::{Path, PathBuf},
++    pin::Pin,
++    process::ExitStatus,
++    time::{Duration, SystemTime, UNIX_EPOCH},
++};
++
++use futures_core::Stream;
++use thiserror::Error;
++use tokio::{fs, io::AsyncWriteExt, process::Command, sync::mpsc, time};
++use tracing::debug;
++
++use crate::{
++    builder::{apply_cli_overrides, resolve_cli_overrides},
++    capabilities::{guard_is_supported, log_guard_skip},
++    jsonl,
++    process::{spawn_with_retry, tee_stream, ConsoleTarget},
++    ApplyDiffArtifacts, CliOverridesPatch, CodexClient, CodexError, ConfigOverride, ExecRequest,
++    FlagState, ResumeSessionRequest, ThreadEvent,
++};
++
++impl CodexClient {
++    /// Sends `prompt` to `codex exec` and returns its stdout (the final agent message) on success.
++    ///
++    /// When `.json(true)` is enabled the CLI emits JSONL events (`thread.started` or
++    /// `thread.resumed`, `turn.started`/`turn.completed`/`turn.failed`,
++    /// `item.created`/`item.updated`, or `error`). The stream is mirrored to stdout unless
++    /// `.mirror_stdout(false)`; the returned string contains the buffered lines for offline
++    /// parsing. For per-event handling, see `crates/codex/examples/stream_events.rs`.
++    ///
++    /// ```rust,no_run
++    /// use codex::CodexClient;
++    /// # #[tokio::main]
++    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
++    /// let client = CodexClient::builder().json(true).mirror_stdout(false).build();
++    /// let jsonl = client.send_prompt("Stream repo status").await?;
++    /// println!("{jsonl}");
++    /// # Ok(()) }
++    /// ```
++    pub async fn send_prompt(&self, prompt: impl AsRef<str>) -> Result<String, CodexError> {
++        self.send_prompt_with(ExecRequest::new(prompt.as_ref()))
++            .await
++    }
++
++    /// Sends an exec request with per-call CLI overrides.
++    pub async fn send_prompt_with(&self, request: ExecRequest) -> Result<String, CodexError> {
++        if request.prompt.trim().is_empty() {
++            return Err(CodexError::EmptyPrompt);
++        }
++
++        self.invoke_codex_exec(request).await
++    }
++
++    /// Streams structured JSONL events from `codex exec --json`.
++    ///
++    /// Respects `mirror_stdout` (raw JSON echoing) and tees raw lines to `json_event_log` when
++    /// configured on the builder or request. Returns an [`ExecStream`] with both the parsed event
++    /// stream and a completion future that reports `--output-last-message`/schema paths.
++    pub async fn stream_exec(
++        &self,
++        request: ExecStreamRequest,
++    ) -> Result<ExecStream, ExecStreamError> {
++        self.stream_exec_with_overrides(request, CliOverridesPatch::default())
++            .await
++    }
++
++    /// Streams JSONL events with per-request CLI overrides.
++    pub async fn stream_exec_with_overrides(
++        &self,
++        request: ExecStreamRequest,
++        overrides: CliOverridesPatch,
++    ) -> Result<ExecStream, ExecStreamError> {
++        if request.prompt.trim().is_empty() {
++            return Err(CodexError::EmptyPrompt.into());
++        }
++
++        let ExecStreamRequest {
++            prompt,
++            idle_timeout,
++            output_last_message,
++            output_schema,
++            json_event_log,
++        } = request;
++
++        let dir_ctx = self.directory_context()?;
++        let dir_path = dir_ctx.path().to_path_buf();
++        let last_message_path =
++            output_last_message.unwrap_or_else(|| unique_temp_path("codex_last_message_", "txt"));
++        let needs_capabilities = output_schema.is_some() || !self.add_dirs.is_empty();
++        let capabilities = if needs_capabilities {
++            Some(self.probe_capabilities().await)
++        } else {
++            None
++        };
++        let resolved_overrides =
++            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
++
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("exec")
++            .arg("--color")
++            .arg(self.color_mode.as_str())
++            .arg("--skip-git-repo-check")
++            .arg("--json")
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .stdin(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(&dir_path);
++
++        apply_cli_overrides(&mut command, &resolved_overrides, true);
++
++        if let Some(model) = &self.model {
++            command.arg("--model").arg(model);
++        }
++
++        if let Some(capabilities) = &capabilities {
++            if !self.add_dirs.is_empty() {
++                let guard = capabilities.guard_add_dir();
++                if guard_is_supported(&guard) {
++                    for dir in &self.add_dirs {
++                        command.arg("--add-dir").arg(dir);
++                    }
++                } else {
++                    log_guard_skip(&guard);
++                }
++            }
++        }
++
++        for image in &self.images {
++            command.arg("--image").arg(image);
++        }
++
++        command.arg("--output-last-message").arg(&last_message_path);
++
++        if let Some(schema_path) = &output_schema {
++            if let Some(capabilities) = &capabilities {
++                let guard = capabilities.guard_output_schema();
++                if guard_is_supported(&guard) {
++                    command.arg("--output-schema").arg(schema_path);
++                } else {
++                    log_guard_skip(&guard);
++                }
++            } else {
++                command.arg("--output-schema").arg(schema_path);
++            }
++        }
++
++        self.command_env.apply(&mut command)?;
++
++        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
++
++        {
++            let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
++            if let Err(source) = stdin.write_all(prompt.as_bytes()).await {
++                if source.kind() != std::io::ErrorKind::BrokenPipe {
++                    return Err(CodexError::StdinWrite(source).into());
++                }
++            }
++            if let Err(source) = stdin.write_all(b"\n").await {
++                if source.kind() != std::io::ErrorKind::BrokenPipe {
++                    return Err(CodexError::StdinWrite(source).into());
++                }
++            }
++            if let Err(source) = stdin.shutdown().await {
++                if source.kind() != std::io::ErrorKind::BrokenPipe {
++                    return Err(CodexError::StdinWrite(source).into());
++                }
++            }
++        }
++
++        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
++        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
++
++        let (tx, rx) = mpsc::channel(32);
++        let json_log = jsonl::prepare_json_log(
++            json_event_log
++                .or_else(|| self.json_event_log.clone())
++                .filter(|path| !path.as_os_str().is_empty()),
++        )
++        .await?;
++        let stdout_task = tokio::spawn(jsonl::forward_json_events(
++            stdout,
++            tx,
++            self.mirror_stdout,
++            json_log,
++        ));
++        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
++
++        let events = jsonl::EventChannelStream::new(rx, idle_timeout);
++        let timeout = self.timeout;
++        let schema_path = output_schema.clone();
++        let completion = Box::pin(async move {
++            let _dir_ctx = dir_ctx;
++            let wait_task = async move {
++                let status = child
++                    .wait()
++                    .await
++                    .map_err(|source| CodexError::Wait { source })?;
++                let stdout_result = stdout_task.await.map_err(CodexError::Join)?;
++                stdout_result?;
++                let stderr_bytes = stderr_task
++                    .await
++                    .map_err(CodexError::Join)?
++                    .map_err(CodexError::CaptureIo)?;
++                if !status.success() {
++                    return Err(CodexError::NonZeroExit {
++                        status,
++                        stderr: String::from_utf8(stderr_bytes).unwrap_or_default(),
++                    }
++                    .into());
++                }
++                let last_message = read_last_message(&last_message_path).await;
++                Ok(ExecCompletion {
++                    status,
++                    last_message_path: Some(last_message_path),
++                    last_message,
++                    schema_path,
++                })
++            };
++
++            if timeout.is_zero() {
++                wait_task.await
++            } else {
++                match time::timeout(timeout, wait_task).await {
++                    Ok(result) => result,
++                    Err(_) => Err(CodexError::Timeout { timeout }.into()),
++                }
++            }
++        });
++
++        Ok(ExecStream {
++            events: Box::pin(events),
++            completion,
++        })
++    }
++
++    /// Streams structured events from `codex exec --json resume ...`.
++    pub async fn stream_resume(
++        &self,
++        request: ResumeRequest,
++    ) -> Result<ExecStream, ExecStreamError> {
++        if let Some(prompt) = &request.prompt {
++            if prompt.trim().is_empty() {
++                return Err(CodexError::EmptyPrompt.into());
++            }
++        }
++
++        let ResumeRequest {
++            selector,
++            prompt,
++            idle_timeout,
++            output_last_message,
++            output_schema,
++            json_event_log,
++            overrides,
++        } = request;
++
++        let dir_ctx = self.directory_context()?;
++        let dir_path = dir_ctx.path().to_path_buf();
++        let last_message_path =
++            output_last_message.unwrap_or_else(|| unique_temp_path("codex_last_message_", "txt"));
++        let needs_capabilities = output_schema.is_some() || !self.add_dirs.is_empty();
++        let capabilities = if needs_capabilities {
++            Some(self.probe_capabilities().await)
++        } else {
++            None
++        };
++        let resolved_overrides =
++            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
++
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("exec")
++            .arg("--color")
++            .arg(self.color_mode.as_str())
++            .arg("--skip-git-repo-check")
++            .arg("--json")
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .stdin(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(&dir_path);
++
++        apply_cli_overrides(&mut command, &resolved_overrides, true);
++
++        if let Some(model) = &self.model {
++            command.arg("--model").arg(model);
++        }
++
++        if let Some(capabilities) = &capabilities {
++            if !self.add_dirs.is_empty() {
++                let guard = capabilities.guard_add_dir();
++                if guard_is_supported(&guard) {
++                    for dir in &self.add_dirs {
++                        command.arg("--add-dir").arg(dir);
++                    }
++                } else {
++                    log_guard_skip(&guard);
++                }
++            }
++        }
++
++        for image in &self.images {
++            command.arg("--image").arg(image);
++        }
++
++        command.arg("--output-last-message").arg(&last_message_path);
++
++        if let Some(schema_path) = &output_schema {
++            if let Some(capabilities) = &capabilities {
++                let guard = capabilities.guard_output_schema();
++                if guard_is_supported(&guard) {
++                    command.arg("--output-schema").arg(schema_path);
++                } else {
++                    log_guard_skip(&guard);
++                }
++            } else {
++                command.arg("--output-schema").arg(schema_path);
++            }
++        }
++
++        command.arg("resume");
++
++        match selector {
++            ResumeSelector::Id(id) => {
++                command.arg(id);
++            }
++            ResumeSelector::Last => {
++                command.arg("--last");
++            }
++            ResumeSelector::All => {
++                command.arg("--all");
++            }
++        }
++
++        if prompt.is_some() {
++            // `codex exec resume` reads the follow-up prompt from stdin when `-` is supplied.
++            command.arg("-");
++        }
++
++        self.command_env.apply(&mut command)?;
++
++        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
++
++        if let Some(prompt) = &prompt {
++            let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
++            if let Err(source) = stdin.write_all(prompt.as_bytes()).await {
++                if source.kind() != std::io::ErrorKind::BrokenPipe {
++                    return Err(CodexError::StdinWrite(source).into());
++                }
++            }
++            if let Err(source) = stdin.write_all(b"\n").await {
++                if source.kind() != std::io::ErrorKind::BrokenPipe {
++                    return Err(CodexError::StdinWrite(source).into());
++                }
++            }
++            if let Err(source) = stdin.shutdown().await {
++                if source.kind() != std::io::ErrorKind::BrokenPipe {
++                    return Err(CodexError::StdinWrite(source).into());
++                }
++            }
++        } else {
++            let _ = child.stdin.take();
++        }
++
++        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
++        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
++
++        let (tx, rx) = mpsc::channel(32);
++        let json_log = jsonl::prepare_json_log(
++            json_event_log
++                .or_else(|| self.json_event_log.clone())
++                .filter(|path| !path.as_os_str().is_empty()),
++        )
++        .await?;
++        let stdout_task = tokio::spawn(jsonl::forward_json_events(
++            stdout,
++            tx,
++            self.mirror_stdout,
++            json_log,
++        ));
++        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
++
++        let events = jsonl::EventChannelStream::new(rx, idle_timeout);
++        let timeout = self.timeout;
++        let schema_path = output_schema.clone();
++        let completion = Box::pin(async move {
++            let _dir_ctx = dir_ctx;
++            let wait_task = async move {
++                let status = child
++                    .wait()
++                    .await
++                    .map_err(|source| CodexError::Wait { source })?;
++                let stdout_result = stdout_task.await.map_err(CodexError::Join)?;
++                stdout_result?;
++                let stderr_bytes = stderr_task
++                    .await
++                    .map_err(CodexError::Join)?
++                    .map_err(CodexError::CaptureIo)?;
++                if !status.success() {
++                    return Err(CodexError::NonZeroExit {
++                        status,
++                        stderr: String::from_utf8(stderr_bytes).unwrap_or_default(),
++                    }
++                    .into());
++                }
++                let last_message = read_last_message(&last_message_path).await;
++                Ok(ExecCompletion {
++                    status,
++                    last_message_path: Some(last_message_path),
++                    last_message,
++                    schema_path,
++                })
++            };
++
++            if timeout.is_zero() {
++                wait_task.await
++            } else {
++                match time::timeout(timeout, wait_task).await {
++                    Ok(result) => result,
++                    Err(_) => Err(CodexError::Timeout { timeout }.into()),
++                }
++            }
++        });
++
++        Ok(ExecStream {
++            events: Box::pin(events),
++            completion,
++        })
++    }
++
++    /// Runs `codex resume [OPTIONS] [SESSION_ID] [PROMPT]` and returns captured output.
++    pub async fn resume_session(
++        &self,
++        request: ResumeSessionRequest,
++    ) -> Result<ApplyDiffArtifacts, CodexError> {
++        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
++            return Err(CodexError::EmptyPrompt);
++        }
++
++        let mut args = vec![OsString::from("resume")];
++        if request.all {
++            args.push(OsString::from("--all"));
++        }
++        if request.last {
++            args.push(OsString::from("--last"));
++        }
++        if let Some(session_id) = request.session_id {
++            if !session_id.trim().is_empty() {
++                args.push(OsString::from(session_id));
++            }
++        }
++        if let Some(prompt) = request.prompt {
++            if !prompt.trim().is_empty() {
++                args.push(OsString::from(prompt));
++            }
++        }
++
++        self.run_simple_command_with_overrides(args, request.overrides)
++            .await
++    }
++
++    async fn invoke_codex_exec(&self, request: ExecRequest) -> Result<String, CodexError> {
++        let ExecRequest { prompt, overrides } = request;
++        let dir_ctx = self.directory_context()?;
++        let needs_capabilities = self.output_schema || !self.add_dirs.is_empty();
++        let capabilities = if needs_capabilities {
++            Some(self.probe_capabilities().await)
++        } else {
++            None
++        };
++
++        let resolved_overrides =
++            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
++        let mut command = Command::new(self.command_env.binary_path());
++        command
++            .arg("exec")
++            .arg("--color")
++            .arg(self.color_mode.as_str())
++            .arg("--skip-git-repo-check")
++            .stdout(std::process::Stdio::piped())
++            .stderr(std::process::Stdio::piped())
++            .kill_on_drop(true)
++            .current_dir(dir_ctx.path());
++
++        apply_cli_overrides(&mut command, &resolved_overrides, true);
++
++        let send_prompt_via_stdin = self.json_output;
++        if !send_prompt_via_stdin {
++            command.arg(&prompt);
++        }
++        let stdin_mode = if send_prompt_via_stdin {
++            std::process::Stdio::piped()
++        } else {
++            std::process::Stdio::null()
++        };
++        command.stdin(stdin_mode);
++
++        if let Some(model) = &self.model {
++            command.arg("--model").arg(model);
++        }
++
++        if let Some(capabilities) = &capabilities {
++            if self.output_schema {
++                let guard = capabilities.guard_output_schema();
++                if guard_is_supported(&guard) {
++                    command.arg("--output-schema");
++                } else {
++                    log_guard_skip(&guard);
++                }
++            }
++
++            if !self.add_dirs.is_empty() {
++                let guard = capabilities.guard_add_dir();
++                if guard_is_supported(&guard) {
++                    for dir in &self.add_dirs {
++                        command.arg("--add-dir").arg(dir);
++                    }
++                } else {
++                    log_guard_skip(&guard);
++                }
++            }
++        }
++
++        for image in &self.images {
++            command.arg("--image").arg(image);
++        }
++
++        if self.json_output {
++            command.arg("--json");
++        }
++
++        self.command_env.apply(&mut command)?;
++
++        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
++
++        if send_prompt_via_stdin {
++            let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
++            if let Err(source) = stdin.write_all(prompt.as_bytes()).await {
++                if source.kind() != std::io::ErrorKind::BrokenPipe {
++                    return Err(CodexError::StdinWrite(source));
++                }
++            }
++            if let Err(source) = stdin.write_all(b"\n").await {
++                if source.kind() != std::io::ErrorKind::BrokenPipe {
++                    return Err(CodexError::StdinWrite(source));
++                }
++            }
++            if let Err(source) = stdin.shutdown().await {
++                if source.kind() != std::io::ErrorKind::BrokenPipe {
++                    return Err(CodexError::StdinWrite(source));
++                }
++            }
++        } else {
++            let _ = child.stdin.take();
++        }
++
++        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
++        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
++
++        let stdout_task = tokio::spawn(tee_stream(
++            stdout,
++            ConsoleTarget::Stdout,
++            self.mirror_stdout,
++        ));
++        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
++
++        let wait_task = async move {
++            let status = child
++                .wait()
++                .await
++                .map_err(|source| CodexError::Wait { source })?;
++            let stdout_bytes = stdout_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            let stderr_bytes = stderr_task
++                .await
++                .map_err(CodexError::Join)?
++                .map_err(CodexError::CaptureIo)?;
++            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
++        };
++
++        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
++            wait_task.await?
++        } else {
++            match time::timeout(self.timeout, wait_task).await {
++                Ok(result) => result?,
++                Err(_) => {
++                    return Err(CodexError::Timeout {
++                        timeout: self.timeout,
++                    });
++                }
++            }
++        };
++
++        let stderr_string = String::from_utf8(stderr_bytes).unwrap_or_default();
++        if !status.success() {
++            return Err(CodexError::NonZeroExit {
++                status,
++                stderr: stderr_string,
++            });
++        }
++
++        let primary_output = if self.json_output && stdout_bytes.is_empty() {
++            stderr_string
++        } else {
++            String::from_utf8(stdout_bytes)?
++        };
++        let trimmed = if self.json_output {
++            primary_output
++        } else {
++            primary_output.trim().to_string()
++        };
++        debug!(
++            binary = ?self.command_env.binary_path(),
++            bytes = trimmed.len(),
++            "received Codex output"
++        );
++        Ok(trimmed)
++    }
++}
++
++/// Options configuring a streaming exec invocation.
++#[derive(Clone, Debug)]
++pub struct ExecStreamRequest {
++    /// User prompt that will be forwarded to `codex exec`.
++    pub prompt: String,
++    /// Per-event idle timeout. If no JSON lines arrive before the duration elapses,
++    /// [`ExecStreamError::IdleTimeout`] is returned.
++    pub idle_timeout: Option<Duration>,
++    /// Optional file path passed through to `--output-last-message`. When unset, the wrapper
++    /// will request a temporary path and return it in [`ExecCompletion::last_message_path`].
++    pub output_last_message: Option<PathBuf>,
++    /// Optional file path passed through to `--output-schema` so clients can persist the schema
++    /// describing the item envelope structure seen during the run.
++    pub output_schema: Option<PathBuf>,
++    /// Optional file path that receives a tee of every raw JSONL event line as it streams in.
++    /// Appends to existing files, flushes each line, and creates parent directories. Overrides
++    /// [`CodexClientBuilder::json_event_log`] for this request when provided.
++    pub json_event_log: Option<PathBuf>,
++}
++
++/// Selector for `codex resume` targets.
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub enum ResumeSelector {
++    Id(String),
++    Last,
++    All,
++}
++
++/// Options configuring a streaming resume invocation.
++#[derive(Clone, Debug)]
++pub struct ResumeRequest {
++    pub selector: ResumeSelector,
++    pub prompt: Option<String>,
++    pub idle_timeout: Option<Duration>,
++    pub output_last_message: Option<PathBuf>,
++    pub output_schema: Option<PathBuf>,
++    pub json_event_log: Option<PathBuf>,
++    pub overrides: CliOverridesPatch,
++}
++
++impl ResumeRequest {
++    pub fn new(selector: ResumeSelector) -> Self {
++        Self {
++            selector,
++            prompt: None,
++            idle_timeout: None,
++            output_last_message: None,
++            output_schema: None,
++            json_event_log: None,
++            overrides: CliOverridesPatch::default(),
++        }
++    }
++
++    pub fn with_id(id: impl Into<String>) -> Self {
++        Self::new(ResumeSelector::Id(id.into()))
++    }
++
++    pub fn last() -> Self {
++        Self::new(ResumeSelector::Last)
++    }
++
++    pub fn all() -> Self {
++        Self::new(ResumeSelector::All)
++    }
++
++    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
++        self.prompt = Some(prompt.into());
++        self
++    }
++
++    pub fn idle_timeout(mut self, idle_timeout: Duration) -> Self {
++        self.idle_timeout = Some(idle_timeout);
++        self
++    }
++
++    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
++        self.overrides
++            .config_overrides
++            .push(ConfigOverride::new(key, value));
++        self
++    }
++
++    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
++        self.overrides
++            .config_overrides
++            .push(ConfigOverride::from_raw(raw));
++        self
++    }
++
++    pub fn profile(mut self, profile: impl Into<String>) -> Self {
++        let profile = profile.into();
++        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
++        self
++    }
++
++    pub fn oss(mut self, enable: bool) -> Self {
++        self.overrides.oss = if enable {
++            FlagState::Enable
++        } else {
++            FlagState::Disable
++        };
++        self
++    }
++
++    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
++        self.overrides.feature_toggles.enable.push(name.into());
++        self
++    }
++
++    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
++        self.overrides.feature_toggles.disable.push(name.into());
++        self
++    }
++
++    pub fn search(mut self, enable: bool) -> Self {
++        self.overrides.search = if enable {
++            FlagState::Enable
++        } else {
++            FlagState::Disable
++        };
++        self
++    }
++}
++
++/// Ergonomic container for the streaming surface; produced by `stream_exec` (implemented in D2).
++///
++/// `events` yields parsed [`ThreadEvent`] values as soon as each JSONL line arrives from the CLI.
++/// `completion` resolves once the Codex process exits and is the place to surface `--output-last-message`
++/// and `--output-schema` paths after streaming finishes.
++pub struct ExecStream {
++    pub events: DynThreadEventStream,
++    pub completion: DynExecCompletion,
++}
++
++/// Type-erased stream of events from the Codex CLI.
++pub type DynThreadEventStream =
++    Pin<Box<dyn Stream<Item = Result<ThreadEvent, ExecStreamError>> + Send>>;
++
++/// Type-erased completion future that resolves when streaming stops.
++pub type DynExecCompletion =
++    Pin<Box<dyn Future<Output = Result<ExecCompletion, ExecStreamError>> + Send>>;
++
++/// Summary returned when the codex child process exits.
++#[derive(Clone, Debug)]
++pub struct ExecCompletion {
++    pub status: ExitStatus,
++    /// Path that codex wrote when `--output-last-message` was enabled. The wrapper may eagerly
++    /// read the file and populate `last_message` when feasible.
++    pub last_message_path: Option<PathBuf>,
++    pub last_message: Option<String>,
++    /// Path to the JSON schema requested via `--output-schema`, if provided by the caller.
++    pub schema_path: Option<PathBuf>,
++}
++
++/// Errors that may occur while consuming the JSONL stream.
++#[derive(Debug, Error)]
++pub enum ExecStreamError {
++    #[error(transparent)]
++    Codex(#[from] CodexError),
++    #[error("failed to parse codex JSONL event: {source}: `{line}`")]
++    Parse {
++        line: String,
++        #[source]
++        source: serde_json::Error,
++    },
++    #[error("codex JSONL event missing required context: {message}: `{line}`")]
++    Normalize { line: String, message: String },
++    #[error("codex JSON stream idle for {idle_for:?}")]
++    IdleTimeout { idle_for: Duration },
++    #[error("codex JSON stream closed unexpectedly")]
++    ChannelClosed,
++}
++
++async fn read_last_message(path: &Path) -> Option<String> {
++    (fs::read_to_string(path).await).ok()
++}
++
++fn unique_temp_path(prefix: &str, extension: &str) -> PathBuf {
++    let mut path = env::temp_dir();
++    let timestamp = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .unwrap_or_else(|_| Duration::from_secs(0))
++        .as_nanos();
++    path.push(format!(
++        "{prefix}{timestamp}_{}.{}",
++        std::process::id(),
++        extension
++    ));
++    path
++}
+diff --git a/crates/codex/src/lib.rs b/crates/codex/src/lib.rs
+index 3759773..66fee60 100644
+--- a/crates/codex/src/lib.rs
++++ b/crates/codex/src/lib.rs
+@@ -72,6 +72,7 @@ mod builder;
+ mod bundled_binary;
+ mod cli;
+ mod events;
++mod exec;
+ mod execpolicy;
+ mod home;
+ pub mod jsonl;
+@@ -106,6 +107,10 @@ pub use events::{
+     ThreadEvent, ThreadStarted, TodoItem, TodoListDelta, TodoListState, ToolCallStatus,
+     TurnCompleted, TurnFailed, TurnStarted, WebSearchDelta, WebSearchState, WebSearchStatus,
+ };
++pub use exec::{
++    DynExecCompletion, DynThreadEventStream, ExecCompletion, ExecStream, ExecStreamError,
++    ExecStreamRequest, ResumeRequest, ResumeSelector,
++};
+ pub use execpolicy::{
+     ExecPolicyCheckRequest, ExecPolicyCheckResult, ExecPolicyDecision, ExecPolicyEvaluation,
+     ExecPolicyMatch, ExecPolicyNoMatch, ExecPolicyRuleMatch,
+@@ -120,15 +125,12 @@ use std::{
+     env,
+     ffi::{OsStr, OsString},
+     fs as std_fs,
+-    future::Future,
+     path::{Path, PathBuf},
+-    pin::Pin,
+     process::ExitStatus,
+-    time::{Duration, SystemTime, UNIX_EPOCH},
++    time::{Duration, SystemTime},
+ };
+ 
+ use builder::{apply_cli_overrides, resolve_cli_overrides};
+-use futures_core::Stream;
+ use home::CommandEnvironment;
+ use process::{
+     command_output_text, preferred_output_channel, spawn_with_retry, tee_stream, CommandOutput,
+@@ -136,8 +138,11 @@ use process::{
+ };
+ use tempfile::TempDir;
+ use thiserror::Error;
+-use tokio::{fs, io::AsyncWriteExt, process::Command, sync::mpsc, time};
+-use tracing::{debug, warn};
++use tokio::{io::AsyncWriteExt, process::Command, time};
++use tracing::warn;
++
++#[cfg(test)]
++use tokio::sync::mpsc;
+ 
+ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(120);
+ const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
+@@ -302,416 +307,6 @@ impl CodexClient {
+         self.command_env.codex_home_layout()
+     }
+ 
+-    /// Sends `prompt` to `codex exec` and returns its stdout (the final agent message) on success.
+-    ///
+-    /// When `.json(true)` is enabled the CLI emits JSONL events (`thread.started` or
+-    /// `thread.resumed`, `turn.started`/`turn.completed`/`turn.failed`,
+-    /// `item.created`/`item.updated`, or `error`). The stream is mirrored to stdout unless
+-    /// `.mirror_stdout(false)`; the returned string contains the buffered lines for offline
+-    /// parsing. For per-event handling, see `crates/codex/examples/stream_events.rs`.
+-    ///
+-    /// ```rust,no_run
+-    /// use codex::CodexClient;
+-    /// # #[tokio::main]
+-    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+-    /// let client = CodexClient::builder().json(true).mirror_stdout(false).build();
+-    /// let jsonl = client.send_prompt("Stream repo status").await?;
+-    /// println!("{jsonl}");
+-    /// # Ok(()) }
+-    /// ```
+-    pub async fn send_prompt(&self, prompt: impl AsRef<str>) -> Result<String, CodexError> {
+-        self.send_prompt_with(ExecRequest::new(prompt.as_ref()))
+-            .await
+-    }
+-
+-    /// Sends an exec request with per-call CLI overrides.
+-    pub async fn send_prompt_with(&self, request: ExecRequest) -> Result<String, CodexError> {
+-        if request.prompt.trim().is_empty() {
+-            return Err(CodexError::EmptyPrompt);
+-        }
+-
+-        self.invoke_codex_exec(request).await
+-    }
+-
+-    /// Streams structured JSONL events from `codex exec --json`.
+-    ///
+-    /// Respects `mirror_stdout` (raw JSON echoing) and tees raw lines to `json_event_log` when
+-    /// configured on the builder or request. Returns an [`ExecStream`] with both the parsed event
+-    /// stream and a completion future that reports `--output-last-message`/schema paths.
+-    pub async fn stream_exec(
+-        &self,
+-        request: ExecStreamRequest,
+-    ) -> Result<ExecStream, ExecStreamError> {
+-        self.stream_exec_with_overrides(request, CliOverridesPatch::default())
+-            .await
+-    }
+-
+-    /// Streams JSONL events with per-request CLI overrides.
+-    pub async fn stream_exec_with_overrides(
+-        &self,
+-        request: ExecStreamRequest,
+-        overrides: CliOverridesPatch,
+-    ) -> Result<ExecStream, ExecStreamError> {
+-        if request.prompt.trim().is_empty() {
+-            return Err(CodexError::EmptyPrompt.into());
+-        }
+-
+-        let ExecStreamRequest {
+-            prompt,
+-            idle_timeout,
+-            output_last_message,
+-            output_schema,
+-            json_event_log,
+-        } = request;
+-
+-        let dir_ctx = self.directory_context()?;
+-        let dir_path = dir_ctx.path().to_path_buf();
+-        let last_message_path =
+-            output_last_message.unwrap_or_else(|| unique_temp_path("codex_last_message_", "txt"));
+-        let needs_capabilities = output_schema.is_some() || !self.add_dirs.is_empty();
+-        let capabilities = if needs_capabilities {
+-            Some(self.probe_capabilities().await)
+-        } else {
+-            None
+-        };
+-        let resolved_overrides =
+-            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("exec")
+-            .arg("--color")
+-            .arg(self.color_mode.as_str())
+-            .arg("--skip-git-repo-check")
+-            .arg("--json")
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .stdin(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(&dir_path);
+-
+-        apply_cli_overrides(&mut command, &resolved_overrides, true);
+-
+-        if let Some(model) = &self.model {
+-            command.arg("--model").arg(model);
+-        }
+-
+-        if let Some(capabilities) = &capabilities {
+-            if !self.add_dirs.is_empty() {
+-                let guard = capabilities.guard_add_dir();
+-                if guard_is_supported(&guard) {
+-                    for dir in &self.add_dirs {
+-                        command.arg("--add-dir").arg(dir);
+-                    }
+-                } else {
+-                    log_guard_skip(&guard);
+-                }
+-            }
+-        }
+-
+-        for image in &self.images {
+-            command.arg("--image").arg(image);
+-        }
+-
+-        command.arg("--output-last-message").arg(&last_message_path);
+-
+-        if let Some(schema_path) = &output_schema {
+-            if let Some(capabilities) = &capabilities {
+-                let guard = capabilities.guard_output_schema();
+-                if guard_is_supported(&guard) {
+-                    command.arg("--output-schema").arg(schema_path);
+-                } else {
+-                    log_guard_skip(&guard);
+-                }
+-            } else {
+-                command.arg("--output-schema").arg(schema_path);
+-            }
+-        }
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        {
+-            let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
+-            if let Err(source) = stdin.write_all(prompt.as_bytes()).await {
+-                if source.kind() != std::io::ErrorKind::BrokenPipe {
+-                    return Err(CodexError::StdinWrite(source).into());
+-                }
+-            }
+-            if let Err(source) = stdin.write_all(b"\n").await {
+-                if source.kind() != std::io::ErrorKind::BrokenPipe {
+-                    return Err(CodexError::StdinWrite(source).into());
+-                }
+-            }
+-            if let Err(source) = stdin.shutdown().await {
+-                if source.kind() != std::io::ErrorKind::BrokenPipe {
+-                    return Err(CodexError::StdinWrite(source).into());
+-                }
+-            }
+-        }
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let (tx, rx) = mpsc::channel(32);
+-        let json_log = jsonl::prepare_json_log(
+-            json_event_log
+-                .or_else(|| self.json_event_log.clone())
+-                .filter(|path| !path.as_os_str().is_empty()),
+-        )
+-        .await?;
+-        let stdout_task = tokio::spawn(jsonl::forward_json_events(
+-            stdout,
+-            tx,
+-            self.mirror_stdout,
+-            json_log,
+-        ));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+-
+-        let events = jsonl::EventChannelStream::new(rx, idle_timeout);
+-        let timeout = self.timeout;
+-        let schema_path = output_schema.clone();
+-        let completion = Box::pin(async move {
+-            let _dir_ctx = dir_ctx;
+-            let wait_task = async move {
+-                let status = child
+-                    .wait()
+-                    .await
+-                    .map_err(|source| CodexError::Wait { source })?;
+-                let stdout_result = stdout_task.await.map_err(CodexError::Join)?;
+-                stdout_result?;
+-                let stderr_bytes = stderr_task
+-                    .await
+-                    .map_err(CodexError::Join)?
+-                    .map_err(CodexError::CaptureIo)?;
+-                if !status.success() {
+-                    return Err(CodexError::NonZeroExit {
+-                        status,
+-                        stderr: String::from_utf8(stderr_bytes).unwrap_or_default(),
+-                    }
+-                    .into());
+-                }
+-                let last_message = read_last_message(&last_message_path).await;
+-                Ok(ExecCompletion {
+-                    status,
+-                    last_message_path: Some(last_message_path),
+-                    last_message,
+-                    schema_path,
+-                })
+-            };
+-
+-            if timeout.is_zero() {
+-                wait_task.await
+-            } else {
+-                match time::timeout(timeout, wait_task).await {
+-                    Ok(result) => result,
+-                    Err(_) => Err(CodexError::Timeout { timeout }.into()),
+-                }
+-            }
+-        });
+-
+-        Ok(ExecStream {
+-            events: Box::pin(events),
+-            completion,
+-        })
+-    }
+-
+-    /// Streams structured events from `codex exec --json resume ...`.
+-    pub async fn stream_resume(
+-        &self,
+-        request: ResumeRequest,
+-    ) -> Result<ExecStream, ExecStreamError> {
+-        if let Some(prompt) = &request.prompt {
+-            if prompt.trim().is_empty() {
+-                return Err(CodexError::EmptyPrompt.into());
+-            }
+-        }
+-
+-        let ResumeRequest {
+-            selector,
+-            prompt,
+-            idle_timeout,
+-            output_last_message,
+-            output_schema,
+-            json_event_log,
+-            overrides,
+-        } = request;
+-
+-        let dir_ctx = self.directory_context()?;
+-        let dir_path = dir_ctx.path().to_path_buf();
+-        let last_message_path =
+-            output_last_message.unwrap_or_else(|| unique_temp_path("codex_last_message_", "txt"));
+-        let needs_capabilities = output_schema.is_some() || !self.add_dirs.is_empty();
+-        let capabilities = if needs_capabilities {
+-            Some(self.probe_capabilities().await)
+-        } else {
+-            None
+-        };
+-        let resolved_overrides =
+-            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+-
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("exec")
+-            .arg("--color")
+-            .arg(self.color_mode.as_str())
+-            .arg("--skip-git-repo-check")
+-            .arg("--json")
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .stdin(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(&dir_path);
+-
+-        apply_cli_overrides(&mut command, &resolved_overrides, true);
+-
+-        if let Some(model) = &self.model {
+-            command.arg("--model").arg(model);
+-        }
+-
+-        if let Some(capabilities) = &capabilities {
+-            if !self.add_dirs.is_empty() {
+-                let guard = capabilities.guard_add_dir();
+-                if guard_is_supported(&guard) {
+-                    for dir in &self.add_dirs {
+-                        command.arg("--add-dir").arg(dir);
+-                    }
+-                } else {
+-                    log_guard_skip(&guard);
+-                }
+-            }
+-        }
+-
+-        for image in &self.images {
+-            command.arg("--image").arg(image);
+-        }
+-
+-        command.arg("--output-last-message").arg(&last_message_path);
+-
+-        if let Some(schema_path) = &output_schema {
+-            if let Some(capabilities) = &capabilities {
+-                let guard = capabilities.guard_output_schema();
+-                if guard_is_supported(&guard) {
+-                    command.arg("--output-schema").arg(schema_path);
+-                } else {
+-                    log_guard_skip(&guard);
+-                }
+-            } else {
+-                command.arg("--output-schema").arg(schema_path);
+-            }
+-        }
+-
+-        command.arg("resume");
+-
+-        match selector {
+-            ResumeSelector::Id(id) => {
+-                command.arg(id);
+-            }
+-            ResumeSelector::Last => {
+-                command.arg("--last");
+-            }
+-            ResumeSelector::All => {
+-                command.arg("--all");
+-            }
+-        }
+-
+-        if prompt.is_some() {
+-            // `codex exec resume` reads the follow-up prompt from stdin when `-` is supplied.
+-            command.arg("-");
+-        }
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        if let Some(prompt) = &prompt {
+-            let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
+-            if let Err(source) = stdin.write_all(prompt.as_bytes()).await {
+-                if source.kind() != std::io::ErrorKind::BrokenPipe {
+-                    return Err(CodexError::StdinWrite(source).into());
+-                }
+-            }
+-            if let Err(source) = stdin.write_all(b"\n").await {
+-                if source.kind() != std::io::ErrorKind::BrokenPipe {
+-                    return Err(CodexError::StdinWrite(source).into());
+-                }
+-            }
+-            if let Err(source) = stdin.shutdown().await {
+-                if source.kind() != std::io::ErrorKind::BrokenPipe {
+-                    return Err(CodexError::StdinWrite(source).into());
+-                }
+-            }
+-        } else {
+-            let _ = child.stdin.take();
+-        }
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let (tx, rx) = mpsc::channel(32);
+-        let json_log = jsonl::prepare_json_log(
+-            json_event_log
+-                .or_else(|| self.json_event_log.clone())
+-                .filter(|path| !path.as_os_str().is_empty()),
+-        )
+-        .await?;
+-        let stdout_task = tokio::spawn(jsonl::forward_json_events(
+-            stdout,
+-            tx,
+-            self.mirror_stdout,
+-            json_log,
+-        ));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+-
+-        let events = jsonl::EventChannelStream::new(rx, idle_timeout);
+-        let timeout = self.timeout;
+-        let schema_path = output_schema.clone();
+-        let completion = Box::pin(async move {
+-            let _dir_ctx = dir_ctx;
+-            let wait_task = async move {
+-                let status = child
+-                    .wait()
+-                    .await
+-                    .map_err(|source| CodexError::Wait { source })?;
+-                let stdout_result = stdout_task.await.map_err(CodexError::Join)?;
+-                stdout_result?;
+-                let stderr_bytes = stderr_task
+-                    .await
+-                    .map_err(CodexError::Join)?
+-                    .map_err(CodexError::CaptureIo)?;
+-                if !status.success() {
+-                    return Err(CodexError::NonZeroExit {
+-                        status,
+-                        stderr: String::from_utf8(stderr_bytes).unwrap_or_default(),
+-                    }
+-                    .into());
+-                }
+-                let last_message = read_last_message(&last_message_path).await;
+-                Ok(ExecCompletion {
+-                    status,
+-                    last_message_path: Some(last_message_path),
+-                    last_message,
+-                    schema_path,
+-                })
+-            };
+-
+-            if timeout.is_zero() {
+-                wait_task.await
+-            } else {
+-                match time::timeout(timeout, wait_task).await {
+-                    Ok(result) => result,
+-                    Err(_) => Err(CodexError::Timeout { timeout }.into()),
+-                }
+-            }
+-        });
+-
+-        Ok(ExecStream {
+-            events: Box::pin(events),
+-            completion,
+-        })
+-    }
+-
+     /// Spawns a `codex login` session using the default ChatGPT OAuth flow.
+     ///
+     /// The returned child inherits `kill_on_drop` so abandoning the handle cleans up the login helper.
+@@ -1325,37 +920,6 @@ impl CodexClient {
+             .await
+     }
+ 
+-    /// Runs `codex resume [OPTIONS] [SESSION_ID] [PROMPT]` and returns captured output.
+-    pub async fn resume_session(
+-        &self,
+-        request: ResumeSessionRequest,
+-    ) -> Result<ApplyDiffArtifacts, CodexError> {
+-        if matches!(request.prompt.as_deref(), Some(prompt) if prompt.trim().is_empty()) {
+-            return Err(CodexError::EmptyPrompt);
+-        }
+-
+-        let mut args = vec![OsString::from("resume")];
+-        if request.all {
+-            args.push(OsString::from("--all"));
+-        }
+-        if request.last {
+-            args.push(OsString::from("--last"));
+-        }
+-        if let Some(session_id) = request.session_id {
+-            if !session_id.trim().is_empty() {
+-                args.push(OsString::from(session_id));
+-            }
+-        }
+-        if let Some(prompt) = request.prompt {
+-            if !prompt.trim().is_empty() {
+-                args.push(OsString::from(prompt));
+-            }
+-        }
+-
+-        self.run_simple_command_with_overrides(args, request.overrides)
+-            .await
+-    }
+-
+     /// Runs `codex fork [OPTIONS] [SESSION_ID] [PROMPT]` and returns captured output.
+     pub async fn fork_session(
+         &self,
+@@ -2181,166 +1745,6 @@ impl CodexClient {
+         update_advisory_from_capabilities(&capabilities, latest_releases)
+     }
+ 
+-    async fn invoke_codex_exec(&self, request: ExecRequest) -> Result<String, CodexError> {
+-        let ExecRequest { prompt, overrides } = request;
+-        let dir_ctx = self.directory_context()?;
+-        let needs_capabilities = self.output_schema || !self.add_dirs.is_empty();
+-        let capabilities = if needs_capabilities {
+-            Some(self.probe_capabilities().await)
+-        } else {
+-            None
+-        };
+-
+-        let resolved_overrides =
+-            resolve_cli_overrides(&self.cli_overrides, &overrides, self.model.as_deref());
+-        let mut command = Command::new(self.command_env.binary_path());
+-        command
+-            .arg("exec")
+-            .arg("--color")
+-            .arg(self.color_mode.as_str())
+-            .arg("--skip-git-repo-check")
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .current_dir(dir_ctx.path());
+-
+-        apply_cli_overrides(&mut command, &resolved_overrides, true);
+-
+-        let send_prompt_via_stdin = self.json_output;
+-        if !send_prompt_via_stdin {
+-            command.arg(&prompt);
+-        }
+-        let stdin_mode = if send_prompt_via_stdin {
+-            std::process::Stdio::piped()
+-        } else {
+-            std::process::Stdio::null()
+-        };
+-        command.stdin(stdin_mode);
+-
+-        if let Some(model) = &self.model {
+-            command.arg("--model").arg(model);
+-        }
+-
+-        if let Some(capabilities) = &capabilities {
+-            if self.output_schema {
+-                let guard = capabilities.guard_output_schema();
+-                if guard_is_supported(&guard) {
+-                    command.arg("--output-schema");
+-                } else {
+-                    log_guard_skip(&guard);
+-                }
+-            }
+-
+-            if !self.add_dirs.is_empty() {
+-                let guard = capabilities.guard_add_dir();
+-                if guard_is_supported(&guard) {
+-                    for dir in &self.add_dirs {
+-                        command.arg("--add-dir").arg(dir);
+-                    }
+-                } else {
+-                    log_guard_skip(&guard);
+-                }
+-            }
+-        }
+-
+-        for image in &self.images {
+-            command.arg("--image").arg(image);
+-        }
+-
+-        if self.json_output {
+-            command.arg("--json");
+-        }
+-
+-        self.command_env.apply(&mut command)?;
+-
+-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+-
+-        if send_prompt_via_stdin {
+-            let mut stdin = child.stdin.take().ok_or(CodexError::StdinUnavailable)?;
+-            if let Err(source) = stdin.write_all(prompt.as_bytes()).await {
+-                if source.kind() != std::io::ErrorKind::BrokenPipe {
+-                    return Err(CodexError::StdinWrite(source));
+-                }
+-            }
+-            if let Err(source) = stdin.write_all(b"\n").await {
+-                if source.kind() != std::io::ErrorKind::BrokenPipe {
+-                    return Err(CodexError::StdinWrite(source));
+-                }
+-            }
+-            if let Err(source) = stdin.shutdown().await {
+-                if source.kind() != std::io::ErrorKind::BrokenPipe {
+-                    return Err(CodexError::StdinWrite(source));
+-                }
+-            }
+-        } else {
+-            let _ = child.stdin.take();
+-        }
+-
+-        let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
+-        let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;
+-
+-        let stdout_task = tokio::spawn(tee_stream(
+-            stdout,
+-            ConsoleTarget::Stdout,
+-            self.mirror_stdout,
+-        ));
+-        let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !self.quiet));
+-
+-        let wait_task = async move {
+-            let status = child
+-                .wait()
+-                .await
+-                .map_err(|source| CodexError::Wait { source })?;
+-            let stdout_bytes = stdout_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            let stderr_bytes = stderr_task
+-                .await
+-                .map_err(CodexError::Join)?
+-                .map_err(CodexError::CaptureIo)?;
+-            Ok::<_, CodexError>((status, stdout_bytes, stderr_bytes))
+-        };
+-
+-        let (status, stdout_bytes, stderr_bytes) = if self.timeout.is_zero() {
+-            wait_task.await?
+-        } else {
+-            match time::timeout(self.timeout, wait_task).await {
+-                Ok(result) => result?,
+-                Err(_) => {
+-                    return Err(CodexError::Timeout {
+-                        timeout: self.timeout,
+-                    });
+-                }
+-            }
+-        };
+-
+-        let stderr_string = String::from_utf8(stderr_bytes).unwrap_or_default();
+-        if !status.success() {
+-            return Err(CodexError::NonZeroExit {
+-                status,
+-                stderr: stderr_string,
+-            });
+-        }
+-
+-        let primary_output = if self.json_output && stdout_bytes.is_empty() {
+-            stderr_string
+-        } else {
+-            String::from_utf8(stdout_bytes)?
+-        };
+-        let trimmed = if self.json_output {
+-            primary_output
+-        } else {
+-            primary_output.trim().to_string()
+-        };
+-        debug!(
+-            binary = ?self.command_env.binary_path(),
+-            bytes = trimmed.len(),
+-            "received Codex output"
+-        );
+-        Ok(trimmed)
+-    }
+-
+     fn directory_context(&self) -> Result<DirectoryContext, CodexError> {
+         if let Some(dir) = &self.working_dir {
+             return Ok(DirectoryContext::Fixed(dir.clone()));
+@@ -2603,197 +2007,6 @@ pub enum CodexError {
+     Join(#[from] tokio::task::JoinError),
+ }
+ 
+-/// Options configuring a streaming exec invocation.
+-#[derive(Clone, Debug)]
+-pub struct ExecStreamRequest {
+-    /// User prompt that will be forwarded to `codex exec`.
+-    pub prompt: String,
+-    /// Per-event idle timeout. If no JSON lines arrive before the duration elapses,
+-    /// [`ExecStreamError::IdleTimeout`] is returned.
+-    pub idle_timeout: Option<Duration>,
+-    /// Optional file path passed through to `--output-last-message`. When unset, the wrapper
+-    /// will request a temporary path and return it in [`ExecCompletion::last_message_path`].
+-    pub output_last_message: Option<PathBuf>,
+-    /// Optional file path passed through to `--output-schema` so clients can persist the schema
+-    /// describing the item envelope structure seen during the run.
+-    pub output_schema: Option<PathBuf>,
+-    /// Optional file path that receives a tee of every raw JSONL event line as it streams in.
+-    /// Appends to existing files, flushes each line, and creates parent directories. Overrides
+-    /// [`CodexClientBuilder::json_event_log`] for this request when provided.
+-    pub json_event_log: Option<PathBuf>,
+-}
+-
+-/// Selector for `codex resume` targets.
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub enum ResumeSelector {
+-    Id(String),
+-    Last,
+-    All,
+-}
+-
+-/// Options configuring a streaming resume invocation.
+-#[derive(Clone, Debug)]
+-pub struct ResumeRequest {
+-    pub selector: ResumeSelector,
+-    pub prompt: Option<String>,
+-    pub idle_timeout: Option<Duration>,
+-    pub output_last_message: Option<PathBuf>,
+-    pub output_schema: Option<PathBuf>,
+-    pub json_event_log: Option<PathBuf>,
+-    pub overrides: CliOverridesPatch,
+-}
+-
+-impl ResumeRequest {
+-    pub fn new(selector: ResumeSelector) -> Self {
+-        Self {
+-            selector,
+-            prompt: None,
+-            idle_timeout: None,
+-            output_last_message: None,
+-            output_schema: None,
+-            json_event_log: None,
+-            overrides: CliOverridesPatch::default(),
+-        }
+-    }
+-
+-    pub fn with_id(id: impl Into<String>) -> Self {
+-        Self::new(ResumeSelector::Id(id.into()))
+-    }
+-
+-    pub fn last() -> Self {
+-        Self::new(ResumeSelector::Last)
+-    }
+-
+-    pub fn all() -> Self {
+-        Self::new(ResumeSelector::All)
+-    }
+-
+-    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+-        self.prompt = Some(prompt.into());
+-        self
+-    }
+-
+-    pub fn idle_timeout(mut self, idle_timeout: Duration) -> Self {
+-        self.idle_timeout = Some(idle_timeout);
+-        self
+-    }
+-
+-    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+-        self.overrides
+-            .config_overrides
+-            .push(ConfigOverride::new(key, value));
+-        self
+-    }
+-
+-    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+-        self.overrides
+-            .config_overrides
+-            .push(ConfigOverride::from_raw(raw));
+-        self
+-    }
+-
+-    pub fn profile(mut self, profile: impl Into<String>) -> Self {
+-        let profile = profile.into();
+-        self.overrides.profile = (!profile.trim().is_empty()).then_some(profile);
+-        self
+-    }
+-
+-    pub fn oss(mut self, enable: bool) -> Self {
+-        self.overrides.oss = if enable {
+-            FlagState::Enable
+-        } else {
+-            FlagState::Disable
+-        };
+-        self
+-    }
+-
+-    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {
+-        self.overrides.feature_toggles.enable.push(name.into());
+-        self
+-    }
+-
+-    pub fn disable_feature(mut self, name: impl Into<String>) -> Self {
+-        self.overrides.feature_toggles.disable.push(name.into());
+-        self
+-    }
+-
+-    pub fn search(mut self, enable: bool) -> Self {
+-        self.overrides.search = if enable {
+-            FlagState::Enable
+-        } else {
+-            FlagState::Disable
+-        };
+-        self
+-    }
+-}
+-
+-/// Ergonomic container for the streaming surface; produced by `stream_exec` (implemented in D2).
+-///
+-/// `events` yields parsed [`ThreadEvent`] values as soon as each JSONL line arrives from the CLI.
+-/// `completion` resolves once the Codex process exits and is the place to surface `--output-last-message`
+-/// and `--output-schema` paths after streaming finishes.
+-pub struct ExecStream {
+-    pub events: DynThreadEventStream,
+-    pub completion: DynExecCompletion,
+-}
+-
+-/// Type-erased stream of events from the Codex CLI.
+-pub type DynThreadEventStream =
+-    Pin<Box<dyn Stream<Item = Result<ThreadEvent, ExecStreamError>> + Send>>;
+-
+-/// Type-erased completion future that resolves when streaming stops.
+-pub type DynExecCompletion =
+-    Pin<Box<dyn Future<Output = Result<ExecCompletion, ExecStreamError>> + Send>>;
+-
+-/// Summary returned when the codex child process exits.
+-#[derive(Clone, Debug)]
+-pub struct ExecCompletion {
+-    pub status: ExitStatus,
+-    /// Path that codex wrote when `--output-last-message` was enabled. The wrapper may eagerly
+-    /// read the file and populate `last_message` when feasible.
+-    pub last_message_path: Option<PathBuf>,
+-    pub last_message: Option<String>,
+-    /// Path to the JSON schema requested via `--output-schema`, if provided by the caller.
+-    pub schema_path: Option<PathBuf>,
+-}
+-
+-/// Errors that may occur while consuming the JSONL stream.
+-#[derive(Debug, Error)]
+-pub enum ExecStreamError {
+-    #[error(transparent)]
+-    Codex(#[from] CodexError),
+-    #[error("failed to parse codex JSONL event: {source}: `{line}`")]
+-    Parse {
+-        line: String,
+-        #[source]
+-        source: serde_json::Error,
+-    },
+-    #[error("codex JSONL event missing required context: {message}: `{line}`")]
+-    Normalize { line: String, message: String },
+-    #[error("codex JSON stream idle for {idle_for:?}")]
+-    IdleTimeout { idle_for: Duration },
+-    #[error("codex JSON stream closed unexpectedly")]
+-    ChannelClosed,
+-}
+-
+-async fn read_last_message(path: &Path) -> Option<String> {
+-    (fs::read_to_string(path).await).ok()
+-}
+-
+-fn unique_temp_path(prefix: &str, extension: &str) -> PathBuf {
+-    let mut path = env::temp_dir();
+-    let timestamp = SystemTime::now()
+-        .duration_since(UNIX_EPOCH)
+-        .unwrap_or_else(|_| Duration::from_secs(0))
+-        .as_nanos();
+-    path.push(format!(
+-        "{prefix}{timestamp}_{}.{}",
+-        std::process::id(),
+-        extension
+-    ));
+-    path
+-}
+-
+ enum DirectoryContext {
+     Fixed(PathBuf),
+     Ephemeral(TempDir),

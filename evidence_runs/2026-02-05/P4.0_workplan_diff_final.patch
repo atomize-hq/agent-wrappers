@@ -1,0 +1,51 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 8c2e735..40e79fa 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -1008,7 +1008,7 @@ Reason: Phases 1/2/3 are closed; the latest size evidence (`evidence_runs/2026-0
+ 
+ ##### P4.0 — Reduce crates/codex/src/tests.rs below ceiling (tests modularization)
+ 
+-Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
+ Last Updated: 2026-02-05
+ 
+ - Goal: Reduce `crates/codex/src/tests.rs` from 3,178 LOC to `<= 1000` LOC while preserving test behavior.
+@@ -2120,6 +2120,37 @@ Add entries as work lands. Format:
+ - Commit:
+   - 444cdf94efaa7fcad551a4fcafc0f4e664c39712
+ 
++### 2026-02-05 — P4.0 tests modularization (`crates/codex/src/tests.rs` below ceiling)
++
++- Scope/step: P4.0
++- Why: Earliest not-done item in §10 execution queue; reduce `crates/codex/src/tests.rs` below the 1000 LOC ceiling without changing test behavior.
++- What changed:
++  - Replaced monolithic `crates/codex/src/tests.rs` with a thin façade entrypoint and moved test bodies into `crates/codex/src/tests/` domain modules.
++  - Added `crates/codex/src/tests/mod.rs` as the shared internal test harness (`use` imports + helper fns + module declarations), and split tests into:
++    - `auth_session.rs`
++    - `builder_env_home.rs`
++    - `bundled_binary.rs`
++    - `capabilities.rs`
++    - `cli_commands.rs`
++    - `cli_overrides.rs`
++    - `jsonl_stream.rs`
++    - `sandbox_execpolicy.rs`
++  - Added `#[path = "tests.rs"] mod tests;` under `#[cfg(test)]` in `crates/codex/src/lib.rs` to disambiguate `tests.rs` entrypoint vs `tests/mod.rs` tree.
++  - Result: `crates/codex/src/tests.rs` is now a 4-line façade and no longer a >1000 LOC monolith.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.0_cargo_fmt_check_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P4.0_cargo_fmt_apply.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P4.0_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P4.0_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P4.0_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0_cargo_audit.txt`; reran with `--no-fetch --stale` due to advisory DB fetch/lock constraints in this sandbox)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P4.0_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0_cargo_deny_advisories.txt`; reran with writable temp `CARGO_HOME`, `--disable-fetch`, and offline mode due crates.io/advisory-db access constraints)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.0_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.0_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/P4.0_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/P4.0_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

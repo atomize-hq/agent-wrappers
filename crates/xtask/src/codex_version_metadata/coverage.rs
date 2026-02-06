@@ -1,0 +1,419 @@
+use std::collections::{BTreeMap, BTreeSet};
+
+use super::{
+    models::{UnionSnapshotV2, WrapperCoverageV1, WrapperScope},
+    CoverageV1, RulesFile, RulesParityExclusions, VersionMetadataError,
+};
+
+#[derive(Debug, Default)]
+struct ParityExclusionsIndex {
+    commands: BTreeSet<Vec<String>>,
+    flags: BTreeSet<(Vec<String>, String)>,
+    args: BTreeSet<(Vec<String>, String)>,
+}
+
+fn build_parity_exclusions_index(exclusions: &RulesParityExclusions) -> ParityExclusionsIndex {
+    let mut index = ParityExclusionsIndex::default();
+    for unit in &exclusions.units {
+        match unit.unit.as_str() {
+            "command" => {
+                index.commands.insert(unit.path.clone());
+            }
+            "flag" => {
+                if let Some(key) = unit.key.as_ref() {
+                    index.flags.insert((unit.path.clone(), key.clone()));
+                }
+            }
+            "arg" => {
+                if let Some(name) = unit.name.as_ref() {
+                    index.args.insert((unit.path.clone(), name.clone()));
+                }
+            }
+            _ => {}
+        }
+    }
+    index
+}
+
+#[derive(Debug, Clone)]
+struct ScopedCoverage {
+    index: usize,
+    targets: BTreeSet<String>,
+    level: String,
+    note: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct WrapperIndex {
+    commands: BTreeMap<Vec<String>, Vec<ScopedCoverage>>,
+    flags: BTreeMap<(Vec<String>, String), Vec<ScopedCoverage>>,
+    args: BTreeMap<(Vec<String>, String), Vec<ScopedCoverage>>,
+}
+
+pub(super) fn compute_coverage(
+    rules: &RulesFile,
+    union: &UnionSnapshotV2,
+    wrapper: &WrapperCoverageV1,
+) -> Result<CoverageV1, VersionMetadataError> {
+    let input_targets: BTreeSet<String> = union
+        .inputs
+        .iter()
+        .map(|i| i.target_triple.clone())
+        .collect();
+
+    let wrapper_index = index_wrapper(
+        &rules.union.expected_targets,
+        &rules.union.platform_mapping,
+        wrapper,
+    );
+
+    let allowed: BTreeSet<&str> = rules
+        .version_metadata
+        .supported_policy
+        .coverage_requirement
+        .allowed_levels
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
+    let disallowed: BTreeSet<&str> = rules
+        .version_metadata
+        .supported_policy
+        .coverage_requirement
+        .disallowed_levels
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
+
+    let treat_missing_as = rules
+        .version_metadata
+        .supported_policy
+        .coverage_requirement
+        .treat_missing_as
+        .as_str();
+
+    let parity_exclusions = rules
+        .parity_exclusions
+        .as_ref()
+        .filter(|ex| ex.schema_version == 1)
+        .map(build_parity_exclusions_index)
+        .unwrap_or_default();
+
+    let gate = CoverageGate {
+        allowed: &allowed,
+        disallowed: &disallowed,
+        treat_missing_as,
+        parity_exclusions: &parity_exclusions,
+    };
+
+    let mut supported_targets = Vec::new();
+
+    for target in &rules.union.expected_targets {
+        if !input_targets.contains(target) {
+            continue;
+        }
+
+        if is_supported_on_target(rules, union, &wrapper_index, target, &gate) {
+            supported_targets.push(target.clone());
+        }
+    }
+
+    let supported_required_target = supported_targets
+        .iter()
+        .any(|t| t == &rules.union.required_target);
+
+    Ok(CoverageV1 {
+        supported_targets: Some(supported_targets),
+        supported_required_target: Some(supported_required_target),
+    })
+}
+
+struct CoverageGate<'a> {
+    allowed: &'a BTreeSet<&'a str>,
+    disallowed: &'a BTreeSet<&'a str>,
+    treat_missing_as: &'a str,
+    parity_exclusions: &'a ParityExclusionsIndex,
+}
+
+fn is_supported_on_target(
+    rules: &RulesFile,
+    union: &UnionSnapshotV2,
+    wrapper_index: &WrapperIndex,
+    target: &str,
+    gate: &CoverageGate<'_>,
+) -> bool {
+    for cmd in &union.commands {
+        if !cmd.available_on.iter().any(|t| t == target) {
+            continue;
+        }
+
+        if gate.parity_exclusions.commands.contains(&cmd.path) {
+            continue;
+        }
+
+        let cmd_level = resolve_level_for_target(
+            wrapper_index
+                .commands
+                .get(&cmd.path)
+                .map(Vec::as_slice)
+                .unwrap_or(&[]),
+            target,
+        )
+        .unwrap_or_else(|| gate.treat_missing_as.to_string());
+
+        if gate.disallowed.contains(cmd_level.as_str())
+            || !gate.allowed.contains(cmd_level.as_str())
+        {
+            return false;
+        }
+        if cmd_level == "intentionally_unsupported"
+            && rules
+                .version_metadata
+                .supported_policy
+                .intentionally_unsupported_requires_note
+        {
+            let note_ok = resolve_note_for_target(
+                wrapper_index
+                    .commands
+                    .get(&cmd.path)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]),
+                target,
+            )
+            .is_some_and(|n| !n.trim().is_empty());
+            if !note_ok {
+                return false;
+            }
+        }
+
+        for flag in &cmd.flags {
+            if !flag.available_on.iter().any(|t| t == target) {
+                continue;
+            }
+            if gate
+                .parity_exclusions
+                .flags
+                .contains(&(cmd.path.clone(), flag.key.clone()))
+            {
+                continue;
+            }
+            let key = (cmd.path.clone(), flag.key.clone());
+            let flag_level = resolve_level_for_target(
+                wrapper_index
+                    .flags
+                    .get(&key)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]),
+                target,
+            )
+            .unwrap_or_else(|| gate.treat_missing_as.to_string());
+
+            if gate.disallowed.contains(flag_level.as_str())
+                || !gate.allowed.contains(flag_level.as_str())
+            {
+                return false;
+            }
+            if flag_level == "intentionally_unsupported"
+                && rules
+                    .version_metadata
+                    .supported_policy
+                    .intentionally_unsupported_requires_note
+            {
+                let note_ok = resolve_note_for_target(
+                    wrapper_index
+                        .flags
+                        .get(&key)
+                        .map(Vec::as_slice)
+                        .unwrap_or(&[]),
+                    target,
+                )
+                .is_some_and(|n| !n.trim().is_empty());
+                if !note_ok {
+                    return false;
+                }
+            }
+        }
+
+        for arg in &cmd.args {
+            if !arg.available_on.iter().any(|t| t == target) {
+                continue;
+            }
+            if gate
+                .parity_exclusions
+                .args
+                .contains(&(cmd.path.clone(), arg.name.clone()))
+            {
+                continue;
+            }
+            let key = (cmd.path.clone(), arg.name.clone());
+            let arg_level = resolve_level_for_target(
+                wrapper_index
+                    .args
+                    .get(&key)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]),
+                target,
+            )
+            .unwrap_or_else(|| gate.treat_missing_as.to_string());
+
+            if gate.disallowed.contains(arg_level.as_str())
+                || !gate.allowed.contains(arg_level.as_str())
+            {
+                return false;
+            }
+            if arg_level == "intentionally_unsupported"
+                && rules
+                    .version_metadata
+                    .supported_policy
+                    .intentionally_unsupported_requires_note
+            {
+                let note_ok = resolve_note_for_target(
+                    wrapper_index
+                        .args
+                        .get(&key)
+                        .map(Vec::as_slice)
+                        .unwrap_or(&[]),
+                    target,
+                )
+                .is_some_and(|n| !n.trim().is_empty());
+                if !note_ok {
+                    return false;
+                }
+            }
+        }
+    }
+    true
+}
+
+fn resolve_level_for_target(entries: &[ScopedCoverage], target: &str) -> Option<String> {
+    let mut levels = BTreeSet::<String>::new();
+    for e in entries {
+        if e.targets.contains(target) {
+            levels.insert(e.level.clone());
+        }
+    }
+    if levels.len() == 1 {
+        levels.into_iter().next()
+    } else {
+        None
+    }
+}
+
+fn resolve_note_for_target(entries: &[ScopedCoverage], target: &str) -> Option<String> {
+    let mut by_index: BTreeMap<usize, String> = BTreeMap::new();
+    for e in entries {
+        if !e.targets.contains(target) {
+            continue;
+        }
+        if let Some(note) = e.note.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+            by_index.entry(e.index).or_insert_with(|| note.to_string());
+        }
+    }
+    by_index.into_values().next()
+}
+
+fn index_wrapper(
+    expected_targets: &[String],
+    platform_mapping: &BTreeMap<String, String>,
+    wrapper: &WrapperCoverageV1,
+) -> WrapperIndex {
+    let expected_set: BTreeSet<String> = expected_targets.iter().cloned().collect();
+
+    let mut commands: BTreeMap<Vec<String>, Vec<ScopedCoverage>> = BTreeMap::new();
+    let mut flags: BTreeMap<(Vec<String>, String), Vec<ScopedCoverage>> = BTreeMap::new();
+    let mut args: BTreeMap<(Vec<String>, String), Vec<ScopedCoverage>> = BTreeMap::new();
+
+    for (cmd_idx, cmd) in wrapper.coverage.iter().enumerate() {
+        let cmd_targets = scope_to_targets(
+            expected_targets,
+            platform_mapping,
+            &expected_set,
+            cmd.scope.as_ref(),
+        );
+        commands
+            .entry(cmd.path.clone())
+            .or_default()
+            .push(ScopedCoverage {
+                index: cmd_idx,
+                targets: cmd_targets.clone(),
+                level: cmd.level.clone(),
+                note: cmd.note.clone(),
+            });
+
+        for flag in &cmd.flags {
+            let flag_targets = scope_to_targets(
+                expected_targets,
+                platform_mapping,
+                &expected_set,
+                flag.scope.as_ref(),
+            );
+            let effective = intersect(&cmd_targets, &flag_targets);
+            flags
+                .entry((cmd.path.clone(), flag.key.clone()))
+                .or_default()
+                .push(ScopedCoverage {
+                    index: cmd_idx,
+                    targets: effective,
+                    level: flag.level.clone(),
+                    note: flag.note.clone(),
+                });
+        }
+
+        for arg in &cmd.args {
+            let arg_targets = scope_to_targets(
+                expected_targets,
+                platform_mapping,
+                &expected_set,
+                arg.scope.as_ref(),
+            );
+            let effective = intersect(&cmd_targets, &arg_targets);
+            args.entry((cmd.path.clone(), arg.name.clone()))
+                .or_default()
+                .push(ScopedCoverage {
+                    index: cmd_idx,
+                    targets: effective,
+                    level: arg.level.clone(),
+                    note: arg.note.clone(),
+                });
+        }
+    }
+
+    WrapperIndex {
+        commands,
+        flags,
+        args,
+    }
+}
+
+fn scope_to_targets(
+    expected_targets: &[String],
+    platform_mapping: &BTreeMap<String, String>,
+    expected_set: &BTreeSet<String>,
+    scope: Option<&WrapperScope>,
+) -> BTreeSet<String> {
+    let Some(scope) = scope else {
+        return expected_set.clone();
+    };
+
+    let mut out = BTreeSet::<String>::new();
+    if let Some(tt) = scope.target_triples.as_ref() {
+        for t in tt {
+            if expected_set.contains(t) {
+                out.insert(t.clone());
+            }
+        }
+    }
+    if let Some(platforms) = scope.platforms.as_ref() {
+        for target in expected_targets {
+            if let Some(platform) = platform_mapping.get(target) {
+                if platforms.iter().any(|pl| pl == platform) {
+                    out.insert(target.clone());
+                }
+            }
+        }
+    }
+    out
+}
+
+fn intersect(a: &BTreeSet<String>, b: &BTreeSet<String>) -> BTreeSet<String> {
+    a.intersection(b).cloned().collect()
+}

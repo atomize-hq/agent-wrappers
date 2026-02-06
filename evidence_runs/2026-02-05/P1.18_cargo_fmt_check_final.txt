@@ -1,0 +1,57 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/app_server.rs:110:
+         })
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/apply_diff.rs:157:
+         })
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/features.rs:90:
+ 
+         let stdout_string = String::from_utf8(stdout_bytes)?;
+         let stderr_string = String::from_utf8(stderr_bytes)?;
+[31m-        let (features, format) =
+(B[m[31m-            crate::version::parse_feature_list_output(&stdout_string, json).map_err(|reason| {
+(B[m[31m-                CodexError::FeatureListParse {
+(B[m[31m-                    reason,
+(B[m[31m-                    stdout: stdout_string.clone(),
+(B[m[31m-                }
+(B[m[32m+        let (features, format) = crate::version::parse_feature_list_output(&stdout_string, json)
+(B[m[32m+            .map_err(|reason| CodexError::FeatureListParse {
+(B[m[32m+                reason,
+(B[m[32m+                stdout: stdout_string.clone(),
+(B[m             })?;
+ 
+         Ok(FeaturesListOutput {
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/features.rs:107:
+         })
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/mod.rs:1:
+[31m-mod apply_diff;
+(B[m mod app_server;
+[32m+mod apply_diff;
+(B[m mod features;
+ mod proxy;
+ mod sandbox;
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/mod.rs:6:
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/proxy.rs:78:
+         })
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/commands/sandbox.rs:152:
+         })
+     }
+ }
+[31m-
+(B[m 

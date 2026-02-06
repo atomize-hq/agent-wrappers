@@ -1,0 +1,338 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:2856:
+     use super::*;
+     use crate::builder::ResolvedCliOverrides;
+     use futures_util::{pin_mut, StreamExt};
+[31m-    use serde_json::json;
+(B[m     use semver::Version;
+[32m+    use serde_json::json;
+(B[m     use std::collections::HashMap;
+     use std::fs as std_fs;
+     #[cfg(unix)]
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:4219:
+         assert!(matches!(err, CodexError::EmptySandboxCommand));
+     }
+ 
+[31m-	    fn capabilities_with_version(raw_version: &str) -> CodexCapabilities {
+(B[m[31m-	        CodexCapabilities {
+(B[m[31m-	            cache_key: CapabilityCacheKey {
+(B[m[31m-	                binary_path: PathBuf::from("codex"),
+(B[m[31m-	            },
+(B[m[31m-	            fingerprint: None,
+(B[m[31m-	            version: Some(version::parse_version_output(raw_version)),
+(B[m[31m-	            features: CodexFeatureFlags::default(),
+(B[m[31m-	            probe_plan: CapabilityProbePlan::default(),
+(B[m[31m-	            collected_at: SystemTime::now(),
+(B[m[31m-	        }
+(B[m[31m-	    }
+(B[m[32m+    fn capabilities_with_version(raw_version: &str) -> CodexCapabilities {
+(B[m[32m+        CodexCapabilities {
+(B[m[32m+            cache_key: CapabilityCacheKey {
+(B[m[32m+                binary_path: PathBuf::from("codex"),
+(B[m[32m+            },
+(B[m[32m+            fingerprint: None,
+(B[m[32m+            version: Some(version::parse_version_output(raw_version)),
+(B[m[32m+            features: CodexFeatureFlags::default(),
+(B[m[32m+            probe_plan: CapabilityProbePlan::default(),
+(B[m[32m+            collected_at: SystemTime::now(),
+(B[m[32m+        }
+(B[m[32m+    }
+(B[m 
+     fn capabilities_without_version() -> CodexCapabilities {
+         CodexCapabilities {
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:4291:
+         }
+     }
+ 
+[31m-	    fn sample_capability_overrides() -> CapabilityOverrides {
+(B[m[31m-	        CapabilityOverrides {
+(B[m[31m-	            snapshot: Some(sample_capabilities_snapshot()),
+(B[m[31m-	            version: Some(version::parse_version_output("codex 9.9.9-nightly")),
+(B[m[31m-	            features: CapabilityFeatureOverrides {
+(B[m[31m-	                supports_features_list: Some(true),
+(B[m[31m-	                supports_output_schema: Some(true),
+(B[m[31m-	                supports_add_dir: Some(true),
+(B[m[31m-	                supports_mcp_login: None,
+(B[m[31m-	            },
+(B[m[31m-	        }
+(B[m[31m-	    }
+(B[m[32m+    fn sample_capability_overrides() -> CapabilityOverrides {
+(B[m[32m+        CapabilityOverrides {
+(B[m[32m+            snapshot: Some(sample_capabilities_snapshot()),
+(B[m[32m+            version: Some(version::parse_version_output("codex 9.9.9-nightly")),
+(B[m[32m+            features: CapabilityFeatureOverrides {
+(B[m[32m+                supports_features_list: Some(true),
+(B[m[32m+                supports_output_schema: Some(true),
+(B[m[32m+                supports_add_dir: Some(true),
+(B[m[32m+                supports_mcp_login: None,
+(B[m[32m+            },
+(B[m[32m+        }
+(B[m[32m+    }
+(B[m 
+     fn capability_snapshot_with_metadata(
+         collected_at: SystemTime,
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:4799:
+         assert!(client_without_home.codex_home_layout().is_none());
+     }
+ 
+[31m-	    #[test]
+(B[m[31m-	    fn parses_version_output_fields() {
+(B[m[31m-	        let parsed = version::parse_version_output("codex v3.4.5-nightly (commit abc1234)");
+(B[m[31m-	        assert_eq!(parsed.semantic, Some((3, 4, 5)));
+(B[m[31m-	        assert_eq!(parsed.channel, CodexReleaseChannel::Nightly);
+(B[m[31m-	        assert_eq!(parsed.commit.as_deref(), Some("abc1234"));
+(B[m[31m-	        assert_eq!(
+(B[m[31m-	            parsed.raw,
+(B[m[31m-	            "codex v3.4.5-nightly (commit abc1234)".to_string()
+(B[m[31m-	        );
+(B[m[31m-	    }
+(B[m[32m+    #[test]
+(B[m[32m+    fn parses_version_output_fields() {
+(B[m[32m+        let parsed = version::parse_version_output("codex v3.4.5-nightly (commit abc1234)");
+(B[m[32m+        assert_eq!(parsed.semantic, Some((3, 4, 5)));
+(B[m[32m+        assert_eq!(parsed.channel, CodexReleaseChannel::Nightly);
+(B[m[32m+        assert_eq!(parsed.commit.as_deref(), Some("abc1234"));
+(B[m[32m+        assert_eq!(
+(B[m[32m+            parsed.raw,
+(B[m[32m+            "codex v3.4.5-nightly (commit abc1234)".to_string()
+(B[m[32m+        );
+(B[m[32m+    }
+(B[m 
+     #[test]
+     fn update_advisory_detects_newer_release() {
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:5025:
+         let cache_key = capability_cache_key(&binary);
+         let fingerprint = current_fingerprint(&cache_key);
+ 
+[31m-	        let snapshot = CodexCapabilities {
+(B[m[31m-	            cache_key: cache_key.clone(),
+(B[m[31m-	            fingerprint: fingerprint.clone(),
+(B[m[31m-	            version: Some(version::parse_version_output("codex 0.0.1")),
+(B[m[31m-	            features: CodexFeatureFlags {
+(B[m[31m-	                supports_features_list: true,
+(B[m[31m-	                supports_output_schema: true,
+(B[m[31m-	                supports_add_dir: false,
+(B[m[32m+        let snapshot = CodexCapabilities {
+(B[m[32m+            cache_key: cache_key.clone(),
+(B[m[32m+            fingerprint: fingerprint.clone(),
+(B[m[32m+            version: Some(version::parse_version_output("codex 0.0.1")),
+(B[m[32m+            features: CodexFeatureFlags {
+(B[m[32m+                supports_features_list: true,
+(B[m[32m+                supports_output_schema: true,
+(B[m[32m+                supports_add_dir: false,
+(B[m                 supports_mcp_login: false,
+             },
+             probe_plan: CapabilityProbePlan {
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:5123:
+             let mut cache = capability_cache().lock().unwrap();
+             cache.insert(
+                 cache_key.clone(),
+[31m-	                CodexCapabilities {
+(B[m[31m-	                    cache_key: cache_key.clone(),
+(B[m[31m-	                    fingerprint: None,
+(B[m[31m-	                    version: Some(version::parse_version_output("codex 9.9.9")),
+(B[m[31m-	                    features: CodexFeatureFlags {
+(B[m[31m-	                        supports_features_list: true,
+(B[m[31m-	                        supports_output_schema: true,
+(B[m[31m-	                        supports_add_dir: true,
+(B[m[32m+                CodexCapabilities {
+(B[m[32m+                    cache_key: cache_key.clone(),
+(B[m[32m+                    fingerprint: None,
+(B[m[32m+                    version: Some(version::parse_version_output("codex 9.9.9")),
+(B[m[32m+                    features: CodexFeatureFlags {
+(B[m[32m+                        supports_features_list: true,
+(B[m[32m+                        supports_output_schema: true,
+(B[m[32m+                        supports_add_dir: true,
+(B[m                         supports_mcp_login: true,
+                     },
+                     probe_plan: CapabilityProbePlan::default(),
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:5227:
+         clear_capability_cache();
+     }
+ 
+[31m-	    #[test]
+(B[m[31m-	    fn parses_features_from_json_and_text() {
+(B[m[31m-	        let json = r#"{"features":["output_schema","add_dir"],"mcp_login":true}"#;
+(B[m[31m-	        let parsed_json = version::parse_features_from_json(json).unwrap();
+(B[m[31m-	        assert!(parsed_json.supports_output_schema);
+(B[m[31m-	        assert!(parsed_json.supports_add_dir);
+(B[m[31m-	        assert!(parsed_json.supports_mcp_login);
+(B[m[32m+    #[test]
+(B[m[32m+    fn parses_features_from_json_and_text() {
+(B[m[32m+        let json = r#"{"features":["output_schema","add_dir"],"mcp_login":true}"#;
+(B[m[32m+        let parsed_json = version::parse_features_from_json(json).unwrap();
+(B[m[32m+        assert!(parsed_json.supports_output_schema);
+(B[m[32m+        assert!(parsed_json.supports_add_dir);
+(B[m[32m+        assert!(parsed_json.supports_mcp_login);
+(B[m 
+[31m-	        let text = "Features: output-schema add-dir login --mcp";
+(B[m[31m-	        let parsed_text = version::parse_features_from_text(text);
+(B[m[31m-	        assert!(parsed_text.supports_output_schema);
+(B[m[31m-	        assert!(parsed_text.supports_add_dir);
+(B[m[31m-	        assert!(parsed_text.supports_mcp_login);
+(B[m[31m-	    }
+(B[m[32m+        let text = "Features: output-schema add-dir login --mcp";
+(B[m[32m+        let parsed_text = version::parse_features_from_text(text);
+(B[m[32m+        assert!(parsed_text.supports_output_schema);
+(B[m[32m+        assert!(parsed_text.supports_add_dir);
+(B[m[32m+        assert!(parsed_text.supports_mcp_login);
+(B[m[32m+    }
+(B[m 
+[31m-	    #[test]
+(B[m[31m-	    fn parses_feature_list_json_and_text_tables() {
+(B[m[31m-	        let json = r#"{"features":[{"name":"json-stream","stage":"stable","enabled":true,"notes":"keep"},{"name":"cloud-exec","stage":"experimental","enabled":false}]}"#;
+(B[m[31m-	        let (json_features, json_format) = version::parse_feature_list_output(json, true).unwrap();
+(B[m[31m-	        assert_eq!(json_format, FeaturesListFormat::Json);
+(B[m[31m-	        assert_eq!(json_features.len(), 2);
+(B[m[31m-	        assert_eq!(json_features[0].name, "json-stream");
+(B[m[31m-	        assert_eq!(json_features[0].stage, Some(CodexFeatureStage::Stable));
+(B[m[32m+    #[test]
+(B[m[32m+    fn parses_feature_list_json_and_text_tables() {
+(B[m[32m+        let json = r#"{"features":[{"name":"json-stream","stage":"stable","enabled":true,"notes":"keep"},{"name":"cloud-exec","stage":"experimental","enabled":false}]}"#;
+(B[m[32m+        let (json_features, json_format) = version::parse_feature_list_output(json, true).unwrap();
+(B[m[32m+        assert_eq!(json_format, FeaturesListFormat::Json);
+(B[m[32m+        assert_eq!(json_features.len(), 2);
+(B[m[32m+        assert_eq!(json_features[0].name, "json-stream");
+(B[m[32m+        assert_eq!(json_features[0].stage, Some(CodexFeatureStage::Stable));
+(B[m         assert!(json_features[0].enabled);
+         assert!(json_features[0].extra.contains_key("notes"));
+         assert_eq!(
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:5263:
+ json-stream stable      true
+ 	cloud-exec experimental false
+ 	"#;
+[31m-	        let (text_features, text_format) = version::parse_feature_list_output(text, false).unwrap();
+(B[m[31m-	        assert_eq!(text_format, FeaturesListFormat::Text);
+(B[m[31m-	        assert_eq!(text_features.len(), 2);
+(B[m[31m-	        assert_eq!(
+(B[m[31m-	            text_features[1].stage,
+(B[m[31m-	            Some(CodexFeatureStage::Experimental)
+(B[m[31m-	        );
+(B[m[31m-	        assert!(!text_features[1].enabled);
+(B[m[32m+        let (text_features, text_format) = version::parse_feature_list_output(text, false).unwrap();
+(B[m[32m+        assert_eq!(text_format, FeaturesListFormat::Text);
+(B[m[32m+        assert_eq!(text_features.len(), 2);
+(B[m[32m+        assert_eq!(
+(B[m[32m+            text_features[1].stage,
+(B[m[32m+            Some(CodexFeatureStage::Experimental)
+(B[m[32m+        );
+(B[m[32m+        assert!(!text_features[1].enabled);
+(B[m 
+[31m-	        let (fallback_features, fallback_format) = version::parse_feature_list_output(text, true).unwrap();
+(B[m[31m-	        assert_eq!(fallback_format, FeaturesListFormat::Text);
+(B[m[31m-	        assert_eq!(fallback_features.len(), 2);
+(B[m[31m-	    }
+(B[m[32m+        let (fallback_features, fallback_format) =
+(B[m[32m+            version::parse_feature_list_output(text, true).unwrap();
+(B[m[32m+        assert_eq!(fallback_format, FeaturesListFormat::Text);
+(B[m[32m+        assert_eq!(fallback_features.len(), 2);
+(B[m[32m+    }
+(B[m 
+     #[test]
+[31m-	    fn parses_help_output_flags() {
+(B[m[31m-	        let help =
+(B[m[31m-	            "Usage: codex --output-schema ... add-dir ... login --mcp. See `codex features list`.";
+(B[m[31m-	        let parsed = version::parse_help_output(help);
+(B[m[31m-	        assert!(parsed.supports_output_schema);
+(B[m[31m-	        assert!(parsed.supports_add_dir);
+(B[m[31m-	        assert!(parsed.supports_mcp_login);
+(B[m[31m-	        assert!(parsed.supports_features_list);
+(B[m[31m-	    }
+(B[m[32m+    fn parses_help_output_flags() {
+(B[m[32m+        let help =
+(B[m[32m+            "Usage: codex --output-schema ... add-dir ... login --mcp. See `codex features list`.";
+(B[m[32m+        let parsed = version::parse_help_output(help);
+(B[m[32m+        assert!(parsed.supports_output_schema);
+(B[m[32m+        assert!(parsed.supports_add_dir);
+(B[m[32m+        assert!(parsed.supports_mcp_login);
+(B[m[32m+        assert!(parsed.supports_features_list);
+(B[m[32m+    }
+(B[m 
+     #[test]
+     fn capability_guard_reports_detected_support() {
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:5367:
+         );
+         let binary = write_fake_codex(temp.path(), &script);
+ 
+[31m-	        let snapshot = CodexCapabilities {
+(B[m[31m-	            cache_key: CapabilityCacheKey {
+(B[m[31m-	                binary_path: PathBuf::from("codex"),
+(B[m[31m-	            },
+(B[m[31m-	            fingerprint: None,
+(B[m[31m-	            version: Some(version::parse_version_output("codex 9.9.9-custom")),
+(B[m[31m-	            features: CodexFeatureFlags {
+(B[m[31m-	                supports_features_list: true,
+(B[m[31m-	                supports_output_schema: true,
+(B[m[31m-	                supports_add_dir: false,
+(B[m[32m+        let snapshot = CodexCapabilities {
+(B[m[32m+            cache_key: CapabilityCacheKey {
+(B[m[32m+                binary_path: PathBuf::from("codex"),
+(B[m[32m+            },
+(B[m[32m+            fingerprint: None,
+(B[m[32m+            version: Some(version::parse_version_output("codex 9.9.9-custom")),
+(B[m[32m+            features: CodexFeatureFlags {
+(B[m[32m+                supports_features_list: true,
+(B[m[32m+                supports_output_schema: true,
+(B[m[32m+                supports_add_dir: false,
+(B[m                 supports_mcp_login: true,
+             },
+             probe_plan: CapabilityProbePlan::default(),
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/lib.rs:5478:
+   echo "Usage: codex add-dir"
+ fi
+ 	"#;
+[31m-	        let binary = write_fake_codex(temp.path(), script);
+(B[m[31m-	        let version_override =
+(B[m[31m-	            version::parse_version_output("codex 9.9.9-nightly (commit beefcafe)");
+(B[m[32m+        let binary = write_fake_codex(temp.path(), script);
+(B[m[32m+        let version_override =
+(B[m[32m+            version::parse_version_output("codex 9.9.9-nightly (commit beefcafe)");
+(B[m 
+         let client = CodexClient::builder()
+             .binary(&binary)
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/version.rs:256:
+     if normalized.contains("add_dir") || compact.contains("adddir") {
+         flags.supports_add_dir = true;
+     }
+[31m-    if normalized.contains("mcp_login") || (normalized.contains("login") && normalized.contains("mcp"))
+(B[m[32m+    if normalized.contains("mcp_login")
+(B[m[32m+        || (normalized.contains("login") && normalized.contains("mcp"))
+(B[m     {
+         flags.supports_mcp_login = true;
+     }
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/version.rs:324:
+             if let Some(features) = map.get("features") {
+                 return parse_feature_list_json_value(features);
+             }
+[31m-            if map.contains_key("name") || map.contains_key("enabled") || map.contains_key("stage") {
+(B[m[32m+            if map.contains_key("name") || map.contains_key("enabled") || map.contains_key("stage")
+(B[m[32m+            {
+(B[m                 return feature_from_json_fields(None, map).map(|feature| vec![feature]);
+             }
+             Some(
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/version.rs:331:
+                 map.iter()
+                     .filter_map(|(name, value)| match value {
+[31m-                        Value::Object(inner) => feature_from_json_fields(Some(name.as_str()), inner),
+(B[m[32m+                        Value::Object(inner) => {
+(B[m[32m+                            feature_from_json_fields(Some(name.as_str()), inner)
+(B[m[32m+                        }
+(B[m                         Value::Bool(flag) => Some(CodexFeature {
+                             name: name.clone(),
+                             stage: None,
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/version.rs:544:
+             }
+         }
+         CodexUpdateStatus::UnknownLatestVersion => notes.push(
+[31m-            "No latest Codex release information provided; update advisory unavailable.".to_string(),
+(B[m[32m+            "No latest Codex release information provided; update advisory unavailable."
+(B[m[32m+                .to_string(),
+(B[m         ),
+         CodexUpdateStatus::UpToDate => {
+             if let Some(latest) = latest_release.as_ref() {
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/codex/src/version.rs:564:
+         notes,
+     }
+ }
+[31m-
+(B[m 
+cargo fmt check failed

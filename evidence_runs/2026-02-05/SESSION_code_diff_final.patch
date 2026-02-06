@@ -1,0 +1,17 @@
+diff --git a/crates/codex/src/tests/cli_commands.rs b/crates/codex/src/tests/cli.rs
+similarity index 100%
+rename from crates/codex/src/tests/cli_commands.rs
+rename to crates/codex/src/tests/cli.rs
+diff --git a/crates/codex/src/tests/mod.rs b/crates/codex/src/tests/mod.rs
+index 61ea65e..f22658e 100644
+--- a/crates/codex/src/tests/mod.rs
++++ b/crates/codex/src/tests/mod.rs
+@@ -27,7 +27,7 @@ mod auth_session;
+ mod builder_env_home;
+ mod bundled_binary;
+ mod capabilities;
+-mod cli_commands;
++mod cli;
+ mod cli_overrides;
+ mod cloud;
+ mod jsonl;

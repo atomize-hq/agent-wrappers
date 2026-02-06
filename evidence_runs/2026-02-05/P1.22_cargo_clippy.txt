@@ -1,0 +1,854 @@
+    Checking codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)
+error[E0432]: unresolved imports `super::apply_cli_overrides`, `super::resolve_cli_overrides`, `super::spawn_with_retry`, `super::tee_stream`, `super::ConsoleTarget`
+  --> crates/codex/src/execpolicy.rs:13:5
+   |
+13 |     apply_cli_overrides, resolve_cli_overrides, spawn_with_retry, tee_stream, CliOverridesPatch,
+   |     ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^ no `tee_stream` in the root
+   |     |                    |                      |
+   |     |                    |                      no `spawn_with_retry` in the root
+   |     |                    no `resolve_cli_overrides` in the root
+   |     no `apply_cli_overrides` in the root
+14 |     CodexClient, CodexError, ConfigOverride, ConsoleTarget, FlagState,
+   |                                              ^^^^^^^^^^^^^ no `ConsoleTarget` in the root
+   |
+   = help: consider importing this enum instead:
+           crate::process::ConsoleTarget
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+   --> crates/codex/src/tests.rs:423:10
+    |
+423 |         [OsString::from("echo"), OsString::from("hello world")],
+    |          ^^^^^^^^ use of undeclared type `OsString`
+    |
+    = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+    |
+423 -         [OsString::from("echo"), OsString::from("hello world")],
+423 +         [String::from("echo"), OsString::from("hello world")],
+    |
+help: consider importing this struct
+    |
+1   + use std::ffi::OsString;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+   --> crates/codex/src/tests.rs:423:34
+    |
+423 |         [OsString::from("echo"), OsString::from("hello world")],
+    |                                  ^^^^^^^^ use of undeclared type `OsString`
+    |
+    = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+    |
+423 -         [OsString::from("echo"), OsString::from("hello world")],
+423 +         [OsString::from("echo"), String::from("hello world")],
+    |
+help: consider importing this struct
+    |
+1   + use std::ffi::OsString;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+   --> crates/codex/src/tests.rs:614:17
+    |
+614 |                 OsString::from("bash"),
+    |                 ^^^^^^^^ use of undeclared type `OsString`
+    |
+    = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+    |
+614 -                 OsString::from("bash"),
+614 +                 String::from("bash"),
+    |
+help: consider importing this struct
+    |
+1   + use std::ffi::OsString;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+   --> crates/codex/src/tests.rs:615:17
+    |
+615 |                 OsString::from("-lc"),
+    |                 ^^^^^^^^ use of undeclared type `OsString`
+    |
+    = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+    |
+615 -                 OsString::from("-lc"),
+615 +                 String::from("-lc"),
+    |
+help: consider importing this struct
+    |
+1   + use std::ffi::OsString;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+   --> crates/codex/src/tests.rs:616:17
+    |
+616 |                 OsString::from("echo ok"),
+    |                 ^^^^^^^^ use of undeclared type `OsString`
+    |
+    = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+    |
+616 -                 OsString::from("echo ok"),
+616 +                 String::from("echo ok"),
+    |
+help: consider importing this struct
+    |
+1   + use std::ffi::OsString;
+    |
+
+error[E0412]: cannot find type `OsString` in this scope
+   --> crates/codex/src/tests.rs:667:53
+    |
+667 |     let request = ExecPolicyCheckRequest::new(Vec::<OsString>::new());
+    |                                                     ^^^^^^^^
+   --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/alloc/src/string.rs:360:1
+    |
+    = note: similarly named struct `String` defined here
+    |
+    = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+    |
+667 -     let request = ExecPolicyCheckRequest::new(Vec::<OsString>::new());
+667 +     let request = ExecPolicyCheckRequest::new(Vec::<String>::new());
+    |
+help: consider importing this struct
+    |
+1   + use std::ffi::OsString;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+   --> crates/codex/src/tests.rs:696:42
+    |
+696 |             ExecPolicyCheckRequest::new([OsString::from("echo"), OsString::from("noop")])
+    |                                          ^^^^^^^^ use of undeclared type `OsString`
+    |
+    = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+    |
+696 -             ExecPolicyCheckRequest::new([OsString::from("echo"), OsString::from("noop")])
+696 +             ExecPolicyCheckRequest::new([String::from("echo"), OsString::from("noop")])
+    |
+help: consider importing this struct
+    |
+1   + use std::ffi::OsString;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+   --> crates/codex/src/tests.rs:696:66
+    |
+696 |             ExecPolicyCheckRequest::new([OsString::from("echo"), OsString::from("noop")])
+    |                                                                  ^^^^^^^^ use of undeclared type `OsString`
+    |
+    = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+    |
+696 -             ExecPolicyCheckRequest::new([OsString::from("echo"), OsString::from("noop")])
+696 +             ExecPolicyCheckRequest::new([OsString::from("echo"), String::from("noop")])
+    |
+help: consider importing this struct
+    |
+1   + use std::ffi::OsString;
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1041:48
+     |
+1041 |             McpAddRequest::stdio("files", vec![OsString::from("node"), OsString::from("srv")])
+     |                                                ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1041 -             McpAddRequest::stdio("files", vec![OsString::from("node"), OsString::from("srv")])
+1041 +             McpAddRequest::stdio("files", vec![String::from("node"), OsString::from("srv")])
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1041:72
+     |
+1041 |             McpAddRequest::stdio("files", vec![OsString::from("node"), OsString::from("srv")])
+     |                                                                        ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1041 -             McpAddRequest::stdio("files", vec![OsString::from("node"), OsString::from("srv")])
+1041 +             McpAddRequest::stdio("files", vec![OsString::from("node"), String::from("srv")])
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0412]: cannot find type `OsString` in this scope
+    --> crates/codex/src/tests.rs:1362:76
+     |
+1362 |     let request = SandboxCommandRequest::new(SandboxPlatform::Linux, Vec::<OsString>::new());
+     |                                                                            ^^^^^^^^
+    --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/alloc/src/string.rs:360:1
+     |
+     = note: similarly named struct `String` defined here
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1362 -     let request = SandboxCommandRequest::new(SandboxPlatform::Linux, Vec::<OsString>::new());
+1362 +     let request = SandboxCommandRequest::new(SandboxPlatform::Linux, Vec::<String>::new());
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0412]: cannot find type `OsString` in this scope
+    --> crates/codex/src/tests.rs:1613:22
+     |
+1613 |     let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+     |                      ^^^^^^^^
+    --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/alloc/src/string.rs:360:1
+     |
+     = note: similarly named struct `String` defined here
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1613 -     let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+1613 +     let map: HashMap<String, OsString> = overrides.into_iter().collect();
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0412]: cannot find type `OsString` in this scope
+    --> crates/codex/src/tests.rs:1613:32
+     |
+1613 |     let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+     |                                ^^^^^^^^
+    --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/alloc/src/string.rs:360:1
+     |
+     = note: similarly named struct `String` defined here
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1613 -     let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+1613 +     let map: HashMap<OsString, String> = overrides.into_iter().collect();
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1616:18
+     |
+1616 |         map.get(&OsString::from(CODEX_BINARY_ENV)),
+     |                  ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1616 -         map.get(&OsString::from(CODEX_BINARY_ENV)),
+1616 +         map.get(&String::from(CODEX_BINARY_ENV)),
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1617:15
+     |
+1617 |         Some(&OsString::from("/custom/codex"))
+     |               ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1617 -         Some(&OsString::from("/custom/codex"))
+1617 +         Some(&String::from("/custom/codex"))
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1620:18
+     |
+1620 |         map.get(&OsString::from(CODEX_HOME_ENV)),
+     |                  ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1620 -         map.get(&OsString::from(CODEX_HOME_ENV)),
+1620 +         map.get(&String::from(CODEX_HOME_ENV)),
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1624:18
+     |
+1624 |         map.get(&OsString::from(RUST_LOG_ENV)),
+     |                  ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1624 -         map.get(&OsString::from(RUST_LOG_ENV)),
+1624 +         map.get(&String::from(RUST_LOG_ENV)),
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1625:15
+     |
+1625 |         Some(&OsString::from(DEFAULT_RUST_LOG))
+     |               ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1625 -         Some(&OsString::from(DEFAULT_RUST_LOG))
+1625 +         Some(&String::from(DEFAULT_RUST_LOG))
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `Command`
+    --> crates/codex/src/tests.rs:1660:23
+     |
+1660 |     let mut command = Command::new("echo");
+     |                       ^^^^^^^ use of undeclared type `Command`
+     |
+help: consider importing one of these structs
+     |
+1    + use std::process::Command;
+     |
+1    + use tokio::process::Command;
+     |
+
+error[E0412]: cannot find type `OsString` in this scope
+    --> crates/codex/src/tests.rs:1663:23
+     |
+1663 |     let envs: HashMap<OsString, Option<OsString>> = command
+     |                       ^^^^^^^^
+    --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/alloc/src/string.rs:360:1
+     |
+     = note: similarly named struct `String` defined here
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1663 -     let envs: HashMap<OsString, Option<OsString>> = command
+1663 +     let envs: HashMap<String, Option<OsString>> = command
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0412]: cannot find type `OsString` in this scope
+    --> crates/codex/src/tests.rs:1663:40
+     |
+1663 |     let envs: HashMap<OsString, Option<OsString>> = command
+     |                                        ^^^^^^^^
+    --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/alloc/src/string.rs:360:1
+     |
+     = note: similarly named struct `String` defined here
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1663 -     let envs: HashMap<OsString, Option<OsString>> = command
+1663 +     let envs: HashMap<OsString, Option<String>> = command
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1670:19
+     |
+1670 |         envs.get(&OsString::from(binary_key)),
+     |                   ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1670 -         envs.get(&OsString::from(binary_key)),
+1670 +         envs.get(&String::from(binary_key)),
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1671:20
+     |
+1671 |         Some(&Some(OsString::from("/app/bundled/codex")))
+     |                    ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1671 -         Some(&Some(OsString::from("/app/bundled/codex")))
+1671 +         Some(&Some(String::from("/app/bundled/codex")))
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1674:19
+     |
+1674 |         envs.get(&OsString::from(home_key)),
+     |                   ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1674 -         envs.get(&OsString::from(home_key)),
+1674 +         envs.get(&String::from(home_key)),
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1678:19
+     |
+1678 |         envs.get(&OsString::from(rust_log_key)),
+     |                   ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1678 -         envs.get(&OsString::from(rust_log_key)),
+1678 +         envs.get(&String::from(rust_log_key)),
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1679:20
+     |
+1679 |         Some(&Some(OsString::from(DEFAULT_RUST_LOG)))
+     |                    ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1679 -         Some(&Some(OsString::from(DEFAULT_RUST_LOG)))
+1679 +         Some(&Some(String::from(DEFAULT_RUST_LOG)))
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1683:14
+     |
+1683 |         Some(OsString::from("/tmp/ambient_home"))
+     |              ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1683 -         Some(OsString::from("/tmp/ambient_home"))
+1683 +         Some(String::from("/tmp/ambient_home"))
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0412]: cannot find type `OsString` in this scope
+    --> crates/codex/src/tests.rs:1795:22
+     |
+1795 |     let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+     |                      ^^^^^^^^
+    --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/alloc/src/string.rs:360:1
+     |
+     = note: similarly named struct `String` defined here
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1795 -     let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+1795 +     let map: HashMap<String, OsString> = overrides.into_iter().collect();
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0412]: cannot find type `OsString` in this scope
+    --> crates/codex/src/tests.rs:1795:32
+     |
+1795 |     let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+     |                                ^^^^^^^^
+    --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/alloc/src/string.rs:360:1
+     |
+     = note: similarly named struct `String` defined here
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1795 -     let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+1795 +     let map: HashMap<OsString, String> = overrides.into_iter().collect();
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1798:18
+     |
+1798 |         map.get(&OsString::from(CODEX_BINARY_ENV)),
+     |                  ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1798 -         map.get(&OsString::from(CODEX_BINARY_ENV)),
+1798 +         map.get(&String::from(CODEX_BINARY_ENV)),
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1799:15
+     |
+1799 |         Some(&OsString::from("codex"))
+     |               ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1799 -         Some(&OsString::from("codex"))
+1799 +         Some(&String::from("codex"))
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1801:32
+     |
+1801 |     assert!(!map.contains_key(&OsString::from(RUST_LOG_ENV)));
+     |                                ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1801 -     assert!(!map.contains_key(&OsString::from(RUST_LOG_ENV)));
+1801 +     assert!(!map.contains_key(&String::from(RUST_LOG_ENV)));
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0412]: cannot find type `OsString` in this scope
+    --> crates/codex/src/tests.rs:1819:22
+     |
+1819 |     let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+     |                      ^^^^^^^^
+    --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/alloc/src/string.rs:360:1
+     |
+     = note: similarly named struct `String` defined here
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1819 -     let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+1819 +     let map: HashMap<String, OsString> = overrides.into_iter().collect();
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0412]: cannot find type `OsString` in this scope
+    --> crates/codex/src/tests.rs:1819:32
+     |
+1819 |     let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+     |                                ^^^^^^^^
+    --> /rustc/29483883eed69d5fb4db01964cdf2af4d86e9cb2/library/alloc/src/string.rs:360:1
+     |
+     = note: similarly named struct `String` defined here
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1819 -     let map: HashMap<OsString, OsString> = overrides.into_iter().collect();
+1819 +     let map: HashMap<OsString, String> = overrides.into_iter().collect();
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `OsString`
+    --> crates/codex/src/tests.rs:1825:18
+     |
+1825 |         map.get(&OsString::from(CODEX_HOME_ENV)),
+     |                  ^^^^^^^^ use of undeclared type `OsString`
+     |
+     = note: struct `crate::mcp::tests_runtime_app::prelude::OsString` exists but is inaccessible
+help: a struct with a similar name exists
+     |
+1825 -         map.get(&OsString::from(CODEX_HOME_ENV)),
+1825 +         map.get(&String::from(CODEX_HOME_ENV)),
+     |
+help: consider importing this struct
+     |
+1    + use std::ffi::OsString;
+     |
+
+error[E0425]: cannot find function `resolve_cli_overrides` in this scope
+    --> crates/codex/src/tests.rs:2920:20
+     |
+2920 |     let resolved = resolve_cli_overrides(&builder, &patch, Some("gpt-5"));
+     |                    ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+     |
+note: function `crate::builder::cli_overrides::resolve_cli_overrides` exists but is inaccessible
+    --> crates/codex/src/builder/cli_overrides.rs:65:1
+     |
+65   | / pub(super) fn resolve_cli_overrides(
+66   | |     builder: &CliOverrides,
+67   | |     patch: &CliOverridesPatch,
+68   | |     model: Option<&str>,
+...    |
+127  | | }
+     | |_^ not accessible
+help: consider importing this function
+     |
+1    + use crate::builder::resolve_cli_overrides;
+     |
+
+error[E0425]: cannot find function `resolve_cli_overrides` in this scope
+    --> crates/codex/src/tests.rs:2930:34
+     |
+2930 |     let resolved_without_model = resolve_cli_overrides(&builder, &patch, None);
+     |                                  ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+     |
+note: function `crate::builder::cli_overrides::resolve_cli_overrides` exists but is inaccessible
+    --> crates/codex/src/builder/cli_overrides.rs:65:1
+     |
+65   | / pub(super) fn resolve_cli_overrides(
+66   | |     builder: &CliOverrides,
+67   | |     patch: &CliOverridesPatch,
+68   | |     model: Option<&str>,
+...    |
+127  | | }
+     | |_^ not accessible
+help: consider importing this function
+     |
+1    + use crate::builder::resolve_cli_overrides;
+     |
+
+error[E0425]: cannot find function `resolve_cli_overrides` in this scope
+    --> crates/codex/src/tests.rs:2941:20
+     |
+2941 |     let resolved = resolve_cli_overrides(&builder, &CliOverridesPatch::default(), Some("gpt-5"));
+     |                    ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+     |
+note: function `crate::builder::cli_overrides::resolve_cli_overrides` exists but is inaccessible
+    --> crates/codex/src/builder/cli_overrides.rs:65:1
+     |
+65   | / pub(super) fn resolve_cli_overrides(
+66   | |     builder: &CliOverrides,
+67   | |     patch: &CliOverridesPatch,
+68   | |     model: Option<&str>,
+...    |
+127  | | }
+     | |_^ not accessible
+help: consider importing this function
+     |
+1    + use crate::builder::resolve_cli_overrides;
+     |
+
+error[E0425]: cannot find function `resolve_cli_overrides` in this scope
+    --> crates/codex/src/tests.rs:2954:20
+     |
+2954 |     let resolved = resolve_cli_overrides(&builder, &patch, Some("gpt-5"));
+     |                    ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+     |
+note: function `crate::builder::cli_overrides::resolve_cli_overrides` exists but is inaccessible
+    --> crates/codex/src/builder/cli_overrides.rs:65:1
+     |
+65   | / pub(super) fn resolve_cli_overrides(
+66   | |     builder: &CliOverrides,
+67   | |     patch: &CliOverridesPatch,
+68   | |     model: Option<&str>,
+...    |
+127  | | }
+     | |_^ not accessible
+help: consider importing this function
+     |
+1    + use crate::builder::resolve_cli_overrides;
+     |
+
+error[E0425]: cannot find function `resolve_cli_overrides` in this scope
+    --> crates/codex/src/tests.rs:2973:20
+     |
+2973 |     let resolved = resolve_cli_overrides(&builder_overrides, &patch, None);
+     |                    ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+     |
+note: function `crate::builder::cli_overrides::resolve_cli_overrides` exists but is inaccessible
+    --> crates/codex/src/builder/cli_overrides.rs:65:1
+     |
+65   | / pub(super) fn resolve_cli_overrides(
+66   | |     builder: &CliOverrides,
+67   | |     patch: &CliOverridesPatch,
+68   | |     model: Option<&str>,
+...    |
+127  | | }
+     | |_^ not accessible
+help: consider importing this function
+     |
+1    + use crate::builder::resolve_cli_overrides;
+     |
+
+error[E0425]: cannot find function `resolve_cli_overrides` in this scope
+    --> crates/codex/src/tests.rs:2994:20
+     |
+2994 |     let resolved = resolve_cli_overrides(&builder_overrides, &patch, None);
+     |                    ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+     |
+note: function `crate::builder::cli_overrides::resolve_cli_overrides` exists but is inaccessible
+    --> crates/codex/src/builder/cli_overrides.rs:65:1
+     |
+65   | / pub(super) fn resolve_cli_overrides(
+66   | |     builder: &CliOverrides,
+67   | |     patch: &CliOverridesPatch,
+68   | |     model: Option<&str>,
+...    |
+127  | | }
+     | |_^ not accessible
+help: consider importing this function
+     |
+1    + use crate::builder::resolve_cli_overrides;
+     |
+
+error[E0425]: cannot find function `resolve_cli_overrides` in this scope
+    --> crates/codex/src/tests.rs:3015:20
+     |
+3015 |     let resolved = resolve_cli_overrides(&builder_overrides, &patch, None);
+     |                    ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+     |
+note: function `crate::builder::cli_overrides::resolve_cli_overrides` exists but is inaccessible
+    --> crates/codex/src/builder/cli_overrides.rs:65:1
+     |
+65   | / pub(super) fn resolve_cli_overrides(
+66   | |     builder: &CliOverrides,
+67   | |     patch: &CliOverridesPatch,
+68   | |     model: Option<&str>,
+...    |
+127  | | }
+     | |_^ not accessible
+help: consider importing this function
+     |
+1    + use crate::builder::resolve_cli_overrides;
+     |
+
+error[E0425]: cannot find function `resolve_cli_overrides` in this scope
+    --> crates/codex/src/tests.rs:3034:20
+     |
+3034 |     let resolved = resolve_cli_overrides(&builder_overrides, &CliOverridesPatch::default(), None);
+     |                    ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+     |
+note: function `crate::builder::cli_overrides::resolve_cli_overrides` exists but is inaccessible
+    --> crates/codex/src/builder/cli_overrides.rs:65:1
+     |
+65   | / pub(super) fn resolve_cli_overrides(
+66   | |     builder: &CliOverrides,
+67   | |     patch: &CliOverridesPatch,
+68   | |     model: Option<&str>,
+...    |
+127  | | }
+     | |_^ not accessible
+help: consider importing this function
+     |
+1    + use crate::builder::resolve_cli_overrides;
+     |
+
+error[E0425]: cannot find function `resolve_cli_overrides` in this scope
+    --> crates/codex/src/tests.rs:3045:20
+     |
+3045 |     let resolved = resolve_cli_overrides(&builder_overrides, &patch, None);
+     |                    ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+     |
+note: function `crate::builder::cli_overrides::resolve_cli_overrides` exists but is inaccessible
+    --> crates/codex/src/builder/cli_overrides.rs:65:1
+     |
+65   | / pub(super) fn resolve_cli_overrides(
+66   | |     builder: &CliOverrides,
+67   | |     patch: &CliOverridesPatch,
+68   | |     model: Option<&str>,
+...    |
+127  | | }
+     | |_^ not accessible
+help: consider importing this function
+     |
+1    + use crate::builder::resolve_cli_overrides;
+     |
+
+error[E0425]: cannot find function `resolve_cli_overrides` in this scope
+    --> crates/codex/src/tests.rs:3075:20
+     |
+3075 |     let resolved = resolve_cli_overrides(&builder_overrides, &patch, None);
+     |                    ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+     |
+note: function `crate::builder::cli_overrides::resolve_cli_overrides` exists but is inaccessible
+    --> crates/codex/src/builder/cli_overrides.rs:65:1
+     |
+65   | / pub(super) fn resolve_cli_overrides(
+66   | |     builder: &CliOverrides,
+67   | |     patch: &CliOverridesPatch,
+68   | |     model: Option<&str>,
+...    |
+127  | | }
+     | |_^ not accessible
+help: consider importing this function
+     |
+1    + use crate::builder::resolve_cli_overrides;
+     |
+
+For more information about this error, try `rustc --explain E0432`.
+error: could not compile `codex` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+Some errors have detailed explanations: E0412, E0425, E0432, E0433.
+For more information about an error, try `rustc --explain E0412`.
+error: could not compile `codex` (lib test) due to 46 previous errors
+clippy failed

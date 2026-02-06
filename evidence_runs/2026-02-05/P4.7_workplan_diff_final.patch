@@ -1,0 +1,46 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 757a4d6..cb8f33d 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -1129,7 +1129,7 @@ Last Updated: 2026-02-05
+ 
+ ##### P4.7 — Reduce `crates/xtask/tests/c3_spec_reports_metadata_retain.rs` below hard threshold
+ 
+-Status: [x] Not Started  [ ] In Progress  [ ] Done  
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
+ Last Updated: 2026-02-05
+ 
+ - Goal: Reduce `crates/xtask/tests/c3_spec_reports_metadata_retain.rs` from 742 LOC to `<= 600` LOC via mechanical test modularization.
+@@ -2379,6 +2379,32 @@ Add entries as work lands. Format:
+ - Commit:
+   - TBD_POST_COMMIT
+ 
++### 2026-02-05 — P4.7 tests modularization (`crates/xtask/tests/c3_spec_reports_metadata_retain.rs` below hard threshold)
++
++- Scope/step: P4.7
++- Why: Earliest queued not-done item in §10 after P4.6; reduce `crates/xtask/tests/c3_spec_reports_metadata_retain.rs` to `<= 600` LOC via mechanical test modularization with assertions/snapshots unchanged.
++- What changed:
++  - Kept `crates/xtask/tests/c3_spec_reports_metadata_retain.rs` as the shared helper façade and moved inline tests into out-of-line submodules.
++  - Added submodules under `crates/xtask/tests/c3_spec_reports_metadata_retain/`:
++    - `report_filter_semantics.rs`
++    - `report_incomplete_union.rs`
++    - `version_metadata_requirements.rs`
++    - `retain_behavior.rs`
++  - Preserved existing test names/assertions/fixtures; this is organization-only.
++  - Result: `crates/xtask/tests/c3_spec_reports_metadata_retain.rs` is now 478 LOC (<= 600).
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.7_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P4.7_cargo_clippy_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.7_cargo_clippy.txt`; fixed module path wiring/imports in step scope)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P4.7_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P4.7_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.7_cargo_audit.txt`; reran with `--no-fetch --stale` due advisory DB lock/fetch constraints in this sandbox)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P4.7_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.7_cargo_deny_advisories.txt`; reran with writable temp `CARGO_HOME`, offline mode, and `--disable-fetch` due advisory DB lock/network constraints in this sandbox)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.7_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.7_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Base commit: `evidence_runs/2026-02-05/P4.7_BASE_STEP.txt`
++- Commit:
++  - TBD_POST_COMMIT
++
+ ## 9) Open Questions / Decisions (lightweight log)
+ 
+ Use this table for decisions that affect policy, public APIs, or exceptions to size constraints.

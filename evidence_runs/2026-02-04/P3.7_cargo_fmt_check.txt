@@ -1,0 +1,146 @@
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/report.rs:441:
+     }
+ 
+     missing_commands.sort_by(|a, b| util::cmp_path(&a.path, &b.path));
+[31m-    missing_flags.sort_by(|a, b| {
+(B[m[31m-        util::cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key))
+(B[m[31m-    });
+(B[m[31m-    missing_args.sort_by(|a, b| {
+(B[m[31m-        util::cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name))
+(B[m[31m-    });
+(B[m[32m+    missing_flags.sort_by(|a, b| util::cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key)));
+(B[m[32m+    missing_args.sort_by(|a, b| util::cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name)));
+(B[m 
+     excluded_commands.sort_by(|a, b| util::cmp_path(&a.path, &b.path));
+[31m-    excluded_flags.sort_by(|a, b| {
+(B[m[31m-        util::cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key))
+(B[m[31m-    });
+(B[m[31m-    excluded_args.sort_by(|a, b| {
+(B[m[31m-        util::cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name))
+(B[m[31m-    });
+(B[m[32m+    excluded_flags.sort_by(|a, b| util::cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key)));
+(B[m[32m+    excluded_args
+(B[m[32m+        .sort_by(|a, b| util::cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name)));
+(B[m 
+     passthrough_candidates.sort_by(|a, b| util::cmp_path(&a.path, &b.path));
+     unsupported.sort_by(|a, b| util::cmp_path(&a.path, &b.path));
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/report.rs:461:
+     intentionally_unsupported.sort_by(cmp_iu_delta);
+ 
+     wrapper_only_commands.sort_by(|a, b| util::cmp_path(&a.path, &b.path));
+[31m-    wrapper_only_flags.sort_by(|a, b| {
+(B[m[31m-        util::cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key))
+(B[m[31m-    });
+(B[m[31m-    wrapper_only_args.sort_by(|a, b| {
+(B[m[31m-        util::cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name))
+(B[m[31m-    });
+(B[m[32m+    wrapper_only_flags
+(B[m[32m+        .sort_by(|a, b| util::cmp_path(&a.path, &b.path).then_with(|| a.key.cmp(&b.key)));
+(B[m[32m+    wrapper_only_args
+(B[m[32m+        .sort_by(|a, b| util::cmp_path(&a.path, &b.path).then_with(|| a.name.cmp(&b.name)));
+(B[m 
+     let deltas = ReportDeltasV1 {
+         missing_commands,
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/report.rs:651:
+ ) -> (Vec<String>, bool) {
+     if let Some(cmd) = upstream.get(path) {
+         if let Some(flag) = cmd.flags.iter().find(|f| f.key == key) {
+[31m-            let present = present_on_filter(&flag.available_on, report_targets, expected_targets, mode);
+(B[m[32m+            let present =
+(B[m[32m+                present_on_filter(&flag.available_on, report_targets, expected_targets, mode);
+(B[m             return (flag.available_on.clone(), present);
+         }
+         return (cmd.available_on.clone(), false);
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/report.rs:658:
+     }
+[31m-    (util::ordered_subset(expected_targets, &wrapper_res.targets), false)
+(B[m[32m+    (
+(B[m[32m+        util::ordered_subset(expected_targets, &wrapper_res.targets),
+(B[m[32m+        false,
+(B[m[32m+    )
+(B[m }
+ 
+ fn upstream_arg_availability(
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/report.rs:670:
+ ) -> (Vec<String>, bool) {
+     if let Some(cmd) = upstream.get(path) {
+         if let Some(arg) = cmd.args.iter().find(|a| a.name == name) {
+[31m-            let present = present_on_filter(&arg.available_on, report_targets, expected_targets, mode);
+(B[m[32m+            let present =
+(B[m[32m+                present_on_filter(&arg.available_on, report_targets, expected_targets, mode);
+(B[m             return (arg.available_on.clone(), present);
+         }
+         return (cmd.available_on.clone(), false);
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/report.rs:677:
+     }
+[31m-    (util::ordered_subset(expected_targets, &wrapper_res.targets), false)
+(B[m[32m+    (
+(B[m[32m+        util::ordered_subset(expected_targets, &wrapper_res.targets),
+(B[m[32m+        false,
+(B[m[32m+    )
+(B[m }
+ 
+ #[derive(Debug, Serialize)]
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/report.rs:934:
+ ) -> std::cmp::Ordering {
+     iu_kind_rank(a).cmp(&iu_kind_rank(b)).then_with(|| {
+         util::cmp_path(iu_path(a), iu_path(b)).then_with(|| match (a, b) {
+[31m-            (ReportIntentionallyUnsupportedDeltaV1::Flag(a), ReportIntentionallyUnsupportedDeltaV1::Flag(b)) => a.key.cmp(&b.key),
+(B[m[31m-            (ReportIntentionallyUnsupportedDeltaV1::Arg(a), ReportIntentionallyUnsupportedDeltaV1::Arg(b)) => a.name.cmp(&b.name),
+(B[m[32m+            (
+(B[m[32m+                ReportIntentionallyUnsupportedDeltaV1::Flag(a),
+(B[m[32m+                ReportIntentionallyUnsupportedDeltaV1::Flag(b),
+(B[m[32m+            ) => a.key.cmp(&b.key),
+(B[m[32m+            (
+(B[m[32m+                ReportIntentionallyUnsupportedDeltaV1::Arg(a),
+(B[m[32m+                ReportIntentionallyUnsupportedDeltaV1::Arg(b),
+(B[m[32m+            ) => a.name.cmp(&b.name),
+(B[m             _ => std::cmp::Ordering::Equal,
+         })
+     })
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/report.rs:980:
+         args,
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/rules.rs:204:
+         )))
+     }
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/util.rs:1:
+[31m-use std::{
+(B[m[31m-    collections::BTreeSet,
+(B[m[31m-    fs, io,
+(B[m[31m-    path::Path,
+(B[m[31m-};
+(B[m[32m+use std::{collections::BTreeSet, fs, io, path::Path};
+(B[m 
+ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
+ 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/util.rs:47:
+     a.intersection(b).cloned().collect()
+ }
+ 
+[31m-pub(super) fn ordered_subset(expected_targets: &[String], targets: &BTreeSet<String>) -> Vec<String> {
+(B[m[32m+pub(super) fn ordered_subset(
+(B[m[32m+    expected_targets: &[String],
+(B[m[32m+    targets: &BTreeSet<String>,
+(B[m[32m+) -> Vec<String> {
+(B[m     expected_targets
+         .iter()
+         .filter(|t| targets.contains(*t))
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/util.rs:77:
+ pub(super) fn is_prefix(prefix: &[String], path: &[String]) -> bool {
+     prefix.len() <= path.len() && prefix.iter().zip(path).all(|(a, b)| a == b)
+ }
+[31m-
+(B[m 
+Diff in /home/dev/__Active_Code/codex_wrapper_new/crates/xtask/src/codex_report/wrapper.rs:197:
+         note,
+     })
+ }
+[31m-
+(B[m 

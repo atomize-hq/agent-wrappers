@@ -1,0 +1,45 @@
+diff --git a/refactor_workplan.md b/refactor_workplan.md
+index 6b717a7..5fee3a4 100644
+--- a/refactor_workplan.md
++++ b/refactor_workplan.md
+@@ -1008,7 +1008,7 @@ Reason: P4.4 refreshed the measurements (`evidence_runs/2026-02-05/P4.4_tokei_cr
+ 
+ ##### P4.0 — Reduce crates/codex/src/tests.rs below ceiling (tests modularization)
+ 
+-Status: [ ] Not Started  [x] In Progress  [ ] Done  
++Status: [ ] Not Started  [ ] In Progress  [x] Done  
+ Last Updated: 2026-02-05
+ 
+ - Goal: Reduce `crates/codex/src/tests.rs` from 3,178 LOC to `<= 1000` LOC while preserving test behavior.
+@@ -2538,7 +2538,30 @@ Add entries as work lands. Format:
+   - Code diff: `evidence_runs/2026-02-05/SESSION_code_diff_final.patch` (post-commit)
+   - Workplan diff: `evidence_runs/2026-02-05/SESSION_workplan_diff_final.patch` (post-commit)
+ - Commit:
+-  - TBD
++  - 465e126a60d645850db5185eaed03ffabcc836c5
++
++### 2026-02-05 — P4.0.5 tests modularization follow-up (`cli` domain split 5/5)
++
++- Scope/step: P4.0.5
++- Why: Continue the P4.0 loop by moving the remaining CLI-domain tests into a dedicated module and removing the transitional `cli_commands` module.
++- What changed:
++  - Moved the remaining CLI-domain tests from `crates/codex/src/tests/cli_commands.rs` into `crates/codex/src/tests/cli.rs` with test names/assertions preserved.
++  - Updated `crates/codex/src/tests/mod.rs` wiring from `mod cli_commands;` to `mod cli;`.
++  - Removed `crates/codex/src/tests/cli_commands.rs`.
++  - Kept shared helpers in `crates/codex/src/tests/support.rs`; no helper behavior changes were required.
++- Validation results (§4.1):
++  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.0.5_cargo_fmt_check.txt`)
++  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P4.0.5_cargo_clippy.txt`)
++  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P4.0.5_cargo_test.txt`)
++  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P4.0.5_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0.5_cargo_audit.txt`; reran with writable temp `CARGO_HOME` and `--no-fetch --stale` due advisory DB lock/network constraints in this sandbox)
++  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P4.0.5_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0.5_cargo_deny_advisories.txt`; reran with writable temp `CARGO_HOME`, offline mode, and `--disable-fetch` due advisory DB lock constraints in this sandbox)
++  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.0.5_cargo_deny_licenses.txt`)
++  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.0.5_cargo_fmt_check_final.txt`)
++- Evidence/patches:
++  - Code diff: `evidence_runs/2026-02-05/SESSION_code_diff_final.patch` (post-commit)
++  - Workplan diff: `evidence_runs/2026-02-05/SESSION_workplan_diff_final.patch` (post-commit)
++- Commit:
++  - TBD (single-commit rule: commit hash is available only after commit creation)
+ 
+ ## 9) Open Questions / Decisions (lightweight log)
+ 

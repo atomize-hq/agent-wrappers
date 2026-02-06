@@ -1,0 +1,46 @@
+  2790	    /// Additional `--config key=value` overrides to pass through.
+  2791	    pub config_overrides: Vec<ConfigOverride>,
+  2792	    /// Feature toggles forwarded to `--enable`/`--disable`.
+  2793	    pub feature_toggles: FeatureToggles,
+  2794	    /// Working directory for the spawned command; falls back to the builder value, then the current process directory.
+  2795	    pub working_dir: Option<PathBuf>,
+  2796	}
+  2797	
+  2798	impl SandboxCommandRequest {
+  2799	    pub fn new<I, S>(platform: SandboxPlatform, command: I) -> Self
+  2800	    where
+  2801	        I: IntoIterator<Item = S>,
+  2802	        S: Into<OsString>,
+  2803	    {
+  2804	        Self {
+  2805	            platform,
+  2806	            command: command.into_iter().map(Into::into).collect(),
+  2807	            full_auto: false,
+  2808	            log_denials: false,
+  2809	            config_overrides: Vec::new(),
+  2810	            feature_toggles: FeatureToggles::default(),
+  2811	            working_dir: None,
+  2812	        }
+  2813	    }
+  2814	
+  2815	    pub fn full_auto(mut self, enable: bool) -> Self {
+  2816	        self.full_auto = enable;
+  2817	        self
+  2818	    }
+  2819	
+  2820	    pub fn log_denials(mut self, enable: bool) -> Self {
+  2821	        self.log_denials = enable;
+  2822	        self
+  2823	    }
+  2824	
+  2825	    pub fn config_override(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+  2826	        self.config_overrides.push(ConfigOverride::new(key, value));
+  2827	        self
+  2828	    }
+  2829	
+  2830	    pub fn config_override_raw(mut self, raw: impl Into<String>) -> Self {
+  2831	        self.config_overrides.push(ConfigOverride::from_raw(raw));
+  2832	        self
+  2833	    }
+  2834	
+  2835	    pub fn enable_feature(mut self, name: impl Into<String>) -> Self {

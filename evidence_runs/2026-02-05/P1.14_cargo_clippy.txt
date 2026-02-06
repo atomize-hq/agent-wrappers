@@ -1,0 +1,66 @@
+    Checking codex v0.2.0 (/home/dev/__Active_Code/codex_wrapper_new/crates/codex)
+error: unused import: `self as stdio`
+   --> crates/codex/src/lib.rs:124:10
+    |
+124 |     io::{self as stdio, Write},
+    |          ^^^^^^^^^^^^^
+    |
+    = note: `-D unused-imports` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+error: unused import: `task`
+   --> crates/codex/src/lib.rs:145:5
+    |
+145 |     task, time,
+    |     ^^^^
+
+error: unused imports: `AsyncRead` and `task`
+   --> crates/codex/src/lib.rs:142:10
+    |
+142 |     io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
+    |          ^^^^^^^^^
+...
+145 |     task, time,
+    |     ^^^^
+
+error: unused import: `Write`
+   --> crates/codex/src/lib.rs:124:25
+    |
+124 |     io::{self as stdio, Write},
+    |                         ^^^^^
+
+error: unused import: `AsyncRead`
+   --> crates/codex/src/lib.rs:142:10
+    |
+142 |     io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
+    |          ^^^^^^^^^
+
+error: unused import: `AsyncReadExt`
+   --> crates/codex/src/lib.rs:142:21
+    |
+142 |     io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
+    |                     ^^^^^^^^^^^^
+
+error: could not compile `codex` (lib) due to 5 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: items after a test module
+    --> crates/codex/src/lib.rs:2819:1
+     |
+2819 | mod tests {
+     | ^^^^^^^^^
+...
+6380 | fn default_rust_log_value() -> Option<&'static str> {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+6386 | fn default_binary_path() -> PathBuf {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+6392 | fn parse_login_success(output: &str) -> Option<CodexAuthStatus> {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#items_after_test_module
+     = note: `-D clippy::items-after-test-module` implied by `-D warnings`
+     = help: to override `-D warnings` add `#[allow(clippy::items_after_test_module)]`
+     = help: move the items to before the test module was defined
+
+error: could not compile `codex` (lib test) due to 5 previous errors
