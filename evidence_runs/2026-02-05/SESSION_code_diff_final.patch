@@ -1,21 +1,21 @@
 diff --git a/crates/codex/src/tests/cli_commands.rs b/crates/codex/src/tests/cli_commands.rs
-index 3b64c0a..e4eb874 100644
+index e4eb874..bf7a5a5 100644
 --- a/crates/codex/src/tests/cli_commands.rs
 +++ b/crates/codex/src/tests/cli_commands.rs
-@@ -187,92 +187,6 @@ printf "%s\n" "$@"
+@@ -187,118 +187,6 @@ printf "%s\n" "$@"
      );
  }
  
 -#[cfg(unix)]
 -#[tokio::test]
--async fn cloud_list_parses_json_and_maps_args() {
+-async fn mcp_list_get_and_add_map_args_and_parse_json() {
 -    let dir = tempfile::tempdir().unwrap();
 -    let script_path = write_fake_codex(
 -        dir.path(),
 -        r#"#!/usr/bin/env bash
 -printf "%s\n" "$@" 1>&2
 -cat <<'JSON'
--{"tasks":[],"cursor":null}
+-{"servers":[{"name":"files"}]}
 -JSON
 -"#,
 -    );
@@ -26,27 +26,30 @@ index 3b64c0a..e4eb874 100644
 -        .quiet(true)
 -        .build();
 -
--    let output = client
--        .cloud_list(
--            CloudListRequest::new()
--                .json(true)
--                .env_id("env-1")
--                .limit(3)
--                .cursor("cur-1"),
--        )
+-    let list = client
+-        .mcp_list(McpListRequest::new().json(true))
 -        .await
 -        .unwrap();
--
--    assert_eq!(output.json, Some(json!({"tasks": [], "cursor": null})));
+-    assert_eq!(list.json, Some(json!({"servers": [{"name": "files"}]})));
 -    assert_eq!(
--        output.stderr.lines().collect::<Vec<_>>(),
--        vec!["cloud", "list", "--env", "env-1", "--limit", "3", "--cursor", "cur-1", "--json"]
+-        list.stderr.lines().collect::<Vec<_>>(),
+-        vec!["mcp", "list", "--json"]
+-    );
+-
+-    let get = client
+-        .mcp_get(McpGetRequest::new("files").json(true))
+-        .await
+-        .unwrap();
+-    assert_eq!(get.json, Some(json!({"servers": [{"name": "files"}]})));
+-    assert_eq!(
+-        get.stderr.lines().collect::<Vec<_>>(),
+-        vec!["mcp", "get", "--json", "files"]
 -    );
 -}
 -
 -#[cfg(unix)]
 -#[tokio::test]
--async fn cloud_exec_maps_args_and_rejects_empty_env_id() {
+-async fn mcp_add_maps_transports_and_validates_required_fields() {
 -    let dir = tempfile::tempdir().unwrap();
 -    let script_path = write_fake_codex(
 -        dir.path(),
@@ -61,141 +64,70 @@ index 3b64c0a..e4eb874 100644
 -        .quiet(true)
 -        .build();
 -
--    let output = client
--        .cloud_exec(
--            CloudExecRequest::new("env-1")
--                .attempts(2)
--                .branch("main")
--                .query("hello"),
+-    let stdio = client
+-        .mcp_add(
+-            McpAddRequest::stdio("files", vec![OsString::from("node"), OsString::from("srv")])
+-                .env("TOKEN", "abc"),
 -        )
 -        .await
 -        .unwrap();
 -    assert_eq!(
--        output.stdout.lines().collect::<Vec<_>>(),
+-        stdio.stdout.lines().collect::<Vec<_>>(),
 -        vec![
--            "cloud",
--            "exec",
+-            "mcp",
+-            "add",
+-            "files",
 -            "--env",
--            "env-1",
--            "--attempts",
--            "2",
--            "--branch",
--            "main",
--            "hello"
+-            "TOKEN=abc",
+-            "--",
+-            "node",
+-            "srv"
+-        ]
+-    );
+-
+-    let http = client
+-        .mcp_add(
+-            McpAddRequest::streamable_http("http", "https://example.test")
+-                .bearer_token_env_var("TOKEN_ENV"),
+-        )
+-        .await
+-        .unwrap();
+-    assert_eq!(
+-        http.stdout.lines().collect::<Vec<_>>(),
+-        vec![
+-            "mcp",
+-            "add",
+-            "http",
+-            "--url",
+-            "https://example.test",
+-            "--bearer-token-env-var",
+-            "TOKEN_ENV"
 -        ]
 -    );
 -
 -    let err = client
--        .cloud_exec(CloudExecRequest::new("  "))
+-        .mcp_add(McpAddRequest::stdio("files", Vec::new()))
 -        .await
 -        .unwrap_err();
--    assert!(matches!(err, CodexError::EmptyEnvId));
+-    assert!(matches!(err, CodexError::EmptyMcpCommand));
+-
+-    let err = client
+-        .mcp_add(McpAddRequest::streamable_http("bad", "  "))
+-        .await
+-        .unwrap_err();
+-    assert!(matches!(err, CodexError::EmptyMcpUrl));
 -}
 -
  #[cfg(unix)]
  #[tokio::test]
- async fn mcp_list_get_and_add_map_args_and_parse_json() {
-diff --git a/crates/codex/src/tests/cloud.rs b/crates/codex/src/tests/cloud.rs
-new file mode 100644
-index 0000000..a7ba9bf
---- /dev/null
-+++ b/crates/codex/src/tests/cloud.rs
-@@ -0,0 +1,87 @@
-+use super::*;
-+
-+#[cfg(unix)]
-+#[tokio::test]
-+async fn cloud_list_parses_json_and_maps_args() {
-+    let dir = tempfile::tempdir().unwrap();
-+    let script_path = write_fake_codex(
-+        dir.path(),
-+        r#"#!/usr/bin/env bash
-+printf "%s\n" "$@" 1>&2
-+cat <<'JSON'
-+{"tasks":[],"cursor":null}
-+JSON
-+"#,
-+    );
-+
-+    let client = CodexClient::builder()
-+        .binary(&script_path)
-+        .mirror_stdout(false)
-+        .quiet(true)
-+        .build();
-+
-+    let output = client
-+        .cloud_list(
-+            CloudListRequest::new()
-+                .json(true)
-+                .env_id("env-1")
-+                .limit(3)
-+                .cursor("cur-1"),
-+        )
-+        .await
-+        .unwrap();
-+
-+    assert_eq!(output.json, Some(json!({"tasks": [], "cursor": null})));
-+    assert_eq!(
-+        output.stderr.lines().collect::<Vec<_>>(),
-+        vec!["cloud", "list", "--env", "env-1", "--limit", "3", "--cursor", "cur-1", "--json"]
-+    );
-+}
-+
-+#[cfg(unix)]
-+#[tokio::test]
-+async fn cloud_exec_maps_args_and_rejects_empty_env_id() {
-+    let dir = tempfile::tempdir().unwrap();
-+    let script_path = write_fake_codex(
-+        dir.path(),
-+        r#"#!/usr/bin/env bash
-+printf "%s\n" "$@"
-+"#,
-+    );
-+
-+    let client = CodexClient::builder()
-+        .binary(&script_path)
-+        .mirror_stdout(false)
-+        .quiet(true)
-+        .build();
-+
-+    let output = client
-+        .cloud_exec(
-+            CloudExecRequest::new("env-1")
-+                .attempts(2)
-+                .branch("main")
-+                .query("hello"),
-+        )
-+        .await
-+        .unwrap();
-+    assert_eq!(
-+        output.stdout.lines().collect::<Vec<_>>(),
-+        vec![
-+            "cloud",
-+            "exec",
-+            "--env",
-+            "env-1",
-+            "--attempts",
-+            "2",
-+            "--branch",
-+            "main",
-+            "hello"
-+        ]
-+    );
-+
-+    let err = client
-+        .cloud_exec(CloudExecRequest::new("  "))
-+        .await
-+        .unwrap_err();
-+    assert!(matches!(err, CodexError::EmptyEnvId));
-+}
+ async fn app_server_codegen_maps_overrides_and_prettier() {
 diff --git a/crates/codex/src/tests/mod.rs b/crates/codex/src/tests/mod.rs
-index 47770ea..fb0b4bf 100644
+index fb0b4bf..2796483 100644
 --- a/crates/codex/src/tests/mod.rs
 +++ b/crates/codex/src/tests/mod.rs
-@@ -28,5 +28,6 @@ mod bundled_binary;
- mod capabilities;
- mod cli_commands;
+@@ -30,4 +30,5 @@ mod cli_commands;
  mod cli_overrides;
-+mod cloud;
+ mod cloud;
  mod jsonl;
++mod mcp;
  mod sandbox_execpolicy;

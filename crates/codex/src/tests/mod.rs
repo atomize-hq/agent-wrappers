@@ -30,4 +30,5 @@ mod cli_commands;
 mod cli_overrides;
 mod cloud;
 mod jsonl;
+mod mcp;
 mod sandbox_execpolicy;

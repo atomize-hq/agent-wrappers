@@ -2494,6 +2494,28 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/SESSION_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/SESSION_workplan_diff_final.patch` (post-commit)
 - Commit:
+  - 0549f5a533fad243dd11c56a926fdb08c9a595e9
+
+### 2026-02-05 — P4.0.3 tests modularization follow-up (`mcp` domain split 3/5)
+
+- Scope/step: P4.0.3
+- Why: Continue the P4.0 loop by moving one cohesive tests domain into its own module while keeping behavior unchanged.
+- What changed:
+  - Moved MCP command tests from `crates/codex/src/tests/cli_commands.rs` into new `crates/codex/src/tests/mcp.rs` with test names/assertions preserved.
+  - Updated `crates/codex/src/tests/mod.rs` wiring to include `mod mcp;`.
+  - Kept shared helpers in `crates/codex/src/tests/support.rs`; no helper behavior changes were required.
+- Validation results (§4.1):
+  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.0.3_cargo_fmt_check.txt`)
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P4.0.3_cargo_clippy.txt`)
+  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P4.0.3_cargo_test.txt`)
+  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P4.0.3_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0.3_cargo_audit.txt`; reran with writable temp `CARGO_HOME` + copied advisory DB and `--no-fetch --stale` due read-only advisory DB lock in this sandbox)
+  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P4.0.3_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0.3_cargo_deny_advisories.txt`; reran with writable temp `CARGO_HOME`, copied registry/advisory DB state, offline mode, and `--disable-fetch` due advisory DB lock/network constraints in this sandbox)
+  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.0.3_cargo_deny_licenses.txt`)
+  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.0.3_cargo_fmt_check_final.txt`)
+- Evidence/patches:
+  - Code diff: `evidence_runs/2026-02-05/SESSION_code_diff_final.patch` (post-commit)
+  - Workplan diff: `evidence_runs/2026-02-05/SESSION_workplan_diff_final.patch` (post-commit)
+- Commit:
   - TBD
 
 ## 9) Open Questions / Decisions (lightweight log)
