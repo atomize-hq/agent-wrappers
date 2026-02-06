@@ -2472,7 +2472,29 @@ Add entries as work lands. Format:
   - Code diff: `evidence_runs/2026-02-05/P4.0.1_code_diff_final.patch` (post-commit)
   - Workplan diff: `evidence_runs/2026-02-05/P4.0.1_workplan_diff_final.patch` (post-commit)
 - Commit:
-  - 2baa20910226765b579e73ec18d48bf75cb1f363
+  - 86e473d60056ac6cdf001646eaf2bb1e23039670
+
+### 2026-02-05 — P4.0.2 tests modularization follow-up (`cloud` domain split 2/5)
+
+- Scope/step: P4.0.2
+- Why: Continue the P4.0 loop by moving one cohesive tests domain into its own module while keeping behavior unchanged.
+- What changed:
+  - Moved cloud command tests from `crates/codex/src/tests/cli_commands.rs` into new `crates/codex/src/tests/cloud.rs` with test names/assertions preserved.
+  - Updated `crates/codex/src/tests/mod.rs` wiring to include `mod cloud;`.
+  - Kept shared helpers in `crates/codex/src/tests/support.rs`; no helper behavior changes were required.
+- Validation results (§4.1):
+  - `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.0.2_cargo_fmt_check_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0.2_cargo_fmt_check.txt`; applied: `evidence_runs/2026-02-05/P4.0.2_cargo_fmt_apply.txt`)
+  - `cargo clippy --all-targets --all-features -- -D warnings`: PASS (`evidence_runs/2026-02-05/P4.0.2_cargo_clippy.txt`)
+  - `cargo test --all-targets --all-features`: PASS (`evidence_runs/2026-02-05/P4.0.2_cargo_test.txt`)
+  - `cargo audit`: PASS (`evidence_runs/2026-02-05/P4.0.2_cargo_audit_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0.2_cargo_audit.txt`; reran with copied writable advisory DB + `--no-fetch --stale` due read-only advisory DB lock in this sandbox)
+  - `cargo deny check advisories`: PASS (`evidence_runs/2026-02-05/P4.0.2_cargo_deny_advisories_after.txt`) (initial FAIL: `evidence_runs/2026-02-05/P4.0.2_cargo_deny_advisories.txt`; reran with writable temp `CARGO_HOME`, copied registry/advisory DB state, offline mode, and `--disable-fetch` due advisory DB lock/network constraints in this sandbox)
+  - `cargo deny check licenses`: PASS (`evidence_runs/2026-02-05/P4.0.2_cargo_deny_licenses.txt`)
+  - Final `cargo fmt --all -- --check`: PASS (`evidence_runs/2026-02-05/P4.0.2_cargo_fmt_check_final.txt`)
+- Evidence/patches:
+  - Code diff: `evidence_runs/2026-02-05/SESSION_code_diff_final.patch` (post-commit)
+  - Workplan diff: `evidence_runs/2026-02-05/SESSION_workplan_diff_final.patch` (post-commit)
+- Commit:
+  - TBD
 
 ## 9) Open Questions / Decisions (lightweight log)
 

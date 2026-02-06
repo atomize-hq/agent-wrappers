@@ -28,5 +28,6 @@ mod bundled_binary;
 mod capabilities;
 mod cli_commands;
 mod cli_overrides;
+mod cloud;
 mod jsonl;
 mod sandbox_execpolicy;
