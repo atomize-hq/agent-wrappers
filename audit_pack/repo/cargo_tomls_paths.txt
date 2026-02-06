@@ -1,3 +1,0 @@
-./Cargo.toml
-./crates/codex/Cargo.toml
-./crates/xtask/Cargo.toml

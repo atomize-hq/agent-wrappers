@@ -1,5 +1,0 @@
-- cargo install cargo-geiger (exit 101): audit_pack/meta/install_cargo-geiger.txt
-- cargo install cargo-udeps (exit 101): audit_pack/meta/install_cargo-udeps.txt
-- cargo audit (exit 1): audit_pack/supply_chain/cargo_audit.txt
-- cargo deny check advisories (exit 1): audit_pack/supply_chain/cargo_deny_advisories.txt
-- cargo deny check licenses (exit 4): audit_pack/supply_chain/cargo_deny_licenses.txt
