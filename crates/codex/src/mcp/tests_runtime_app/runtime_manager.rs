@@ -22,8 +22,8 @@ async fn runtime_manager_starts_and_stops_stdio() {
     let runtime = McpRuntimeServer {
         name: "env-probe".into(),
         transport: McpRuntimeTransport::Stdio(StdioServerDefinition {
-            command: script.to_string_lossy().to_string(),
-            args: Vec::new(),
+            command: "python3".to_string(),
+            args: vec![script.to_string_lossy().to_string()],
             env: BTreeMap::new(),
             timeout_ms: Some(1500),
         }),

@@ -37,6 +37,8 @@ Every example under `crates/codex/examples/` maps to a `codex` CLI invocation. W
 | `cargo run -p codex --example stream_events -- "Summarize repo status"` | `echo "Summarize repo status" \| codex exec --skip-git-repo-check --json --timeout 0` | Typed consumer for `thread/turn/item` events (thread/turn IDs included, item created/updated for agent_message, reasoning, command_execution, file_change, mcp_tool_call, web_search, todo_list) plus `turn.failed`; `--sample` replays bundled events. |
 | `cargo run -p codex --example stream_last_message -- "Summarize repo status"` | `codex exec --skip-git-repo-check --json --output-last-message <path> --output-schema <path> <<<"Summarize repo status"` | Reads `--output-last-message` + `--output-schema` files; falls back to samples when the binary does not support those flags (e.g., 0.61.x). |
 | `CODEX_LOG_PATH=/tmp/codex.log cargo run -p codex --example stream_with_log -- "Stream with logging"` | `echo "Stream with logging" \| codex exec --skip-git-repo-check --json` | Mirrors stdout and tees JSONL events to `CODEX_LOG_PATH` (or uses sample events with IDs/status). |
+| `cargo run -p codex --example parse_rollout_jsonl -- --path <rollout.jsonl>` | `cat <rollout.jsonl>` | Offline parser for saved rollout JSONL logs (`rollout-*.jsonl` under `$CODEX_HOME/sessions`). |
+| `cargo run -p codex --example filter_rollout_event_msg -- --path <rollout.jsonl> --event-msg-type token_count --response-item-type message` | `cat <rollout.jsonl>` | Offline filter for rollout `event_msg` and `response_item` records by payload type; supports multiple filters and `--list-types`. |
 
 ## Resume & Apply/Diff
 

@@ -84,6 +84,7 @@ mod home;
 pub mod jsonl;
 pub mod mcp;
 mod process;
+pub mod rollout_jsonl;
 pub mod wrapper_coverage_manifest;
 
 pub use crate::error::CodexError;
@@ -127,6 +128,13 @@ pub use home::{AuthSeedError, AuthSeedOptions, AuthSeedOutcome, CodexHomeLayout}
 pub use jsonl::{
     thread_event_jsonl_file, thread_event_jsonl_reader, JsonlThreadEventParser,
     ThreadEventJsonlFileReader, ThreadEventJsonlReader, ThreadEventJsonlRecord,
+};
+pub use rollout_jsonl::{
+    find_rollout_file_by_id, find_rollout_files, rollout_jsonl_file, rollout_jsonl_reader,
+    RolloutBaseInstructions, RolloutContentPart, RolloutEvent, RolloutEventMsg,
+    RolloutEventMsgPayload, RolloutJsonlError, RolloutJsonlFileReader, RolloutJsonlParser,
+    RolloutJsonlReader, RolloutJsonlRecord, RolloutResponseItem, RolloutResponseItemPayload,
+    RolloutSessionMeta, RolloutSessionMetaPayload, RolloutUnknown,
 };
 
 use std::{
