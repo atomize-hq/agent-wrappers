@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "semantic_version": "0.97.0",
+  "status": "reported",
+  "updated_at": "2026-02-09T05:15:15Z",
+  "artifacts": {
+    "snapshots_dir": "snapshots/0.97.0",
+    "reports_dir": "reports/0.97.0",
+    "union_complete": false
+  },
+  "coverage": {
+    "supported_targets": [
+      "x86_64-unknown-linux-musl"
+    ],
+    "supported_required_target": true
+  },
+  "promotion": {
+    "eligible_for_latest_validated": false
+  }
+}

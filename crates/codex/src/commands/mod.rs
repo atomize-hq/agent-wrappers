@@ -1,6 +1,7 @@
 mod app_server;
 mod apply_diff;
 mod cloud;
+mod debug;
 mod features;
 mod fork;
 mod help;

@@ -5,8 +5,8 @@ use tokio::{process::Command, time};
 use crate::{
     builder::{apply_cli_overrides, resolve_cli_overrides},
     process::{spawn_with_retry, tee_stream, ConsoleTarget},
-    ApplyDiffArtifacts, CodexClient, CodexError, FeaturesCommandRequest, FeaturesListOutput,
-    FeaturesListRequest,
+    ApplyDiffArtifacts, CodexClient, CodexError, FeaturesCommandRequest, FeaturesDisableRequest,
+    FeaturesEnableRequest, FeaturesListOutput, FeaturesListRequest,
 };
 
 impl CodexClient {
@@ -17,6 +17,40 @@ impl CodexClient {
     ) -> Result<ApplyDiffArtifacts, CodexError> {
         self.run_simple_command_with_overrides(vec![OsString::from("features")], request.overrides)
             .await
+    }
+
+    /// Enables a CLI feature via `codex features enable <FEATURE>`.
+    pub async fn features_enable(
+        &self,
+        request: FeaturesEnableRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let FeaturesEnableRequest { feature, overrides } = request;
+        self.run_simple_command_with_overrides(
+            vec![
+                OsString::from("features"),
+                OsString::from("enable"),
+                OsString::from(feature),
+            ],
+            overrides,
+        )
+        .await
+    }
+
+    /// Disables a CLI feature via `codex features disable <FEATURE>`.
+    pub async fn features_disable(
+        &self,
+        request: FeaturesDisableRequest,
+    ) -> Result<ApplyDiffArtifacts, CodexError> {
+        let FeaturesDisableRequest { feature, overrides } = request;
+        self.run_simple_command_with_overrides(
+            vec![
+                OsString::from("features"),
+                OsString::from("disable"),
+                OsString::from(feature),
+            ],
+            overrides,
+        )
+        .await
     }
 
     /// Lists CLI features via `codex features list`.

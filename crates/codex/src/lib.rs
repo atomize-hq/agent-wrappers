@@ -102,12 +102,15 @@ pub use bundled_binary::{
 pub use cli::{
     AppServerCodegenOutput, AppServerCodegenRequest, AppServerCodegenTarget, CloudExecRequest,
     CloudListOutput, CloudListRequest, CloudOverviewRequest, CloudStatusRequest, CodexFeature,
-    CodexFeatureStage, ExecRequest, ExecReviewCommandRequest, FeaturesCommandRequest,
-    FeaturesListFormat, FeaturesListOutput, FeaturesListRequest, ForkSessionRequest,
-    HelpCommandRequest, HelpScope, McpAddRequest, McpAddTransport, McpGetRequest, McpListOutput,
-    McpListRequest, McpLogoutRequest, McpOauthLoginRequest, McpOverviewRequest, McpRemoveRequest,
-    ResponsesApiProxyHandle, ResponsesApiProxyInfo, ResponsesApiProxyRequest, ResumeSessionRequest,
-    ReviewCommandRequest, SandboxCommandRequest, SandboxPlatform, SandboxRun, StdioToUdsRequest,
+    CodexFeatureStage, DebugAppServerHelpRequest, DebugAppServerRequest,
+    DebugAppServerSendMessageV2Request, DebugCommandRequest, DebugHelpRequest, ExecRequest,
+    ExecReviewCommandRequest, FeaturesCommandRequest, FeaturesDisableRequest,
+    FeaturesEnableRequest, FeaturesListFormat, FeaturesListOutput, FeaturesListRequest,
+    ForkSessionRequest, HelpCommandRequest, HelpScope, McpAddRequest, McpAddTransport,
+    McpGetRequest, McpListOutput, McpListRequest, McpLogoutRequest, McpOauthLoginRequest,
+    McpOverviewRequest, McpRemoveRequest, ResponsesApiProxyHandle, ResponsesApiProxyInfo,
+    ResponsesApiProxyRequest, ResumeSessionRequest, ReviewCommandRequest, SandboxCommandRequest,
+    SandboxPlatform, SandboxRun, StdioToUdsRequest,
 };
 pub use events::{
     CommandExecutionDelta, CommandExecutionState, EventError, FileChangeDelta, FileChangeKind,

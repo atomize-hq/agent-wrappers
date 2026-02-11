@@ -20,7 +20,14 @@
     { "path": ["execpolicy", "check"], "examples": ["execpolicy_check"] },
     { "path": ["features"], "examples": ["features_cmd"] },
     { "path": ["features", "help"], "examples": ["help_scopes"] },
+    { "path": ["features", "enable"], "examples": ["features_toggle"] },
+    { "path": ["features", "disable"], "examples": ["features_toggle"] },
     { "path": ["features", "list"], "examples": ["features_cmd"] },
+    { "path": ["debug"], "examples": ["debug_cmd"] },
+    { "path": ["debug", "help"], "examples": ["debug_cmd"] },
+    { "path": ["debug", "app-server"], "examples": ["debug_cmd"] },
+    { "path": ["debug", "app-server", "help"], "examples": ["debug_cmd"] },
+    { "path": ["debug", "app-server", "send-message-v2"], "examples": ["debug_cmd"] },
     { "path": ["fork"], "examples": ["session_commands"] },
     { "path": ["help"], "examples": ["help_scopes"] },
     { "path": ["login"], "examples": ["auth_flow"] },
@@ -47,4 +54,3 @@
     { "path": ["stdio-to-uds"], "examples": ["stdio_to_uds_live"] }
   ]
 }
-

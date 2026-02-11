@@ -33,6 +33,8 @@ pub struct AppServerCodegenRequest {
     pub target: AppServerCodegenTarget,
     /// Output directory passed to `--out`; created if missing.
     pub out_dir: PathBuf,
+    /// Passes `--experimental` to the app-server codegen subcommand when enabled.
+    pub experimental: bool,
     /// Per-call CLI overrides layered on top of the builder.
     pub overrides: CliOverridesPatch,
 }
@@ -43,6 +45,7 @@ impl AppServerCodegenRequest {
         Self {
             target: AppServerCodegenTarget::TypeScript { prettier: None },
             out_dir: out_dir.into(),
+            experimental: false,
             overrides: CliOverridesPatch::default(),
         }
     }
@@ -52,8 +55,15 @@ impl AppServerCodegenRequest {
         Self {
             target: AppServerCodegenTarget::JsonSchema,
             out_dir: out_dir.into(),
+            experimental: false,
             overrides: CliOverridesPatch::default(),
         }
+    }
+
+    /// Controls whether `--experimental` is passed to the codegen subcommand.
+    pub fn experimental(mut self, enable: bool) -> Self {
+        self.experimental = enable;
+        self
     }
 
     /// Formats TypeScript output with the provided Prettier executable (no-op for JSON schema).

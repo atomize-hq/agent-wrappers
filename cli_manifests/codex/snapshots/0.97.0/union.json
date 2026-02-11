@@ -1,0 +1,1633 @@
+{
+  "snapshot_schema_version": 2,
+  "tool": "codex-cli",
+  "mode": "union",
+  "collected_at": "2026-02-05T05:11:10Z",
+  "expected_targets": [
+    "x86_64-unknown-linux-musl",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc"
+  ],
+  "complete": false,
+  "missing_targets": [
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc"
+  ],
+  "inputs": [
+    {
+      "target_triple": "x86_64-unknown-linux-musl",
+      "collected_at": "2026-02-05T05:11:10Z",
+      "binary": {
+        "sha256": "1a661731a8ea4bd836b84eaa056ad6f637eacb6dbac887581e2af4304285b1df",
+        "size_bytes": 73049256,
+        "platform": {
+          "os": "linux",
+          "arch": "x86_64"
+        },
+        "target_triple": "x86_64-unknown-linux-musl",
+        "version_output": "codex-cli 0.97.0",
+        "semantic_version": "0.97.0",
+        "channel": "stable"
+      },
+      "features": {
+        "commands_added_when_all_enabled": [],
+        "enabled_for_snapshot": [
+          "apps",
+          "collab",
+          "collaboration_modes",
+          "enable_request_compression",
+          "personality",
+          "request_rule",
+          "shell_snapshot",
+          "shell_tool",
+          "skill_mcp_dependency_install",
+          "steer",
+          "undo",
+          "unified_exec",
+          "web_search_cached",
+          "web_search_request"
+        ],
+        "listed": [
+          {
+            "effective": false,
+            "name": "apps",
+            "stage": "experimental"
+          },
+          {
+            "effective": false,
+            "name": "collab",
+            "stage": "experimental"
+          },
+          {
+            "effective": true,
+            "name": "collaboration_modes",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "enable_request_compression",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "personality",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "request_rule",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "shell_snapshot",
+            "stage": "experimental"
+          },
+          {
+            "effective": true,
+            "name": "shell_tool",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "skill_mcp_dependency_install",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "steer",
+            "stage": "experimental"
+          },
+          {
+            "effective": false,
+            "name": "undo",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "unified_exec",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "web_search_cached",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "web_search_request",
+            "stage": "deprecated"
+          }
+        ],
+        "mode": "default_plus_all_enabled"
+      }
+    }
+  ],
+  "commands": [
+    {
+      "path": [],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "about": "If no subcommand is specified, options will be forwarded to the interactive CLI.",
+      "usage": "codex [OPTIONS] [PROMPT]\ncodex [OPTIONS] <COMMAND> [ARGS]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Optional user prompt to start the session",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--add-dir",
+          "long": "--add-dir",
+          "takes_value": true,
+          "value_name": "DIR",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--ask-for-approval",
+          "long": "--ask-for-approval",
+          "short": "-a",
+          "takes_value": true,
+          "value_name": "APPROVAL_POLICY",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--cd",
+          "long": "--cd",
+          "short": "-C",
+          "takes_value": true,
+          "value_name": "DIR",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--config",
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--dangerously-bypass-approvals-and-sandbox",
+          "long": "--dangerously-bypass-approvals-and-sandbox",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--disable",
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--enable",
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--full-auto",
+          "long": "--full-auto",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--image",
+          "long": "--image",
+          "short": "-i",
+          "takes_value": true,
+          "value_name": "FILE",
+          "repeatable": true,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--local-provider",
+          "long": "--local-provider",
+          "takes_value": true,
+          "value_name": "OSS_PROVIDER",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--model",
+          "long": "--model",
+          "short": "-m",
+          "takes_value": true,
+          "value_name": "MODEL",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--no-alt-screen",
+          "long": "--no-alt-screen",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--oss",
+          "long": "--oss",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--profile",
+          "long": "--profile",
+          "short": "-p",
+          "takes_value": true,
+          "value_name": "CONFIG_PROFILE",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--sandbox",
+          "long": "--sandbox",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "SANDBOX_MODE",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--search",
+          "long": "--search",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-V",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex app-server [OPTIONS] [COMMAND]",
+      "flags": [
+        {
+          "key": "--analytics-default-enabled",
+          "long": "--analytics-default-enabled",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server",
+        "generate-json-schema"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex app-server generate-json-schema [OPTIONS] --out <DIR>",
+      "flags": [
+        {
+          "key": "--experimental",
+          "long": "--experimental",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--out",
+          "long": "--out",
+          "short": "-o",
+          "takes_value": true,
+          "value_name": "DIR",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server",
+        "generate-ts"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex app-server generate-ts [OPTIONS] --out <DIR>",
+      "flags": [
+        {
+          "key": "--experimental",
+          "long": "--experimental",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--out",
+          "long": "--out",
+          "short": "-o",
+          "takes_value": true,
+          "value_name": "DIR",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--prettier",
+          "long": "--prettier",
+          "short": "-p",
+          "takes_value": true,
+          "value_name": "PRETTIER_BIN",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex app-server help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "apply"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex apply [OPTIONS] <TASK_ID>",
+      "args": [
+        {
+          "name": "TASK_ID",
+          "required": true,
+          "variadic": false,
+          "inferred_from_usage": true,
+          "note": "inferred from usage",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex cloud [OPTIONS] [COMMAND]"
+    },
+    {
+      "path": [
+        "cloud",
+        "apply"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex cloud apply [OPTIONS] <TASK_ID>",
+      "args": [
+        {
+          "name": "TASK_ID",
+          "required": true,
+          "variadic": false,
+          "note": "Codex Cloud task identifier to apply",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--attempt",
+          "long": "--attempt",
+          "takes_value": true,
+          "value_name": "N",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "diff"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex cloud diff [OPTIONS] <TASK_ID>",
+      "args": [
+        {
+          "name": "TASK_ID",
+          "required": true,
+          "variadic": false,
+          "note": "Codex Cloud task identifier to display",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--attempt",
+          "long": "--attempt",
+          "takes_value": true,
+          "value_name": "N",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "exec"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex cloud exec [OPTIONS] --env <ENV_ID> [QUERY]",
+      "args": [
+        {
+          "name": "QUERY",
+          "required": false,
+          "variadic": false,
+          "note": "Task prompt to run in Codex Cloud",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--attempts",
+          "long": "--attempts",
+          "takes_value": true,
+          "value_name": "ATTEMPTS",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--branch",
+          "long": "--branch",
+          "takes_value": true,
+          "value_name": "BRANCH",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--env",
+          "long": "--env",
+          "takes_value": true,
+          "value_name": "ENV_ID",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex cloud help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "list"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex cloud list [OPTIONS]",
+      "flags": [
+        {
+          "key": "--cursor",
+          "long": "--cursor",
+          "takes_value": true,
+          "value_name": "CURSOR",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--env",
+          "long": "--env",
+          "takes_value": true,
+          "value_name": "ENV_ID",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--limit",
+          "long": "--limit",
+          "takes_value": true,
+          "value_name": "N",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "status"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex cloud status [OPTIONS] <TASK_ID>",
+      "args": [
+        {
+          "name": "TASK_ID",
+          "required": true,
+          "variadic": false,
+          "note": "Codex Cloud task identifier to inspect",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "completion"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex completion [OPTIONS] [SHELL]",
+      "args": [
+        {
+          "name": "SHELL",
+          "required": false,
+          "variadic": false,
+          "note": "Shell to generate completions for\n[default: bash]\n[possible values: bash, elvish, fish, powershell, zsh]",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex debug [OPTIONS] <COMMAND>"
+    },
+    {
+      "path": [
+        "debug",
+        "app-server"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex debug app-server [OPTIONS] <COMMAND>"
+    },
+    {
+      "path": [
+        "debug",
+        "app-server",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex debug app-server help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "app-server",
+        "send-message-v2"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex debug app-server send-message-v2 [OPTIONS] <USER_MESSAGE>",
+      "args": [
+        {
+          "name": "USER_MESSAGE",
+          "required": true,
+          "variadic": false,
+          "inferred_from_usage": true,
+          "note": "inferred from usage",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex debug help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex exec [OPTIONS] [PROMPT] [COMMAND]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Initial instructions for the agent. If not provided as an argument (or if `-` is used),\ninstructions are read from stdin",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--color",
+          "long": "--color",
+          "takes_value": true,
+          "value_name": "COLOR",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--output-last-message",
+          "long": "--output-last-message",
+          "short": "-o",
+          "takes_value": true,
+          "value_name": "FILE",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--output-schema",
+          "long": "--output-schema",
+          "takes_value": true,
+          "value_name": "FILE",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--skip-git-repo-check",
+          "long": "--skip-git-repo-check",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex exec help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec",
+        "resume"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex exec resume [OPTIONS] [SESSION_ID] [PROMPT]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Prompt to send after resuming the session. If `-` is used, read from stdin",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "name": "SESSION_ID",
+          "required": false,
+          "variadic": false,
+          "note": "Conversation/session id (UUID) or thread name. UUIDs take precedence if it parses. If\nomitted, use --last to pick the most recent recorded session",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--all",
+          "long": "--all",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--last",
+          "long": "--last",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--skip-git-repo-check",
+          "long": "--skip-git-repo-check",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec",
+        "review"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex exec review [OPTIONS] [PROMPT]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Custom review instructions. If `-` is used, read from stdin",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--base",
+          "long": "--base",
+          "takes_value": true,
+          "value_name": "BRANCH",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--commit",
+          "long": "--commit",
+          "takes_value": true,
+          "value_name": "SHA",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--skip-git-repo-check",
+          "long": "--skip-git-repo-check",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--title",
+          "long": "--title",
+          "takes_value": true,
+          "value_name": "TITLE",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--uncommitted",
+          "long": "--uncommitted",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "features"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex features [OPTIONS] <COMMAND>"
+    },
+    {
+      "path": [
+        "features",
+        "disable"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex features disable [OPTIONS] <FEATURE>",
+      "args": [
+        {
+          "name": "FEATURE",
+          "required": true,
+          "variadic": false,
+          "note": "Feature key to update (for example: unified_exec)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "features",
+        "enable"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex features enable [OPTIONS] <FEATURE>",
+      "args": [
+        {
+          "name": "FEATURE",
+          "required": true,
+          "variadic": false,
+          "note": "Feature key to update (for example: unified_exec)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "features",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex features help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "features",
+        "list"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex features list [OPTIONS]"
+    },
+    {
+      "path": [
+        "fork"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex fork [OPTIONS] [SESSION_ID] [PROMPT]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Optional user prompt to start the session",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "name": "SESSION_ID",
+          "required": false,
+          "variadic": false,
+          "note": "Conversation/session id (UUID). When provided, forks this session. If omitted, use --last\nto pick the most recent recorded session",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--all",
+          "long": "--all",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--last",
+          "long": "--last",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "login"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex login [OPTIONS] [COMMAND]",
+      "flags": [
+        {
+          "key": "--device-auth",
+          "long": "--device-auth",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--with-api-key",
+          "long": "--with-api-key",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "login",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex login help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "login",
+        "status"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex login status [OPTIONS]"
+    },
+    {
+      "path": [
+        "logout"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex logout [OPTIONS]"
+    },
+    {
+      "path": [
+        "mcp"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp [OPTIONS] <COMMAND>"
+    },
+    {
+      "path": [
+        "mcp",
+        "add"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp add [OPTIONS] <NAME> (--url <URL> | -- <COMMAND>...)",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": true,
+          "variadic": true,
+          "note": "Command to launch the MCP server. Use --url for a streamable HTTP server",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name for the MCP server configuration",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--bearer-token-env-var",
+          "long": "--bearer-token-env-var",
+          "takes_value": true,
+          "value_name": "ENV_VAR",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--env",
+          "long": "--env",
+          "takes_value": true,
+          "value_name": "KEY=VALUE",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--url",
+          "long": "--url",
+          "takes_value": true,
+          "value_name": "URL",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "get"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp get [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to display",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp list [OPTIONS]",
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "login"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp login [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to authenticate with oauth",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--scopes",
+          "long": "--scopes",
+          "takes_value": true,
+          "value_name": "SCOPE,SCOPE",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "logout"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp logout [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to deauthenticate",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "remove"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp remove [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server configuration to remove",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp-server"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex mcp-server [OPTIONS]"
+    },
+    {
+      "path": [
+        "resume"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex resume [OPTIONS] [SESSION_ID] [PROMPT]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Optional user prompt to start the session",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "name": "SESSION_ID",
+          "required": false,
+          "variadic": false,
+          "note": "Conversation/session id (UUID) or thread name. UUIDs take precedence if it parses. If\nomitted, use --last to pick the most recent recorded session",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--all",
+          "long": "--all",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--last",
+          "long": "--last",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "review"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex review [OPTIONS] [PROMPT]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Custom review instructions. If `-` is used, read from stdin",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--base",
+          "long": "--base",
+          "takes_value": true,
+          "value_name": "BRANCH",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--commit",
+          "long": "--commit",
+          "takes_value": true,
+          "value_name": "SHA",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--title",
+          "long": "--title",
+          "takes_value": true,
+          "value_name": "TITLE",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        },
+        {
+          "key": "--uncommitted",
+          "long": "--uncommitted",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "sandbox"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex sandbox [OPTIONS] <COMMAND>"
+    },
+    {
+      "path": [
+        "sandbox",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex sandbox help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "sandbox",
+        "linux"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex sandbox linux [OPTIONS] [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Full command args to run under landlock",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "sandbox",
+        "macos"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex sandbox macos [OPTIONS] [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Full command args to run under seatbelt",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--log-denials",
+          "long": "--log-denials",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "sandbox",
+        "windows"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl"
+      ],
+      "usage": "codex sandbox windows [OPTIONS] [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Full command args to run under Windows restricted token sandbox",
+          "available_on": [
+            "x86_64-unknown-linux-musl"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-02-02T03:24:47Z",
+  "generated_at": "2026-02-09T05:15:15Z",
   "wrapper_version": "0.2.0",
   "coverage": [
     {
@@ -98,6 +98,10 @@
       "level": "explicit",
       "flags": [
         {
+          "key": "--experimental",
+          "level": "explicit"
+        },
+        {
           "key": "--out",
           "level": "explicit"
         }
@@ -110,6 +114,10 @@
       ],
       "level": "explicit",
       "flags": [
+        {
+          "key": "--experimental",
+          "level": "explicit"
+        },
         {
           "key": "--out",
           "level": "explicit"
@@ -283,6 +291,60 @@
     },
     {
       "path": [
+        "debug"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "debug",
+        "app-server"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "debug",
+        "app-server",
+        "help"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "app-server",
+        "send-message-v2"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "USER_MESSAGE",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "help"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
         "exec"
       ],
       "level": "explicit",
@@ -431,6 +493,32 @@
         "features"
       ],
       "level": "explicit"
+    },
+    {
+      "path": [
+        "features",
+        "disable"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "FEATURE",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "features",
+        "enable"
+      ],
+      "level": "explicit",
+      "args": [
+        {
+          "name": "FEATURE",
+          "level": "explicit"
+        }
+      ]
     },
     {
       "path": [

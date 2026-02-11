@@ -1,5 +1,6 @@
 mod app_server;
 mod cloud;
+mod debug;
 mod exec;
 mod features;
 mod help;
@@ -14,10 +15,14 @@ pub use app_server::{AppServerCodegenOutput, AppServerCodegenRequest, AppServerC
 pub use cloud::{
     CloudExecRequest, CloudListOutput, CloudListRequest, CloudOverviewRequest, CloudStatusRequest,
 };
+pub use debug::{
+    DebugAppServerHelpRequest, DebugAppServerRequest, DebugAppServerSendMessageV2Request,
+    DebugCommandRequest, DebugHelpRequest,
+};
 pub use exec::ExecRequest;
 pub use features::{
-    CodexFeature, CodexFeatureStage, FeaturesCommandRequest, FeaturesListFormat,
-    FeaturesListOutput, FeaturesListRequest,
+    CodexFeature, CodexFeatureStage, FeaturesCommandRequest, FeaturesDisableRequest,
+    FeaturesEnableRequest, FeaturesListFormat, FeaturesListOutput, FeaturesListRequest,
 };
 pub use help::{HelpCommandRequest, HelpScope};
 pub use mcp::{

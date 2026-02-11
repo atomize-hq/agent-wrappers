@@ -221,3 +221,51 @@ impl Default for FeaturesCommandRequest {
         Self::new()
     }
 }
+
+/// Request for `codex features enable <FEATURE>`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FeaturesEnableRequest {
+    /// Feature key to enable.
+    pub feature: String,
+    /// Per-call CLI overrides layered on top of the builder.
+    pub overrides: CliOverridesPatch,
+}
+
+impl FeaturesEnableRequest {
+    pub fn new(feature: impl Into<String>) -> Self {
+        Self {
+            feature: feature.into(),
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    /// Replaces the default CLI overrides for this request.
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}
+
+/// Request for `codex features disable <FEATURE>`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FeaturesDisableRequest {
+    /// Feature key to disable.
+    pub feature: String,
+    /// Per-call CLI overrides layered on top of the builder.
+    pub overrides: CliOverridesPatch,
+}
+
+impl FeaturesDisableRequest {
+    pub fn new(feature: impl Into<String>) -> Self {
+        Self {
+            feature: feature.into(),
+            overrides: CliOverridesPatch::default(),
+        }
+    }
+
+    /// Replaces the default CLI overrides for this request.
+    pub fn with_overrides(mut self, overrides: CliOverridesPatch) -> Self {
+        self.overrides = overrides;
+        self
+    }
+}

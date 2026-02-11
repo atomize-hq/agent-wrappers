@@ -280,6 +280,7 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                 CoverageLevel::Explicit,
                 None,
                 vec![
+                    flag("--experimental", CoverageLevel::Explicit),
                     flag("--out", CoverageLevel::Explicit),
                     flag("--prettier", CoverageLevel::Explicit),
                 ],
@@ -289,7 +290,10 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                 &["app-server", "generate-json-schema"],
                 CoverageLevel::Explicit,
                 None,
-                vec![flag("--out", CoverageLevel::Explicit)],
+                vec![
+                    flag("--experimental", CoverageLevel::Explicit),
+                    flag("--out", CoverageLevel::Explicit),
+                ],
                 vec![],
             ),
             // Scenario 8: `codex responses-api-proxy`.
@@ -470,8 +474,52 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                 vec![],
                 vec![arg("COMMAND", CoverageLevel::Explicit)],
             ),
-            // New 0.92.0 command surfaces.
+            // New 0.92.0+ command surfaces.
             command(&["features"], CoverageLevel::Explicit, None, vec![], vec![]),
+            // New 0.97.0 command surfaces.
+            command(
+                &["features", "enable"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("FEATURE", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["features", "disable"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("FEATURE", CoverageLevel::Explicit)],
+            ),
+            command(&["debug"], CoverageLevel::Explicit, None, vec![], vec![]),
+            command(
+                &["debug", "help"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("COMMAND", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["debug", "app-server"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![],
+            ),
+            command(
+                &["debug", "app-server", "help"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("COMMAND", CoverageLevel::Explicit)],
+            ),
+            command(
+                &["debug", "app-server", "send-message-v2"],
+                CoverageLevel::Explicit,
+                None,
+                vec![],
+                vec![arg("USER_MESSAGE", CoverageLevel::Explicit)],
+            ),
             command(
                 &["exec", "review"],
                 CoverageLevel::Explicit,

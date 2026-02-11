@@ -208,6 +208,7 @@ Wrapper API family:
 
 ### Required command-specific flags
 
+- `--experimental` (level: `explicit`)
 - `--out` (level: `explicit`)
 - `--prettier` (level: `explicit`) only under `path=["app-server","generate-ts"]`
 
@@ -470,3 +471,42 @@ For `path=["mcp","add"]`:
 - `--env` (level: `explicit`)
 - `NAME` (level: `explicit`)
 - `COMMAND` (level: `explicit`)
+
+## Scenario 19: `codex features enable` and `codex features disable`
+
+Wrapper API family:
+- `CodexClient::features_enable`
+- `CodexClient::features_disable`
+
+### Command entries
+
+- Path: `["features","enable"]` (level: `explicit`)
+- Path: `["features","disable"]` (level: `explicit`)
+
+### Required positional args
+
+- For `path=["features","enable"]`: `FEATURE` (level: `explicit`)
+- For `path=["features","disable"]`: `FEATURE` (level: `explicit`)
+
+## Scenario 20: `codex debug` command families
+
+Wrapper API family:
+- `CodexClient::debug`
+- `CodexClient::debug_help`
+- `CodexClient::debug_app_server`
+- `CodexClient::debug_app_server_help`
+- `CodexClient::debug_app_server_send_message_v2`
+
+### Command entries
+
+- Path: `["debug"]` (level: `explicit`)
+- Path: `["debug","help"]` (level: `explicit`)
+- Path: `["debug","app-server"]` (level: `explicit`)
+- Path: `["debug","app-server","help"]` (level: `explicit`)
+- Path: `["debug","app-server","send-message-v2"]` (level: `explicit`)
+
+### Required positional args
+
+- For `path=["debug","help"]`: `COMMAND` (level: `explicit`)
+- For `path=["debug","app-server","help"]`: `COMMAND` (level: `explicit`)
+- For `path=["debug","app-server","send-message-v2"]`: `USER_MESSAGE` (level: `explicit`)

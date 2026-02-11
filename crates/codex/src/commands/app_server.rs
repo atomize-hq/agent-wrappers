@@ -23,6 +23,7 @@ impl CodexClient {
         let AppServerCodegenRequest {
             target,
             out_dir,
+            experimental,
             overrides,
         } = request;
 
@@ -47,6 +48,10 @@ impl CodexClient {
             .current_dir(dir_ctx.path());
 
         apply_cli_overrides(&mut command, &resolved_overrides, true);
+
+        if experimental {
+            command.arg("--experimental");
+        }
 
         if let Some(prettier) = target.prettier() {
             command.arg("--prettier").arg(prettier);

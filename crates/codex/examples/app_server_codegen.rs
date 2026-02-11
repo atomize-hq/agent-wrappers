@@ -4,11 +4,12 @@ use codex::{AppServerCodegenRequest, CodexClient};
 
 fn usage() {
     eprintln!(
-        "usage: app_server_codegen <ts|json> <OUT_DIR> [--prettier <PATH>] [--profile <PROFILE>]"
+        "usage: app_server_codegen <ts|json> <OUT_DIR> [--experimental] [--prettier <PATH>] [--profile <PROFILE>]"
     );
     eprintln!("examples:");
     eprintln!("  app_server_codegen ts ./gen/app --prettier ./node_modules/.bin/prettier");
     eprintln!("  app_server_codegen json ./gen/app");
+    eprintln!("  app_server_codegen json ./gen/app --experimental");
 }
 
 #[tokio::main]
@@ -35,10 +36,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut prettier: Option<PathBuf> = None;
     let mut profile: Option<String> = None;
+    let mut experimental = false;
 
     let mut index = 0;
     while index < args.len() {
         match args[index].to_string_lossy().as_ref() {
+            "--experimental" => {
+                experimental = true;
+            }
             "--prettier" => {
                 if let Some(path) = args.get(index + 1) {
                     prettier = Some(PathBuf::from(path));
@@ -66,6 +71,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         index += 1;
+    }
+
+    if experimental {
+        request = request.experimental(true);
     }
 
     if let Some(path) = prettier {
