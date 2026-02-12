@@ -52,7 +52,7 @@ pub struct Args {
     /// Timeout for each `claude ... --help` invocation, in milliseconds.
     ///
     /// This is a safety valve to prevent snapshot generation from hanging on any single command.
-    #[arg(long, default_value_t = 20_000)]
+    #[arg(long, default_value_t = 10_000)]
     pub help_timeout_ms: u64,
 }
 

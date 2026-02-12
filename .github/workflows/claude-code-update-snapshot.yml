@@ -199,6 +199,7 @@ jobs:
             --out-file "$OUT" \
             --capture-raw-help \
             --raw-help-target "$TARGET" \
+            --help-timeout-ms 8000 \
             --supplement cli_manifests/claude_code/supplement/commands.json
 
       - name: Upload snapshot JSON
