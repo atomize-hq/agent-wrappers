@@ -165,7 +165,7 @@ Required:
 - `xtask codex-validate` passes.
 
 Coverage completion targets:
-- For the required target (`linux-x64-musl`), the regenerated `coverage.linux-x64-musl.json` has no remaining uncovered units (no `missing_*` and no `unsupported` entries), unless they are explicitly `intentionally_unsupported` with rationale notes.
+- For the required target (`linux-x64`), the regenerated `coverage.linux-x64.json` has no remaining uncovered units (no `missing_*` and no `unsupported` entries), unless they are explicitly `intentionally_unsupported` with rationale notes.
 
 If union is complete:
 - Meet the same bar across all expected targets (use `coverage.all.json` or per-target reports).

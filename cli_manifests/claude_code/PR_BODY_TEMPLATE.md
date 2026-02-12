@@ -73,6 +73,6 @@ Then run wrapper tests (Linux required):
 ## Done Criteria
 
 - `cargo run -p xtask -- codex-validate --root cli_manifests/claude_code` passes.
-- For the required target (`linux-x64-musl`), `cli_manifests/claude_code/reports/{{VERSION}}/coverage.linux-x64-musl.json` has:
+- For the required target (`linux-x64`), `cli_manifests/claude_code/reports/{{VERSION}}/coverage.linux-x64.json` has:
   - no missing/unknown/unsupported surfaces after regeneration, OR all remaining gaps are explicitly `intentionally_unsupported` with rationale notes.
 - If `snapshots/{{VERSION}}/union.json.complete == true`, meet the same criterion for all expected targets.

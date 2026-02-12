@@ -24,22 +24,15 @@ jobs:
       VERSION: ${{ inputs.version }}
       DRY_RUN: ${{ inputs.dry_run }}
       ROOT: cli_manifests/claude_code
-      REQUIRED_TARGET: linux-x64-musl
+      REQUIRED_TARGET: linux-x64
       ASSET: claude
-      BIN: ./claude-linux-x64-musl
+      BIN: ./claude-linux-x64
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - uses: dtolnay/rust-toolchain@stable
-
-      - name: Install musl runtime (linux-x64-musl)
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y musl musl-tools
 
       - name: Validate inputs and required files
         shell: bash

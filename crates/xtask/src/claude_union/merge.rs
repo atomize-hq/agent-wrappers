@@ -440,27 +440,47 @@ fn raw_help_paths(
             .join(target)
             .join("help.txt")
     } else {
-        let mut p = PathBuf::from("raw_help")
+        PathBuf::from("raw_help")
             .join(version)
             .join(target)
-            .join("commands");
-        for token in cmd_path {
-            p.push(token);
-        }
-        p.join("help.txt")
+            .join("commands")
+            .join(raw_help_command_dir_name(cmd_path))
+            .join("help.txt")
     };
 
     let full = if cmd_path.is_empty() {
         raw_help_root.join(target).join("help.txt")
     } else {
-        let mut p = raw_help_root.join(target).join("commands");
-        for token in cmd_path {
-            p.push(token);
-        }
-        p.join("help.txt")
+        raw_help_root
+            .join(target)
+            .join("commands")
+            .join(raw_help_command_dir_name(cmd_path))
+            .join("help.txt")
     };
 
     (rel.to_string_lossy().to_string(), full)
+}
+
+fn raw_help_command_dir_name(path: &[String]) -> String {
+    let joined = path.join("\u{1f}");
+    let mut hasher = Sha256::new();
+    hasher.update(joined.as_bytes());
+    let hash = hex::encode(hasher.finalize());
+
+    let mut prefix = path.join("-");
+    if prefix.is_empty() {
+        prefix = "cmd".to_string();
+    }
+    const MAX_PREFIX: usize = 40;
+    if prefix.len() > MAX_PREFIX {
+        prefix.truncate(MAX_PREFIX);
+        prefix = prefix.trim_end_matches('-').to_string();
+        if prefix.is_empty() {
+            prefix = "cmd".to_string();
+        }
+    }
+
+    format!("{prefix}__{hash}")
 }
 
 fn values_by_target<T, F>(

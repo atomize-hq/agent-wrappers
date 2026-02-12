@@ -18,7 +18,7 @@ Key references:
 - **No runtime downloads.** The wrapper crate must not download/update Claude Code at runtime. Downloads and pins happen in CI workflows only.
 - **Channel policy:** automation tracks the upstream `stable` pointer.
 - **Targets (v1):**
-  - required: `linux-x64-musl`
+  - required: `linux-x64`
   - best-effort: `darwin-arm64`, `win32-x64`
 - **Authoritative pointers:** `min_supported.txt` and `latest_validated.txt` (plus per-target pointers under `pointers/`). During bootstrap these pointers may be `none`.
 - **Promotion safety:** only promote versions that have passed validation on the required target and meet the `RULES.json` gating rules.

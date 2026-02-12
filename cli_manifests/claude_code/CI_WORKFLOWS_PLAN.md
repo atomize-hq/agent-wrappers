@@ -72,7 +72,7 @@ Responsibilities:
 ## Target Matrix (v1)
 
 Defined by `cli_manifests/claude_code/RULES.json`:
-- required target: `linux-x64-musl`
+- required target: `linux-x64`
 - best-effort targets: `darwin-arm64`, `win32-x64`
 
 ## Pins (artifacts.lock.json)

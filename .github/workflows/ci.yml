@@ -197,7 +197,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${{ needs.claude-versions.outputs.latest_validated }}"
-          TARGET="linux-x64-musl"
+          TARGET="linux-x64"
           ASSET="claude"
 
           URL="$(jq -r --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" '.artifacts[] | select(.claude_code_version==$v and .target_triple==$t and .asset_name==$a) | .download_url' cli_manifests/claude_code/artifacts.lock.json)"
@@ -211,8 +211,8 @@ jobs:
           curl -fsSL -o claude.bin "$URL"
           test "$(wc -c < claude.bin)" = "$SIZE"
           echo "$SHA  claude.bin" | sha256sum -c -
-          install -m 0755 claude.bin ./claude-linux-x64-musl
-          DISABLE_AUTOUPDATER=1 ./claude-linux-x64-musl --version
+          install -m 0755 claude.bin ./claude-linux-x64
+          DISABLE_AUTOUPDATER=1 ./claude-linux-x64 --version
 
       - name: Wrapper unit tests
         shell: bash
