@@ -3,7 +3,7 @@ name: Only allow staging -> main
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
 
 jobs:
   guard:
@@ -21,3 +21,25 @@ jobs:
             exit 1
           fi
           echo "OK: staging -> main"
+
+      - name: Require PR purpose label (staging -> main)
+        if: ${{ github.base_ref == 'main' && github.head_ref == 'staging' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Enforce a simple explicit "why" label to control main-branch CI intensity and ensure
+          # staging->main PRs are intentional.
+          #
+          # Allowed labels:
+          # - purpose=codex_release
+          # - purpose=claude_code_release
+          # - purpose=ops
+          labels="$(jq -r '.pull_request.labels[].name' "$GITHUB_EVENT_PATH" | tr '\n' ' ' || true)"
+          echo "Labels: ${labels:-<none>}"
+
+          allowed_re='(^| )purpose=(codex_release|claude_code_release|ops)( |$)'
+          if ! [[ " $labels " =~ $allowed_re ]]; then
+            echo "Missing required purpose label for staging -> main PR."
+            echo "Add one of: purpose=codex_release | purpose=claude_code_release | purpose=ops"
+            exit 1
+          fi

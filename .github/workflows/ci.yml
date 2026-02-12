@@ -2,6 +2,9 @@ name: CI
 
 on:
   pull_request:
+    branches:
+      - staging
+      - main
   push:
     branches:
       - main
@@ -12,6 +15,59 @@ permissions:
   contents: read
 
 jobs:
+  pr-purpose:
+    name: PR purpose (staging -> main)
+    runs-on: ubuntu-latest
+    outputs:
+      purpose: ${{ steps.purpose.outputs.purpose }}
+    steps:
+      - name: Determine purpose label
+        id: purpose
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Only meaningful for pull_request events (especially staging -> main).
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "purpose=non_pr" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${{ github.base_ref }}" != "main" ] || [ "${{ github.head_ref }}" != "staging" ]; then
+            echo "purpose=non_staging_to_main" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          labels="$(jq -r '.pull_request.labels[].name' "$GITHUB_EVENT_PATH" || true)"
+          purpose=""
+          for l in $labels; do
+            case "$l" in
+              purpose=codex_release) purpose="codex_release" ;;
+              purpose=claude_code_release) purpose="claude_code_release" ;;
+              purpose=ops) purpose="ops" ;;
+              *) ;;
+            esac
+          done
+
+          if [ -z "$purpose" ]; then
+            echo "purpose=missing" >> "$GITHUB_OUTPUT"
+            echo "Missing required purpose label (should be enforced by only-staging-to-main.yml)." >&2
+            exit 1
+          fi
+          echo "purpose=$purpose" >> "$GITHUB_OUTPUT"
+
+  rust-tests:
+    name: Rust tests (workspace)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo test --workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test --workspace --all-targets
+
   codex-validate-artifacts:
     name: Validate Codex committed artifacts
     runs-on: ubuntu-latest
@@ -90,7 +146,8 @@ jobs:
   linux-latest-validated:
     name: Linux (latest validated)
     runs-on: ubuntu-latest
-    needs: versions
+    needs: [versions, pr-purpose]
+    if: ${{ github.event_name != 'pull_request' || github.base_ref != 'main' || needs.pr-purpose.outputs.purpose == 'codex_release' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -138,8 +195,8 @@ jobs:
   linux-min-supported:
     name: Linux (min supported)
     runs-on: ubuntu-latest
-    needs: versions
-    if: ${{ needs.versions.outputs.min_supported != needs.versions.outputs.latest_validated }}
+    needs: [versions, pr-purpose]
+    if: ${{ (needs.versions.outputs.min_supported != needs.versions.outputs.latest_validated) && (github.event_name != 'pull_request' || github.base_ref != 'main' || needs.pr-purpose.outputs.purpose == 'codex_release') }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -187,8 +244,8 @@ jobs:
   linux-claude-latest-validated:
     name: Claude Code Linux (latest validated)
     runs-on: ubuntu-latest
-    needs: claude-versions
-    if: ${{ needs.claude-versions.outputs.latest_validated != 'none' }}
+    needs: [claude-versions, pr-purpose]
+    if: ${{ needs.claude-versions.outputs.latest_validated != 'none' && (github.event_name != 'pull_request' || github.base_ref != 'main' || needs.pr-purpose.outputs.purpose == 'claude_code_release') }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
