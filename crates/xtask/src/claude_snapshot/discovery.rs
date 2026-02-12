@@ -325,6 +325,12 @@ fn parse_command_token(line: &str) -> Option<String> {
     let (head, desc) = split_tokens_and_desc(trimmed);
     let token = head.split_whitespace().next()?;
     let token = token.split('|').next().unwrap_or(token);
+    // Claude Code help often includes a meta `help` subcommand (e.g. `claude mcp help [command]`)
+    // that does not behave like a real leaf command under `--help` crawling and may exit non-zero.
+    // Skip it to keep snapshot generation deterministic.
+    if token == "help" {
+        return None;
+    }
     if desc.is_empty() && head.trim() != token {
         return None;
     }

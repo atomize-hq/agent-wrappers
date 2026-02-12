@@ -115,7 +115,7 @@ async fn app_server_codegen_experimental_emits_flag() -> Result<(), Box<dyn std:
     let invocations = read_invocations(&log_path)?;
     let invocation = invocations
         .iter()
-        .find(|inv| inv.argv.get(0).map(|v| v.as_str()) == Some("app-server"))
+        .find(|inv| inv.argv.first().map(|v| v.as_str()) == Some("app-server"))
         .expect("expected an app-server invocation");
 
     assert!(

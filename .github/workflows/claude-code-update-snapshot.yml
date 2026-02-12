@@ -146,6 +146,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Install musl runtime (linux-x64-musl)
+        if: ${{ matrix.target_triple == 'linux-x64-musl' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y musl musl-tools
+
       - name: Download pins + downloads
         uses: actions/download-artifact@v4
         with:
