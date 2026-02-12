@@ -186,6 +186,24 @@ pub(super) fn discover_commands(
                         continue;
                     }
 
+                    // Guard against multi-token cycles like:
+                    // `plugin manifest marketplace` -> `manifest` -> `marketplace` -> ...
+                    // where the CLI's help output presents a cyclic tree. Without this, snapshot
+                    // generation produces a large number of synthetic command paths that aren't
+                    // actionable wrapper gaps.
+                    if path.iter().any(|t| t == &sub) {
+                        known_omissions.push(format!(
+                            "skipped cyclic subcommand token: {} {}",
+                            if path.is_empty() {
+                                "<root>".to_string()
+                            } else {
+                                path.join(" ")
+                            },
+                            sub
+                        ));
+                        continue;
+                    }
+
                     let mut next = path.clone();
                     next.push(sub);
                     stack.push(next);
