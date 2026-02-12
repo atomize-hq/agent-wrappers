@@ -239,6 +239,7 @@ jobs:
         with:
           name: "claude-code-snapshot-${{ inputs.version }}-linux-x64"
           path: .
+          merge-multiple: true
 
       - name: Download macOS snapshot (best effort)
         continue-on-error: true
@@ -246,6 +247,7 @@ jobs:
         with:
           name: "claude-code-snapshot-${{ inputs.version }}-darwin-arm64"
           path: .
+          merge-multiple: true
 
       - name: Download Windows snapshot (best effort)
         continue-on-error: true
@@ -253,6 +255,27 @@ jobs:
         with:
           name: "claude-code-snapshot-${{ inputs.version }}-win32-x64"
           path: .
+          merge-multiple: true
+
+      - name: Normalize snapshot paths (download-artifact v4)
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          EXPECTED="cli_manifests/claude_code/snapshots/${VERSION}/linux-x64.json"
+          if [ -f "$EXPECTED" ]; then
+            exit 0
+          fi
+          ALT="$(find . -path "*/${EXPECTED}" -print -quit || true)"
+          if [ -z "$ALT" ]; then
+            echo "missing required snapshot for target linux-x64: ${EXPECTED}" >&2
+            echo "debug: top-level directories:" >&2
+            ls -la >&2
+            exit 1
+          fi
+          mkdir -p "$(dirname "$EXPECTED")"
+          cp "$ALT" "$EXPECTED"
 
       - name: Union
         shell: bash
