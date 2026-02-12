@@ -1,20 +1,29 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::Path,
-    process::Command,
+    process::{Command, Stdio},
+    time::Duration,
 };
 
 use super::{layout, supplements, util, ArgSnapshot, CommandSnapshot, Error, FlagSnapshot};
+
+pub(super) struct DiscoveryOutput {
+    pub(super) commands: BTreeMap<Vec<String>, CommandSnapshot>,
+    pub(super) known_omissions: Vec<String>,
+}
 
 pub(super) fn discover_commands(
     claude_binary: &Path,
     raw_help_dir: Option<&Path>,
     capture_raw_help: bool,
-) -> Result<BTreeMap<Vec<String>, CommandSnapshot>, Error> {
+    help_timeout_ms: u64,
+) -> Result<DiscoveryOutput, Error> {
     let mut out = BTreeMap::<Vec<String>, CommandSnapshot>::new();
     let mut visited = BTreeSet::<Vec<String>>::new();
+    let mut known_omissions: Vec<String> = Vec::new();
+    let help_timeout = Duration::from_millis(help_timeout_ms);
 
-    let root_help = run_claude_help(claude_binary, &[])?;
+    let root_help = run_claude_help_strict(claude_binary, &[], help_timeout)?;
     let root_parsed = parse_help(&root_help);
 
     if capture_raw_help {
@@ -64,78 +73,150 @@ pub(super) fn discover_commands(
         claude_binary,
         raw_help_dir,
         capture_raw_help,
+        help_timeout,
     };
 
-    for token in root_parsed.subcommands {
-        collect_command_recursive(&ctx, vec![token], &mut visited, &mut out)?;
+    // Use an explicit stack to avoid deep recursion (which can stack-overflow on Windows if the
+    // CLI presents a deeply nested or accidentally self-referential command tree).
+    let mut stack: Vec<Vec<String>> = root_parsed
+        .subcommands
+        .into_iter()
+        .map(|t| vec![t])
+        .collect();
+
+    while let Some(path) = stack.pop() {
+        if !visited.insert(path.clone()) {
+            continue;
+        }
+
+        match run_claude_help_tolerant(ctx.claude_binary, &path, ctx.help_timeout) {
+            Ok(help) => {
+                let parsed = parse_help(&help);
+
+                if ctx.capture_raw_help {
+                    if let Some(dir) = ctx.raw_help_dir {
+                        layout::write_raw_help(dir, &path, &help)?;
+                    }
+                }
+
+                let mut args = parsed.args;
+                if let Some(usage) = parsed.usage.as_deref() {
+                    merge_inferred_args(
+                        &mut args,
+                        infer_args_from_usage(usage, &path, !parsed.subcommands.is_empty()),
+                    );
+                }
+                if !args.is_empty() {
+                    args.sort_by(|a, b| a.name.cmp(&b.name));
+                }
+
+                let mut flags = parsed.flags;
+                if !flags.is_empty() {
+                    flags.sort_by(supplements::flag_sort_key);
+                }
+
+                out.insert(
+                    path.clone(),
+                    CommandSnapshot {
+                        path: path.clone(),
+                        about: parsed.about,
+                        usage: parsed.usage,
+                        stability: None,
+                        platforms: None,
+                        args: if args.is_empty() { None } else { Some(args) },
+                        flags: if flags.is_empty() { None } else { Some(flags) },
+                    },
+                );
+
+                for sub in parsed.subcommands {
+                    let mut next = path.clone();
+                    next.push(sub);
+                    stack.push(next);
+                }
+            }
+            Err(note) => {
+                // Keep the snapshot deterministic and progressing even if a specific `--help`
+                // probe fails (e.g., requires auth, tries to do first-run setup, or exits 1).
+                known_omissions.push(note);
+                out.insert(
+                    path.clone(),
+                    CommandSnapshot {
+                        path,
+                        about: None,
+                        usage: None,
+                        stability: None,
+                        platforms: None,
+                        args: None,
+                        flags: None,
+                    },
+                );
+            }
+        }
     }
 
-    Ok(out)
+    if !known_omissions.is_empty() {
+        // Stable ordering for diff friendliness.
+        known_omissions.sort();
+    }
+
+    Ok(DiscoveryOutput {
+        commands: out,
+        known_omissions,
+    })
 }
 
 struct HelpCtx<'a> {
     claude_binary: &'a Path,
     raw_help_dir: Option<&'a Path>,
     capture_raw_help: bool,
+    help_timeout: Duration,
 }
 
-fn collect_command_recursive(
-    ctx: &HelpCtx<'_>,
-    path: Vec<String>,
-    visited: &mut BTreeSet<Vec<String>>,
-    out: &mut BTreeMap<Vec<String>, CommandSnapshot>,
-) -> Result<(), Error> {
-    if !visited.insert(path.clone()) {
-        return Ok(());
+fn run_claude_help_strict(
+    claude_binary: &Path,
+    path: &[String],
+    timeout: Duration,
+) -> Result<String, Error> {
+    let help =
+        run_claude_help_with_timeout(claude_binary, path, timeout).map_err(Error::CommandFailed)?;
+    if !help.status.success() {
+        return Err(Error::CommandFailed(help.failure_debug));
     }
-
-    let help = run_claude_help(ctx.claude_binary, &path)?;
-    let parsed = parse_help(&help);
-
-    if ctx.capture_raw_help {
-        if let Some(dir) = ctx.raw_help_dir {
-            layout::write_raw_help(dir, &path, &help)?;
-        }
-    }
-
-    let mut args = parsed.args;
-    if let Some(usage) = parsed.usage.as_deref() {
-        merge_inferred_args(
-            &mut args,
-            infer_args_from_usage(usage, &path, !parsed.subcommands.is_empty()),
-        );
-    }
-    if !args.is_empty() {
-        args.sort_by(|a, b| a.name.cmp(&b.name));
-    }
-
-    let mut flags = parsed.flags;
-    if !flags.is_empty() {
-        flags.sort_by(supplements::flag_sort_key);
-    }
-
-    let entry = CommandSnapshot {
-        path: path.clone(),
-        about: parsed.about,
-        usage: parsed.usage,
-        stability: None,
-        platforms: None,
-        args: if args.is_empty() { None } else { Some(args) },
-        flags: if flags.is_empty() { None } else { Some(flags) },
-    };
-
-    out.insert(path.clone(), entry);
-
-    for sub in parsed.subcommands {
-        let mut next = path.clone();
-        next.push(sub);
-        collect_command_recursive(ctx, next, visited, out)?;
-    }
-
-    Ok(())
+    Ok(help.text)
 }
 
-fn run_claude_help(claude_binary: &Path, path: &[String]) -> Result<String, Error> {
+fn run_claude_help_tolerant(
+    claude_binary: &Path,
+    path: &[String],
+    timeout: Duration,
+) -> Result<String, String> {
+    let help = run_claude_help_with_timeout(claude_binary, path, timeout)?;
+
+    if help.status.success() {
+        return Ok(help.text);
+    }
+
+    // Some CLIs exit non-zero for `--help` while still printing a full usage block.
+    // Prefer keeping snapshot generation moving, but record a stable omission note.
+    if looks_like_help(&help.text) {
+        return Ok(help.text);
+    }
+
+    Err(help.failure_note)
+}
+
+struct HelpRun {
+    status: std::process::ExitStatus,
+    text: String,
+    failure_note: String,
+    failure_debug: String,
+}
+
+fn run_claude_help_with_timeout(
+    claude_binary: &Path,
+    path: &[String],
+    timeout: Duration,
+) -> Result<HelpRun, String> {
     let mut cmd = Command::new(claude_binary);
     cmd.args(path);
     cmd.arg("--help");
@@ -143,14 +224,43 @@ fn run_claude_help(claude_binary: &Path, path: &[String]) -> Result<String, Erro
     cmd.env("CLICOLOR", "0");
     cmd.env("TERM", "dumb");
     cmd.env("DISABLE_AUTOUPDATER", "1");
+    cmd.env("CI", "1");
+    cmd.stdin(Stdio::null());
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
 
-    let output = cmd.output()?;
-    if !output.status.success() {
-        return Err(Error::CommandFailed(util::command_failed_message(
-            &cmd, &output,
-        )));
-    }
-    Ok(util::normalize_text(&output.stdout, &output.stderr))
+    let mut child = cmd.spawn().map_err(|e| e.to_string())?;
+
+    // Avoid indefinite hangs on any single `--help` invocation.
+    let _status = {
+        use wait_timeout::ChildExt;
+        match child.wait_timeout(timeout).map_err(|e| e.to_string())? {
+            Some(status) => status,
+            None => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(format!(
+                    "timeout after {}ms: {}",
+                    timeout.as_millis(),
+                    util::command_string(&cmd)
+                ));
+            }
+        }
+    };
+
+    let output = child.wait_with_output().map_err(|e| e.to_string())?;
+    let text = util::normalize_text(&output.stdout, &output.stderr);
+    let cmd_string = util::command_string(&cmd);
+    let exit_code = output.status.code().unwrap_or(-1);
+    let failure_note = format!("help probe failed: {cmd_string} (exit {exit_code})");
+    let failure_debug = util::command_failed_message(&cmd, &output);
+
+    Ok(HelpRun {
+        status: output.status,
+        text,
+        failure_note,
+        failure_debug,
+    })
 }
 
 #[derive(Debug)]
@@ -294,6 +404,16 @@ fn parse_help(help: &str) -> ParsedHelp {
     }
 }
 
+fn looks_like_help(s: &str) -> bool {
+    // Heuristic: accept common help markers even when exit status is non-zero.
+    let lower = s.to_ascii_lowercase();
+    lower.contains("usage:")
+        || lower.contains("commands:")
+        || lower.contains("subcommands:")
+        || lower.contains("options:")
+        || lower.contains("flags:")
+}
+
 fn is_section_header(t: &str) -> bool {
     matches!(
         t.trim_end_matches(':').to_ascii_lowercase().as_str(),
@@ -323,12 +443,21 @@ fn parse_command_token(line: &str) -> Option<String> {
     // on-the-same-line description. Wrapped descriptions (continuation lines) should not be
     // interpreted as additional command tokens.
     let (head, desc) = split_tokens_and_desc(trimmed);
-    let token = head.split_whitespace().next()?;
+    // Clap's commands list format is typically: `<token>  <desc>`. If the "head" contains
+    // whitespace, it's usually a usage/example line like `claude <cmd> --help`, not a subcommand.
+    // Reject it to prevent runaway self-referential trees like `claude claude claude ...`.
+    if head.split_whitespace().count() != 1 {
+        return None;
+    }
+    let token = head;
     let token = token.split('|').next().unwrap_or(token);
     // Claude Code help often includes a meta `help` subcommand (e.g. `claude mcp help [command]`)
     // that does not behave like a real leaf command under `--help` crawling and may exit non-zero.
     // Skip it to keep snapshot generation deterministic.
     if token == "help" {
+        return None;
+    }
+    if token == "claude" {
         return None;
     }
     if desc.is_empty() && head.trim() != token {

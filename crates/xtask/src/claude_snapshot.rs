@@ -48,6 +48,12 @@ pub struct Args {
     /// Override `collected_at` (RFC3339). Intended for determinism in tests/CI.
     #[arg(long)]
     pub collected_at: Option<String>,
+
+    /// Timeout for each `claude ... --help` invocation, in milliseconds.
+    ///
+    /// This is a safety valve to prevent snapshot generation from hanging on any single command.
+    #[arg(long, default_value_t = 20_000)]
+    pub help_timeout_ms: u64,
 }
 
 #[derive(Debug, Error)]
@@ -104,14 +110,19 @@ pub fn run(args: Args) -> Result<(), Error> {
     let (snapshot_out_path, raw_help_dir, inferred_target_triple) =
         layout::resolve_outputs(&args, &version_dir)?;
 
-    let mut command_entries = discovery::discover_commands(
+    let discovery = discovery::discover_commands(
         &claude_binary,
         raw_help_dir.as_deref(),
         args.capture_raw_help,
+        args.help_timeout_ms,
     )?;
+    let mut command_entries = discovery.commands;
+    let mut known_omissions = discovery.known_omissions;
 
-    let (known_omissions, supplemented) =
+    let (supplement_omissions, _supplemented) =
         supplements::apply_supplements(args.supplement.as_deref(), &mut command_entries)?;
+
+    known_omissions.extend(supplement_omissions);
 
     supplements::normalize_command_entries(&mut command_entries);
 
@@ -137,10 +148,10 @@ pub fn run(args: Args) -> Result<(), Error> {
         },
         commands,
         features: None,
-        known_omissions: if supplemented {
-            Some(known_omissions)
-        } else {
+        known_omissions: if known_omissions.is_empty() {
             None
+        } else {
+            Some(known_omissions)
         },
     };
 

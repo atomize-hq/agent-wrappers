@@ -4,7 +4,7 @@ pub(super) fn command_failed_message(cmd: &Command, output: &Output) -> String {
     let mut s = String::new();
     s.push_str(&format!(
         "{} (exit {})",
-        format_command(cmd),
+        command_string(cmd),
         output.status.code().unwrap_or(-1)
     ));
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -18,7 +18,7 @@ pub(super) fn command_failed_message(cmd: &Command, output: &Output) -> String {
     s
 }
 
-fn format_command(cmd: &Command) -> String {
+pub(super) fn command_string(cmd: &Command) -> String {
     let program = cmd.get_program().to_string_lossy();
     let args = cmd
         .get_args()

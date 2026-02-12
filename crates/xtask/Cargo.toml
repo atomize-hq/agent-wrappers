@@ -23,3 +23,4 @@ serde_json = { workspace = true }
 sha2 = "0.10"
 thiserror = { workspace = true }
 time = { version = "0.3", features = ["formatting", "parsing"] }
+wait-timeout = "0.2"
