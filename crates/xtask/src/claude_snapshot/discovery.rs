@@ -5,6 +5,8 @@ use std::{
     time::Duration,
 };
 
+use std::time::Instant;
+
 use super::{layout, supplements, util, ArgSnapshot, CommandSnapshot, Error, FlagSnapshot};
 
 pub(super) struct DiscoveryOutput {
@@ -22,6 +24,8 @@ pub(super) fn discover_commands(
     let mut visited = BTreeSet::<Vec<String>>::new();
     let mut known_omissions: Vec<String> = Vec::new();
     let help_timeout = Duration::from_millis(help_timeout_ms);
+    let started_at = Instant::now();
+    let mut last_progress_at = Instant::now();
 
     let root_help = run_claude_help_strict(claude_binary, &[], help_timeout)?;
     let root_parsed = parse_help(&root_help);
@@ -84,9 +88,30 @@ pub(super) fn discover_commands(
         .map(|t| vec![t])
         .collect();
 
+    let mut probed = 0usize;
+    let mut omission_count = 0usize;
+
     while let Some(path) = stack.pop() {
         if !visited.insert(path.clone()) {
             continue;
+        }
+
+        probed += 1;
+        if probed == 1 || probed % 25 == 0 || last_progress_at.elapsed() >= Duration::from_secs(5) {
+            last_progress_at = Instant::now();
+            let elapsed = started_at.elapsed();
+            eprintln!(
+                "[claude-snapshot] probed={} visited={} queue={} elapsed={}s last={}",
+                probed,
+                visited.len(),
+                stack.len(),
+                elapsed.as_secs(),
+                if path.is_empty() {
+                    "<root>".to_string()
+                } else {
+                    path.join(" ")
+                }
+            );
         }
 
         match run_claude_help_tolerant(ctx.claude_binary, &path, ctx.help_timeout) {
@@ -137,6 +162,12 @@ pub(super) fn discover_commands(
             Err(note) => {
                 // Keep the snapshot deterministic and progressing even if a specific `--help`
                 // probe fails (e.g., requires auth, tries to do first-run setup, or exits 1).
+                omission_count += 1;
+                if omission_count <= 25 {
+                    eprintln!("[claude-snapshot] omission: {note}");
+                } else if omission_count == 26 {
+                    eprintln!("[claude-snapshot] omission: (further omissions suppressed)");
+                }
                 known_omissions.push(note);
                 out.insert(
                     path.clone(),
