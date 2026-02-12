@@ -208,7 +208,7 @@ jobs:
           name: "claude-code-snapshot-${{ inputs.version }}-${{ matrix.target_triple }}"
           if-no-files-found: error
           path: |
-            cli_manifests/claude_code/snapshots/${{ inputs.version }}/${{ matrix.target_triple }}.json
+            cli_manifests/claude_code/snapshots/${{ inputs.version }}/
 
       - name: Upload raw help capture (not committed)
         uses: actions/upload-artifact@v4
@@ -263,19 +263,35 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          EXPECTED="cli_manifests/claude_code/snapshots/${VERSION}/linux-x64.json"
-          if [ -f "$EXPECTED" ]; then
-            exit 0
-          fi
-          ALT="$(find . -path "*/${EXPECTED}" -print -quit || true)"
-          if [ -z "$ALT" ]; then
-            echo "missing required snapshot for target linux-x64: ${EXPECTED}" >&2
+          for t in linux-x64 darwin-arm64 win32-x64; do
+            EXPECTED="cli_manifests/claude_code/snapshots/${VERSION}/${t}.json"
+            if [ -f "$EXPECTED" ]; then
+              continue
+            fi
+
+            # Older upload-artifact behavior (or single-file uploads) may flatten into `${t}.json`.
+            if [ -f "${t}.json" ]; then
+              mkdir -p "$(dirname "$EXPECTED")"
+              cp "${t}.json" "$EXPECTED"
+              continue
+            fi
+
+            # Some download layouts extract under an artifact-named directory.
+            ALT="$(find . -path "*/${EXPECTED}" -print -quit || true)"
+            if [ -n "$ALT" ]; then
+              mkdir -p "$(dirname "$EXPECTED")"
+              cp "$ALT" "$EXPECTED"
+              continue
+            fi
+          done
+
+          REQ="cli_manifests/claude_code/snapshots/${VERSION}/linux-x64.json"
+          if [ ! -f "$REQ" ]; then
+            echo "missing required snapshot for target linux-x64: ${REQ}" >&2
             echo "debug: top-level directories:" >&2
             ls -la >&2
             exit 1
           fi
-          mkdir -p "$(dirname "$EXPECTED")"
-          cp "$ALT" "$EXPECTED"
 
       - name: Union
         shell: bash
