@@ -17,6 +17,12 @@ permissions:
   contents: read
 
 jobs:
+  # IMPORTANT: This workflow always checks out and builds from the `staging` branch so that
+  # automation branches are derived from the same base they target via create-pull-request.
+  # This avoids accidentally including unrelated commits when the workflow is dispatched from `main`.
+  #
+  # The workflow definition itself can still be dispatched from any ref, but the git worktree used
+  # for artifact generation and PR creation is pinned to `staging`.
   prepare:
     name: Prepare pins (artifacts.lock.json)
     runs-on: ubuntu-latest
@@ -26,6 +32,8 @@ jobs:
       snapshot_matrix: ${{ steps.matrix.outputs.snapshot_matrix }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: staging
 
       - name: Reject automated min_supported updates (policy)
         if: ${{ inputs.update_min_supported }}
@@ -154,6 +162,8 @@ jobs:
       matrix: ${{ fromJSON(needs.prepare.outputs.snapshot_matrix) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: staging
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Download pins + downloads
@@ -238,6 +248,8 @@ jobs:
     needs: [prepare, snapshot]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: staging
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Download pins + downloads
@@ -515,6 +527,7 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.AUTOMATION_TOKEN || github.token }}
+          base: staging
           commit-message: "chore: codex cli artifacts for ${{ inputs.version }}"
           title: "chore: codex cli artifacts for ${{ inputs.version }}"
           body-path: _codex_cli_pr_body.md

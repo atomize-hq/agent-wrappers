@@ -13,6 +13,12 @@ permissions:
   pull-requests: write
 
 jobs:
+  # IMPORTANT: This workflow always checks out and builds from the `staging` branch so that
+  # automation branches are derived from the same base they target via create-pull-request.
+  # This avoids accidentally including unrelated commits when the workflow is dispatched from `main`.
+  #
+  # The workflow definition itself can still be dispatched from any ref, but the git worktree used
+  # for artifact generation and PR creation is pinned to `staging`.
   prepare:
     name: Prepare pins (artifacts.lock.json)
     runs-on: ubuntu-latest
@@ -21,6 +27,8 @@ jobs:
       snapshot_matrix: ${{ steps.matrix.outputs.snapshot_matrix }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: staging
 
       - name: Fetch manifest + compute SOURCE_DATE_EPOCH
         id: manifest
@@ -145,6 +153,8 @@ jobs:
       matrix: ${{ fromJSON(needs.prepare.outputs.snapshot_matrix) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: staging
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
@@ -225,6 +235,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: staging
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
@@ -340,6 +352,7 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+          base: staging
           commit-message: "chore: snapshot claude code ${VERSION}"
           title: "chore: snapshot claude code ${VERSION}"
           body-path: _claude_code_update_summary.md
