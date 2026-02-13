@@ -8,7 +8,87 @@
       "level": "explicit",
       "flags": [
         {
+          "key": "--add-dir",
+          "level": "explicit"
+        },
+        {
+          "key": "--agent",
+          "level": "passthrough"
+        },
+        {
+          "key": "--agents",
+          "level": "passthrough"
+        },
+        {
+          "key": "--allow-dangerously-skip-permissions",
+          "level": "passthrough"
+        },
+        {
+          "key": "--allowedTools",
+          "level": "explicit"
+        },
+        {
+          "key": "--append-system-prompt",
+          "level": "passthrough"
+        },
+        {
+          "key": "--betas",
+          "level": "passthrough"
+        },
+        {
+          "key": "--chrome",
+          "level": "passthrough"
+        },
+        {
+          "key": "--continue",
+          "level": "passthrough"
+        },
+        {
+          "key": "--dangerously-skip-permissions",
+          "level": "explicit"
+        },
+        {
+          "key": "--debug",
+          "level": "passthrough"
+        },
+        {
+          "key": "--debug-file",
+          "level": "passthrough"
+        },
+        {
+          "key": "--disable-slash-commands",
+          "level": "passthrough"
+        },
+        {
+          "key": "--disallowedTools",
+          "level": "explicit"
+        },
+        {
+          "key": "--fallback-model",
+          "level": "passthrough"
+        },
+        {
+          "key": "--file",
+          "level": "passthrough"
+        },
+        {
+          "key": "--fork-session",
+          "level": "passthrough"
+        },
+        {
+          "key": "--from-pr",
+          "level": "passthrough"
+        },
+        {
           "key": "--help",
+          "level": "passthrough"
+        },
+        {
+          "key": "--ide",
+          "level": "passthrough"
+        },
+        {
+          "key": "--include-partial-messages",
           "level": "passthrough"
         },
         {
@@ -20,12 +100,80 @@
           "level": "explicit"
         },
         {
+          "key": "--max-budget-usd",
+          "level": "passthrough"
+        },
+        {
+          "key": "--mcp-config",
+          "level": "explicit"
+        },
+        {
+          "key": "--mcp-debug",
+          "level": "passthrough"
+        },
+        {
+          "key": "--model",
+          "level": "explicit"
+        },
+        {
+          "key": "--no-chrome",
+          "level": "passthrough"
+        },
+        {
+          "key": "--no-session-persistence",
+          "level": "passthrough"
+        },
+        {
           "key": "--output-format",
           "level": "explicit"
         },
         {
+          "key": "--permission-mode",
+          "level": "explicit"
+        },
+        {
+          "key": "--plugin-dir",
+          "level": "passthrough"
+        },
+        {
           "key": "--print",
           "level": "explicit"
+        },
+        {
+          "key": "--replay-user-messages",
+          "level": "passthrough"
+        },
+        {
+          "key": "--resume",
+          "level": "passthrough"
+        },
+        {
+          "key": "--session-id",
+          "level": "passthrough"
+        },
+        {
+          "key": "--setting-sources",
+          "level": "passthrough"
+        },
+        {
+          "key": "--settings",
+          "level": "passthrough"
+        },
+        {
+          "key": "--strict-mcp-config",
+          "level": "explicit"
+        },
+        {
+          "key": "--system-prompt",
+          "level": "passthrough"
+        },
+        {
+          "key": "--tools",
+          "level": "passthrough"
+        },
+        {
+          "key": "--verbose",
+          "level": "passthrough"
         },
         {
           "key": "--version",
@@ -42,10 +190,207 @@
     },
     {
       "path": [
-        "install"
+        "mcp"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--help",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--env",
+          "level": "explicit"
+        },
+        {
+          "key": "--header",
+          "level": "explicit"
+        },
+        {
+          "key": "--help",
+          "level": "passthrough"
+        },
+        {
+          "key": "--scope",
+          "level": "explicit"
+        },
+        {
+          "key": "--transport",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add-from-claude-desktop"
+      ],
+      "level": "passthrough",
+      "note": "Supported via run_command; platform-gated upstream.",
+      "flags": [
+        {
+          "key": "--help",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add-json"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--help",
+          "level": "passthrough"
+        },
+        {
+          "key": "--scope",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "get"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--help",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "mcp",
+        "remove"
+      ],
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--help",
+          "level": "passthrough"
+        },
+        {
+          "key": "--scope",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "reset-project-choices"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "mcp",
+        "serve"
+      ],
+      "level": "passthrough",
+      "note": "Supported via run_command; no typed API yet.",
+      "flags": [
+        {
+          "key": "--help",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin"
+      ],
+      "level": "passthrough",
+      "note": "Supported via run_command; no typed API yet.",
+      "flags": [
+        {
+          "key": "--help",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "manifest"
+      ],
+      "level": "passthrough",
+      "flags": [
+        {
+          "key": "--help",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "manifest",
+        "marketplace"
+      ],
+      "level": "passthrough",
+      "flags": [
+        {
+          "key": "--help",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace"
+      ],
+      "level": "passthrough",
+      "flags": [
+        {
+          "key": "--help",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "repo"
+      ],
+      "level": "passthrough",
+      "flags": [
+        {
+          "key": "--help",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "setup-token"
       ],
       "level": "intentionally_unsupported",
-      "note": "Claude Code installation is out of scope for this wrapper."
+      "note": "Token setup is out of scope for this wrapper (secrets-handling policy)."
     },
     {
       "path": [
