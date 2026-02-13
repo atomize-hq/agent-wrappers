@@ -65,13 +65,7 @@
         "target_triple": "win32-x64",
         "version_output": "2.1.29 (Claude Code)",
         "semantic_version": "2.1.29"
-      },
-      "known_omissions": [
-        "skipped cyclic subcommand token: plugin manifest marketplace manifest",
-        "skipped recursive subcommand token: plugin manifest manifest",
-        "skipped recursive subcommand token: plugin manifest marketplace marketplace",
-        "skipped recursive subcommand token: plugin marketplace repo repo"
-      ]
+      }
     }
   ],
   "commands": [
@@ -92,8 +86,7 @@
           "note": "inferred from usage",
           "available_on": [
             "linux-x64",
-            "darwin-arm64",
-            "win32-x64"
+            "darwin-arm64"
           ]
         },
         {
@@ -104,8 +97,7 @@
           "note": "inferred from usage",
           "available_on": [
             "linux-x64",
-            "darwin-arm64",
-            "win32-x64"
+            "darwin-arm64"
           ]
         }
       ],
@@ -584,6 +576,25 @@
     },
     {
       "path": [
+        "install"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude install [options] [target]",
+      "flags": [
+        {
+          "key": "--force",
+          "long": "--force",
+          "takes_value": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
         "mcp"
       ],
       "available_on": [
@@ -592,6 +603,158 @@
         "win32-x64"
       ],
       "usage": "claude mcp [options] [command]"
+    },
+    {
+      "path": [
+        "mcp",
+        "add"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude mcp add [options] <name> <commandOrUrl> [args...]",
+      "args": [
+        {
+          "name": "commandOrUrl",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        },
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--env",
+          "long": "--env",
+          "short": "-e",
+          "takes_value": true,
+          "value_name": "env...",
+          "available_on": [
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--header",
+          "long": "--header",
+          "short": "-H",
+          "takes_value": true,
+          "value_name": "header...",
+          "available_on": [
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--transport",
+          "long": "--transport",
+          "short": "-t",
+          "takes_value": true,
+          "value_name": "transport",
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add-from-claude-desktop"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude mcp add-from-claude-desktop [options]",
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add-json"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude mcp add-json [options] <name> <json>",
+      "args": [
+        {
+          "name": "json",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        },
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "get"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude mcp get [options] <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
     },
     {
       "path": [
@@ -608,6 +771,38 @@
     {
       "path": [
         "mcp",
+        "remove"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude mcp remove [options] <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
         "reset-project-choices"
       ],
       "available_on": [
@@ -616,6 +811,16 @@
         "win32-x64"
       ],
       "usage": "claude mcp reset-project-choices [options]"
+    },
+    {
+      "path": [
+        "mcp",
+        "serve"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude mcp serve [options]"
     },
     {
       "path": [
@@ -631,12 +836,124 @@
     {
       "path": [
         "plugin",
+        "disable"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude plugin disable [options] [plugin]",
+      "flags": [
+        {
+          "key": "--all",
+          "long": "--all",
+          "short": "-a",
+          "takes_value": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "enable"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude plugin enable [options] <plugin>",
+      "args": [
+        {
+          "name": "plugin",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "install"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude plugin install|i [options] <plugin>",
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "list"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude plugin list [options]",
+      "flags": [
+        {
+          "key": "--available",
+          "long": "--available",
+          "takes_value": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
         "manifest"
       ],
       "available_on": [
         "linux-x64",
-        "darwin-arm64",
-        "win32-x64"
+        "darwin-arm64"
       ],
       "usage": "claude plugin [options] [command]"
     },
@@ -648,8 +965,7 @@
       ],
       "available_on": [
         "linux-x64",
-        "darwin-arm64",
-        "win32-x64"
+        "darwin-arm64"
       ],
       "usage": "claude plugin [options] [command]"
     },
@@ -669,14 +985,151 @@
       "path": [
         "plugin",
         "marketplace",
+        "add"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude plugin marketplace add [options] <source>",
+      "args": [
+        {
+          "name": "source",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "list"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude plugin marketplace list [options]",
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "remove"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude plugin marketplace remove|rm [options] <name>"
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
         "repo"
       ],
       "available_on": [
         "linux-x64",
-        "darwin-arm64",
-        "win32-x64"
+        "darwin-arm64"
       ],
       "usage": "claude plugin marketplace [options] [command]"
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "update"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude plugin marketplace update [options] [name]"
+    },
+    {
+      "path": [
+        "plugin",
+        "uninstall"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude plugin uninstall|remove [options] <plugin>",
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "update"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude plugin update [options] <plugin>",
+      "args": [
+        {
+          "name": "plugin",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "validate"
+      ],
+      "available_on": [
+        "win32-x64"
+      ],
+      "usage": "claude plugin validate [options] <path>",
+      "args": [
+        {
+          "name": "path",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "win32-x64"
+          ]
+        }
+      ]
     },
     {
       "path": [

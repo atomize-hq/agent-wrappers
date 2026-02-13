@@ -26,28 +26,6 @@
     "missing_commands": [],
     "missing_flags": [],
     "missing_args": [],
-    "excluded_args": [
-      {
-        "path": [],
-        "name": "command",
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "note": "Root command dispatch pseudo-arg inferred from usage is excluded from wrapper parity."
-      },
-      {
-        "path": [],
-        "name": "prompt",
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "note": "Interactive default-mode prompt surface is excluded from wrapper parity (wrapper targets --print)."
-      }
-    ],
     "passthrough_candidates": [
       {
         "path": [
@@ -64,45 +42,7 @@
       {
         "path": [
           "plugin",
-          "manifest"
-        ],
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "passthrough"
-      },
-      {
-        "path": [
-          "plugin",
-          "manifest",
           "marketplace"
-        ],
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "passthrough"
-      },
-      {
-        "path": [
-          "plugin",
-          "marketplace"
-        ],
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "passthrough"
-      },
-      {
-        "path": [
-          "plugin",
-          "marketplace",
-          "repo"
         ],
         "upstream_available_on": [
           "linux-x64",
@@ -157,8 +97,6 @@
           "add"
         ],
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "explicit"
@@ -169,8 +107,6 @@
           "add-from-claude-desktop"
         ],
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough",
@@ -182,8 +118,6 @@
           "add-json"
         ],
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "explicit"
@@ -194,8 +128,6 @@
           "get"
         ],
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "explicit"
@@ -206,8 +138,6 @@
           "remove"
         ],
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "explicit"
@@ -218,12 +148,45 @@
           "serve"
         ],
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough",
         "note": "Supported via run_command; no typed API yet."
+      },
+      {
+        "path": [
+          "plugin",
+          "manifest"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "manifest",
+          "marketplace"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "repo"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64"
+        ],
+        "wrapper_level": "passthrough"
       }
     ],
     "wrapper_only_flags": [
@@ -246,8 +209,6 @@
         ],
         "key": "--env",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "explicit"
@@ -259,8 +220,6 @@
         ],
         "key": "--header",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "explicit"
@@ -272,8 +231,6 @@
         ],
         "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
@@ -285,8 +242,6 @@
         ],
         "key": "--scope",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "explicit"
@@ -298,8 +253,6 @@
         ],
         "key": "--transport",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "explicit"
@@ -311,8 +264,6 @@
         ],
         "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
@@ -324,8 +275,6 @@
         ],
         "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
@@ -337,8 +286,6 @@
         ],
         "key": "--scope",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "explicit"
@@ -350,8 +297,6 @@
         ],
         "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
@@ -363,8 +308,6 @@
         ],
         "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
@@ -376,8 +319,6 @@
         ],
         "key": "--scope",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "explicit"
@@ -389,8 +330,6 @@
         ],
         "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
@@ -415,8 +354,7 @@
         "key": "--help",
         "upstream_available_on": [
           "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
+          "darwin-arm64"
         ],
         "wrapper_level": "passthrough"
       },
@@ -429,8 +367,7 @@
         "key": "--help",
         "upstream_available_on": [
           "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
+          "darwin-arm64"
         ],
         "wrapper_level": "passthrough"
       },
@@ -456,8 +393,7 @@
         "key": "--help",
         "upstream_available_on": [
           "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
+          "darwin-arm64"
         ],
         "wrapper_level": "passthrough"
       }

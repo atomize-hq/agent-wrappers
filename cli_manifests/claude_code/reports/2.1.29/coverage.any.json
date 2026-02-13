@@ -23,17 +23,341 @@
     "mode": "any"
   },
   "deltas": {
-    "missing_commands": [],
-    "missing_flags": [],
-    "missing_args": [],
+    "missing_commands": [
+      {
+        "path": [
+          "install"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "disable"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "enable"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "install"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "list"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "add"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "list"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "remove"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "update"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "uninstall"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "update"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "validate"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      }
+    ],
+    "missing_flags": [
+      {
+        "path": [
+          "install"
+        ],
+        "key": "--force",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add-from-claude-desktop"
+        ],
+        "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "disable"
+        ],
+        "key": "--all",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "disable"
+        ],
+        "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "enable"
+        ],
+        "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "install"
+        ],
+        "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "list"
+        ],
+        "key": "--available",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "list"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "list"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "uninstall"
+        ],
+        "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "update"
+        ],
+        "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      }
+    ],
+    "missing_args": [
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "commandOrUrl",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "name",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add-json"
+        ],
+        "name": "json",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add-json"
+        ],
+        "name": "name",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "get"
+        ],
+        "name": "name",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "name": "name",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "enable"
+        ],
+        "name": "plugin",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "add"
+        ],
+        "name": "source",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "update"
+        ],
+        "name": "plugin",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin",
+          "validate"
+        ],
+        "name": "path",
+        "upstream_available_on": [
+          "win32-x64"
+        ]
+      }
+    ],
     "excluded_args": [
       {
         "path": [],
         "name": "command",
         "upstream_available_on": [
           "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
+          "darwin-arm64"
         ],
         "note": "Root command dispatch pseudo-arg inferred from usage is excluded from wrapper parity."
       },
@@ -42,13 +366,34 @@
         "name": "prompt",
         "upstream_available_on": [
           "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
+          "darwin-arm64"
         ],
         "note": "Interactive default-mode prompt surface is excluded from wrapper parity (wrapper targets --print)."
       }
     ],
     "passthrough_candidates": [
+      {
+        "path": [
+          "mcp",
+          "add-from-claude-desktop"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Supported via run_command; platform-gated upstream."
+      },
+      {
+        "path": [
+          "mcp",
+          "serve"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Supported via run_command; no typed API yet."
+      },
       {
         "path": [
           "plugin"
@@ -68,8 +413,7 @@
         ],
         "upstream_available_on": [
           "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
+          "darwin-arm64"
         ],
         "wrapper_level": "passthrough"
       },
@@ -81,8 +425,7 @@
         ],
         "upstream_available_on": [
           "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
+          "darwin-arm64"
         ],
         "wrapper_level": "passthrough"
       },
@@ -106,8 +449,7 @@
         ],
         "upstream_available_on": [
           "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
+          "darwin-arm64"
         ],
         "wrapper_level": "passthrough"
       }
@@ -150,82 +492,6 @@
         "note": "Claude Code auto-update is out of scope for this wrapper."
       }
     ],
-    "wrapper_only_commands": [
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "explicit"
-      },
-      {
-        "path": [
-          "mcp",
-          "add-from-claude-desktop"
-        ],
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "passthrough",
-        "note": "Supported via run_command; platform-gated upstream."
-      },
-      {
-        "path": [
-          "mcp",
-          "add-json"
-        ],
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "explicit"
-      },
-      {
-        "path": [
-          "mcp",
-          "get"
-        ],
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "explicit"
-      },
-      {
-        "path": [
-          "mcp",
-          "remove"
-        ],
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "explicit"
-      },
-      {
-        "path": [
-          "mcp",
-          "serve"
-        ],
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "passthrough",
-        "note": "Supported via run_command; no typed API yet."
-      }
-    ],
     "wrapper_only_flags": [
       {
         "path": [
@@ -244,65 +510,11 @@
           "mcp",
           "add"
         ],
-        "key": "--env",
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "explicit"
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "key": "--header",
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "explicit"
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
         "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "key": "--scope",
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "explicit"
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "key": "--transport",
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "explicit"
       },
       {
         "path": [
@@ -311,8 +523,6 @@
         ],
         "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
@@ -324,24 +534,9 @@
         ],
         "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
-      },
-      {
-        "path": [
-          "mcp",
-          "add-json"
-        ],
-        "key": "--scope",
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "explicit"
       },
       {
         "path": [
@@ -350,8 +545,6 @@
         ],
         "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
@@ -363,24 +556,9 @@
         ],
         "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
-      },
-      {
-        "path": [
-          "mcp",
-          "remove"
-        ],
-        "key": "--scope",
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "explicit"
       },
       {
         "path": [
@@ -389,8 +567,6 @@
         ],
         "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
@@ -415,8 +591,7 @@
         "key": "--help",
         "upstream_available_on": [
           "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
+          "darwin-arm64"
         ],
         "wrapper_level": "passthrough"
       },
@@ -429,8 +604,7 @@
         "key": "--help",
         "upstream_available_on": [
           "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
+          "darwin-arm64"
         ],
         "wrapper_level": "passthrough"
       },
@@ -456,8 +630,7 @@
         "key": "--help",
         "upstream_available_on": [
           "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
+          "darwin-arm64"
         ],
         "wrapper_level": "passthrough"
       }
