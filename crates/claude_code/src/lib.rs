@@ -16,6 +16,7 @@ pub mod wrapper_coverage_manifest;
 pub use builder::ClaudeClientBuilder;
 pub use client::ClaudeClient;
 pub use commands::command::ClaudeCommandRequest;
+pub use commands::doctor::ClaudeDoctorRequest;
 pub use commands::mcp::{
     McpAddJsonRequest, McpAddRequest, McpGetRequest, McpRemoveRequest, McpScope, McpTransport,
 };

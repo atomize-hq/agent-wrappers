@@ -194,13 +194,7 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                 vec![],
                 vec![],
             ),
-            command(
-                &["doctor"],
-                CoverageLevel::IntentionallyUnsupported,
-                Some("Claude Code updater diagnostics are out of scope for this wrapper."),
-                vec![],
-                vec![],
-            ),
+            command(&["doctor"], CoverageLevel::Explicit, None, vec![], vec![]),
             command(
                 &["setup-token"],
                 CoverageLevel::IntentionallyUnsupported,

@@ -5,6 +5,7 @@ use tokio::process::Command;
 use crate::{
     builder::ClaudeClientBuilder,
     commands::command::ClaudeCommandRequest,
+    commands::doctor::ClaudeDoctorRequest,
     commands::mcp::{McpAddJsonRequest, McpAddRequest, McpGetRequest, McpRemoveRequest},
     commands::print::{ClaudeOutputFormat, ClaudePrintRequest},
     parse_stream_json_lines, process, ClaudeCodeError, CommandOutput, StreamJsonLineOutcome,
@@ -125,6 +126,17 @@ impl ClaudeClient {
     pub async fn mcp_add_json(
         &self,
         req: McpAddJsonRequest,
+    ) -> Result<CommandOutput, ClaudeCodeError> {
+        self.run_command(req.into_command()).await
+    }
+
+    pub async fn doctor(&self) -> Result<CommandOutput, ClaudeCodeError> {
+        self.doctor_with(ClaudeDoctorRequest::new()).await
+    }
+
+    pub async fn doctor_with(
+        &self,
+        req: ClaudeDoctorRequest,
     ) -> Result<CommandOutput, ClaudeCodeError> {
         self.run_command(req.into_command()).await
     }

@@ -185,8 +185,7 @@
       "path": [
         "doctor"
       ],
-      "level": "intentionally_unsupported",
-      "note": "Claude Code updater diagnostics are out of scope for this wrapper."
+      "level": "explicit"
     },
     {
       "path": [
