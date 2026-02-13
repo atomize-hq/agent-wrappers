@@ -69,6 +69,19 @@ jobs:
           set -euo pipefail
           cargo test --workspace --all-targets
 
+  loc-check:
+    name: LOC cap (Rust files)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: make loc-check
+        shell: bash
+        run: |
+          set -euo pipefail
+          make loc-check
+
   codex-validate-artifacts:
     name: Validate Codex committed artifacts
     runs-on: ubuntu-latest

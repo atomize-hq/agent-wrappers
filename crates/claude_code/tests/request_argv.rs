@@ -6,7 +6,8 @@ fn argv_orders_flags_before_prompt() {
         .output_format(ClaudeOutputFormat::StreamJson)
         .input_format(ClaudeInputFormat::Text)
         .json_schema(r#"{"type":"object"}"#)
-        .extra_args(["--model", "sonnet"]);
+        .model("sonnet")
+        .extra_args(["--debug"]);
 
     let argv = req.argv();
     assert!(argv.starts_with(&[
@@ -19,6 +20,7 @@ fn argv_orders_flags_before_prompt() {
         r#"{"type":"object"}"#.to_string(),
         "--model".to_string(),
         "sonnet".to_string(),
+        "--debug".to_string(),
     ]));
     assert_eq!(argv.last().unwrap(), "hello");
 }
