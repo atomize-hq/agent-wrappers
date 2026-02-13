@@ -95,8 +95,7 @@ pub(super) fn discover_commands(
         }
 
         probed += 1;
-        if probed == 1 || probed % 25 == 0 || last_progress_at.elapsed() >= Duration::from_secs(5)
-        {
+        if probed == 1 || probed % 25 == 0 || last_progress_at.elapsed() >= Duration::from_secs(5) {
             last_progress_at = Instant::now();
             let elapsed = started_at.elapsed();
             eprintln!(
@@ -127,7 +126,11 @@ pub(super) fn discover_commands(
                 if let Some(usage) = parsed.usage.as_deref() {
                     usage_infer::merge_inferred_args(
                         &mut args,
-                        usage_infer::infer_args_from_usage(usage, &path, !parsed.subcommands.is_empty()),
+                        usage_infer::infer_args_from_usage(
+                            usage,
+                            &path,
+                            !parsed.subcommands.is_empty(),
+                        ),
                     );
                 }
                 if !args.is_empty() {

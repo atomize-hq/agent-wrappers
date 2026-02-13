@@ -89,4 +89,3 @@ pub(super) fn infer_args_from_usage(
 
     out
 }
-

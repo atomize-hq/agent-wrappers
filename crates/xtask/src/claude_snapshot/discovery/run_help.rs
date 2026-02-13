@@ -13,7 +13,8 @@ pub(super) fn run_claude_help_strict(
     path: &[String],
     timeout: Duration,
 ) -> Result<String, Error> {
-    let help = run_claude_help_with_timeout(claude_binary, path, timeout).map_err(Error::CommandFailed)?;
+    let help =
+        run_claude_help_with_timeout(claude_binary, path, timeout).map_err(Error::CommandFailed)?;
     if !help.status.success() {
         return Err(Error::CommandFailed(help.failure_debug));
     }
@@ -104,4 +105,3 @@ fn looks_like_help(s: &str) -> bool {
         || lower.contains("options:")
         || lower.contains("flags:")
 }
-

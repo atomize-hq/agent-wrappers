@@ -115,7 +115,10 @@ impl ClaudeClient {
         self.run_command(req.into_command()).await
     }
 
-    pub async fn mcp_remove(&self, req: McpRemoveRequest) -> Result<CommandOutput, ClaudeCodeError> {
+    pub async fn mcp_remove(
+        &self,
+        req: McpRemoveRequest,
+    ) -> Result<CommandOutput, ClaudeCodeError> {
         self.run_command(req.into_command()).await
     }
 

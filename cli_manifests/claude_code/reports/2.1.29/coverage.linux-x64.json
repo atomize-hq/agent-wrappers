@@ -147,6 +147,16 @@
     "wrapper_only_commands": [
       {
         "path": [
+          "install"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Claude Code installation is out of scope for this wrapper."
+      },
+      {
+        "path": [
           "mcp",
           "add"
         ],
@@ -206,21 +216,123 @@
         ],
         "wrapper_level": "passthrough",
         "note": "Supported via run_command; no typed API yet."
-      }
-    ],
-    "wrapper_only_flags": [
+      },
       {
         "path": [
-          "mcp"
+          "plugin",
+          "disable"
         ],
-        "key": "--help",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
       },
+      {
+        "path": [
+          "plugin",
+          "enable"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "install"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "list"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "add"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "list"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "remove"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "update"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "uninstall"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "update"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "validate"
+        ],
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      }
+    ],
+    "wrapper_only_flags": [
       {
         "path": [
           "mcp",
@@ -242,17 +354,6 @@
           "win32-x64"
         ],
         "wrapper_level": "explicit"
-      },
-      {
-        "path": [
-          "mcp",
-          "add"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "win32-x64"
-        ],
-        "wrapper_level": "passthrough"
       },
       {
         "path": [
@@ -281,18 +382,7 @@
           "mcp",
           "add-from-claude-desktop"
         ],
-        "key": "--help",
-        "upstream_available_on": [
-          "win32-x64"
-        ],
-        "wrapper_level": "passthrough"
-      },
-      {
-        "path": [
-          "mcp",
-          "add-json"
-        ],
-        "key": "--help",
+        "key": "--scope",
         "upstream_available_on": [
           "win32-x64"
         ],
@@ -304,6 +394,163 @@
           "add-json"
         ],
         "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "remove"
+        ],
+        "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "plugin",
+          "disable"
+        ],
+        "key": "--all",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "disable"
+        ],
+        "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "enable"
+        ],
+        "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "install"
+        ],
+        "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "list"
+        ],
+        "key": "--available",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "list"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "list"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "uninstall"
+        ],
+        "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "update"
+        ],
+        "key": "--scope",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      }
+    ],
+    "wrapper_only_args": [
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "commandOrUrl",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "name",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "add-json"
+        ],
+        "name": "json",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "mcp",
+          "add-json"
+        ],
+        "name": "name",
         "upstream_available_on": [
           "win32-x64"
         ],
@@ -314,29 +561,7 @@
           "mcp",
           "get"
         ],
-        "key": "--help",
-        "upstream_available_on": [
-          "win32-x64"
-        ],
-        "wrapper_level": "passthrough"
-      },
-      {
-        "path": [
-          "mcp",
-          "remove"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "win32-x64"
-        ],
-        "wrapper_level": "passthrough"
-      },
-      {
-        "path": [
-          "mcp",
-          "remove"
-        ],
-        "key": "--scope",
+        "name": "name",
         "upstream_available_on": [
           "win32-x64"
         ],
@@ -345,60 +570,21 @@
       {
         "path": [
           "mcp",
-          "serve"
+          "remove"
         ],
-        "key": "--help",
+        "name": "name",
         "upstream_available_on": [
           "win32-x64"
         ],
-        "wrapper_level": "passthrough"
-      },
-      {
-        "path": [
-          "plugin"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "passthrough"
+        "wrapper_level": "explicit"
       },
       {
         "path": [
           "plugin",
-          "manifest"
+          "enable"
         ],
-        "key": "--help",
+        "name": "plugin",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64"
-        ],
-        "wrapper_level": "passthrough"
-      },
-      {
-        "path": [
-          "plugin",
-          "manifest",
-          "marketplace"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64"
-        ],
-        "wrapper_level": "passthrough"
-      },
-      {
-        "path": [
-          "plugin",
-          "marketplace"
-        ],
-        "key": "--help",
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
           "win32-x64"
         ],
         "wrapper_level": "passthrough"
@@ -407,12 +593,33 @@
         "path": [
           "plugin",
           "marketplace",
-          "repo"
+          "add"
         ],
-        "key": "--help",
+        "name": "source",
         "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64"
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "update"
+        ],
+        "name": "plugin",
+        "upstream_available_on": [
+          "win32-x64"
+        ],
+        "wrapper_level": "passthrough"
+      },
+      {
+        "path": [
+          "plugin",
+          "validate"
+        ],
+        "name": "path",
+        "upstream_available_on": [
+          "win32-x64"
         ],
         "wrapper_level": "passthrough"
       }

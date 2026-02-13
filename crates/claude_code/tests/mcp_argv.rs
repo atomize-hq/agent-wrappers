@@ -46,7 +46,8 @@ fn mcp_remove_includes_scope_when_set() {
 
 #[test]
 fn mcp_add_json_includes_scope_when_set() {
-    let req = McpAddJsonRequest::new("my-server", r#"{"transport":"stdio"}"#).scope(McpScope::Local);
+    let req =
+        McpAddJsonRequest::new("my-server", r#"{"transport":"stdio"}"#).scope(McpScope::Local);
     let argv = req.into_command().argv();
     assert_eq!(
         argv,
@@ -60,4 +61,3 @@ fn mcp_add_json_includes_scope_when_set() {
         ]
     );
 }
-

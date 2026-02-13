@@ -45,4 +45,3 @@ impl ClaudeCommandRequest {
         out
     }
 }
-

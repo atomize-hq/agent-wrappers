@@ -190,15 +190,16 @@
     },
     {
       "path": [
+        "install"
+      ],
+      "level": "intentionally_unsupported",
+      "note": "Claude Code installation is out of scope for this wrapper."
+    },
+    {
+      "path": [
         "mcp"
       ],
-      "level": "explicit",
-      "flags": [
-        {
-          "key": "--help",
-          "level": "passthrough"
-        }
-      ]
+      "level": "explicit"
     },
     {
       "path": [
@@ -216,15 +217,21 @@
           "level": "explicit"
         },
         {
-          "key": "--help",
-          "level": "passthrough"
-        },
-        {
           "key": "--scope",
           "level": "explicit"
         },
         {
           "key": "--transport",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "commandOrUrl",
+          "level": "explicit"
+        },
+        {
+          "name": "name",
           "level": "explicit"
         }
       ]
@@ -238,7 +245,7 @@
       "note": "Supported via run_command; platform-gated upstream.",
       "flags": [
         {
-          "key": "--help",
+          "key": "--scope",
           "level": "passthrough"
         }
       ]
@@ -251,11 +258,17 @@
       "level": "explicit",
       "flags": [
         {
-          "key": "--help",
-          "level": "passthrough"
+          "key": "--scope",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "json",
+          "level": "explicit"
         },
         {
-          "key": "--scope",
+          "name": "name",
           "level": "explicit"
         }
       ]
@@ -266,10 +279,10 @@
         "get"
       ],
       "level": "explicit",
-      "flags": [
+      "args": [
         {
-          "key": "--help",
-          "level": "passthrough"
+          "name": "name",
+          "level": "explicit"
         }
       ]
     },
@@ -288,11 +301,13 @@
       "level": "explicit",
       "flags": [
         {
-          "key": "--help",
-          "level": "passthrough"
-        },
-        {
           "key": "--scope",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
           "level": "explicit"
         }
       ]
@@ -310,23 +325,77 @@
         "serve"
       ],
       "level": "passthrough",
-      "note": "Supported via run_command; no typed API yet.",
-      "flags": [
-        {
-          "key": "--help",
-          "level": "passthrough"
-        }
-      ]
+      "note": "Supported via run_command; no typed API yet."
     },
     {
       "path": [
         "plugin"
       ],
       "level": "passthrough",
-      "note": "Supported via run_command; no typed API yet.",
+      "note": "Supported via run_command; no typed API yet."
+    },
+    {
+      "path": [
+        "plugin",
+        "disable"
+      ],
+      "level": "passthrough",
       "flags": [
         {
-          "key": "--help",
+          "key": "--all",
+          "level": "passthrough"
+        },
+        {
+          "key": "--scope",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "enable"
+      ],
+      "level": "passthrough",
+      "flags": [
+        {
+          "key": "--scope",
+          "level": "passthrough"
+        }
+      ],
+      "args": [
+        {
+          "name": "plugin",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "install"
+      ],
+      "level": "passthrough",
+      "flags": [
+        {
+          "key": "--scope",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "list"
+      ],
+      "level": "passthrough",
+      "flags": [
+        {
+          "key": "--available",
+          "level": "passthrough"
+        },
+        {
+          "key": "--json",
           "level": "passthrough"
         }
       ]
@@ -336,13 +405,7 @@
         "plugin",
         "manifest"
       ],
-      "level": "passthrough",
-      "flags": [
-        {
-          "key": "--help",
-          "level": "passthrough"
-        }
-      ]
+      "level": "passthrough"
     },
     {
       "path": [
@@ -350,23 +413,25 @@
         "manifest",
         "marketplace"
       ],
-      "level": "passthrough",
-      "flags": [
-        {
-          "key": "--help",
-          "level": "passthrough"
-        }
-      ]
+      "level": "passthrough"
     },
     {
       "path": [
         "plugin",
         "marketplace"
       ],
+      "level": "passthrough"
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "add"
+      ],
       "level": "passthrough",
-      "flags": [
+      "args": [
         {
-          "key": "--help",
+          "name": "source",
           "level": "passthrough"
         }
       ]
@@ -375,12 +440,81 @@
       "path": [
         "plugin",
         "marketplace",
-        "repo"
+        "list"
       ],
       "level": "passthrough",
       "flags": [
         {
-          "key": "--help",
+          "key": "--json",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "remove"
+      ],
+      "level": "passthrough"
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "repo"
+      ],
+      "level": "passthrough"
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "update"
+      ],
+      "level": "passthrough"
+    },
+    {
+      "path": [
+        "plugin",
+        "uninstall"
+      ],
+      "level": "passthrough",
+      "flags": [
+        {
+          "key": "--scope",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "update"
+      ],
+      "level": "passthrough",
+      "flags": [
+        {
+          "key": "--scope",
+          "level": "passthrough"
+        }
+      ],
+      "args": [
+        {
+          "name": "plugin",
+          "level": "passthrough"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "validate"
+      ],
+      "level": "passthrough",
+      "args": [
+        {
+          "name": "path",
           "level": "passthrough"
         }
       ]
