@@ -7,13 +7,43 @@
 - Regenerate artifacts and pass `codex-validate` for the parity root.
 
 ### Missing commands
-- (none)
+- `install`
+- `plugin disable`
+- `plugin enable`
+- `plugin install`
+- `plugin list`
+- `plugin marketplace add`
+- `plugin marketplace list`
+- `plugin marketplace remove`
+- `plugin marketplace update`
+- `plugin uninstall`
+- `plugin update`
+- `plugin validate`
 
 ### Missing flags
-- (none)
+- `install --force`
+- `mcp add-from-claude-desktop --scope`
+- `plugin disable --all`
+- `plugin disable --scope`
+- `plugin enable --scope`
+- `plugin install --scope`
+- `plugin list --available`
+- `plugin list --json`
+- `plugin marketplace list --json`
+- `plugin uninstall --scope`
+- `plugin update --scope`
 
 ### Missing args
-- (none)
+- `mcp add commandOrUrl`
+- `mcp add name`
+- `mcp add-json json`
+- `mcp add-json name`
+- `mcp get name`
+- `mcp remove name`
+- `plugin enable plugin`
+- `plugin marketplace add source`
+- `plugin update plugin`
+- `plugin validate path`
 
 ## Acceptance Criteria
 - Wrapper changes address C0 scope.
