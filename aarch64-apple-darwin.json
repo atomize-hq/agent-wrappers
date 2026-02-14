@@ -1,17 +1,17 @@
 {
   "snapshot_schema_version": 1,
   "tool": "codex-cli",
-  "collected_at": "2026-02-05T05:11:10Z",
+  "collected_at": "2026-02-12T18:29:57Z",
   "binary": {
-    "sha256": "37abd73bf0fb3603efa392858f9cc5bfe5d47c9bc24bcb465b20b720381ef0a4",
-    "size_bytes": 54329392,
+    "sha256": "8047c31fbc47591a93bb91d63a3c8387802f0e4504346f1599ba13c534cfb528",
+    "size_bytes": 65715760,
     "platform": {
       "os": "macos",
       "arch": "aarch64"
     },
     "target_triple": "aarch64-apple-darwin",
-    "version_output": "codex-cli 0.97.0",
-    "semantic_version": "0.97.0",
+    "version_output": "codex-cli 0.100.0",
+    "semantic_version": "0.100.0",
     "channel": "stable"
   },
   "commands": [
@@ -195,6 +195,11 @@
           "long": "--help",
           "short": "-h",
           "takes_value": false
+        },
+        {
+          "long": "--listen",
+          "takes_value": true,
+          "value_name": "URL"
         }
       ]
     },
@@ -828,6 +833,10 @@
           "value_name": "FEATURE"
         },
         {
+          "long": "--ephemeral",
+          "takes_value": false
+        },
+        {
           "long": "--full-auto",
           "takes_value": false
         },
@@ -957,6 +966,10 @@
           "value_name": "FEATURE"
         },
         {
+          "long": "--ephemeral",
+          "takes_value": false
+        },
+        {
           "long": "--full-auto",
           "takes_value": false
         },
@@ -1035,6 +1048,10 @@
           "long": "--enable",
           "takes_value": true,
           "value_name": "FEATURE"
+        },
+        {
+          "long": "--ephemeral",
+          "takes_value": false
         },
         {
           "long": "--full-auto",
@@ -2155,9 +2172,13 @@
       "apps",
       "collab",
       "collaboration_modes",
+      "elevated_windows_sandbox",
       "enable_request_compression",
+      "experimental_windows_sandbox",
       "personality",
+      "remote_models",
       "request_rule",
+      "search_tool",
       "shell_snapshot",
       "shell_tool",
       "skill_mcp_dependency_install",
@@ -2184,13 +2205,28 @@
         "stage": "stable"
       },
       {
+        "effective": false,
+        "name": "elevated_windows_sandbox",
+        "stage": "removed"
+      },
+      {
         "effective": true,
         "name": "enable_request_compression",
         "stage": "stable"
       },
       {
+        "effective": false,
+        "name": "experimental_windows_sandbox",
+        "stage": "removed"
+      },
+      {
         "effective": true,
         "name": "personality",
+        "stage": "stable"
+      },
+      {
+        "effective": true,
+        "name": "remote_models",
         "stage": "stable"
       },
       {
@@ -2200,8 +2236,13 @@
       },
       {
         "effective": false,
+        "name": "search_tool",
+        "stage": "removed"
+      },
+      {
+        "effective": true,
         "name": "shell_snapshot",
-        "stage": "experimental"
+        "stage": "stable"
       },
       {
         "effective": true,
@@ -2214,9 +2255,9 @@
         "stage": "stable"
       },
       {
-        "effective": false,
+        "effective": true,
         "name": "steer",
-        "stage": "experimental"
+        "stage": "stable"
       },
       {
         "effective": false,
