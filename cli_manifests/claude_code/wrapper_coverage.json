@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-01-31T20:14:43Z",
+  "generated_at": "2026-02-14T12:38:28.919868Z",
   "wrapper_version": "0.2.0",
   "coverage": [
     {
@@ -13,15 +13,15 @@
         },
         {
           "key": "--agent",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--agents",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--allow-dangerously-skip-permissions",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--allowedTools",
@@ -29,19 +29,19 @@
         },
         {
           "key": "--append-system-prompt",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--betas",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--chrome",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--continue",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--dangerously-skip-permissions",
@@ -49,15 +49,15 @@
         },
         {
           "key": "--debug",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--debug-file",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--disable-slash-commands",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--disallowedTools",
@@ -65,31 +65,31 @@
         },
         {
           "key": "--fallback-model",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--file",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--fork-session",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--from-pr",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--help",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--ide",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--include-partial-messages",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--input-format",
@@ -101,7 +101,7 @@
         },
         {
           "key": "--max-budget-usd",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--mcp-config",
@@ -109,7 +109,7 @@
         },
         {
           "key": "--mcp-debug",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--model",
@@ -117,11 +117,11 @@
         },
         {
           "key": "--no-chrome",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--no-session-persistence",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--output-format",
@@ -133,7 +133,7 @@
         },
         {
           "key": "--plugin-dir",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--print",
@@ -141,23 +141,23 @@
         },
         {
           "key": "--replay-user-messages",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--resume",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--session-id",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--setting-sources",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--settings",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--strict-mcp-config",
@@ -165,19 +165,19 @@
         },
         {
           "key": "--system-prompt",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--tools",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--verbose",
-          "level": "passthrough"
+          "level": "explicit"
         },
         {
           "key": "--version",
-          "level": "passthrough"
+          "level": "explicit"
         }
       ]
     },
@@ -257,8 +257,7 @@
         "mcp",
         "add-from-claude-desktop"
       ],
-      "level": "passthrough",
-      "note": "Supported via run_command; platform-gated upstream.",
+      "level": "explicit",
       "scope": {
         "target_triples": [
           "win32-x64"
@@ -267,7 +266,7 @@
       "flags": [
         {
           "key": "--scope",
-          "level": "passthrough"
+          "level": "explicit"
         }
       ]
     },
@@ -360,8 +359,7 @@
         "mcp",
         "serve"
       ],
-      "level": "passthrough",
-      "note": "Supported via run_command; no typed API yet.",
+      "level": "explicit",
       "scope": {
         "target_triples": [
           "win32-x64"
@@ -642,8 +640,7 @@
       "path": [
         "update"
       ],
-      "level": "intentionally_unsupported",
-      "note": "Claude Code auto-update is out of scope for this wrapper."
+      "level": "explicit"
     }
   ]
 }

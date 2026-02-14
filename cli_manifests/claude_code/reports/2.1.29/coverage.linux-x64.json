@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-01-31T20:14:43Z",
+  "generated_at": "2026-02-14T12:38:29.392689Z",
   "inputs": {
     "upstream": {
       "semantic_version": "2.1.29",
@@ -43,20 +43,6 @@
           "darwin-arm64"
         ],
         "note": "Interactive default-mode prompt surface is excluded from wrapper parity (wrapper targets --print)."
-      }
-    ],
-    "intentionally_unsupported": [
-      {
-        "path": [
-          "update"
-        ],
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Claude Code auto-update is out of scope for this wrapper."
       }
     ]
   }

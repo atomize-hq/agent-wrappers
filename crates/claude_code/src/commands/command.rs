@@ -9,6 +9,15 @@ pub struct ClaudeCommandRequest {
 }
 
 impl ClaudeCommandRequest {
+    pub fn root() -> Self {
+        Self {
+            path: Vec::new(),
+            args: Vec::new(),
+            stdin: None,
+            timeout: None,
+        }
+    }
+
     pub fn new(path: impl IntoIterator<Item = impl Into<String>>) -> Self {
         Self {
             path: path.into_iter().map(Into::into).collect(),

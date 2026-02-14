@@ -97,6 +97,7 @@ Validator rule: any `intentionally_unsupported` entry (command/flag/arg) require
 
 Note policy (to avoid churn):
 - `intentionally_unsupported` entries must have a stable, non-empty `note`.
+- `passthrough` entries must have a stable, non-empty rationale `note`.
 - Capability-guarded surfaces must use `note: "capability-guarded"` (exact string) per the generator contract.
 
 ## Operating Loop (single version V)

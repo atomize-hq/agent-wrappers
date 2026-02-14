@@ -4,7 +4,7 @@ Async wrapper around the Claude Code CLI (`claude`) focused on the headless `--p
 
 Design goals:
 - Non-interactive first: all supported prompting APIs run with `--print`.
-- No runtime downloads: this crate never installs or updates Claude Code.
+- No automatic downloads: this crate never installs Claude Code and never auto-updates it; update only runs when explicitly invoked.
 - Parent environment is never mutated; env overrides apply per-spawn only.
 
 ## Quickstart

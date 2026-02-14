@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-01-31T20:14:43Z",
+  "generated_at": "2026-02-14T12:38:29.392689Z",
   "inputs": {
     "upstream": {
       "semantic_version": "2.1.29",
@@ -46,30 +46,6 @@
         "note": "Interactive default-mode prompt surface is excluded from wrapper parity (wrapper targets --print)."
       }
     ],
-    "passthrough_candidates": [
-      {
-        "path": [
-          "mcp",
-          "add-from-claude-desktop"
-        ],
-        "upstream_available_on": [
-          "win32-x64"
-        ],
-        "wrapper_level": "passthrough",
-        "note": "Supported via run_command; platform-gated upstream."
-      },
-      {
-        "path": [
-          "mcp",
-          "serve"
-        ],
-        "upstream_available_on": [
-          "win32-x64"
-        ],
-        "wrapper_level": "passthrough",
-        "note": "Supported via run_command; no typed API yet."
-      }
-    ],
     "intentionally_unsupported": [
       {
         "path": [
@@ -80,18 +56,6 @@
         ],
         "wrapper_level": "intentionally_unsupported",
         "note": "Claude Code installation is out of scope for this wrapper."
-      },
-      {
-        "path": [
-          "update"
-        ],
-        "upstream_available_on": [
-          "linux-x64",
-          "darwin-arm64",
-          "win32-x64"
-        ],
-        "wrapper_level": "intentionally_unsupported",
-        "note": "Claude Code auto-update is out of scope for this wrapper."
       },
       {
         "path": [

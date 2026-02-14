@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-02-09T05:15:15Z",
+  "generated_at": "2026-02-14T12:38:36.156165Z",
   "wrapper_version": "0.2.0",
   "coverage": [
     {
@@ -22,7 +22,8 @@
         },
         {
           "key": "--config",
-          "level": "passthrough"
+          "level": "passthrough",
+          "note": "Generic config overrides are forwarded as strings; keys are not typed/validated by the wrapper."
         },
         {
           "key": "--dangerously-bypass-approvals-and-sandbox",
@@ -30,11 +31,13 @@
         },
         {
           "key": "--disable",
-          "level": "passthrough"
+          "level": "passthrough",
+          "note": "Generic feature toggles are forwarded as strings; individual feature flags are not typed by the wrapper."
         },
         {
           "key": "--enable",
-          "level": "passthrough"
+          "level": "passthrough",
+          "note": "Generic feature toggles are forwarded as strings; individual feature flags are not typed by the wrapper."
         },
         {
           "key": "--full-auto",
