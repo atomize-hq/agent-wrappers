@@ -32,5 +32,9 @@ pub use commands::print::{ClaudeInputFormat, ClaudeOutputFormat, ClaudePrintRequ
 pub use commands::setup_token::ClaudeSetupTokenRequest;
 pub use error::{ClaudeCodeError, StreamJsonLineError};
 pub use stream_json::{parse_stream_json_lines, StreamJsonLine, StreamJsonLineOutcome};
+pub use stream_json::{
+    ClaudeStreamEvent, ClaudeStreamJsonErrorCode, ClaudeStreamJsonEvent,
+    ClaudeStreamJsonParseError, ClaudeStreamJsonParser,
+};
 
 pub use process::CommandOutput;
