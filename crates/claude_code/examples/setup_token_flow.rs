@@ -23,9 +23,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    // Mirror the underlying CLI output; `setup-token` is interactive and otherwise
-    // users won't see the OAuth URL/prompt when the wrapper is capturing via a PTY.
-    let client = real_cli::maybe_isolated_client_with_mirroring("setup_token_flow", true, true)?;
+    // Do not mirror raw PTY output: `claude setup-token` emits terminal control sequences
+    // (Ink UI) which looks noisy when mirrored. We capture output and print a clean URL.
+    let client = real_cli::maybe_isolated_client_with_mirroring("setup_token_flow", false, false)?;
     let mut session = client
         .setup_token_start_with(ClaudeSetupTokenRequest::new().timeout(None))
         .await?;

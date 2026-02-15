@@ -62,22 +62,58 @@ impl ClaudeSetupTokenSession {
             return Ok(Some(self.url.as_str()));
         }
 
-        let Some(rx) = self.url_rx.as_mut() else {
-            return Ok(None);
-        };
+        let deadline = time::Instant::now() + timeout;
+        let poll_interval = Duration::from_millis(25);
 
-        match time::timeout(timeout, rx).await {
-            Ok(Ok(url)) => {
+        loop {
+            if !self.url.is_empty() {
+                return Ok(Some(self.url.as_str()));
+            }
+
+            // Parse from the full captured output buffer (more robust than relying only on
+            // incremental chunk parsing, and avoids “TTY noise” issues).
+            if let Some(url) = self.extract_url_from_captured_output().await {
                 self.url = url;
                 self.url_rx = None;
-                Ok(Some(self.url.as_str()))
+                return Ok(Some(self.url.as_str()));
             }
-            Ok(Err(_closed)) => {
+
+            if time::Instant::now() >= deadline {
                 self.url_rx = None;
-                Ok(None)
+                return Ok(None);
             }
-            Err(_timeout) => Ok(None),
+
+            let Some(rx) = self.url_rx.as_mut() else {
+                time::sleep(poll_interval).await;
+                continue;
+            };
+
+            let remaining = deadline.saturating_duration_since(time::Instant::now());
+            let nap = std::cmp::min(poll_interval, remaining);
+
+            match time::timeout(nap, rx).await {
+                Ok(Ok(url)) => {
+                    self.url = url;
+                    self.url_rx = None;
+                    return Ok(Some(self.url.as_str()));
+                }
+                Ok(Err(_closed)) => {
+                    self.url_rx = None;
+                    // Keep looping: URL might still be extractable from buffered output.
+                }
+                Err(_timeout) => {
+                    // Keep looping; we'll re-check buffer.
+                }
+            }
         }
+    }
+
+    async fn extract_url_from_captured_output(&self) -> Option<String> {
+        let mut combined = Vec::new();
+        combined.extend_from_slice(&self.stdout_buf.lock().await);
+        combined.extend_from_slice(&self.stderr_buf.lock().await);
+        let text = String::from_utf8_lossy(&combined);
+        extract_oauth_url(&text)
     }
 
     pub async fn submit_code(mut self, code: &str) -> Result<CommandOutput, ClaudeCodeError> {
