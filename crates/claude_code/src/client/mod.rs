@@ -6,7 +6,10 @@ use crate::{
     builder::ClaudeClientBuilder,
     commands::command::ClaudeCommandRequest,
     commands::doctor::ClaudeDoctorRequest,
-    commands::mcp::{McpAddJsonRequest, McpAddRequest, McpGetRequest, McpRemoveRequest},
+    commands::mcp::{
+        McpAddFromClaudeDesktopRequest, McpAddJsonRequest, McpAddRequest, McpGetRequest,
+        McpRemoveRequest, McpServeRequest,
+    },
     commands::plugin::{
         PluginDisableRequest, PluginEnableRequest, PluginInstallRequest, PluginListRequest,
         PluginManifestMarketplaceRequest, PluginManifestRequest, PluginMarketplaceAddRequest,
@@ -15,6 +18,7 @@ use crate::{
         PluginUninstallRequest, PluginUpdateRequest, PluginValidateRequest,
     },
     commands::print::{ClaudeOutputFormat, ClaudePrintRequest},
+    commands::update::ClaudeUpdateRequest,
     parse_stream_json_lines, process, ClaudeCodeError, CommandOutput, StreamJsonLineOutcome,
 };
 
@@ -35,6 +39,16 @@ pub struct ClaudeClient {
 impl ClaudeClient {
     pub fn builder() -> ClaudeClientBuilder {
         ClaudeClientBuilder::default()
+    }
+
+    pub async fn help(&self) -> Result<CommandOutput, ClaudeCodeError> {
+        self.run_command(ClaudeCommandRequest::root().arg("--help"))
+            .await
+    }
+
+    pub async fn version(&self) -> Result<CommandOutput, ClaudeCodeError> {
+        self.run_command(ClaudeCommandRequest::root().arg("--version"))
+            .await
     }
 
     pub async fn run_command(
@@ -67,9 +81,14 @@ impl ClaudeClient {
         &self,
         request: ClaudePrintRequest,
     ) -> Result<ClaudePrintResult, ClaudeCodeError> {
-        if request.prompt.is_none() && request.stdin.is_none() {
+        let allow_missing_prompt = request.stdin.is_some()
+            || request.continue_session
+            || request.resume
+            || request.resume_value.is_some()
+            || request.from_pr;
+        if request.prompt.is_none() && !allow_missing_prompt {
             return Err(ClaudeCodeError::InvalidRequest(
-                "either prompt or stdin_bytes must be provided".to_string(),
+                "either prompt, stdin_bytes, or a continuation flag must be provided".to_string(),
             ));
         }
 
@@ -137,6 +156,17 @@ impl ClaudeClient {
     pub async fn mcp_add_json(
         &self,
         req: McpAddJsonRequest,
+    ) -> Result<CommandOutput, ClaudeCodeError> {
+        self.run_command(req.into_command()).await
+    }
+
+    pub async fn mcp_serve(&self, req: McpServeRequest) -> Result<CommandOutput, ClaudeCodeError> {
+        self.run_command(req.into_command()).await
+    }
+
+    pub async fn mcp_add_from_claude_desktop(
+        &self,
+        req: McpAddFromClaudeDesktopRequest,
     ) -> Result<CommandOutput, ClaudeCodeError> {
         self.run_command(req.into_command()).await
     }
@@ -257,6 +287,17 @@ impl ClaudeClient {
     pub async fn plugin_marketplace_update(
         &self,
         req: PluginMarketplaceUpdateRequest,
+    ) -> Result<CommandOutput, ClaudeCodeError> {
+        self.run_command(req.into_command()).await
+    }
+
+    pub async fn update(&self) -> Result<CommandOutput, ClaudeCodeError> {
+        self.update_with(ClaudeUpdateRequest::new()).await
+    }
+
+    pub async fn update_with(
+        &self,
+        req: ClaudeUpdateRequest,
     ) -> Result<CommandOutput, ClaudeCodeError> {
         self.run_command(req.into_command()).await
     }

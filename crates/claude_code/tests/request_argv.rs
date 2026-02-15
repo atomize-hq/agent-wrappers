@@ -7,7 +7,7 @@ fn argv_orders_flags_before_prompt() {
         .input_format(ClaudeInputFormat::Text)
         .json_schema(r#"{"type":"object"}"#)
         .model("sonnet")
-        .extra_args(["--debug"]);
+        .debug(true);
 
     let argv = req.argv();
     assert!(argv.starts_with(&[

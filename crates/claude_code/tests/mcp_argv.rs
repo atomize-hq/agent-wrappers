@@ -1,4 +1,7 @@
-use claude_code::{McpAddJsonRequest, McpAddRequest, McpRemoveRequest, McpScope, McpTransport};
+use claude_code::{
+    McpAddFromClaudeDesktopRequest, McpAddJsonRequest, McpAddRequest, McpRemoveRequest, McpScope,
+    McpServeRequest, McpTransport,
+};
 
 #[test]
 fn mcp_add_argv_orders_options_before_positionals() {
@@ -60,4 +63,22 @@ fn mcp_add_json_includes_scope_when_set() {
             r#"{"transport":"stdio"}"#.to_string(),
         ]
     );
+}
+
+#[test]
+fn mcp_serve_argv_allows_extra_args() {
+    let argv = McpServeRequest::new()
+        .args(["--foo", "bar"])
+        .into_command()
+        .argv();
+    assert_eq!(argv, ["mcp", "serve", "--foo", "bar"]);
+}
+
+#[test]
+fn mcp_add_from_claude_desktop_orders_scope_flag() {
+    let argv = McpAddFromClaudeDesktopRequest::new()
+        .scope(McpScope::User)
+        .into_command()
+        .argv();
+    assert_eq!(argv, ["mcp", "add-from-claude-desktop", "--scope", "user"]);
 }

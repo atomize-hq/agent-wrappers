@@ -355,6 +355,37 @@ fn c2_validate_rejects_intentionally_unsupported_without_note() {
 }
 
 #[test]
+fn c2_validate_rejects_passthrough_without_note() {
+    let temp = make_temp_dir("ccm-c2-wrapper-passthrough-note");
+    let codex_dir = temp.join("cli_manifests").join("codex");
+
+    let wrapper_coverage = json!({
+        "schema_version": 1,
+        "generated_at": TS,
+        "wrapper_version": "0.0.0-test",
+        "coverage": [{
+            "path": ["codex"],
+            "level": "passthrough"
+        }]
+    });
+    materialize_minimal_valid_codex_dir(&codex_dir, &wrapper_coverage);
+
+    let output = run_xtask_validate(&codex_dir);
+    assert!(
+        !output.status.success(),
+        "expected validation failure:\nstatus: {}\nstdout:\n{}\nstderr:\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("PASSTHROUGH_NOTE_MISSING") && stderr.contains("wrapper_coverage.json"),
+        "expected PASSTHROUGH_NOTE_MISSING for wrapper_coverage.json, got:\n{stderr}"
+    );
+}
+
+#[test]
 fn c2_validate_rejects_overlapping_wrapper_scopes_no_scope_means_all_expected_targets() {
     let temp = make_temp_dir("ccm-c2-wrapper-overlap-no-scope");
     let codex_dir = temp.join("cli_manifests").join("codex");

@@ -292,3 +292,9 @@ jobs:
         run: |
           set -euo pipefail
           cargo test -p claude_code
+
+      - name: Wrapper examples compile gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test -p claude_code --examples

@@ -4,3 +4,4 @@ pub mod mcp;
 pub mod plugin;
 pub mod print;
 pub mod setup_token;
+pub mod update;

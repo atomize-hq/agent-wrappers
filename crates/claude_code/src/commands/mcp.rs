@@ -173,3 +173,59 @@ impl McpAddJsonRequest {
         req.args([self.name, self.json])
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct McpServeRequest {
+    pub args: Vec<String>,
+}
+
+impl McpServeRequest {
+    pub fn new() -> Self {
+        Self { args: Vec::new() }
+    }
+
+    pub fn args(mut self, args: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.args = args.into_iter().map(Into::into).collect();
+        self
+    }
+
+    pub fn into_command(self) -> ClaudeCommandRequest {
+        ClaudeCommandRequest::new(["mcp", "serve"]).args(self.args)
+    }
+}
+
+impl Default for McpServeRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct McpAddFromClaudeDesktopRequest {
+    pub scope: Option<McpScope>,
+}
+
+impl McpAddFromClaudeDesktopRequest {
+    pub fn new() -> Self {
+        Self { scope: None }
+    }
+
+    pub fn scope(mut self, scope: McpScope) -> Self {
+        self.scope = Some(scope);
+        self
+    }
+
+    pub fn into_command(self) -> ClaudeCommandRequest {
+        let mut req = ClaudeCommandRequest::new(["mcp", "add-from-claude-desktop"]);
+        if let Some(scope) = self.scope {
+            req = req.args(["--scope", scope.as_arg_value()]);
+        }
+        req
+    }
+}
+
+impl Default for McpAddFromClaudeDesktopRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}

@@ -19,7 +19,8 @@ pub use client::ClaudeSetupTokenSession;
 pub use commands::command::ClaudeCommandRequest;
 pub use commands::doctor::ClaudeDoctorRequest;
 pub use commands::mcp::{
-    McpAddJsonRequest, McpAddRequest, McpGetRequest, McpRemoveRequest, McpScope, McpTransport,
+    McpAddFromClaudeDesktopRequest, McpAddJsonRequest, McpAddRequest, McpGetRequest,
+    McpRemoveRequest, McpScope, McpServeRequest, McpTransport,
 };
 pub use commands::plugin::{
     PluginDisableRequest, PluginEnableRequest, PluginInstallRequest, PluginListRequest,
@@ -28,8 +29,11 @@ pub use commands::plugin::{
     PluginMarketplaceRequest, PluginMarketplaceUpdateRequest, PluginRequest,
     PluginUninstallRequest, PluginUpdateRequest, PluginValidateRequest,
 };
-pub use commands::print::{ClaudeInputFormat, ClaudeOutputFormat, ClaudePrintRequest};
+pub use commands::print::{
+    ClaudeChromeMode, ClaudeInputFormat, ClaudeOutputFormat, ClaudePrintRequest,
+};
 pub use commands::setup_token::ClaudeSetupTokenRequest;
+pub use commands::update::ClaudeUpdateRequest;
 pub use error::{ClaudeCodeError, StreamJsonLineError};
 pub use stream_json::{parse_stream_json_lines, StreamJsonLine, StreamJsonLineOutcome};
 pub use stream_json::{

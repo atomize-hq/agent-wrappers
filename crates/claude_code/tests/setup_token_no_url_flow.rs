@@ -6,7 +6,7 @@ mod unix {
     use tempfile::TempDir;
 
     #[tokio::test]
-    async fn setup_token_extracts_url_and_accepts_code() {
+    async fn setup_token_allows_missing_url_and_exits_cleanly() {
         use std::os::unix::fs::PermissionsExt;
 
         let dir = TempDir::new().expect("temp dir");
@@ -18,22 +18,8 @@ if [ "${1:-}" != "setup-token" ]; then
   echo "expected 'setup-token' arg, got: ${1:-<none>}" >&2
   exit 10
 fi
-
-cat >&2 <<'EOF'
-Browser didn't open? Use the url below to sign in (c to copy)
-
-https://claude.ai/oauth/authorize?code=true&client_id=abc&response_type=c
-ode&redirect_uri=https%3A%2F%2Fplatform.claude.com%2Foauth%2Fcode%2Fcallback&scope=user%3Ainference
-
-Paste code here if prompted >
-EOF
-
-IFS= read -r code
-if [ "$code" != "my-code" ]; then
-  echo "unexpected code: $code" >&2
-  exit 42
-fi
-echo "ok"
+echo "opened browser"
+exit 0
 "#;
 
         fs::write(&script_path, script).expect("write script");
@@ -52,18 +38,17 @@ echo "ok"
             .expect("start");
 
         let url = session
-            .wait_for_url(Duration::from_secs(2))
+            .wait_for_url(Duration::from_millis(50))
             .await
-            .expect("wait url")
-            .expect("url present");
-        assert!(url.starts_with("https://claude.ai/oauth/authorize?"));
+            .expect("wait url");
+        assert!(url.is_none(), "expected no URL, got {url:?}");
 
-        let out = session.submit_code("my-code").await.expect("submit");
-        assert!(out.status.success());
-        let stdout = String::from_utf8_lossy(&out.stdout);
+        let out = session.wait().await.expect("wait");
         assert!(
-            stdout.contains("ok"),
-            "expected stdout to contain ok; got: {stdout:?}"
+            out.status.success(),
+            "expected success, got {:?}",
+            out.status
         );
+        assert!(String::from_utf8_lossy(&out.stdout).contains("opened browser"));
     }
 }

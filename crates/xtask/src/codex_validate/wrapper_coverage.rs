@@ -98,6 +98,23 @@ fn validate_wrapper_iu_notes(
     path: &Path,
 ) {
     for (cmd_idx, cmd) in wc.coverage.iter().enumerate() {
+        if cmd.level == "passthrough" && cmd.note.as_deref().unwrap_or("").trim().is_empty() {
+            violations.push(Violation {
+                code: "PASSTHROUGH_NOTE_MISSING",
+                path: rel_path(&ctx.root, path),
+                json_pointer: Some(format!("/coverage/{cmd_idx}/note")),
+                message: format!(
+                    "passthrough requires non-empty note (unit=command command_path={})",
+                    format_command_path(&cmd.path)
+                ),
+                unit: Some("wrapper_command"),
+                command_path: Some(format_command_path(&cmd.path)),
+                key_or_name: None,
+                field: Some("note"),
+                target_triple: None,
+                details: None,
+            });
+        }
         if cmd.level == "intentionally_unsupported"
             && cmd.note.as_deref().unwrap_or("").trim().is_empty()
         {
@@ -118,6 +135,24 @@ fn validate_wrapper_iu_notes(
             });
         }
         for (flag_idx, flag) in cmd.flags.as_deref().unwrap_or(&[]).iter().enumerate() {
+            if flag.level == "passthrough" && flag.note.as_deref().unwrap_or("").trim().is_empty() {
+                violations.push(Violation {
+                    code: "PASSTHROUGH_NOTE_MISSING",
+                    path: rel_path(&ctx.root, path),
+                    json_pointer: Some(format!("/coverage/{cmd_idx}/flags/{flag_idx}/note")),
+                    message: format!(
+                        "passthrough requires non-empty note (unit=flag command_path={} key={})",
+                        format_command_path(&cmd.path),
+                        flag.key
+                    ),
+                    unit: Some("wrapper_flag"),
+                    command_path: Some(format_command_path(&cmd.path)),
+                    key_or_name: Some(flag.key.clone()),
+                    field: Some("note"),
+                    target_triple: None,
+                    details: None,
+                });
+            }
             if flag.level == "intentionally_unsupported"
                 && flag.note.as_deref().unwrap_or("").trim().is_empty()
             {
@@ -140,6 +175,24 @@ fn validate_wrapper_iu_notes(
             }
         }
         for (arg_idx, arg) in cmd.args.as_deref().unwrap_or(&[]).iter().enumerate() {
+            if arg.level == "passthrough" && arg.note.as_deref().unwrap_or("").trim().is_empty() {
+                violations.push(Violation {
+                    code: "PASSTHROUGH_NOTE_MISSING",
+                    path: rel_path(&ctx.root, path),
+                    json_pointer: Some(format!("/coverage/{cmd_idx}/args/{arg_idx}/note")),
+                    message: format!(
+                        "passthrough requires non-empty note (unit=arg command_path={} name={})",
+                        format_command_path(&cmd.path),
+                        arg.name
+                    ),
+                    unit: Some("wrapper_arg"),
+                    command_path: Some(format_command_path(&cmd.path)),
+                    key_or_name: Some(arg.name.clone()),
+                    field: Some("note"),
+                    target_triple: None,
+                    details: None,
+                });
+            }
             if arg.level == "intentionally_unsupported"
                 && arg.note.as_deref().unwrap_or("").trim().is_empty()
             {
