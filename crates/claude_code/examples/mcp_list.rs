@@ -17,9 +17,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // `mcp` root help / command listing (no typed API; use the generic command request).
     let root = client
-        .run_command(ClaudeCommandRequest::new(["mcp"]))
+        .run_command(ClaudeCommandRequest::new(["mcp", "--help"]))
         .await?;
     println!("mcp exit: {}", root.status);
+    print!("{}", String::from_utf8_lossy(&root.stdout));
+    eprint!("{}", String::from_utf8_lossy(&root.stderr));
 
     let out = client.mcp_list().await?;
     println!("mcp list exit: {}", out.status);
