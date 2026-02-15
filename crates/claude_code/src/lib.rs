@@ -9,6 +9,7 @@ mod cli;
 mod client;
 mod commands;
 mod error;
+mod home;
 mod process;
 mod stream_json;
 pub mod wrapper_coverage_manifest;
@@ -35,6 +36,9 @@ pub use commands::print::{
 pub use commands::setup_token::ClaudeSetupTokenRequest;
 pub use commands::update::ClaudeUpdateRequest;
 pub use error::{ClaudeCodeError, StreamJsonLineError};
+pub use home::{
+    ClaudeHomeLayout, ClaudeHomeSeedLevel, ClaudeHomeSeedOutcome, ClaudeHomeSeedRequest,
+};
 pub use stream_json::{parse_stream_json_lines, StreamJsonLine, StreamJsonLineOutcome};
 pub use stream_json::{
     ClaudeStreamEvent, ClaudeStreamJsonErrorCode, ClaudeStreamJsonEvent,

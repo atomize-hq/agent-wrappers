@@ -133,20 +133,10 @@ pub fn maybe_isolated_builder_with_mirroring(
     }
 
     let home = isolated_home_root(example_name);
-    let xdg_config = home.join("xdg-config");
-    let xdg_data = home.join("xdg-data");
-    let xdg_cache = home.join("xdg-cache");
-
-    fs::create_dir_all(&xdg_config)?;
-    fs::create_dir_all(&xdg_data)?;
-    fs::create_dir_all(&xdg_cache)?;
 
     Ok(ClaudeClient::builder()
         .binary(resolve_binary())
-        .env("HOME", home.to_string_lossy())
-        .env("XDG_CONFIG_HOME", xdg_config.to_string_lossy())
-        .env("XDG_DATA_HOME", xdg_data.to_string_lossy())
-        .env("XDG_CACHE_HOME", xdg_cache.to_string_lossy())
+        .claude_home(&home)
         .mirror_stdout(mirror_stdout)
         .mirror_stderr(mirror_stderr))
 }

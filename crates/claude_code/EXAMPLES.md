@@ -5,7 +5,8 @@ Every example under `crates/claude_code/examples/` spawns a real `claude` CLI bi
 ## Common environment variables
 
 - `CLAUDE_BINARY`: Path to the `claude` binary. If unset, examples fall back to a repo-local `./claude-<target>` when present, else `claude` from `PATH`.
-- `CLAUDE_EXAMPLE_ISOLATED_HOME=1`: Runs examples with an isolated `HOME`/`XDG_*` under `target/` to avoid touching your real config.
+- `CLAUDE_HOME`: Wrapper-managed “home root” for Claude CLI state/config (redirects `HOME` + `XDG_*` per subprocess).
+- `CLAUDE_EXAMPLE_ISOLATED_HOME=1`: Runs examples with an isolated Claude home under `target/` to avoid touching your real config.
 - `CLAUDE_EXAMPLE_LIVE=1`: Enables examples that may require network/auth (e.g. `print_*`, `setup_token_flow`).
 - `CLAUDE_EXAMPLE_ALLOW_MUTATION=1`: Enables examples that may mutate local state (e.g. `update`, `plugin_manage`, `mcp_manage`).
 - `CLAUDE_SETUP_TOKEN_CODE`: Optional shortcut for `setup_token_flow` to submit the code without prompting.
@@ -26,6 +27,7 @@ Every example under `crates/claude_code/examples/` spawns a real `claude` CLI bi
 | --- | --- | --- |
 | `cargo run -p claude_code --example help_version` | `claude --help` and `claude --version` | Safe, non-auth, non-mutating. |
 | `cargo run -p claude_code --example doctor` | `claude doctor` | Safe, non-auth, non-mutating. |
+| `cargo run -p claude_code --example claude_home` | `claude --version` | Demonstrates wrapper-managed `CLAUDE_HOME` (isolated CLI state). |
 | `cargo run -p claude_code --example env_binary` | `claude --version` | Shows how examples resolve the `claude` binary. |
 | `cargo run -p claude_code --example mirror_output` | `claude --version` | Demonstrates wrapper stdout/stderr mirroring options. |
 
