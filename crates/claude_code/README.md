@@ -26,6 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ## Examples (real CLI, no stubs)
 
 Examples live under `crates/claude_code/examples/` and always spawn a real `claude` binary.
+See `crates/claude_code/EXAMPLES.md` for a 1:1 mapping of wrapper examples to native CLI commands.
 
 Common environment variables:
 - `CLAUDE_BINARY`: path to the `claude` binary (otherwise uses repo-local `./claude-<target>` when present, or `claude` from PATH).
