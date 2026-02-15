@@ -75,6 +75,7 @@ pub struct ClaudePrintRequest {
     pub(crate) plugin_dirs: Vec<String>,
     pub(crate) replay_user_messages: bool,
     pub(crate) resume: bool,
+    pub(crate) resume_value: Option<String>,
     pub(crate) session_id: Option<String>,
     pub(crate) setting_sources: Option<String>,
     pub(crate) settings: Option<String>,
@@ -123,6 +124,7 @@ impl ClaudePrintRequest {
             plugin_dirs: Vec::new(),
             replay_user_messages: false,
             resume: false,
+            resume_value: None,
             session_id: None,
             setting_sources: None,
             settings: None,
@@ -306,6 +308,11 @@ impl ClaudePrintRequest {
 
     pub fn resume(mut self, enabled: bool) -> Self {
         self.resume = enabled;
+        self
+    }
+
+    pub fn resume_value(mut self, value: impl Into<String>) -> Self {
+        self.resume_value = Some(value.into());
         self
     }
 
@@ -505,7 +512,10 @@ impl ClaudePrintRequest {
             out.push("--replay-user-messages".to_string());
         }
 
-        if self.resume {
+        if let Some(value) = self.resume_value.as_ref() {
+            out.push("--resume".to_string());
+            out.push(value.clone());
+        } else if self.resume {
             out.push("--resume".to_string());
         }
 

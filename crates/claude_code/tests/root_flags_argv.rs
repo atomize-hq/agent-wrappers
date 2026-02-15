@@ -27,7 +27,7 @@ fn root_flags_appear_before_prompt() {
         .no_session_persistence(true)
         .plugin_dirs(["/tmp/plugins"])
         .replay_user_messages(true)
-        .resume(true)
+        .resume_value("session-1")
         .session_id("session-1")
         .setting_sources("env,file")
         .settings("settings.json")
@@ -72,6 +72,16 @@ fn root_flags_appear_before_prompt() {
     }
 
     assert_eq!(argv[prompt_idx], "hello");
+}
+
+#[test]
+fn resume_value_wins_over_resume_bool() {
+    let argv = ClaudePrintRequest::new("hello")
+        .resume(true)
+        .resume_value("abc")
+        .argv();
+    let i = idx(&argv, "--resume").expect("resume");
+    assert_eq!(argv.get(i + 1).map(String::as_str), Some("abc"));
 }
 
 #[test]

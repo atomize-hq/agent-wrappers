@@ -84,6 +84,7 @@ impl ClaudeClient {
         let allow_missing_prompt = request.stdin.is_some()
             || request.continue_session
             || request.resume
+            || request.resume_value.is_some()
             || request.from_pr;
         if request.prompt.is_none() && !allow_missing_prompt {
             return Err(ClaudeCodeError::InvalidRequest(
