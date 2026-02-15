@@ -9,10 +9,7 @@
 
 use std::error::Error;
 
-use claude_code::{
-    parse_stream_json_lines, ClaudeOutputFormat, ClaudePrintRequest, StreamJsonLineOutcome,
-};
-use tempfile::TempDir;
+use claude_code::{parse_stream_json_lines, ClaudeOutputFormat, StreamJsonLineOutcome};
 
 #[path = "support/real_cli.rs"]
 mod real_cli;
@@ -46,7 +43,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    let work = TempDir::new()?;
+    let work = real_cli::example_working_dir("multi_turn_continue")?;
     let client =
         real_cli::maybe_isolated_builder_with_mirroring("multi_turn_continue", false, false)?
             .working_dir(work.path())
@@ -54,7 +51,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let res1 = client
         .print(
-            ClaudePrintRequest::new("Turn 1: say 'ready' and keep it short.")
+            real_cli::default_print_request("Turn 1: say 'ready' and keep it short.")
                 .output_format(ClaudeOutputFormat::StreamJson),
         )
         .await?;
@@ -63,7 +60,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let res2 = client
         .print(
-            ClaudePrintRequest::new("Turn 2: confirm you remember the previous message.")
+            real_cli::default_print_request("Turn 2: confirm you remember the previous message.")
                 .output_format(ClaudeOutputFormat::StreamJson)
                 .continue_session(true),
         )

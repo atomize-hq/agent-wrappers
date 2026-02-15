@@ -20,6 +20,7 @@ fn root_flags_appear_before_prompt() {
         .files(["spec1", "spec2"])
         .fork_session(true)
         .from_pr(true)
+        .from_pr_value("123")
         .ide(true)
         .include_partial_messages(true)
         .max_budget_usd(1.25)
@@ -82,6 +83,16 @@ fn resume_value_wins_over_resume_bool() {
         .argv();
     let i = idx(&argv, "--resume").expect("resume");
     assert_eq!(argv.get(i + 1).map(String::as_str), Some("abc"));
+}
+
+#[test]
+fn from_pr_value_wins_over_from_pr_bool() {
+    let argv = ClaudePrintRequest::new("hello")
+        .from_pr(true)
+        .from_pr_value("pr-1")
+        .argv();
+    let i = idx(&argv, "--from-pr").expect("from-pr");
+    assert_eq!(argv.get(i + 1).map(String::as_str), Some("pr-1"));
 }
 
 #[test]

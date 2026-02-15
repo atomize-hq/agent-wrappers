@@ -15,12 +15,23 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use claude_code::{ClaudeClient, ClaudeClientBuilder};
+use claude_code::{ClaudeClient, ClaudeClientBuilder, ClaudePrintRequest};
+use tempfile::{Builder as TempBuilder, TempDir};
 
 pub const ENV_BINARY: &str = "CLAUDE_BINARY";
 pub const ENV_EXAMPLE_ISOLATED_HOME: &str = "CLAUDE_EXAMPLE_ISOLATED_HOME";
 pub const ENV_EXAMPLE_LIVE: &str = "CLAUDE_EXAMPLE_LIVE";
 pub const ENV_EXAMPLE_ALLOW_MUTATION: &str = "CLAUDE_EXAMPLE_ALLOW_MUTATION";
+pub const ENV_EXAMPLE_ALLOW_CHROME: &str = "CLAUDE_EXAMPLE_ALLOW_CHROME";
+pub const ENV_EXAMPLE_ALLOW_IDE: &str = "CLAUDE_EXAMPLE_ALLOW_IDE";
+pub const ENV_EXAMPLE_FROM_PR: &str = "CLAUDE_EXAMPLE_FROM_PR";
+pub const ENV_EXAMPLE_FILE_SPECS: &str = "CLAUDE_EXAMPLE_FILE_SPECS";
+pub const ENV_EXAMPLE_PLUGIN_DIRS: &str = "CLAUDE_EXAMPLE_PLUGIN_DIRS";
+pub const ENV_EXAMPLE_AGENTS_JSON: &str = "CLAUDE_EXAMPLE_AGENTS_JSON";
+pub const ENV_EXAMPLE_AGENT: &str = "CLAUDE_EXAMPLE_AGENT";
+pub const ENV_EXAMPLE_BETAS: &str = "CLAUDE_EXAMPLE_BETAS";
+pub const ENV_EXAMPLE_MCP_CONFIG: &str = "CLAUDE_EXAMPLE_MCP_CONFIG";
+pub const ENV_EXAMPLE_STREAM_JSON_INPUT: &str = "CLAUDE_EXAMPLE_STREAM_JSON_INPUT";
 
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -158,4 +169,41 @@ pub fn require_mutation(example_name: &str) -> Result<(), Box<dyn Error>> {
         "skipped {example_name}: set {ENV_EXAMPLE_ALLOW_MUTATION}=1 to allow examples that may mutate local state"
     );
     Ok(())
+}
+
+pub fn require_env(var: &str, example_name: &str) -> Option<String> {
+    match env::var(var).ok() {
+        Some(v) if !v.trim().is_empty() => Some(v),
+        _ => {
+            eprintln!("skipped {example_name}: set {var} to run this example");
+            None
+        }
+    }
+}
+
+/// Default request configuration for live `--print` examples.
+///
+/// Conventions:
+/// - Set `--dangerously-skip-permissions` by default to avoid headless prompts/hangs.
+/// - Examples explicitly choose output format so docs remain clear.
+pub fn default_print_request(prompt: impl Into<String>) -> ClaudePrintRequest {
+    ClaudePrintRequest::new(prompt).dangerously_skip_permissions(true)
+}
+
+pub fn example_working_dir(example_name: &str) -> Result<TempDir, Box<dyn Error>> {
+    let base = repo_root().join("target");
+    fs::create_dir_all(&base)?;
+
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let prefix = format!(
+        "claude-example-work-{}-{}-{}-",
+        example_name,
+        std::process::id(),
+        now
+    );
+
+    Ok(TempBuilder::new().prefix(&prefix).tempdir_in(base)?)
 }

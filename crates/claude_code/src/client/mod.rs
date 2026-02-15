@@ -85,7 +85,8 @@ impl ClaudeClient {
             || request.continue_session
             || request.resume
             || request.resume_value.is_some()
-            || request.from_pr;
+            || request.from_pr
+            || request.from_pr_value.is_some();
         if request.prompt.is_none() && !allow_missing_prompt {
             return Err(ClaudeCodeError::InvalidRequest(
                 "either prompt, stdin_bytes, or a continuation flag must be provided".to_string(),

@@ -33,3 +33,5 @@ Common environment variables:
 - `CLAUDE_EXAMPLE_ISOLATED_HOME=1`: run examples with an isolated home under `target/`.
 - `CLAUDE_EXAMPLE_LIVE=1`: enable examples that may require network/auth (e.g. `print_*`, `setup_token_flow`).
 - `CLAUDE_EXAMPLE_ALLOW_MUTATION=1`: enable examples that may mutate local state (e.g. `update`, plugin/MCP management).
+CI compiles examples but does not run them; authenticated/networked examples are live-gated for local runs.
+See `crates/claude_code/EXAMPLES.md` for additional opt-in environment variables.

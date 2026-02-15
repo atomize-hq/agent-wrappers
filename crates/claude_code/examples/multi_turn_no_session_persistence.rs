@@ -1,10 +1,11 @@
-//! Demonstrates a two-turn flow using an explicit `--session-id` then `--resume <value>`.
+//! Demonstrates `--no-session-persistence`.
 //!
 //! Usage:
-//! - `CLAUDE_EXAMPLE_LIVE=1 cargo run -p claude_code --example multi_turn_resume`
+//! - `CLAUDE_EXAMPLE_LIVE=1 cargo run -p claude_code --example multi_turn_no_session_persistence`
 //!
 //! Notes:
-//! - Uses a temp working directory so session persistence doesn't touch the repo.
+//! - Runs in a temp working directory.
+//! - Best-effort demonstration: if upstream behavior differs, the example prints a note instead of failing.
 
 use std::{error::Error, time::SystemTime};
 
@@ -55,55 +56,57 @@ fn extract_session_id(outcomes: &[StreamJsonLineOutcome]) -> Option<String> {
     None
 }
 
-fn outcomes_from_stdout(bytes: &[u8]) -> Vec<StreamJsonLineOutcome> {
-    let text = String::from_utf8_lossy(bytes);
-    parse_stream_json_lines(&text)
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     if !real_cli::live_enabled() {
-        real_cli::require_live("multi_turn_resume")?;
+        real_cli::require_live("multi_turn_no_session_persistence")?;
         return Ok(());
     }
 
-    let work = real_cli::example_working_dir("multi_turn_resume")?;
+    let work = real_cli::example_working_dir("multi_turn_no_session_persistence")?;
     let session_id = pseudo_uuid();
-
-    let client =
-        real_cli::maybe_isolated_builder_with_mirroring("multi_turn_resume", false, false)?
-            .working_dir(work.path())
-            .build();
+    let client = real_cli::maybe_isolated_builder_with_mirroring(
+        "multi_turn_no_session_persistence",
+        false,
+        false,
+    )?
+    .working_dir(work.path())
+    .build();
 
     let res1 = client
         .print(
             real_cli::default_print_request("Turn 1: say 'ready' and keep it short.")
                 .output_format(ClaudeOutputFormat::StreamJson)
+                .no_session_persistence(true)
                 .session_id(session_id.clone()),
         )
         .await?;
     println!("turn1 exit: {}", res1.output.status);
 
-    let out1 = outcomes_from_stdout(&res1.output.stdout);
-    let observed1 = extract_session_id(&out1);
+    let raw1 = String::from_utf8_lossy(&res1.output.stdout);
+    let out1 = parse_stream_json_lines(&raw1);
     println!("requested session_id: {session_id}");
-    if let Some(o) = observed1.as_ref() {
-        println!("observed session_id: {o}");
-    }
+    println!(
+        "observed1 session_id: {}",
+        extract_session_id(&out1).as_deref().unwrap_or("<none>")
+    );
 
     let res2 = client
         .print(
-            real_cli::default_print_request("Turn 2: confirm you remember the previous message.")
+            real_cli::default_print_request("Turn 2: attempt a resume.")
                 .output_format(ClaudeOutputFormat::StreamJson)
+                .no_session_persistence(true)
                 .resume_value(session_id.clone()),
         )
         .await?;
     println!("turn2 exit: {}", res2.output.status);
 
-    let out2 = outcomes_from_stdout(&res2.output.stdout);
-    let observed2 = extract_session_id(&out2);
-    if let Some(o) = observed2.as_ref() {
-        println!("turn2 observed session_id: {o}");
+    if res2.output.status.success() {
+        println!(
+            "note: resume succeeded even with --no-session-persistence; upstream behavior may differ"
+        );
+    } else {
+        println!("resume failed as expected (non-success status)");
     }
 
     Ok(())
