@@ -20,6 +20,7 @@ fn root_flags_appear_before_prompt() {
         .files(["spec1", "spec2"])
         .fork_session(true)
         .from_pr(true)
+        .from_pr_value("123")
         .ide(true)
         .include_partial_messages(true)
         .max_budget_usd(1.25)
@@ -85,6 +86,16 @@ fn resume_value_wins_over_resume_bool() {
 }
 
 #[test]
+fn from_pr_value_wins_over_from_pr_bool() {
+    let argv = ClaudePrintRequest::new("hello")
+        .from_pr(true)
+        .from_pr_value("pr-1")
+        .argv();
+    let i = idx(&argv, "--from-pr").expect("from-pr");
+    assert_eq!(argv.get(i + 1).map(String::as_str), Some("pr-1"));
+}
+
+#[test]
 fn chrome_mode_emits_exactly_one_flag() {
     let chrome = ClaudePrintRequest::new("hello").chrome().argv();
     assert!(idx(&chrome, "--chrome").is_some());
@@ -102,4 +113,12 @@ fn no_prompt_omits_prompt_positional() {
         .continue_session(true)
         .argv();
     assert!(idx(&argv, "hello").is_none());
+}
+
+#[test]
+fn stream_json_output_implies_verbose_flag() {
+    let argv = ClaudePrintRequest::new("hello")
+        .output_format(claude_code::ClaudeOutputFormat::StreamJson)
+        .argv();
+    assert!(idx(&argv, "--verbose").is_some());
 }

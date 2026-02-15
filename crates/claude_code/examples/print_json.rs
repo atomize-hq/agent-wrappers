@@ -5,7 +5,7 @@
 
 use std::error::Error;
 
-use claude_code::{ClaudeOutputFormat, ClaudePrintRequest};
+use claude_code::ClaudeOutputFormat;
 
 #[path = "support/real_cli.rs"]
 mod real_cli;
@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .unwrap_or_else(|| "hello".to_string());
     let client = real_cli::maybe_isolated_client("print_json")?;
     let res = client
-        .print(ClaudePrintRequest::new(prompt).output_format(ClaudeOutputFormat::Json))
+        .print(real_cli::default_print_request(prompt).output_format(ClaudeOutputFormat::Json))
         .await?;
 
     let v: serde_json::Value = serde_json::from_slice(&res.output.stdout)?;

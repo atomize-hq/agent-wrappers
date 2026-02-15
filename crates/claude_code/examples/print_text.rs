@@ -10,7 +10,7 @@
 
 use std::{env, error::Error};
 
-use claude_code::{ClaudeOutputFormat, ClaudePrintRequest};
+use claude_code::ClaudeOutputFormat;
 
 #[path = "support/real_cli.rs"]
 mod real_cli;
@@ -24,11 +24,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let prompt = collect_prompt()?;
     let client = real_cli::maybe_isolated_client("print_text")?;
-    let req = ClaudePrintRequest::new(prompt)
-        .output_format(ClaudeOutputFormat::Text)
-        .debug(true)
-        .session_id("00000000-0000-0000-0000-000000000000")
-        .system_prompt("Respond concisely.");
+    let req = real_cli::default_print_request(prompt).output_format(ClaudeOutputFormat::Text);
     let res = client.print(req).await?;
     print!("{}", String::from_utf8_lossy(&res.output.stdout));
     Ok(())

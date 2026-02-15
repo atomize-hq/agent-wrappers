@@ -67,6 +67,7 @@ pub struct ClaudePrintRequest {
     pub(crate) files: Vec<String>,
     pub(crate) fork_session: bool,
     pub(crate) from_pr: bool,
+    pub(crate) from_pr_value: Option<String>,
     pub(crate) ide: bool,
     pub(crate) include_partial_messages: bool,
     pub(crate) max_budget_usd: Option<f64>,
@@ -116,6 +117,7 @@ impl ClaudePrintRequest {
             files: Vec::new(),
             fork_session: false,
             from_pr: false,
+            from_pr_value: None,
             ide: false,
             include_partial_messages: false,
             max_budget_usd: None,
@@ -268,6 +270,11 @@ impl ClaudePrintRequest {
 
     pub fn from_pr(mut self, enabled: bool) -> Self {
         self.from_pr = enabled;
+        self
+    }
+
+    pub fn from_pr_value(mut self, value: impl Into<String>) -> Self {
+        self.from_pr_value = Some(value.into());
         self
     }
 
@@ -478,7 +485,10 @@ impl ClaudePrintRequest {
             out.push("--fork-session".to_string());
         }
 
-        if self.from_pr {
+        if let Some(value) = self.from_pr_value.as_ref() {
+            out.push("--from-pr".to_string());
+            out.push(value.clone());
+        } else if self.from_pr {
             out.push("--from-pr".to_string());
         }
 
@@ -544,7 +554,13 @@ impl ClaudePrintRequest {
             out.extend(self.tools.iter().cloned());
         }
 
-        if self.verbose {
+        // Upstream requires `--verbose` to be set when emitting stream-json output.
+        //
+        // This is surprising (the help text doesn't mention it), but without it the CLI exits
+        // non-zero and emits an error to stderr.
+        let stream_json_requires_verbose =
+            matches!(self.output_format, ClaudeOutputFormat::StreamJson);
+        if self.verbose || stream_json_requires_verbose {
             out.push("--verbose".to_string());
         }
 

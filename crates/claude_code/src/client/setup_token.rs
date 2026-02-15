@@ -257,6 +257,7 @@ impl ClaudeClient {
         &self,
         request: ClaudeSetupTokenRequest,
     ) -> Result<ClaudeSetupTokenSession, ClaudeCodeError> {
+        self.ensure_home_prepared()?;
         let requested_timeout = request.timeout;
         let binary = self.resolve_binary();
         let argv = request.into_command().argv();

@@ -23,6 +23,7 @@ resume_value=""
 while [ "$#" -gt 0 ]; do
   case "${1:-}" in
     --output-format) shift 2 ;;
+    --verbose) shift ;;
     --resume)
       resume_value="${2:-}"
       shift 2

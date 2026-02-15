@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, path::PathBuf, time::Duration};
+use std::{collections::BTreeMap, path::PathBuf, sync::Arc, time::Duration};
 
 use tokio::process::Command;
 
@@ -19,6 +19,7 @@ use crate::{
     },
     commands::print::{ClaudeOutputFormat, ClaudePrintRequest},
     commands::update::ClaudeUpdateRequest,
+    home::{ClaudeHomeLayout, ClaudeHomeSeedRequest},
     parse_stream_json_lines, process, ClaudeCodeError, CommandOutput, StreamJsonLineOutcome,
 };
 
@@ -31,6 +32,11 @@ pub struct ClaudeClient {
     pub(crate) binary: Option<PathBuf>,
     pub(crate) working_dir: Option<PathBuf>,
     pub(crate) env: BTreeMap<String, String>,
+    pub(crate) claude_home: Option<ClaudeHomeLayout>,
+    pub(crate) create_home_dirs: bool,
+    pub(crate) home_seed: Option<ClaudeHomeSeedRequest>,
+    pub(crate) home_materialize_status: Arc<std::sync::OnceLock<Result<(), String>>>,
+    pub(crate) home_seed_status: Arc<std::sync::OnceLock<Result<(), String>>>,
     pub(crate) timeout: Option<Duration>,
     pub(crate) mirror_stdout: bool,
     pub(crate) mirror_stderr: bool,
@@ -55,6 +61,7 @@ impl ClaudeClient {
         &self,
         request: ClaudeCommandRequest,
     ) -> Result<CommandOutput, ClaudeCodeError> {
+        self.ensure_home_prepared()?;
         let binary = self.resolve_binary();
         let mut cmd = Command::new(&binary);
         cmd.args(request.argv());
@@ -85,13 +92,15 @@ impl ClaudeClient {
             || request.continue_session
             || request.resume
             || request.resume_value.is_some()
-            || request.from_pr;
+            || request.from_pr
+            || request.from_pr_value.is_some();
         if request.prompt.is_none() && !allow_missing_prompt {
             return Err(ClaudeCodeError::InvalidRequest(
                 "either prompt, stdin_bytes, or a continuation flag must be provided".to_string(),
             ));
         }
 
+        self.ensure_home_prepared()?;
         let binary = self.resolve_binary();
         let mut cmd = Command::new(&binary);
         cmd.args(request.argv());
@@ -302,6 +311,10 @@ impl ClaudeClient {
         self.run_command(req.into_command()).await
     }
 
+    pub fn claude_home_layout(&self) -> Option<ClaudeHomeLayout> {
+        self.claude_home.clone()
+    }
+
     fn resolve_binary(&self) -> PathBuf {
         if let Some(b) = self.binary.as_ref() {
             return b.clone();
@@ -312,6 +325,44 @@ impl ClaudeClient {
             }
         }
         PathBuf::from("claude")
+    }
+
+    fn ensure_home_prepared(&self) -> Result<(), ClaudeCodeError> {
+        if self.claude_home.is_none() {
+            return Ok(());
+        }
+
+        let materialize = self.home_materialize_status.get_or_init(|| {
+            let Some(layout) = self.claude_home.as_ref() else {
+                return Ok(());
+            };
+            layout
+                .materialize(self.create_home_dirs)
+                .map_err(|e| e.to_string())
+        });
+        if let Err(msg) = materialize {
+            return Err(ClaudeCodeError::ClaudeHomePrepareFailed(msg.clone()));
+        }
+
+        let seeded = self.home_seed_status.get_or_init(|| {
+            let Some(layout) = self.claude_home.as_ref() else {
+                return Ok(());
+            };
+            let Some(seed_req) = self.home_seed.as_ref() else {
+                return Ok(());
+            };
+            // Seeding implies directories must exist even when the caller disabled auto-creation.
+            let _ = layout.materialize(true);
+            layout
+                .seed_from_user_home(&seed_req.seed_user_home, seed_req.level)
+                .map(|_| ())
+                .map_err(|e| e.to_string())
+        });
+        if let Err(msg) = seeded {
+            return Err(ClaudeCodeError::ClaudeHomeSeedFailed(msg.clone()));
+        }
+
+        Ok(())
     }
 }
 

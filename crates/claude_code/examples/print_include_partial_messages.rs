@@ -5,9 +5,7 @@
 
 use std::{collections::BTreeMap, error::Error};
 
-use claude_code::{
-    parse_stream_json_lines, ClaudeOutputFormat, ClaudePrintRequest, StreamJsonLineOutcome,
-};
+use claude_code::{parse_stream_json_lines, ClaudeOutputFormat, StreamJsonLineOutcome};
 
 #[path = "support/real_cli.rs"]
 mod real_cli;
@@ -49,7 +47,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let res = client
         .print(
-            ClaudePrintRequest::new(prompt)
+            real_cli::default_print_request(prompt)
                 .output_format(ClaudeOutputFormat::StreamJson)
                 .include_partial_messages(true),
         )

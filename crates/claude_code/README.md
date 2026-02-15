@@ -30,6 +30,24 @@ See `crates/claude_code/EXAMPLES.md` for a 1:1 mapping of wrapper examples to na
 
 Common environment variables:
 - `CLAUDE_BINARY`: path to the `claude` binary (otherwise uses repo-local `./claude-<target>` when present, or `claude` from PATH).
+- `CLAUDE_HOME`: wrapper-managed “home root” for Claude CLI state/config (similar to `CODEX_HOME` for Codex).
 - `CLAUDE_EXAMPLE_ISOLATED_HOME=1`: run examples with an isolated home under `target/`.
 - `CLAUDE_EXAMPLE_LIVE=1`: enable examples that may require network/auth (e.g. `print_*`, `setup_token_flow`).
 - `CLAUDE_EXAMPLE_ALLOW_MUTATION=1`: enable examples that may mutate local state (e.g. `update`, plugin/MCP management).
+CI compiles examples but does not run them; authenticated/networked examples are live-gated for local runs.
+See `crates/claude_code/EXAMPLES.md` for additional opt-in environment variables.
+
+## Isolated Claude home (CODEX_HOME parity)
+
+Codex supports `CODEX_HOME` as an app-scoped directory for config/auth/logs/history. Claude Code
+does not have a single official `CLAUDE_HOME` knob, so this wrapper provides one:
+
+- `ClaudeClientBuilder::claude_home(...)` redirects `HOME` + `XDG_*` (and Windows equivalents)
+  per subprocess so the real `claude` CLI writes state beneath your chosen directory.
+- `CLAUDE_HOME=/path/to/home` is also honored when `claude_home(...)` is not set.
+- Optional seeding is opt-in:
+  - `seed_profile_from(..., MinimalAuth)` copies a small set of CLI-relevant artifacts.
+  - `seed_profile_from(..., FullProfile)` may copy large/sensitive app profile data (macOS:
+    `~/Library/Application Support/Claude`); use only when needed.
+
+See the `claude_home` example under `crates/claude_code/examples/`.

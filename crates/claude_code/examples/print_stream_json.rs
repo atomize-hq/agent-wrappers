@@ -6,7 +6,7 @@
 
 use std::{env, error::Error};
 
-use claude_code::{parse_stream_json_lines, ClaudeOutputFormat, ClaudePrintRequest};
+use claude_code::{parse_stream_json_lines, ClaudeOutputFormat};
 
 #[path = "support/real_cli.rs"]
 mod real_cli;
@@ -20,10 +20,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let prompt = collect_prompt()?;
     let client = real_cli::maybe_isolated_client("print_stream_json")?;
-    let req = ClaudePrintRequest::new(prompt)
-        .output_format(ClaudeOutputFormat::StreamJson)
-        .debug(true)
-        .session_id("00000000-0000-0000-0000-000000000000");
+    let req = real_cli::default_print_request(prompt).output_format(ClaudeOutputFormat::StreamJson);
     let res = client.print(req).await?;
 
     println!("exit: {}", res.output.status);
