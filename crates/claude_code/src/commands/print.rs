@@ -554,7 +554,13 @@ impl ClaudePrintRequest {
             out.extend(self.tools.iter().cloned());
         }
 
-        if self.verbose {
+        // Upstream requires `--verbose` to be set when emitting stream-json output.
+        //
+        // This is surprising (the help text doesn't mention it), but without it the CLI exits
+        // non-zero and emits an error to stderr.
+        let stream_json_requires_verbose =
+            matches!(self.output_format, ClaudeOutputFormat::StreamJson);
+        if self.verbose || stream_json_requires_verbose {
             out.push("--verbose".to_string());
         }
 

@@ -114,3 +114,11 @@ fn no_prompt_omits_prompt_positional() {
         .argv();
     assert!(idx(&argv, "hello").is_none());
 }
+
+#[test]
+fn stream_json_output_implies_verbose_flag() {
+    let argv = ClaudePrintRequest::new("hello")
+        .output_format(claude_code::ClaudeOutputFormat::StreamJson)
+        .argv();
+    assert!(idx(&argv, "--verbose").is_some());
+}
