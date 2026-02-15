@@ -26,6 +26,7 @@
 - Format: `make fmt`
 - Lint: `make clippy`
 - Test: `make test`
+- LOC cap: `make loc-check` (must pass; Rust files must stay under 700 code LOC)
 - Preflight (integration gate): `make preflight`
 
 ## Repository hygiene rules
@@ -50,4 +51,3 @@ Conventions:
 - Do not edit `docs/project_management/**` from inside a worktree.
 
 See `docs/project_management/task-triads-feature-setup-standard.md`.
-

@@ -277,25 +277,26 @@ jobs:
           set -euo pipefail
           for t in linux-x64 darwin-arm64 win32-x64; do
             EXPECTED="cli_manifests/claude_code/snapshots/${VERSION}/${t}.json"
-            if [ -f "$EXPECTED" ]; then
-              continue
-            fi
 
-            # Older upload-artifact behavior (or single-file uploads) may flatten into `${t}.json`.
+            # Prefer downloaded snapshots over whatever was present in the checkout.
+            # download-artifact may flatten into `${t}.json` or place files under artifact-named dirs.
             if [ -f "${t}.json" ]; then
               mkdir -p "$(dirname "$EXPECTED")"
-              cp "${t}.json" "$EXPECTED"
+              mv "${t}.json" "$EXPECTED"
               continue
             fi
 
-            # Some download layouts extract under an artifact-named directory.
             ALT="$(find . -path "*/${EXPECTED}" -print -quit || true)"
-            if [ -n "$ALT" ]; then
+            if [ -n "$ALT" ] && [ "$ALT" != "$EXPECTED" ]; then
               mkdir -p "$(dirname "$EXPECTED")"
               cp "$ALT" "$EXPECTED"
               continue
             fi
           done
+
+          # If any prior step (or artifact flattening) produced a top-level `union.json`, ensure it
+          # is never committed. The canonical union lives under `cli_manifests/claude_code/...`.
+          rm -f union.json
 
           REQ="cli_manifests/claude_code/snapshots/${VERSION}/linux-x64.json"
           if [ ! -f "$REQ" ]; then

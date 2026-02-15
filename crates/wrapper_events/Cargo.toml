@@ -1,0 +1,22 @@
+[package]
+name = "wrapper_events"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[features]
+default = []
+codex = ["dep:codex"]
+claude_code = ["dep:claude_code"]
+tokio = ["dep:tokio", "tokio/io-util", "tokio/macros", "tokio/rt"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+codex = { path = "../codex", optional = true }
+claude_code = { path = "../claude_code", optional = true }
+tokio = { workspace = true, optional = true }

@@ -181,6 +181,14 @@ Snapshots must include:
 Supplements:
 - Apply `supplement/commands.json` per-target (before union merge). Supplements may be platform-scoped; the union must reflect availability only on the targets the supplement applied to.
 
+Help-probe strategy (Codex-specific discovery lever):
+- For the root command, use `codex --help`.
+- For non-root commands, prefer `codex help <path...>` over `codex <path...> --help`.
+  Rationale: some Codex subcommands accept free positional args (for example `codex exec [PROMPT] [COMMAND]`).
+  In those cases, `codex <path...> --help` can be misparsed as “real” operands/subcommand tokens rather than a help request,
+  producing incomplete snapshots or runaway traversal. Using `codex help <path...>` avoids that ambiguity and yields stable,
+  exhaustive help-surface discovery.
+
 ### Multi-Platform Discovery and Merge
 
 Some upstream surfaces are platform-gated (or behave differently) across Linux/macOS/Windows (and sometimes by architecture). To make drift detection robust:

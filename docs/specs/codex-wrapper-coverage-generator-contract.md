@@ -161,6 +161,7 @@ For wrapper coverage generation:
 In v1, `note` fields are restricted to prevent diff churn:
 
 - `intentionally_unsupported` units MUST include a non-empty `note` (validator requirement).
+- `passthrough` units MUST include a non-empty rationale `note` (validator requirement).
 - Capability-guarded units MUST include `note: "capability-guarded"`.
 - All other units MUST omit `note`.
 

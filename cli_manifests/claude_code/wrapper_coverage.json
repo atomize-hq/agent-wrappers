@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-01-31T20:14:43Z",
+  "generated_at": "2026-02-14T12:38:28.919868Z",
   "wrapper_version": "0.2.0",
   "coverage": [
     {
@@ -8,8 +8,88 @@
       "level": "explicit",
       "flags": [
         {
+          "key": "--add-dir",
+          "level": "explicit"
+        },
+        {
+          "key": "--agent",
+          "level": "explicit"
+        },
+        {
+          "key": "--agents",
+          "level": "explicit"
+        },
+        {
+          "key": "--allow-dangerously-skip-permissions",
+          "level": "explicit"
+        },
+        {
+          "key": "--allowedTools",
+          "level": "explicit"
+        },
+        {
+          "key": "--append-system-prompt",
+          "level": "explicit"
+        },
+        {
+          "key": "--betas",
+          "level": "explicit"
+        },
+        {
+          "key": "--chrome",
+          "level": "explicit"
+        },
+        {
+          "key": "--continue",
+          "level": "explicit"
+        },
+        {
+          "key": "--dangerously-skip-permissions",
+          "level": "explicit"
+        },
+        {
+          "key": "--debug",
+          "level": "explicit"
+        },
+        {
+          "key": "--debug-file",
+          "level": "explicit"
+        },
+        {
+          "key": "--disable-slash-commands",
+          "level": "explicit"
+        },
+        {
+          "key": "--disallowedTools",
+          "level": "explicit"
+        },
+        {
+          "key": "--fallback-model",
+          "level": "explicit"
+        },
+        {
+          "key": "--file",
+          "level": "explicit"
+        },
+        {
+          "key": "--fork-session",
+          "level": "explicit"
+        },
+        {
+          "key": "--from-pr",
+          "level": "explicit"
+        },
+        {
           "key": "--help",
-          "level": "passthrough"
+          "level": "explicit"
+        },
+        {
+          "key": "--ide",
+          "level": "explicit"
+        },
+        {
+          "key": "--include-partial-messages",
+          "level": "explicit"
         },
         {
           "key": "--input-format",
@@ -20,7 +100,39 @@
           "level": "explicit"
         },
         {
+          "key": "--max-budget-usd",
+          "level": "explicit"
+        },
+        {
+          "key": "--mcp-config",
+          "level": "explicit"
+        },
+        {
+          "key": "--mcp-debug",
+          "level": "explicit"
+        },
+        {
+          "key": "--model",
+          "level": "explicit"
+        },
+        {
+          "key": "--no-chrome",
+          "level": "explicit"
+        },
+        {
+          "key": "--no-session-persistence",
+          "level": "explicit"
+        },
+        {
           "key": "--output-format",
+          "level": "explicit"
+        },
+        {
+          "key": "--permission-mode",
+          "level": "explicit"
+        },
+        {
+          "key": "--plugin-dir",
           "level": "explicit"
         },
         {
@@ -28,8 +140,44 @@
           "level": "explicit"
         },
         {
+          "key": "--replay-user-messages",
+          "level": "explicit"
+        },
+        {
+          "key": "--resume",
+          "level": "explicit"
+        },
+        {
+          "key": "--session-id",
+          "level": "explicit"
+        },
+        {
+          "key": "--setting-sources",
+          "level": "explicit"
+        },
+        {
+          "key": "--settings",
+          "level": "explicit"
+        },
+        {
+          "key": "--strict-mcp-config",
+          "level": "explicit"
+        },
+        {
+          "key": "--system-prompt",
+          "level": "explicit"
+        },
+        {
+          "key": "--tools",
+          "level": "explicit"
+        },
+        {
+          "key": "--verbose",
+          "level": "explicit"
+        },
+        {
           "key": "--version",
-          "level": "passthrough"
+          "level": "explicit"
         }
       ]
     },
@@ -37,22 +185,462 @@
       "path": [
         "doctor"
       ],
-      "level": "intentionally_unsupported",
-      "note": "Claude Code updater diagnostics are out of scope for this wrapper."
+      "level": "explicit"
     },
     {
       "path": [
         "install"
       ],
       "level": "intentionally_unsupported",
-      "note": "Claude Code installation is out of scope for this wrapper."
+      "note": "Claude Code installation is out of scope for this wrapper.",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "flags": [
+        {
+          "key": "--force",
+          "level": "intentionally_unsupported",
+          "note": "Claude Code installation is out of scope for this wrapper."
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "mcp",
+        "add"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "flags": [
+        {
+          "key": "--env",
+          "level": "explicit"
+        },
+        {
+          "key": "--header",
+          "level": "explicit"
+        },
+        {
+          "key": "--scope",
+          "level": "explicit"
+        },
+        {
+          "key": "--transport",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "commandOrUrl",
+          "level": "explicit"
+        },
+        {
+          "name": "name",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add-from-claude-desktop"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "flags": [
+        {
+          "key": "--scope",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add-json"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "flags": [
+        {
+          "key": "--scope",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "json",
+          "level": "explicit"
+        },
+        {
+          "name": "name",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "get"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "args": [
+        {
+          "name": "name",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "mcp",
+        "remove"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "flags": [
+        {
+          "key": "--scope",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "reset-project-choices"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "mcp",
+        "serve"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      }
+    },
+    {
+      "path": [
+        "plugin"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "plugin",
+        "disable"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "flags": [
+        {
+          "key": "--all",
+          "level": "explicit"
+        },
+        {
+          "key": "--scope",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "enable"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "flags": [
+        {
+          "key": "--scope",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "plugin",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "install"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "flags": [
+        {
+          "key": "--scope",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "list"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "flags": [
+        {
+          "key": "--available",
+          "level": "explicit"
+        },
+        {
+          "key": "--json",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "manifest"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "linux-x64",
+          "darwin-arm64"
+        ]
+      }
+    },
+    {
+      "path": [
+        "plugin",
+        "manifest",
+        "marketplace"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "linux-x64",
+          "darwin-arm64"
+        ]
+      }
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace"
+      ],
+      "level": "explicit"
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "add"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "args": [
+        {
+          "name": "source",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "list"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "flags": [
+        {
+          "key": "--json",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "remove"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      }
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "repo"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "linux-x64",
+          "darwin-arm64"
+        ]
+      }
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "update"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      }
+    },
+    {
+      "path": [
+        "plugin",
+        "uninstall"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "flags": [
+        {
+          "key": "--scope",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "update"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "flags": [
+        {
+          "key": "--scope",
+          "level": "explicit"
+        }
+      ],
+      "args": [
+        {
+          "name": "plugin",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "validate"
+      ],
+      "level": "explicit",
+      "scope": {
+        "target_triples": [
+          "win32-x64"
+        ]
+      },
+      "args": [
+        {
+          "name": "path",
+          "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "setup-token"
+      ],
+      "level": "explicit"
     },
     {
       "path": [
         "update"
       ],
-      "level": "intentionally_unsupported",
-      "note": "Claude Code auto-update is out of scope for this wrapper."
+      "level": "explicit"
     }
   ]
 }

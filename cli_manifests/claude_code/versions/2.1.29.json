@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "semantic_version": "2.1.29",
-  "status": "reported",
+  "status": "validated",
   "updated_at": "2026-01-31T20:14:43Z",
   "artifacts": {
     "snapshots_dir": "snapshots/2.1.29",
@@ -9,10 +9,23 @@
     "union_complete": true
   },
   "coverage": {
-    "supported_targets": [],
-    "supported_required_target": false
+    "supported_targets": [
+      "linux-x64",
+      "darwin-arm64",
+      "win32-x64"
+    ],
+    "supported_required_target": true
+  },
+  "validation": {
+    "passed_targets": [
+      "linux-x64",
+      "darwin-arm64",
+      "win32-x64"
+    ],
+    "failed_targets": [],
+    "skipped_targets": []
   },
   "promotion": {
-    "eligible_for_latest_validated": false
+    "eligible_for_latest_validated": true
   }
 }

@@ -29,54 +29,10 @@
 Report: `cli_manifests/claude_code/reports/2.1.29/coverage.any.json`
 
 ### Missing commands
-- `mcp`
-- `mcp list`
-- `mcp reset-project-choices`
-- `plugin`
-- `plugin manifest`
-- `plugin manifest marketplace`
-- `plugin marketplace`
-- `plugin marketplace repo`
-- `setup-token`
+- (none)
 
 ### Missing flags
-- `<root> --add-dir`
-- `<root> --agent`
-- `<root> --agents`
-- `<root> --allow-dangerously-skip-permissions`
-- `<root> --allowedTools`
-- `<root> --append-system-prompt`
-- `<root> --betas`
-- `<root> --chrome`
-- `<root> --continue`
-- `<root> --dangerously-skip-permissions`
-- `<root> --debug`
-- `<root> --debug-file`
-- `<root> --disable-slash-commands`
-- `<root> --disallowedTools`
-- `<root> --fallback-model`
-- `<root> --file`
-- `<root> --fork-session`
-- `<root> --from-pr`
-- `<root> --ide`
-- `<root> --include-partial-messages`
-- `<root> --max-budget-usd`
-- `<root> --mcp-config`
-- `<root> --mcp-debug`
-- `<root> --model`
-- `<root> --no-chrome`
-- `<root> --no-session-persistence`
-- `<root> --permission-mode`
-- `<root> --plugin-dir`
-- `<root> --replay-user-messages`
-- `<root> --resume`
-- `<root> --session-id`
-- `<root> --setting-sources`
-- `<root> --settings`
-- `<root> --strict-mcp-config`
-- `<root> --system-prompt`
-- `<root> --tools`
-- `<root> --verbose`
+- (none)
 
 ### Missing args
 - (none)

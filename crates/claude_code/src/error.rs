@@ -33,6 +33,20 @@ pub enum ClaudeCodeError {
     NonZeroExit { status: ExitStatus },
     #[error("failed to parse JSON output: {0}")]
     JsonParse(#[from] serde_json::Error),
+    #[error("failed to prepare CLAUDE_HOME directory `{path}`: {source}")]
+    PrepareClaudeHome { path: PathBuf, source: std::io::Error },
+    #[error("failed seeding Claude home (io) `{path}`: {source}")]
+    ClaudeHomeSeedIo { path: PathBuf, source: std::io::Error },
+    #[error("failed seeding Claude home: copy `{from}` -> `{to}`: {error}")]
+    ClaudeHomeSeedCopy {
+        from: PathBuf,
+        to: PathBuf,
+        error: std::io::Error,
+    },
+    #[error("claude home prepare failed: {0}")]
+    ClaudeHomePrepareFailed(String),
+    #[error("claude home seed failed: {0}")]
+    ClaudeHomeSeedFailed(String),
 }
 
 #[derive(Debug, Error, Clone)]
