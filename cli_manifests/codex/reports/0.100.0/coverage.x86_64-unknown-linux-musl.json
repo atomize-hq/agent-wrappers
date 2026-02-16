@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-02-12T18:29:57Z",
+  "inputs": {
+    "upstream": {
+      "semantic_version": "0.100.0",
+      "mode": "union",
+      "targets": [
+        "x86_64-unknown-linux-musl"
+      ]
+    },
+    "wrapper": {
+      "schema_version": 1,
+      "wrapper_version": "0.2.0"
+    },
+    "rules": {
+      "rules_schema_version": 1
+    }
+  },
+  "platform_filter": {
+    "mode": "exact_target",
+    "target_triple": "x86_64-unknown-linux-musl"
+  },
+  "deltas": {
+    "missing_commands": [],
+    "missing_flags": [
+      {
+        "path": [
+          "app-server"
+        ],
+        "key": "--listen",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--ephemeral",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "resume"
+        ],
+        "key": "--ephemeral",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "review"
+        ],
+        "key": "--ephemeral",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ]
+      }
+    ],
+    "missing_args": [],
+    "excluded_flags": [
+      {
+        "path": [],
+        "key": "--no-alt-screen",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "note": "Alt-screen control is a TUI-only surface and is excluded from wrapper parity."
+      }
+    ],
+    "excluded_args": [
+      {
+        "path": [],
+        "name": "PROMPT",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "note": "Interactive TUI default-mode prompt surface is excluded from wrapper parity."
+      }
+    ],
+    "intentionally_unsupported": [
+      {
+        "path": [
+          "completion"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Shell completion generation is out of scope for the wrapper."
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "name": "SHELL",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Shell completion generation is out of scope for the wrapper."
+      }
+    ],
+    "wrapper_only_commands": [
+      {
+        "path": [
+          "execpolicy",
+          "check"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "responses-api-proxy"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "stdio-to-uds"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      }
+    ],
+    "wrapper_only_flags": [
+      {
+        "path": [
+          "execpolicy",
+          "check"
+        ],
+        "key": "--policy",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "execpolicy",
+          "check"
+        ],
+        "key": "--pretty",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "login"
+        ],
+        "key": "--api-key",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "login"
+        ],
+        "key": "--mcp",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit",
+        "note": "capability-guarded"
+      },
+      {
+        "path": [
+          "responses-api-proxy"
+        ],
+        "key": "--http-shutdown",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "responses-api-proxy"
+        ],
+        "key": "--port",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "responses-api-proxy"
+        ],
+        "key": "--server-info",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "responses-api-proxy"
+        ],
+        "key": "--upstream-url",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      }
+    ],
+    "wrapper_only_args": [
+      {
+        "path": [
+          "execpolicy",
+          "check"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "stdio-to-uds"
+        ],
+        "name": "SOCKET_PATH",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl"
+        ],
+        "wrapper_level": "explicit"
+      }
+    ]
+  }
+}
