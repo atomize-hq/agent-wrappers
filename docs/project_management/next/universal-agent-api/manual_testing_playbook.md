@@ -9,8 +9,8 @@ on GitHub-hosted runners.
 
 ## Preconditions (optional)
 
-- Codex CLI available (either on `PATH` or via `CODEX_BINARY`).
-- Claude Code CLI available (either on `PATH` or pinned via `ClaudeClientBuilder::binary`).
+- Codex CLI available (either on `PATH` or via `agent_api::backends::codex::CodexBackendConfig.binary`).
+- Claude Code CLI available (either on `PATH` or via `agent_api::backends::claude_code::ClaudeCodeBackendConfig.binary`).
 - A scratch `CODEX_HOME`/work directory under a temp folder.
 
 ## Playbook
@@ -26,4 +26,3 @@ on GitHub-hosted runners.
    - run the `agent_api` Claude backend example (if implemented)
    - confirm buffered events are returned and capability gating behaves as specified
 5. Record results in `session_log.md` under the appropriate integration task.
-

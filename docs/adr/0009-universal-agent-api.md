@@ -8,7 +8,6 @@ Owner(s): spensermcconnell
 
 - Feature directory: `docs/project_management/next/universal-agent-api/` (planning + triads)
 - Sequencing spine: `docs/project_management/next/sequencing.json`
-- Standards (format source): `/Users/spensermcconnell/__Active_Code/atomize-hq/substrate/docs/project_management/standards/ADR_STANDARD_AND_TEMPLATE.md`
 - Repo docs conventions: `docs/STYLE.md`
 
 ## Related Docs
@@ -39,7 +38,7 @@ Owner(s): spensermcconnell
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 5eacaa112086896ecfc73b0ae27e93d2ee5dcc594465eacb4a791911b677f679
+ADR_BODY_SHA256: e6061afe98827bb2bcda966d059135364b48ce5990cc45ba5213f05c7e1b3753
 
 ### Changes (operator-facing)
 
@@ -122,9 +121,12 @@ The event stream is a unified, minimal contract:
   - `agent_kind` (string-backed identity)
   - `kind` (Text/ToolCall/ToolResult/Status/Error/Unknown)
   - `channel` (optional; best-effort)
-  - `data` (optional `serde_json::Value` for agent-specific structured payload)
+  - stable core payload fields:
+    - `text` (for `TextOutput`)
+    - `message` (for `Status` and `Error`)
+  - `data` (optional `serde_json::Value` for bounded, agent-specific structured payload)
 - The universal contract does not require identical tool payload schemas across agents.
-- Raw/opaque payload is permitted only in `data` and must be safe-by-default (see Security).
+- Agent-specific structured payload is permitted only in `data` and must be bounded and safe-by-default; v1 forbids raw backend line capture (see Security).
 
 ### Defaults and environment isolation
 
@@ -182,11 +184,13 @@ The event stream is a unified, minimal contract:
   - If backend resolution fails (unknown agent kind with no registered backend), return a structured
     `UnknownBackend` error.
 - Secret handling:
-  - The universal API does not retain raw backend output by default.
-  - Any agent-specific payload in `AgentEvent.data` must be bounded and must not include raw lines
-    unless the caller explicitly opts in via an extension option.
+  - The universal API does not retain or emit raw backend output in v1.
+  - v1 MUST NOT retain or emit raw backend lines.
+    - Definition: “raw backend lines” means unparsed stdout/stderr line capture from the spawned CLI
+      process.
 - Observability:
-  - Events must carry `agent_kind` and an optional `run_id`/correlation id when available.
+  - Events must carry `agent_kind`.
+  - Correlation ids (when needed) MUST be carried only in bounded, backend-specific structured payloads (`AgentEvent.data`), not as a universal v1 field.
 
 ## Validation Plan (Authoritative)
 

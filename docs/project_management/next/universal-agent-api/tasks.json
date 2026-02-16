@@ -24,6 +24,8 @@
     "acceptance_criteria": [
       "`crates/agent_api` compiles with default features",
       "Core types/traits exist per contract",
+      "Workflow `.github/workflows/universal-agent-api-smoke.yml` exists and runs the feature-local smoke scripts on ubuntu/macos/windows (GitHub-hosted runners)",
+      "Workflow `.github/workflows/universal-agent-api-smoke.yml` runs `make preflight` on `ubuntu-latest` for the same tested ref",
       "No tests added/modified"
     ],
     "start_checklist": [
@@ -120,7 +122,7 @@
     ],
     "end_checklist": [
       "Merge upstream code/test branches for C0 into the integration worktree and reconcile behavior to the spec.",
-      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight.",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
       "Commit integration changes on branch uaa-c0-core-integ.",
       "Fast-forward merge uaa-c0-core-integ into feat/universal-agent-api; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-integ'.",
       "Remove worktree wt/uaa-c0-core-integ."
@@ -253,7 +255,7 @@
     ],
     "end_checklist": [
       "Merge upstream code/test branches for C1 into the integration worktree and reconcile behavior to the spec.",
-      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight.",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
       "Commit integration changes on branch uaa-c1-codex-integ.",
       "Fast-forward merge uaa-c1-codex-integ into feat/universal-agent-api; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-integ'.",
       "Remove worktree wt/uaa-c1-codex-integ."
@@ -386,7 +388,7 @@
     ],
     "end_checklist": [
       "Merge upstream code/test branches for C2 into the integration worktree and reconcile behavior to the spec.",
-      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight.",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
       "Commit integration changes on branch uaa-c2-claude-integ.",
       "Fast-forward merge uaa-c2-claude-integ into feat/universal-agent-api; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-integ'.",
       "Remove worktree wt/uaa-c2-claude-integ."

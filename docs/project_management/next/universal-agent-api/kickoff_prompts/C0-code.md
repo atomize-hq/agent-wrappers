@@ -15,6 +15,8 @@
 
 ## Requirements
 - Implement `crates/agent_api` core types/traits/gateway/errors per the contract.
+- Implement the GitHub-hosted smoke workflow required by the CI checkpoint plan:
+  - `.github/workflows/universal-agent-api-smoke.yml` (runs the feature-local smoke scripts on `ubuntu-latest`, `macos-latest`, `windows-latest` and runs `make preflight` on Linux)
 - Ensure the crate builds with default features (no backends enabled).
 - Do not add/modify tests in this task.
 - Run required commands (capture outputs in END log):
@@ -26,4 +28,3 @@
 2. Commit worktree changes on branch `uaa-c0-core-code`.
 3. Checkout `feat/universal-agent-api`; set `C0-code` to `completed`; add END entry to `session_log.md`; commit docs (`docs: finish C0-code`).
 4. Remove worktree `wt/uaa-c0-core-code`.
-

@@ -20,7 +20,7 @@
   - `cargo fmt`
   - `cargo clippy --workspace --all-targets --all-features -- -D warnings`
   - relevant `cargo test ...`
-  - `make preflight`
+  - `make preflight` (Linux only)
 
 ## End Checklist
 1. Merge upstream C2 code/test branches into the integration worktree and reconcile to the spec.
@@ -28,4 +28,3 @@
 3. Commit integration changes on branch `uaa-c2-claude-integ`.
 4. Fast-forward merge `uaa-c2-claude-integ` into `feat/universal-agent-api`; set `C2-integ` to `completed`; add END entry to `session_log.md`; commit docs (`docs: finish C2-integ`).
 5. Remove worktree `wt/uaa-c2-claude-integ`.
-

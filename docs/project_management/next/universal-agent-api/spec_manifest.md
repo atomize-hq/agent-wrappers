@@ -113,7 +113,7 @@ Trigger: cross-platform validation is required, and we want bounded CI gates rat
 
 - Defines `AgentEvent.kind` mapping rules (including `Unknown` behavior).
 - Defines `channel` semantics (optional, best-effort; allowed values; stability).
-- Defines `data` bounds (size limits), redaction rules, and opt-in raw/opaque payload rules (if any).
+- Defines `data` bounds (size limits), redaction rules, and the v1 prohibition on raw backend line capture.
 - Defines forward/backward policy if events are serialized/stored.
 
 ### `capabilities-schema-spec.md`

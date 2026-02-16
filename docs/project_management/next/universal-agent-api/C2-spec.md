@@ -16,7 +16,7 @@ Implement a Claude Code backend for the universal API behind a feature flag.
   - The backend MUST register under `AgentKind` id `claude_code`.
 - Run semantics:
   - Buffered event production is allowed and must be reflected in capabilities (DR-0001).
-  - If live streaming is not available, the backend must still return a coherent `AgentEvent` sequence after completion.
+  - If live streaming is not available, the backend must still return a coherent `AgentEvent` sequence post-hoc (after the underlying process exits).
 - Event mapping:
   - Map Claude stream-json output into `AgentEvent` per `event-envelope-schema-spec.md`.
 
@@ -31,6 +31,12 @@ The Claude Code backend MUST map stream-json lines into `AgentEventKind` using t
   - `tool_result` → `ToolResult`
   - text deltas / messages → `TextOutput`
 - Unknown/unclassified → `Unknown`
+
+### Stable payload population (normative)
+
+- For `TextOutput` events, the backend MUST set `AgentEvent.text=Some(<chunk>)` and MUST NOT set `message`.
+- For `Status` events, the backend SHOULD set `AgentEvent.message=Some(<status>)` when a safe summary is available.
+- For `Error` events, the backend MUST set `AgentEvent.message=Some(<redacted_error>)`.
 
 ### Out of scope (explicit)
 

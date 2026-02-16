@@ -59,3 +59,98 @@ Namespace rules (normative for specs):
 
 **Selected:** B
 
+## DR-0005 — Raw backend line capture policy
+
+**A) Allow opt-in raw backend line capture (via extensions)**
+- Pros: enables “raw log viewer” and deep debugging.
+- Cons: high secret-leak risk; complicates bounds; adds a permanent compatibility burden.
+
+**B) Forbid raw backend line capture in v1 (Selected)**
+- Pros: safe-by-default; simpler contract; aligns with security posture.
+- Cons: raw capture must be implemented outside this API (ingestion boundary).
+
+**Selected:** B
+
+## DR-0006 — Stable payload fields for core event kinds
+
+**A) Encode core payloads inside `data` JSON only**
+- Pros: fewer struct fields.
+- Cons: forces consumers to parse JSON; higher drift risk across backends; hurts orthogonality.
+
+**B) Add stable `text`/`message` fields to `AgentEvent` (Selected)**
+- Pros: backend-agnostic consumption for `TextOutput`/`Status`/`Error`; easier to document and enforce.
+- Cons: slightly larger struct surface.
+
+**Selected:** B
+
+## DR-0007 — Provided backends without type leakage
+
+**A) Expose backend constructors that use `codex::*` / `claude_code::*` types**
+- Pros: reuse existing builders directly.
+- Cons: leaks backend types into the universal contract; breaks orthogonality.
+
+**B) Provide feature-gated backends with std/serde-friendly config types (Selected)**
+- Pros: avoids leakage; stable, portable contract.
+- Cons: some config duplication/mapping.
+
+**Selected:** B
+
+## DR-0008 — Extensions ↔ capabilities validation contract
+
+**A) Best-effort extensions (unknown keys ignored)**
+- Pros: flexible; fewer errors.
+- Cons: silent degradation; inconsistent behavior across backends; hard to debug.
+
+**B) Fail-closed with 1:1 mapping to capability ids + pre-spawn validation (Selected)**
+- Pros: deterministic; explicit; safe.
+- Cons: callers must be explicit and check capabilities.
+
+**Selected:** B
+
+## DR-0009 — Bounds enforcement behavior
+
+**A) Hard-error the run on any oversize field**
+- Pros: strict.
+- Cons: fragile; increases failure rate; can deadlock consumers if not carefully handled.
+
+**B) Deterministic drop/truncate with explicit rules (Selected)**
+- Pros: safe; predictable; consistent across backends.
+- Cons: some information loss in extreme cases.
+
+**Selected:** B
+
+## DR-0010 — CI checkpoint workflow as a C0 deliverable
+
+**A) Defer CP1 workflow until later (CP1 task creates it)**
+- Pros: less work in C0.
+- Cons: checkpoint becomes non-deterministic; later triads depend on missing infra.
+
+**B) Require the workflow in C0 (Selected)**
+- Pros: CP1 is real and wired early; avoids “forgot to add workflow” drift.
+- Cons: small additional work in C0.
+
+**Selected:** B
+
+## DR-0011 — Codex live streaming capability advertisement
+
+**A) Codex advertises only `agent_api.events`**
+- Pros: fewer capability ids.
+- Cons: loses live-stream signal; violates run protocol semantics.
+
+**B) Codex MUST include `agent_api.events.live` (Selected)**
+- Pros: accurate capability signal; supports real-time UX.
+- Cons: none meaningful.
+
+**Selected:** B
+
+## DR-0012 — `completion` vs event stream termination
+
+**A) `completion` may resolve before the event stream terminates**
+- Pros: slightly simpler backend implementation for buffered modes.
+- Cons: consumer footgun; risks dropped events.
+
+**B) `completion` MUST NOT resolve until the event stream is final (Selected)**
+- Pros: safe consumer contract; no dropped buffered events.
+- Cons: requires adapters to flush/close streams before resolving completion.
+
+**Selected:** B

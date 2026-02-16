@@ -43,7 +43,7 @@ Implement the core `agent_api` crate as an agent-agnostic facade and registry.
 ## Notes / constraints
 
 - Streaming semantics are capability-gated (see `decision_register.md` DR-0001 and `run-protocol-spec.md`).
-- The event envelope must support bounded extension payloads without leaking raw lines by default (see schema specs).
+- The event envelope must support bounded extension payloads and MUST NOT include raw backend line capture in v1 (see schema specs).
 
 ## CI workflow contract (normative for C0)
 

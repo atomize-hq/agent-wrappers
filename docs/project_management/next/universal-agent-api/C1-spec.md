@@ -16,7 +16,7 @@ Implement a Codex backend for the universal API behind a feature flag.
   - The backend MUST register under `AgentKind` id `codex`.
 - Event mapping:
   - Map Codex `ThreadEvent`/item events into `AgentEvent` per `event-envelope-schema-spec.md`.
-  - Preserve safety defaults: do not retain raw output by default.
+  - Preserve safety posture: v1 MUST NOT retain or emit raw backend line capture.
 
 ### Event kind mapping (normative)
 
@@ -29,9 +29,17 @@ The Codex backend MUST map events to `AgentEventKind` using the following rules 
   - `CommandExecution`, `FileChange`, `McpToolCall`, `WebSearch` → `ToolCall`
   - `TodoList` → `Status`
   - `Error` → `Error`
+
+### Stable payload population (normative)
+
+- For `TextOutput` events, the backend MUST set `AgentEvent.text=Some(<chunk>)` and MUST NOT set `message`.
+- For `Status` events, the backend SHOULD set `AgentEvent.message=Some(<status>)` when a safe summary is available.
+- For `Error` events, the backend MUST set `AgentEvent.message=Some(<redacted_error>)`.
 - Capability mapping:
-  - Expose at least the core `agent_api.run` capability.
-  - Expose streaming capability for Codex as `agent_api.events` + backend-specific capability ids as needed.
+  - MUST include `agent_api.run`.
+  - MUST include `agent_api.events`.
+  - MUST include `agent_api.events.live`.
+  - MAY include backend-specific capability ids under `backend.codex.*` as needed.
 
 ### Out of scope (explicit)
 

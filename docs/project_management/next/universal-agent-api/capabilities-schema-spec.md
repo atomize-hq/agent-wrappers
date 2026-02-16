@@ -46,3 +46,7 @@ Every registered backend MUST include:
 Backends that provide live streaming MUST include:
 
 - `agent_api.events.live`
+
+## Extension keys (v1, normative)
+
+- Every supported `AgentRunRequest.extensions` key MUST be present in `AgentCapabilities.ids` as the same string.

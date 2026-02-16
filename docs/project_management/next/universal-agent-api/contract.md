@@ -87,6 +87,10 @@ pub struct AgentEvent {
     pub agent_kind: AgentKind,
     pub kind: AgentEventKind,
     pub channel: Option<String>,
+    /// Stable payload for `TextOutput` events.
+    pub text: Option<String>,
+    /// Stable payload for `Status` and `Error` events.
+    pub message: Option<String>,
     pub data: Option<serde_json::Value>,
 }
 
@@ -115,7 +119,10 @@ pub struct AgentCompletion {
     pub status: ExitStatus,
     /// A backend may populate `final_text` when it can deterministically extract it.
     pub final_text: Option<String>,
-    /// Optional backend-specific completion payload (bounded; see schema spec).
+    /// Optional backend-specific completion payload.
+    ///
+    /// This payload MUST obey the bounds and enforcement behavior defined in
+    /// `event-envelope-schema-spec.md` (see "Completion payload bounds").
     pub data: Option<serde_json::Value>,
 }
 
@@ -171,15 +178,128 @@ impl AgentGateway {
 }
 ```
 
+## Stable payload rules for core event kinds (v1, normative)
+
+For each emitted `AgentEvent`:
+
+- `AgentEventKind::TextOutput`
+  - `text` MUST be `Some`.
+  - `message` MUST be `None`.
+- `AgentEventKind::Status`
+  - `message` SHOULD be `Some`.
+  - `text` MUST be `None`.
+- `AgentEventKind::Error`
+  - `message` MUST be `Some` and MUST be safe/redacted.
+  - `text` MUST be `None`.
+- `AgentEventKind::{ToolCall, ToolResult, Unknown}`
+  - `text` MUST be `None`.
+  - `message` MAY be `Some` (safe/redacted) for operator-facing summaries, but SHOULD be `None` by default.
+
+`data`:
+- MAY be present for any kind.
+- MUST conform to size/safety constraints in `event-envelope-schema-spec.md`.
+
+## Provided backends (feature-gated; v1, normative)
+
+When enabled, `agent_api` MUST provide built-in backends with stable paths and constructor/config
+types that use **only** std + serde-friendly types (no `codex::*` / `claude_code::*` in the public API).
+
+### Backend module layout (normative)
+
+The crate MUST expose:
+
+```rust
+pub mod backends {
+    // Codex backend (`feature = "codex"`)
+    #[cfg(feature = "codex")]
+    pub mod codex {
+        use std::{collections::BTreeMap, path::PathBuf, time::Duration};
+
+        use super::super::{AgentBackend, AgentError, AgentKind, AgentRunHandle, AgentRunRequest};
+
+        #[derive(Clone, Debug, Default)]
+        pub struct CodexBackendConfig {
+            pub binary: Option<PathBuf>,
+            pub codex_home: Option<PathBuf>,
+            pub default_timeout: Option<Duration>,
+            pub default_working_dir: Option<PathBuf>,
+            pub env: BTreeMap<String, String>,
+        }
+
+        pub struct CodexBackend { /* private */ }
+
+        impl CodexBackend {
+            pub fn new(config: CodexBackendConfig) -> Self;
+        }
+
+        impl AgentBackend for CodexBackend {
+            fn kind(&self) -> AgentKind; // MUST be "codex"
+            fn capabilities(&self) -> super::super::AgentCapabilities;
+            fn run(&self, request: AgentRunRequest) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<AgentRunHandle, AgentError>> + Send + '_>>;
+        }
+    }
+
+    // Claude Code backend (`feature = "claude_code"`)
+    #[cfg(feature = "claude_code")]
+    pub mod claude_code {
+        use std::{collections::BTreeMap, path::PathBuf, time::Duration};
+
+        use super::super::{AgentBackend, AgentError, AgentKind, AgentRunHandle, AgentRunRequest};
+
+        #[derive(Clone, Debug, Default)]
+        pub struct ClaudeCodeBackendConfig {
+            pub binary: Option<PathBuf>,
+            pub default_timeout: Option<Duration>,
+            pub default_working_dir: Option<PathBuf>,
+            pub env: BTreeMap<String, String>,
+        }
+
+        pub struct ClaudeCodeBackend { /* private */ }
+
+        impl ClaudeCodeBackend {
+            pub fn new(config: ClaudeCodeBackendConfig) -> Self;
+        }
+
+        impl AgentBackend for ClaudeCodeBackend {
+            fn kind(&self) -> AgentKind; // MUST be "claude_code"
+            fn capabilities(&self) -> super::super::AgentCapabilities;
+            fn run(&self, request: AgentRunRequest) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<AgentRunHandle, AgentError>> + Send + '_>>;
+        }
+    }
+}
+```
+
+### Config and request precedence (v1, normative)
+
+- Backend config provides defaults.
+- `AgentRunRequest` fields MUST override backend config defaults for that run.
+- The backend MUST apply `AgentRunRequest.env` on top of backend config env (request keys win).
+
+## Extensions and capability gating (v1, normative)
+
+- Every supported `AgentRunRequest.extensions` key MUST correspond 1:1 to a capability id of the
+  same string present in `AgentCapabilities.ids`.
+- If a request includes an extension key that is not present in `AgentCapabilities.ids`, the backend
+  MUST fail-closed with `AgentError::UnsupportedCapability { capability: <key> }`.
+- If an extension key is supported but its value is invalid, the backend MUST return
+  `AgentError::InvalidRequest`.
+- Validation of extension keys and values MUST occur before spawning any backend process.
+
 ### Extension option key naming (v1, normative)
 
 Keys in `AgentRunRequest.extensions` MUST:
 
 - be lowercase ASCII
 - match regex: `^[a-z][a-z0-9_.-]*$`
-- be namespaced (recommended prefixes):
-  - `agent_api.` for universal options (none defined in v1)
-  - `backend.<agent_kind>.` for backend-specific options
+- be namespaced:
+  - MUST contain at least one `.` character
+  - MUST start with either:
+    - `agent_api.` (reserved for universal options; none defined in v1), or
+    - `backend.<agent_kind>.` (backend-specific options)
+
+If a key starts with `backend.`, the backend MUST validate that the key begins with
+`backend.<this backend's AgentKind>.` and MUST reject other backends’ namespaces as
+`AgentError::UnsupportedCapability`.
 
 ## Error taxonomy (normative)
 
@@ -194,4 +314,4 @@ All error messages MUST be safe-by-default and MUST NOT include raw backend outp
 - If `AgentRunRequest.timeout` is absent: backend-specific default applies (the universal API MUST NOT invent a global default).
 - If `AgentRunRequest.working_dir` is absent: backend-specific default applies (wrappers may use temp dirs).
 - The universal API MUST NOT mutate the parent process environment; `AgentRunRequest.env` applies only to spawned backend processes.
-- If `AgentRunRequest.extensions` contains any key that the backend does not recognize, the backend MUST fail-closed with `AgentError::UnsupportedCapability`.
+- If `AgentRunRequest.extensions` contains any key that the backend does not recognize, the backend MUST fail-closed with `AgentError::UnsupportedCapability` per the 1:1 mapping rule above.

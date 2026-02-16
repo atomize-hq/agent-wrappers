@@ -20,7 +20,7 @@
   - `cargo fmt`
   - `cargo clippy --workspace --all-targets --all-features -- -D warnings`
   - relevant `cargo test ...` (at minimum, suites introduced by C0-test)
-  - `make preflight`
+  - `make preflight` (Linux only)
 
 ## End Checklist
 1. Merge the upstream C0 code/test branches into the integration worktree and reconcile behavior to the spec.
@@ -28,4 +28,3 @@
 3. Commit integration changes on branch `uaa-c0-core-integ`.
 4. Fast-forward merge `uaa-c0-core-integ` into `feat/universal-agent-api`; set `C0-integ` to `completed`; add END entry to `session_log.md`; commit docs (`docs: finish C0-integ`).
 5. Remove worktree `wt/uaa-c0-core-integ`.
-
