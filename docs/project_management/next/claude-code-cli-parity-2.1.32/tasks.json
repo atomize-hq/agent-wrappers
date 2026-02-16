@@ -1,0 +1,119 @@
+[
+  {
+    "id": "C0-code",
+    "name": "C0 scaffold (code)",
+    "type": "code",
+    "phase": "C0",
+    "status": "pending",
+    "description": "Implement the C0 spec (production code only).",
+    "references": [
+      "docs/project_management/next/claude-code-cli-parity-2.1.32/plan.md",
+      "docs/project_management/next/claude-code-cli-parity-2.1.32/C0-spec.md"
+    ],
+    "acceptance_criteria": [
+      "C0 behavior matches spec",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/claude-code-cli-parity-2.1.32 && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-code'",
+      "Create the task branch and worktree: `git worktree add -b claude-code-cli-parity-2-1-32-c0-v2-1-32-code wt/claude-code-cli-parity-2-1-32-c0-v2-1-32-code feat/claude-code-cli-parity-2.1.32`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets -- -D warnings.",
+      "Inside wt/claude-code-cli-parity-2-1-32-c0-v2-1-32-code, commit C0-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/claude-code-cli-parity-2.1.32.",
+      "Checkout feat/claude-code-cli-parity-2.1.32; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; create downstream prompts if missing; commit docs with 'docs: finish C0-code'.",
+      "Remove worktree wt/claude-code-cli-parity-2-1-32-c0-v2-1-32-code."
+    ],
+    "worktree": "wt/claude-code-cli-parity-2-1-32-c0-v2-1-32-code",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/claude-code-cli-parity-2.1.32/kickoff_prompts/C0-code.md",
+    "depends_on": [],
+    "concurrent_with": [
+      "C0-test"
+    ]
+  },
+  {
+    "id": "C0-test",
+    "name": "C0 scaffold (test)",
+    "type": "test",
+    "phase": "C0",
+    "status": "pending",
+    "description": "Add tests/fixtures/harnesses validating the C0 spec (tests only).",
+    "references": [
+      "docs/project_management/next/claude-code-cli-parity-2.1.32/plan.md",
+      "docs/project_management/next/claude-code-cli-parity-2.1.32/C0-spec.md"
+    ],
+    "acceptance_criteria": [
+      "Tests cover C0 acceptance criteria",
+      "No production code changes",
+      "Required commands executed (fmt + targeted tests) and recorded in session_log.md"
+    ],
+    "start_checklist": [
+      "git checkout feat/claude-code-cli-parity-2.1.32 && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-test'",
+      "Create the task branch and worktree: `git worktree add -b claude-code-cli-parity-2-1-32-c0-v2-1-32-test wt/claude-code-cli-parity-2-1-32-c0-v2-1-32-test feat/claude-code-cli-parity-2.1.32`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; targeted cargo test commands for suites added/updated.",
+      "Inside wt/claude-code-cli-parity-2-1-32-c0-v2-1-32-test, commit C0-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/claude-code-cli-parity-2.1.32.",
+      "Checkout feat/claude-code-cli-parity-2.1.32; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; create downstream prompts if missing; commit docs with 'docs: finish C0-test'.",
+      "Remove worktree wt/claude-code-cli-parity-2-1-32-c0-v2-1-32-test."
+    ],
+    "worktree": "wt/claude-code-cli-parity-2-1-32-c0-v2-1-32-test",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/claude-code-cli-parity-2.1.32/kickoff_prompts/C0-test.md",
+    "depends_on": [],
+    "concurrent_with": [
+      "C0-code"
+    ]
+  },
+  {
+    "id": "C0-integ",
+    "name": "C0 scaffold (integration)",
+    "type": "integration",
+    "phase": "C0",
+    "status": "pending",
+    "description": "Merge C0 code/test, align behavior with the spec, and gate with fmt/clippy/tests.",
+    "references": [
+      "docs/project_management/next/claude-code-cli-parity-2.1.32/plan.md",
+      "docs/project_management/next/claude-code-cli-parity-2.1.32/C0-spec.md"
+    ],
+    "acceptance_criteria": [
+      "C0 code/test merged and match C0-spec",
+      "cargo fmt + clippy + relevant tests + integration gate executed and logged",
+      "Integration merged fast-forward; tasks/logs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/claude-code-cli-parity-2.1.32 && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-integ'",
+      "Create the integration branch and worktree: `git worktree add -b claude-code-cli-parity-2-1-32-c0-v2-1-32-integ wt/claude-code-cli-parity-2-1-32-c0-v2-1-32-integ feat/claude-code-cli-parity-2.1.32`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C0 into the integration worktree and reconcile behavior to the spec.",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets -- -D warnings; relevant tests; make preflight.",
+      "Commit integration changes on the integration branch.",
+      "Fast-forward merge the integration branch into feat/claude-code-cli-parity-2.1.32; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-integ'.",
+      "Remove worktree wt/claude-code-cli-parity-2-1-32-c0-v2-1-32-integ."
+    ],
+    "worktree": "wt/claude-code-cli-parity-2-1-32-c0-v2-1-32-integ",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/claude-code-cli-parity-2.1.32/kickoff_prompts/C0-integ.md",
+    "depends_on": [
+      "C0-code",
+      "C0-test"
+    ],
+    "concurrent_with": []
+  }
+]

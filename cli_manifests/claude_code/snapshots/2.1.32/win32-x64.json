@@ -1,0 +1,773 @@
+{
+  "snapshot_schema_version": 1,
+  "tool": "claude-code-cli",
+  "collected_at": "2026-02-05T17:04:47Z",
+  "binary": {
+    "sha256": "dcc6a3588397644cbd0ba16be91599dbf51722f814e858af7ab13f2eaff91b9f",
+    "size_bytes": 232795296,
+    "platform": {
+      "os": "windows",
+      "arch": "x86_64"
+    },
+    "target_triple": "win32-x64",
+    "version_output": "2.1.32 (Claude Code)",
+    "semantic_version": "2.1.32"
+  },
+  "commands": [
+    {
+      "path": [],
+      "usage": "claude [options] [command] [prompt]",
+      "flags": [
+        {
+          "long": "--add-dir",
+          "takes_value": true,
+          "value_name": "directories..."
+        },
+        {
+          "long": "--agent",
+          "takes_value": true,
+          "value_name": "agent"
+        },
+        {
+          "long": "--agents",
+          "takes_value": true,
+          "value_name": "json"
+        },
+        {
+          "long": "--allow-dangerously-skip-permissions",
+          "takes_value": false
+        },
+        {
+          "long": "--allowedTools",
+          "takes_value": true,
+          "value_name": "tools..."
+        },
+        {
+          "long": "--append-system-prompt",
+          "takes_value": true,
+          "value_name": "prompt"
+        },
+        {
+          "long": "--betas",
+          "takes_value": true,
+          "value_name": "betas..."
+        },
+        {
+          "long": "--chrome",
+          "takes_value": false
+        },
+        {
+          "long": "--continue",
+          "short": "-c",
+          "takes_value": false
+        },
+        {
+          "long": "--dangerously-skip-permissions",
+          "takes_value": false
+        },
+        {
+          "long": "--debug",
+          "short": "-d",
+          "takes_value": false
+        },
+        {
+          "long": "--debug-file",
+          "takes_value": true,
+          "value_name": "path"
+        },
+        {
+          "long": "--disable-slash-commands",
+          "takes_value": false
+        },
+        {
+          "long": "--disallowedTools",
+          "takes_value": true,
+          "value_name": "tools..."
+        },
+        {
+          "long": "--fallback-model",
+          "takes_value": true,
+          "value_name": "model"
+        },
+        {
+          "long": "--file",
+          "takes_value": true,
+          "value_name": "specs..."
+        },
+        {
+          "long": "--fork-session",
+          "takes_value": false
+        },
+        {
+          "long": "--from-pr",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--ide",
+          "takes_value": false
+        },
+        {
+          "long": "--include-partial-messages",
+          "takes_value": false
+        },
+        {
+          "long": "--input-format",
+          "takes_value": true,
+          "value_name": "format"
+        },
+        {
+          "long": "--json-schema",
+          "takes_value": true,
+          "value_name": "schema"
+        },
+        {
+          "long": "--max-budget-usd",
+          "takes_value": true,
+          "value_name": "amount"
+        },
+        {
+          "long": "--mcp-config",
+          "takes_value": true,
+          "value_name": "configs..."
+        },
+        {
+          "long": "--mcp-debug",
+          "takes_value": false
+        },
+        {
+          "long": "--model",
+          "takes_value": true,
+          "value_name": "model"
+        },
+        {
+          "long": "--no-chrome",
+          "takes_value": false
+        },
+        {
+          "long": "--no-session-persistence",
+          "takes_value": false
+        },
+        {
+          "long": "--output-format",
+          "takes_value": true,
+          "value_name": "format"
+        },
+        {
+          "long": "--permission-mode",
+          "takes_value": true,
+          "value_name": "mode"
+        },
+        {
+          "long": "--plugin-dir",
+          "takes_value": true,
+          "value_name": "paths..."
+        },
+        {
+          "long": "--print",
+          "short": "-p",
+          "takes_value": false
+        },
+        {
+          "long": "--replay-user-messages",
+          "takes_value": false
+        },
+        {
+          "long": "--resume",
+          "short": "-r",
+          "takes_value": false
+        },
+        {
+          "long": "--session-id",
+          "takes_value": true,
+          "value_name": "id"
+        },
+        {
+          "long": "--setting-sources",
+          "takes_value": true,
+          "value_name": "sources"
+        },
+        {
+          "long": "--settings",
+          "takes_value": true,
+          "value_name": "file-or-json"
+        },
+        {
+          "long": "--strict-mcp-config",
+          "takes_value": false
+        },
+        {
+          "long": "--system-prompt",
+          "takes_value": true,
+          "value_name": "prompt"
+        },
+        {
+          "long": "--tools",
+          "takes_value": true,
+          "value_name": "tools..."
+        },
+        {
+          "long": "--verbose",
+          "takes_value": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "doctor"
+      ],
+      "usage": "claude doctor [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "install"
+      ],
+      "usage": "claude install [options] [target]",
+      "flags": [
+        {
+          "long": "--force",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp"
+      ],
+      "usage": "claude mcp [options] [command]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add"
+      ],
+      "usage": "claude mcp add [options] <name> <commandOrUrl> [args...]",
+      "args": [
+        {
+          "name": "commandOrUrl",
+          "required": true,
+          "variadic": false
+        },
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--callback-port",
+          "takes_value": true,
+          "value_name": "port"
+        },
+        {
+          "long": "--client-id",
+          "takes_value": true,
+          "value_name": "clientId"
+        },
+        {
+          "long": "--client-secret",
+          "takes_value": false
+        },
+        {
+          "long": "--env",
+          "short": "-e",
+          "takes_value": true,
+          "value_name": "env..."
+        },
+        {
+          "long": "--header",
+          "short": "-H",
+          "takes_value": true,
+          "value_name": "header..."
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        },
+        {
+          "long": "--transport",
+          "short": "-t",
+          "takes_value": true,
+          "value_name": "transport"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add-from-claude-desktop"
+      ],
+      "usage": "claude mcp add-from-claude-desktop [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add-json"
+      ],
+      "usage": "claude mcp add-json [options] <name> <json>",
+      "args": [
+        {
+          "name": "json",
+          "required": true,
+          "variadic": false
+        },
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--client-secret",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "get"
+      ],
+      "usage": "claude mcp get [options] <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "usage": "claude mcp list [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "remove"
+      ],
+      "usage": "claude mcp remove [options] <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "reset-project-choices"
+      ],
+      "usage": "claude mcp reset-project-choices [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "serve"
+      ],
+      "usage": "claude mcp serve [options]",
+      "flags": [
+        {
+          "long": "--debug",
+          "short": "-d",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--verbose",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin"
+      ],
+      "usage": "claude plugin [options] [command]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "disable"
+      ],
+      "usage": "claude plugin disable [options] [plugin]",
+      "flags": [
+        {
+          "long": "--all",
+          "short": "-a",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "enable"
+      ],
+      "usage": "claude plugin enable [options] <plugin>",
+      "args": [
+        {
+          "name": "plugin",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "install"
+      ],
+      "usage": "claude plugin install|i [options] <plugin>",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "list"
+      ],
+      "usage": "claude plugin list [options]",
+      "flags": [
+        {
+          "long": "--available",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--json",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace"
+      ],
+      "usage": "claude plugin marketplace [options] [command]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "add"
+      ],
+      "usage": "claude plugin marketplace add [options] <source>",
+      "args": [
+        {
+          "name": "source",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "list"
+      ],
+      "usage": "claude plugin marketplace list [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--json",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "remove"
+      ],
+      "usage": "claude plugin marketplace remove|rm [options] <name>",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "update"
+      ],
+      "usage": "claude plugin marketplace update [options] [name]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "uninstall"
+      ],
+      "usage": "claude plugin uninstall|remove [options] <plugin>",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "update"
+      ],
+      "usage": "claude plugin update [options] <plugin>",
+      "args": [
+        {
+          "name": "plugin",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "validate"
+      ],
+      "usage": "claude plugin validate [options] <path>",
+      "args": [
+        {
+          "name": "path",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "setup-token"
+      ],
+      "usage": "claude setup-token [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "update"
+      ],
+      "usage": "claude update|upgrade [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    }
+  ]
+}

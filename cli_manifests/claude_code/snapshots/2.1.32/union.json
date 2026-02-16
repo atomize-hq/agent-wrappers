@@ -1,0 +1,1218 @@
+{
+  "snapshot_schema_version": 2,
+  "tool": "claude-code-cli",
+  "mode": "union",
+  "collected_at": "2026-02-05T17:04:47Z",
+  "expected_targets": [
+    "linux-x64",
+    "darwin-arm64",
+    "win32-x64"
+  ],
+  "complete": true,
+  "inputs": [
+    {
+      "target_triple": "linux-x64",
+      "collected_at": "2026-02-05T17:04:47Z",
+      "binary": {
+        "sha256": "96cd1ba796772481bd49bd67e3b8484565d1f3a99662565516c3bfe16d9afd4a",
+        "size_bytes": 222917451,
+        "platform": {
+          "os": "linux",
+          "arch": "x86_64"
+        },
+        "target_triple": "linux-x64",
+        "version_output": "2.1.32 (Claude Code)",
+        "semantic_version": "2.1.32"
+      }
+    },
+    {
+      "target_triple": "darwin-arm64",
+      "collected_at": "2026-02-05T17:04:47Z",
+      "binary": {
+        "sha256": "841ac3051c04480a5651bc9f4ae27ab9d3963477250e71892e4d6e05778dd9d3",
+        "size_bytes": 180719984,
+        "platform": {
+          "os": "macos",
+          "arch": "aarch64"
+        },
+        "target_triple": "darwin-arm64",
+        "version_output": "2.1.32 (Claude Code)",
+        "semantic_version": "2.1.32"
+      }
+    },
+    {
+      "target_triple": "win32-x64",
+      "collected_at": "2026-02-05T17:04:47Z",
+      "binary": {
+        "sha256": "dcc6a3588397644cbd0ba16be91599dbf51722f814e858af7ab13f2eaff91b9f",
+        "size_bytes": 232795296,
+        "platform": {
+          "os": "windows",
+          "arch": "x86_64"
+        },
+        "target_triple": "win32-x64",
+        "version_output": "2.1.32 (Claude Code)",
+        "semantic_version": "2.1.32"
+      }
+    }
+  ],
+  "commands": [
+    {
+      "path": [],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude [options] [command] [prompt]",
+      "flags": [
+        {
+          "key": "--add-dir",
+          "long": "--add-dir",
+          "takes_value": true,
+          "value_name": "directories...",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--agent",
+          "long": "--agent",
+          "takes_value": true,
+          "value_name": "agent",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--agents",
+          "long": "--agents",
+          "takes_value": true,
+          "value_name": "json",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--allow-dangerously-skip-permissions",
+          "long": "--allow-dangerously-skip-permissions",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--allowedTools",
+          "long": "--allowedTools",
+          "takes_value": true,
+          "value_name": "tools...",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--append-system-prompt",
+          "long": "--append-system-prompt",
+          "takes_value": true,
+          "value_name": "prompt",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--betas",
+          "long": "--betas",
+          "takes_value": true,
+          "value_name": "betas...",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--chrome",
+          "long": "--chrome",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--continue",
+          "long": "--continue",
+          "short": "-c",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--dangerously-skip-permissions",
+          "long": "--dangerously-skip-permissions",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--debug",
+          "long": "--debug",
+          "short": "-d",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--debug-file",
+          "long": "--debug-file",
+          "takes_value": true,
+          "value_name": "path",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--disable-slash-commands",
+          "long": "--disable-slash-commands",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--disallowedTools",
+          "long": "--disallowedTools",
+          "takes_value": true,
+          "value_name": "tools...",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--fallback-model",
+          "long": "--fallback-model",
+          "takes_value": true,
+          "value_name": "model",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--file",
+          "long": "--file",
+          "takes_value": true,
+          "value_name": "specs...",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--fork-session",
+          "long": "--fork-session",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--from-pr",
+          "long": "--from-pr",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--ide",
+          "long": "--ide",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--include-partial-messages",
+          "long": "--include-partial-messages",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--input-format",
+          "long": "--input-format",
+          "takes_value": true,
+          "value_name": "format",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--json-schema",
+          "long": "--json-schema",
+          "takes_value": true,
+          "value_name": "schema",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--max-budget-usd",
+          "long": "--max-budget-usd",
+          "takes_value": true,
+          "value_name": "amount",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mcp-config",
+          "long": "--mcp-config",
+          "takes_value": true,
+          "value_name": "configs...",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mcp-debug",
+          "long": "--mcp-debug",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--model",
+          "long": "--model",
+          "takes_value": true,
+          "value_name": "model",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--no-chrome",
+          "long": "--no-chrome",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--no-session-persistence",
+          "long": "--no-session-persistence",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--output-format",
+          "long": "--output-format",
+          "takes_value": true,
+          "value_name": "format",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--permission-mode",
+          "long": "--permission-mode",
+          "takes_value": true,
+          "value_name": "mode",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--plugin-dir",
+          "long": "--plugin-dir",
+          "takes_value": true,
+          "value_name": "paths...",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print",
+          "long": "--print",
+          "short": "-p",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--replay-user-messages",
+          "long": "--replay-user-messages",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--resume",
+          "long": "--resume",
+          "short": "-r",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--session-id",
+          "long": "--session-id",
+          "takes_value": true,
+          "value_name": "id",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--setting-sources",
+          "long": "--setting-sources",
+          "takes_value": true,
+          "value_name": "sources",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--settings",
+          "long": "--settings",
+          "takes_value": true,
+          "value_name": "file-or-json",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--strict-mcp-config",
+          "long": "--strict-mcp-config",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--system-prompt",
+          "long": "--system-prompt",
+          "takes_value": true,
+          "value_name": "prompt",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--tools",
+          "long": "--tools",
+          "takes_value": true,
+          "value_name": "tools...",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--verbose",
+          "long": "--verbose",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "doctor"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude doctor [options]"
+    },
+    {
+      "path": [
+        "install"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude install [options] [target]",
+      "flags": [
+        {
+          "key": "--force",
+          "long": "--force",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude mcp [options] [command]"
+    },
+    {
+      "path": [
+        "mcp",
+        "add"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude mcp add [options] <name> <commandOrUrl> [args...]",
+      "args": [
+        {
+          "name": "commandOrUrl",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--callback-port",
+          "long": "--callback-port",
+          "takes_value": true,
+          "value_name": "port",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--client-id",
+          "long": "--client-id",
+          "takes_value": true,
+          "value_name": "clientId",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--client-secret",
+          "long": "--client-secret",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--env",
+          "long": "--env",
+          "short": "-e",
+          "takes_value": true,
+          "value_name": "env...",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--header",
+          "long": "--header",
+          "short": "-H",
+          "takes_value": true,
+          "value_name": "header...",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--transport",
+          "long": "--transport",
+          "short": "-t",
+          "takes_value": true,
+          "value_name": "transport",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add-from-claude-desktop"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude mcp add-from-claude-desktop [options]",
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add-json"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude mcp add-json [options] <name> <json>",
+      "args": [
+        {
+          "name": "json",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--client-secret",
+          "long": "--client-secret",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "get"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude mcp get [options] <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude mcp list [options]"
+    },
+    {
+      "path": [
+        "mcp",
+        "remove"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude mcp remove [options] <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "reset-project-choices"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude mcp reset-project-choices [options]"
+    },
+    {
+      "path": [
+        "mcp",
+        "serve"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude mcp serve [options]"
+    },
+    {
+      "path": [
+        "plugin"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin [options] [command]"
+    },
+    {
+      "path": [
+        "plugin",
+        "disable"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin disable [options] [plugin]",
+      "flags": [
+        {
+          "key": "--all",
+          "long": "--all",
+          "short": "-a",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "enable"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin enable [options] <plugin>",
+      "args": [
+        {
+          "name": "plugin",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "install"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin install|i [options] <plugin>",
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "list"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin list [options]",
+      "flags": [
+        {
+          "key": "--available",
+          "long": "--available",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin marketplace [options] [command]"
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "add"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin marketplace add [options] <source>",
+      "args": [
+        {
+          "name": "source",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "list"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin marketplace list [options]",
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "remove"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin marketplace remove|rm [options] <name>"
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "update"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin marketplace update [options] [name]"
+    },
+    {
+      "path": [
+        "plugin",
+        "uninstall"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin uninstall|remove [options] <plugin>",
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "update"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin update [options] <plugin>",
+      "args": [
+        {
+          "name": "plugin",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--scope",
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope",
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "validate"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude plugin validate [options] <path>",
+      "args": [
+        {
+          "name": "path",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "setup-token"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude setup-token [options]"
+    },
+    {
+      "path": [
+        "update"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "usage": "claude update|upgrade [options]"
+    }
+  ]
+}
