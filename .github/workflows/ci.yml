@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Guard: no backend types in pub API
+      - name: "Guard: no backend types in pub API"
         shell: bash
         run: |
           set -euo pipefail
