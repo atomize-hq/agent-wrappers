@@ -541,12 +541,49 @@ pub mod backends {
 
     #[cfg(feature = "claude_code")]
     pub mod claude_code {
-        use std::{collections::BTreeMap, path::PathBuf, pin::Pin, time::Duration};
+        use std::{
+            collections::{BTreeMap, BTreeSet},
+            future::Future,
+            path::PathBuf,
+            pin::Pin,
+            task::{Context, Poll},
+            time::Duration,
+        };
+
+        use claude_code::{ClaudeOutputFormat, ClaudePrintRequest, ClaudeStreamJsonParser};
+        use futures_core::Stream;
+        use tokio::sync::{mpsc, oneshot};
 
         use super::super::{
-            AgentWrapperBackend, AgentWrapperCapabilities, AgentWrapperError, AgentWrapperKind,
+            AgentWrapperBackend, AgentWrapperCapabilities, AgentWrapperCompletion,
+            AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind, AgentWrapperKind,
             AgentWrapperRunHandle, AgentWrapperRunRequest,
         };
+
+        const AGENT_KIND: &str = "claude_code";
+        const CHANNEL_ASSISTANT: &str = "assistant";
+        const CHANNEL_ERROR: &str = "error";
+        const CHANNEL_STATUS: &str = "status";
+        const CHANNEL_TOOL: &str = "tool";
+
+        const CHANNEL_BOUND_BYTES: usize = 128;
+        const TEXT_BOUND_BYTES: usize = 65536;
+        const MESSAGE_BOUND_BYTES: usize = 4096;
+
+        struct ReceiverEventStream {
+            rx: mpsc::Receiver<AgentWrapperEvent>,
+        }
+
+        impl Stream for ReceiverEventStream {
+            type Item = AgentWrapperEvent;
+
+            fn poll_next(
+                mut self: Pin<&mut Self>,
+                cx: &mut Context<'_>,
+            ) -> Poll<Option<Self::Item>> {
+                Pin::new(&mut self.rx).poll_recv(cx)
+            }
+        }
 
         #[derive(Clone, Debug, Default)]
         pub struct ClaudeCodeBackendConfig {
@@ -557,24 +594,25 @@ pub mod backends {
         }
 
         pub struct ClaudeCodeBackend {
-            _config: ClaudeCodeBackendConfig,
+            config: ClaudeCodeBackendConfig,
         }
 
         impl ClaudeCodeBackend {
             pub fn new(config: ClaudeCodeBackendConfig) -> Self {
-                Self { _config: config }
+                Self { config }
             }
         }
 
         impl AgentWrapperBackend for ClaudeCodeBackend {
             fn kind(&self) -> AgentWrapperKind {
-                AgentWrapperKind("claude_code".to_string())
+                AgentWrapperKind(AGENT_KIND.to_string())
             }
 
             fn capabilities(&self) -> AgentWrapperCapabilities {
-                let mut ids = std::collections::BTreeSet::new();
+                let mut ids = BTreeSet::new();
                 ids.insert("agent_api.run".to_string());
                 ids.insert("agent_api.events".to_string());
+                ids.insert("backend.claude_code.print_stream_json".to_string());
                 AgentWrapperCapabilities { ids }
             }
 
@@ -583,24 +621,384 @@ pub mod backends {
                 request: AgentWrapperRunRequest,
             ) -> Pin<
                 Box<
-                    dyn std::future::Future<
-                            Output = Result<AgentWrapperRunHandle, AgentWrapperError>,
-                        > + Send
+                    dyn Future<Output = Result<AgentWrapperRunHandle, AgentWrapperError>>
+                        + Send
                         + '_,
                 >,
             > {
-                Box::pin(async move {
-                    if let Some((capability, _)) = request.extensions.into_iter().next() {
-                        return Err(AgentWrapperError::UnsupportedCapability {
-                            agent_kind: "claude_code".to_string(),
-                            capability,
-                        });
-                    }
+                let config = self.config.clone();
+                Box::pin(async move { run_impl(config, request).await })
+            }
+        }
+
+        async fn run_impl(
+            config: ClaudeCodeBackendConfig,
+            request: AgentWrapperRunRequest,
+        ) -> Result<AgentWrapperRunHandle, AgentWrapperError> {
+            if request.prompt.trim().is_empty() {
+                return Err(AgentWrapperError::InvalidRequest {
+                    message: "prompt must not be empty".to_string(),
+                });
+            }
+
+            if let Some((capability, _)) = request.extensions.iter().next() {
+                return Err(AgentWrapperError::UnsupportedCapability {
+                    agent_kind: AGENT_KIND.to_string(),
+                    capability: capability.clone(),
+                });
+            }
+
+            let (tx, rx) = mpsc::channel::<AgentWrapperEvent>(32);
+            let (completion_tx, completion_rx) =
+                oneshot::channel::<Result<AgentWrapperCompletion, AgentWrapperError>>();
+
+            tokio::spawn(async move {
+                let result = run_claude_code(config, request, tx).await;
+                let _ = completion_tx.send(result);
+            });
+
+            let events: super::super::DynAgentWrapperEventStream =
+                Box::pin(ReceiverEventStream { rx });
+
+            let completion: super::super::DynAgentWrapperCompletion = Box::pin(async move {
+                completion_rx.await.unwrap_or_else(|_| {
                     Err(AgentWrapperError::Backend {
-                        message: "claude_code backend not implemented in C0".to_string(),
+                        message: "completion channel dropped".to_string(),
                     })
                 })
+            });
+
+            Ok(AgentWrapperRunHandle { events, completion })
+        }
+
+        async fn run_claude_code(
+            config: ClaudeCodeBackendConfig,
+            request: AgentWrapperRunRequest,
+            tx: mpsc::Sender<AgentWrapperEvent>,
+        ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
+            let timeout = request.timeout.or(config.default_timeout);
+            if let Some(timeout) = timeout {
+                return tokio::time::timeout(timeout, run_claude_code_inner(config, request, tx))
+                    .await
+                    .map_err(|_| AgentWrapperError::Backend {
+                        message: format!("claude_code exceeded timeout of {timeout:?}"),
+                    })?;
             }
+
+            run_claude_code_inner(config, request, tx).await
+        }
+
+        async fn run_claude_code_inner(
+            config: ClaudeCodeBackendConfig,
+            request: AgentWrapperRunRequest,
+            tx: mpsc::Sender<AgentWrapperEvent>,
+        ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
+            let mut builder = claude_code::ClaudeClient::builder();
+            if let Some(binary) = config.binary.as_ref() {
+                builder = builder.binary(binary.clone());
+            }
+
+            let working_dir = request
+                .working_dir
+                .clone()
+                .or_else(|| config.default_working_dir.clone());
+            if let Some(dir) = working_dir {
+                builder = builder.working_dir(dir);
+            }
+
+            builder = builder.timeout(request.timeout.or(config.default_timeout));
+
+            for (k, v) in config.env.iter() {
+                builder = builder.env(k.clone(), v.clone());
+            }
+            for (k, v) in request.env.iter() {
+                builder = builder.env(k.clone(), v.clone());
+            }
+
+            let client = builder.build();
+            let print_req = ClaudePrintRequest::new(request.prompt)
+                .output_format(ClaudeOutputFormat::StreamJson)
+                .include_partial_messages(true);
+
+            let res = match client.print(print_req).await {
+                Ok(res) => res,
+                Err(err) => {
+                    let _ = tx
+                        .send(error_event(format!("claude_code error: {err}")))
+                        .await;
+                    drop(tx);
+                    return Err(AgentWrapperError::Backend {
+                        message: format!("claude_code error: {err}"),
+                    });
+                }
+            };
+
+            let stdout = String::from_utf8_lossy(&res.output.stdout);
+            let mut parser = ClaudeStreamJsonParser::new();
+
+            for line in stdout.lines() {
+                match parser.parse_line(line) {
+                    Ok(None) => {}
+                    Ok(Some(ev)) => {
+                        let mapped = map_stream_json_event(ev);
+                        for event in mapped {
+                            if tx.send(event).await.is_err() {
+                                break;
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        let _ = tx.send(error_event(redact_parse_error(&err))).await;
+                    }
+                }
+            }
+
+            drop(tx);
+
+            Ok(AgentWrapperCompletion {
+                status: res.output.status,
+                final_text: None,
+                data: None,
+            })
+        }
+
+        pub fn map_stream_json_event(
+            ev: claude_code::ClaudeStreamJsonEvent,
+        ) -> Vec<AgentWrapperEvent> {
+            match ev {
+                claude_code::ClaudeStreamJsonEvent::SystemInit { .. } => {
+                    vec![status_event(Some("system init".to_string()))]
+                }
+                claude_code::ClaudeStreamJsonEvent::SystemOther { subtype, .. } => {
+                    vec![status_event(Some(format!("system {subtype}")))]
+                }
+                claude_code::ClaudeStreamJsonEvent::ResultError { .. } => {
+                    vec![error_event("result error".to_string())]
+                }
+                claude_code::ClaudeStreamJsonEvent::ResultSuccess { .. } => {
+                    vec![status_event(Some("result success".to_string()))]
+                }
+                claude_code::ClaudeStreamJsonEvent::AssistantMessage { raw, .. } => {
+                    map_assistant_message(&raw)
+                }
+                claude_code::ClaudeStreamJsonEvent::StreamEvent { stream, .. } => {
+                    map_stream_event(&stream.raw)
+                }
+                claude_code::ClaudeStreamJsonEvent::UserMessage { .. } => vec![status_event(None)],
+                claude_code::ClaudeStreamJsonEvent::Unknown { .. } => vec![unknown_event()],
+            }
+        }
+
+        fn map_assistant_message(raw: &serde_json::Value) -> Vec<AgentWrapperEvent> {
+            let Some(blocks) = raw
+                .get("message")
+                .and_then(|m| m.get("content"))
+                .and_then(|c| c.as_array())
+            else {
+                return vec![unknown_event()];
+            };
+
+            let mut out = Vec::new();
+            for block in blocks {
+                let Some(obj) = block.as_object() else {
+                    out.push(unknown_event());
+                    continue;
+                };
+                let block_type = obj.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                match block_type {
+                    "text" => {
+                        if let Some(text) = obj.get("text").and_then(|v| v.as_str()) {
+                            out.extend(text_output_events(text, Some(CHANNEL_ASSISTANT)));
+                        } else {
+                            out.push(unknown_event());
+                        }
+                    }
+                    "tool_use" => out.push(tool_call_event()),
+                    "tool_result" => out.push(tool_result_event()),
+                    _ => out.push(unknown_event()),
+                }
+            }
+            out
+        }
+
+        fn map_stream_event(raw: &serde_json::Value) -> Vec<AgentWrapperEvent> {
+            let Some(obj) = raw.as_object() else {
+                return vec![unknown_event()];
+            };
+            let event_type = obj.get("type").and_then(|v| v.as_str()).unwrap_or("");
+            match event_type {
+                "content_block_start" => {
+                    let Some(content_block) = obj.get("content_block").and_then(|v| v.as_object())
+                    else {
+                        return vec![unknown_event()];
+                    };
+                    let block_type = content_block
+                        .get("type")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    match block_type {
+                        "tool_use" => vec![tool_call_event()],
+                        "tool_result" => vec![tool_result_event()],
+                        _ => vec![status_event(None)],
+                    }
+                }
+                "content_block_delta" => {
+                    let Some(delta) = obj.get("delta").and_then(|v| v.as_object()) else {
+                        return vec![unknown_event()];
+                    };
+                    let delta_type = delta.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                    match delta_type {
+                        "text_delta" => {
+                            let Some(text) = delta.get("text").and_then(|v| v.as_str()) else {
+                                return vec![unknown_event()];
+                            };
+                            text_output_events(text, Some(CHANNEL_ASSISTANT))
+                        }
+                        "input_json_delta" => vec![tool_call_event()],
+                        _ => vec![unknown_event()],
+                    }
+                }
+                _ => vec![status_event(None)],
+            }
+        }
+
+        fn tool_call_event() -> AgentWrapperEvent {
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
+                kind: AgentWrapperEventKind::ToolCall,
+                channel: enforce_channel_bound(Some(CHANNEL_TOOL.to_string())),
+                text: None,
+                message: None,
+                data: None,
+            }
+        }
+
+        fn tool_result_event() -> AgentWrapperEvent {
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
+                kind: AgentWrapperEventKind::ToolResult,
+                channel: enforce_channel_bound(Some(CHANNEL_TOOL.to_string())),
+                text: None,
+                message: None,
+                data: None,
+            }
+        }
+
+        fn status_event(message: Option<String>) -> AgentWrapperEvent {
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
+                kind: AgentWrapperEventKind::Status,
+                channel: enforce_channel_bound(Some(CHANNEL_STATUS.to_string())),
+                text: None,
+                message: message.map(enforce_message_bound),
+                data: None,
+            }
+        }
+
+        fn error_event(message: String) -> AgentWrapperEvent {
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
+                kind: AgentWrapperEventKind::Error,
+                channel: enforce_channel_bound(Some(CHANNEL_ERROR.to_string())),
+                text: None,
+                message: Some(enforce_message_bound(message)),
+                data: None,
+            }
+        }
+
+        fn unknown_event() -> AgentWrapperEvent {
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
+                kind: AgentWrapperEventKind::Unknown,
+                channel: None,
+                text: None,
+                message: None,
+                data: None,
+            }
+        }
+
+        fn text_output_events(text: &str, channel: Option<&str>) -> Vec<AgentWrapperEvent> {
+            split_utf8_chunks(text, TEXT_BOUND_BYTES)
+                .into_iter()
+                .map(|chunk| AgentWrapperEvent {
+                    agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
+                    kind: AgentWrapperEventKind::TextOutput,
+                    channel: enforce_channel_bound(channel.map(|c| c.to_string())),
+                    text: Some(chunk),
+                    message: None,
+                    data: None,
+                })
+                .collect()
+        }
+
+        fn enforce_channel_bound(channel: Option<String>) -> Option<String> {
+            let channel = channel?;
+            if channel.len() <= CHANNEL_BOUND_BYTES {
+                Some(channel)
+            } else {
+                None
+            }
+        }
+
+        fn enforce_message_bound(message: String) -> String {
+            if message.len() <= MESSAGE_BOUND_BYTES {
+                return message;
+            }
+            const SUFFIX: &str = "…(truncated)";
+            let suffix_bytes = SUFFIX.len();
+            if MESSAGE_BOUND_BYTES > suffix_bytes {
+                let prefix = utf8_truncate_to_bytes(&message, MESSAGE_BOUND_BYTES - suffix_bytes);
+                let mut out = String::with_capacity(MESSAGE_BOUND_BYTES);
+                out.push_str(prefix);
+                out.push_str(SUFFIX);
+                out
+            } else {
+                utf8_truncate_to_bytes("…", MESSAGE_BOUND_BYTES).to_string()
+            }
+        }
+
+        fn split_utf8_chunks(text: &str, bound_bytes: usize) -> Vec<String> {
+            if bound_bytes == 0 {
+                return Vec::new();
+            }
+            if text.len() <= bound_bytes {
+                return vec![text.to_string()];
+            }
+
+            let mut out = Vec::new();
+            let mut start = 0usize;
+            while start < text.len() {
+                let mut end = std::cmp::min(start + bound_bytes, text.len());
+                while end > start && !text.is_char_boundary(end) {
+                    end -= 1;
+                }
+                if end == start {
+                    let ch_len = text[start..]
+                        .chars()
+                        .next()
+                        .map(|ch| ch.len_utf8())
+                        .unwrap_or(1);
+                    end = std::cmp::min(start + ch_len, text.len());
+                }
+                out.push(text[start..end].to_string());
+                start = end;
+            }
+            out
+        }
+
+        fn utf8_truncate_to_bytes(s: &str, bound_bytes: usize) -> &str {
+            if s.len() <= bound_bytes {
+                return s;
+            }
+            let mut end = std::cmp::min(bound_bytes, s.len());
+            while end > 0 && !s.is_char_boundary(end) {
+                end -= 1;
+            }
+            &s[..end]
+        }
+
+        fn redact_parse_error(err: &claude_code::ClaudeStreamJsonParseError) -> String {
+            err.message.clone()
         }
     }
 }
