@@ -117,3 +117,36 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
   - `cargo test --workspace --all-targets --all-features` (pass)
   - `make preflight` (skipped; Linux only)
 - Blockers: none
+
+## [2026-02-17 13:24 UTC] Code Agent – C2-code – START
+- Plan: implement Claude Code feature-gated backend (`agent_api` + `claude_code`) per C2 spec; run fmt/clippy; commit on branch `uaa-c2-claude-code`
+- Blockers: none
+
+## [2026-02-17 13:37 UTC] Code Agent – C2-code – END
+- Branch `uaa-c2-claude-code` (commit `945ec1d`) implemented:
+  - `agent_api::backends::claude_code::ClaudeCodeBackend` run + capabilities (`agent_api.events` but not live)
+  - `agent_api::backends::claude_code::map_stream_json_event` mapping Claude stream-json → `AgentWrapperEvent`
+- Commands: `cargo fmt` (pass); `cargo clippy --workspace --all-targets --all-features -- -D warnings` (pass)
+- Blockers: none
+
+## [2026-02-17 13:24 UTC] Test Agent – C2-test – START
+- Plan: add fixture-based tests for Claude event mapping per C2 spec; commit on branch `uaa-c2-claude-test`
+- Blockers: none
+
+## [2026-02-17 13:35 UTC] Test Agent – C2-test – END
+- Branch `uaa-c2-claude-test` (commit `7243109`) added `crates/agent_api/tests/c2_claude_event_mapping.rs` (feature-gated)
+- Commands: `cargo fmt` (pass); `cargo test -p agent_api --features claude_code` (pass after integration merge)
+- Blockers: none
+
+## [2026-02-17 13:42 UTC] Integration Agent – C2-integ – START
+- Plan: merge `uaa-c2-claude-code` + `uaa-c2-claude-test` into `uaa-c2-claude-integ`; run gates; fast-forward merge into `feat/universal-agent-api`
+- Blockers: none
+
+## [2026-02-17 13:49 UTC] Integration Agent – C2-integ – END
+- Merged `uaa-c2-claude-code` + `uaa-c2-claude-test` and reconciled to C2 spec (merge commits `c97b924`, `c00ee4f`)
+- Commands:
+  - `cargo fmt` (pass)
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings` (pass)
+  - `cargo test --workspace --all-targets --all-features` (pass)
+  - `make preflight` (skipped; Linux only)
+- Blockers: none

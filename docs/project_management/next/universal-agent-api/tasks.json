@@ -274,7 +274,7 @@
     "name": "C2: Claude Code backend adapter (code)",
     "type": "code",
     "phase": "C2",
-    "status": "pending",
+    "status": "completed",
     "description": "Implement `agent_api` feature-gated Claude Code backend adapter (production code only).",
     "references": [
       "docs/project_management/next/universal-agent-api/plan.md",
@@ -320,7 +320,7 @@
     "name": "C2: Claude Code backend adapter (test)",
     "type": "test",
     "phase": "C2",
-    "status": "pending",
+    "status": "completed",
     "description": "Add fixture/sample-based tests for Claude backend mapping (tests only).",
     "references": [
       "docs/project_management/next/universal-agent-api/plan.md",
@@ -363,7 +363,7 @@
     "name": "C2: Claude Code backend adapter (integration)",
     "type": "integration",
     "phase": "C2",
-    "status": "pending",
+    "status": "completed",
     "description": "Merge C2 code/test, align behavior with the spec, and gate with fmt/clippy/tests/preflight (Linux).",
     "references": [
       "docs/project_management/next/universal-agent-api/plan.md",
