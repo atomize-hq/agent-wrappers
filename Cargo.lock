@@ -3,6 +3,17 @@
 version = 3
 
 [[package]]
+name = "agent_api"
+version = "0.2.0"
+dependencies = [
+ "claude_code",
+ "codex",
+ "futures-core",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
