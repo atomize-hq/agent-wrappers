@@ -8,16 +8,14 @@ impl ValidatedChannelString {
         if raw.is_empty() {
             return None;
         }
-        if raw.as_bytes().len() > Self::MAX_BYTES {
+        if raw.len() > Self::MAX_BYTES {
             return None;
         }
         if !raw.is_ascii() {
             return None;
         }
         let mut chars = raw.chars();
-        let Some(first) = chars.next() else {
-            return None;
-        };
+        let first = chars.next()?;
         if !is_alnum(first) {
             return None;
         }
