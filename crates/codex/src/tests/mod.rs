@@ -26,6 +26,7 @@ mod app_server;
 mod auth_session;
 mod builder_env_home;
 mod bundled_binary;
+#[cfg(unix)]
 mod capabilities;
 mod cli;
 mod cli_overrides;
