@@ -425,6 +425,23 @@ pub mod backends {
             request: AgentWrapperRunRequest,
             tx: mpsc::Sender<AgentWrapperEvent>,
         ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
+            let timeout = request.timeout.or(config.default_timeout);
+            if let Some(timeout) = timeout {
+                return tokio::time::timeout(timeout, run_codex_inner(config, request, tx))
+                    .await
+                    .map_err(|_| AgentWrapperError::Backend {
+                        message: format!("codex exceeded timeout of {timeout:?}"),
+                    })?;
+            }
+
+            run_codex_inner(config, request, tx).await
+        }
+
+        async fn run_codex_inner(
+            config: CodexBackendConfig,
+            request: AgentWrapperRunRequest,
+            tx: mpsc::Sender<AgentWrapperEvent>,
+        ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
             let binary = config.binary.unwrap_or_else(|| PathBuf::from("codex"));
             let mut command = Command::new(binary);
             command
