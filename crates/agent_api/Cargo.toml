@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 [features]
 default = []
 codex = ["dep:codex", "dep:tokio"]
-claude_code = ["dep:claude_code"]
+claude_code = ["dep:claude_code", "dep:tokio"]
 
 [dependencies]
 futures-core = "0.3"
