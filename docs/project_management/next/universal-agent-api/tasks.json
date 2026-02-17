@@ -407,7 +407,7 @@
     "name": "CP1: CI checkpoint (GitHub-hosted multi-OS)",
     "type": "integration",
     "phase": "CP1",
-    "status": "pending",
+    "status": "completed",
     "description": "Run the bounded multi-OS CI gates defined in ci_checkpoint_plan.md after C2 is integrated.",
     "references": [
       "docs/project_management/next/universal-agent-api/ci_checkpoint_plan.md",

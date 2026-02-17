@@ -150,3 +150,18 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
   - `cargo test --workspace --all-targets --all-features` (pass)
   - `make preflight` (skipped; Linux only)
 - Blockers: none
+
+## [2026-02-17 18:57 UTC] Ops/CI – CP1-ci-checkpoint – START
+- Tested SHA: `9d616ded0730a00a59c3f0f51570afbb0f0bf550`
+- Triggered GitHub Actions workflow: Universal Agent API smoke (run `22111611396`: https://github.com/atomize-hq/agent-wrappers/actions/runs/22111611396)
+- Gate: ubuntu/macos/windows smoke scripts + linux preflight
+- Blockers: none
+
+## [2026-02-17 19:13 UTC] Ops/CI – CP1-ci-checkpoint – END
+- Workflow run: `22111611396` (pass): https://github.com/atomize-hq/agent-wrappers/actions/runs/22111611396
+- Evidence:
+  - ubuntu-latest smoke: pass (job `63909004013`)
+  - macos-latest smoke: pass (job `63909004007`)
+  - windows-latest smoke: pass (job `63909004021`)
+  - linux preflight: pass (job `63909004053`)
+- Blockers: none
