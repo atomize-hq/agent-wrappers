@@ -82,6 +82,34 @@ jobs:
           set -euo pipefail
           make loc-check
 
+  agent-api-public-api-guard:
+    name: Agent API public API guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-public-api
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo install cargo-public-api --locked
+      - name: Guard: no backend types in public API
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd crates/agent_api
+          cargo public-api --all-features > public-api.txt
+          if sed \
+              -e 's/agent_api::backends::codex::/agent_api::backends::codex_mod::/g' \
+              -e 's/agent_api::backends::claude_code::/agent_api::backends::claude_mod::/g' \
+              public-api.txt \
+            | grep -nE '\\bcodex::|\\bclaude_code::'
+          then
+            echo "ERROR: backend types leaked in agent_api public API"
+            exit 1
+          fi
+
   codex-validate-artifacts:
     name: Validate Codex committed artifacts
     runs-on: ubuntu-latest

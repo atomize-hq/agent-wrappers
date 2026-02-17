@@ -10,6 +10,8 @@ use std::time::Duration;
 
 use futures_core::Stream;
 
+mod bounds;
+
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct AgentWrapperKind(String);
 
@@ -234,7 +236,7 @@ pub mod backends {
             }
         }
 
-        pub fn map_thread_event(event: &ThreadEvent) -> AgentWrapperEvent {
+        fn map_thread_event(event: &ThreadEvent) -> AgentWrapperEvent {
             match event {
                 ThreadEvent::ThreadStarted(_) => status_event(None),
                 ThreadEvent::TurnStarted(_) => status_event(None),
@@ -452,7 +454,7 @@ pub mod backends {
                 .arg("--json")
                 .arg("--full-auto")
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
+                .stderr(Stdio::null())
                 .stdin(Stdio::piped())
                 .kill_on_drop(true);
 
@@ -511,13 +513,20 @@ pub mod backends {
                 match parser.parse_line(&line) {
                     Ok(None) => {}
                     Ok(Some(event)) => {
-                        if tx.send(map_thread_event(&event)).await.is_err() {
-                            break;
+                        for mapped in crate::bounds::enforce_event_bounds(map_thread_event(&event))
+                        {
+                            if tx.send(mapped).await.is_err() {
+                                break;
+                            }
                         }
                     }
                     Err(err) => {
                         let message = redacted_exec_error(&err);
-                        let _ = tx.send(error_event(message)).await;
+                        for mapped in crate::bounds::enforce_event_bounds(error_event(message)) {
+                            if tx.send(mapped).await.is_err() {
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -531,11 +540,143 @@ pub mod backends {
 
             drop(tx);
 
-            Ok(AgentWrapperCompletion {
-                status,
-                final_text: None,
-                data: None,
-            })
+            Ok(crate::bounds::enforce_completion_bounds(
+                AgentWrapperCompletion {
+                    status,
+                    final_text: None,
+                    data: None,
+                },
+            ))
+        }
+
+        #[cfg(all(test, feature = "codex"))]
+        mod tests {
+            use super::*;
+            use crate::{AgentWrapperBackend, AgentWrapperEventKind};
+
+            fn parse_thread_event(json: &str) -> ThreadEvent {
+                serde_json::from_str(json).expect("valid codex::ThreadEvent JSON")
+            }
+
+            fn map(json: &str) -> AgentWrapperEvent {
+                let event = parse_thread_event(json);
+                map_thread_event(&event)
+            }
+
+            #[test]
+            fn codex_backend_reports_required_capabilities() {
+                let backend = CodexBackend::new(CodexBackendConfig::default());
+                let capabilities = backend.capabilities();
+                assert!(capabilities.contains("agent_api.run"));
+                assert!(capabilities.contains("agent_api.events"));
+                assert!(capabilities.contains("agent_api.events.live"));
+            }
+
+            #[test]
+            fn thread_started_maps_to_status() {
+                let mapped = map(r#"{"type":"thread.started","thread_id":"thread-1"}"#);
+                assert_eq!(mapped.agent_kind.as_str(), "codex");
+                assert_eq!(mapped.kind, AgentWrapperEventKind::Status);
+                assert_eq!(mapped.text, None);
+            }
+
+            #[test]
+            fn turn_started_maps_to_status() {
+                let mapped =
+                    map(r#"{"type":"turn.started","thread_id":"thread-1","turn_id":"turn-1"}"#);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::Status);
+                assert_eq!(mapped.text, None);
+            }
+
+            #[test]
+            fn turn_completed_maps_to_status() {
+                let mapped =
+                    map(r#"{"type":"turn.completed","thread_id":"thread-1","turn_id":"turn-1"}"#);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::Status);
+                assert_eq!(mapped.text, None);
+            }
+
+            #[test]
+            fn turn_failed_maps_to_status() {
+                let mapped = map(
+                    r#"{"type":"turn.failed","thread_id":"thread-1","turn_id":"turn-1","error":{"message":"boom"}}"#,
+                );
+                assert_eq!(mapped.kind, AgentWrapperEventKind::Status);
+                assert_eq!(mapped.text, None);
+            }
+
+            #[test]
+            fn transport_error_maps_to_error_with_message() {
+                let mapped = map(r#"{"type":"error","message":"transport failed"}"#);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::Error);
+                assert_eq!(mapped.text, None);
+                assert!(mapped.message.is_some());
+            }
+
+            #[test]
+            fn item_failed_maps_to_error_with_message() {
+                let mapped = map(
+                    r#"{"type":"item.failed","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-1","error":{"message":"tool failed"}}"#,
+                );
+                assert_eq!(mapped.kind, AgentWrapperEventKind::Error);
+                assert_eq!(mapped.text, None);
+                assert!(mapped.message.is_some());
+            }
+
+            #[test]
+            fn agent_message_item_maps_to_text_output_and_uses_text_field() {
+                let mapped = map(
+                    r#"{"type":"item.started","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-1","item_type":"agent_message","content":{"text":"hello"}}"#,
+                );
+                assert_eq!(mapped.kind, AgentWrapperEventKind::TextOutput);
+                assert_eq!(mapped.text.as_deref(), Some("hello"));
+                assert_eq!(mapped.message, None);
+            }
+
+            #[test]
+            fn agent_message_delta_maps_to_text_output_and_uses_text_field() {
+                let mapped = map(
+                    r#"{"type":"item.delta","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-1","item_type":"agent_message","delta":{"text_delta":"hi"}}"#,
+                );
+                assert_eq!(mapped.kind, AgentWrapperEventKind::TextOutput);
+                assert_eq!(mapped.text.as_deref(), Some("hi"));
+                assert_eq!(mapped.message, None);
+            }
+
+            #[test]
+            fn reasoning_item_maps_to_text_output_and_uses_text_field() {
+                let mapped = map(
+                    r#"{"type":"item.completed","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-2","item_type":"reasoning","content":{"text":"thinking"}}"#,
+                );
+                assert_eq!(mapped.kind, AgentWrapperEventKind::TextOutput);
+                assert_eq!(mapped.text.as_deref(), Some("thinking"));
+                assert_eq!(mapped.message, None);
+            }
+
+            #[test]
+            fn command_execution_item_maps_to_tool_call() {
+                let mapped = map(
+                    r#"{"type":"item.started","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-3","item_type":"command_execution","content":{"command":"echo hi"}}"#,
+                );
+                assert_eq!(mapped.kind, AgentWrapperEventKind::ToolCall);
+            }
+
+            #[test]
+            fn todo_list_item_maps_to_status() {
+                let mapped = map(
+                    r#"{"type":"item.started","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-4","item_type":"todo_list","content":{"items":[{"title":"one","completed":false}]}}"#,
+                );
+                assert_eq!(mapped.kind, AgentWrapperEventKind::Status);
+            }
+
+            #[test]
+            fn item_payload_error_maps_to_error_with_message() {
+                let mapped = map(
+                    r#"{"type":"item.completed","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-5","item_type":"error","content":{"message":"bad"}}"#,
+                );
+                assert_eq!(mapped.kind, AgentWrapperEventKind::Error);
+                assert!(mapped.message.is_some());
+            }
         }
     }
 
@@ -562,13 +703,7 @@ pub mod backends {
 
         const AGENT_KIND: &str = "claude_code";
         const CHANNEL_ASSISTANT: &str = "assistant";
-        const CHANNEL_ERROR: &str = "error";
-        const CHANNEL_STATUS: &str = "status";
         const CHANNEL_TOOL: &str = "tool";
-
-        const CHANNEL_BOUND_BYTES: usize = 128;
-        const TEXT_BOUND_BYTES: usize = 65536;
-        const MESSAGE_BOUND_BYTES: usize = 4096;
 
         struct ReceiverEventStream {
             rx: mpsc::Receiver<AgentWrapperEvent>,
@@ -742,29 +877,37 @@ pub mod backends {
                     Ok(Some(ev)) => {
                         let mapped = map_stream_json_event(ev);
                         for event in mapped {
-                            if tx.send(event).await.is_err() {
-                                break;
+                            for bounded in crate::bounds::enforce_event_bounds(event) {
+                                if tx.send(bounded).await.is_err() {
+                                    break;
+                                }
                             }
                         }
                     }
                     Err(err) => {
-                        let _ = tx.send(error_event(redact_parse_error(&err))).await;
+                        for bounded in crate::bounds::enforce_event_bounds(error_event(
+                            redact_parse_error(&err),
+                        )) {
+                            if tx.send(bounded).await.is_err() {
+                                break;
+                            }
+                        }
                     }
                 }
             }
 
             drop(tx);
 
-            Ok(AgentWrapperCompletion {
-                status: res.output.status,
-                final_text: None,
-                data: None,
-            })
+            Ok(crate::bounds::enforce_completion_bounds(
+                AgentWrapperCompletion {
+                    status: res.output.status,
+                    final_text: None,
+                    data: None,
+                },
+            ))
         }
 
-        pub fn map_stream_json_event(
-            ev: claude_code::ClaudeStreamJsonEvent,
-        ) -> Vec<AgentWrapperEvent> {
+        fn map_stream_json_event(ev: claude_code::ClaudeStreamJsonEvent) -> Vec<AgentWrapperEvent> {
             match ev {
                 claude_code::ClaudeStreamJsonEvent::SystemInit { .. } => {
                     vec![status_event(Some("system init".to_string()))]
@@ -866,7 +1009,7 @@ pub mod backends {
             AgentWrapperEvent {
                 agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
                 kind: AgentWrapperEventKind::ToolCall,
-                channel: enforce_channel_bound(Some(CHANNEL_TOOL.to_string())),
+                channel: Some(CHANNEL_TOOL.to_string()),
                 text: None,
                 message: None,
                 data: None,
@@ -877,7 +1020,7 @@ pub mod backends {
             AgentWrapperEvent {
                 agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
                 kind: AgentWrapperEventKind::ToolResult,
-                channel: enforce_channel_bound(Some(CHANNEL_TOOL.to_string())),
+                channel: Some(CHANNEL_TOOL.to_string()),
                 text: None,
                 message: None,
                 data: None,
@@ -888,9 +1031,9 @@ pub mod backends {
             AgentWrapperEvent {
                 agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
                 kind: AgentWrapperEventKind::Status,
-                channel: enforce_channel_bound(Some(CHANNEL_STATUS.to_string())),
+                channel: Some("status".to_string()),
                 text: None,
-                message: message.map(enforce_message_bound),
+                message,
                 data: None,
             }
         }
@@ -899,9 +1042,9 @@ pub mod backends {
             AgentWrapperEvent {
                 agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
                 kind: AgentWrapperEventKind::Error,
-                channel: enforce_channel_bound(Some(CHANNEL_ERROR.to_string())),
+                channel: Some("error".to_string()),
                 text: None,
-                message: Some(enforce_message_bound(message)),
+                message: Some(message),
                 data: None,
             }
         }
@@ -918,87 +1061,179 @@ pub mod backends {
         }
 
         fn text_output_events(text: &str, channel: Option<&str>) -> Vec<AgentWrapperEvent> {
-            split_utf8_chunks(text, TEXT_BOUND_BYTES)
-                .into_iter()
-                .map(|chunk| AgentWrapperEvent {
-                    agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
-                    kind: AgentWrapperEventKind::TextOutput,
-                    channel: enforce_channel_bound(channel.map(|c| c.to_string())),
-                    text: Some(chunk),
-                    message: None,
-                    data: None,
-                })
-                .collect()
-        }
-
-        fn enforce_channel_bound(channel: Option<String>) -> Option<String> {
-            let channel = channel?;
-            if channel.len() <= CHANNEL_BOUND_BYTES {
-                Some(channel)
-            } else {
-                None
-            }
-        }
-
-        fn enforce_message_bound(message: String) -> String {
-            if message.len() <= MESSAGE_BOUND_BYTES {
-                return message;
-            }
-            const SUFFIX: &str = "…(truncated)";
-            let suffix_bytes = SUFFIX.len();
-            if MESSAGE_BOUND_BYTES > suffix_bytes {
-                let prefix = utf8_truncate_to_bytes(&message, MESSAGE_BOUND_BYTES - suffix_bytes);
-                let mut out = String::with_capacity(MESSAGE_BOUND_BYTES);
-                out.push_str(prefix);
-                out.push_str(SUFFIX);
-                out
-            } else {
-                utf8_truncate_to_bytes("…", MESSAGE_BOUND_BYTES).to_string()
-            }
-        }
-
-        fn split_utf8_chunks(text: &str, bound_bytes: usize) -> Vec<String> {
-            if bound_bytes == 0 {
-                return Vec::new();
-            }
-            if text.len() <= bound_bytes {
-                return vec![text.to_string()];
-            }
-
-            let mut out = Vec::new();
-            let mut start = 0usize;
-            while start < text.len() {
-                let mut end = std::cmp::min(start + bound_bytes, text.len());
-                while end > start && !text.is_char_boundary(end) {
-                    end -= 1;
-                }
-                if end == start {
-                    let ch_len = text[start..]
-                        .chars()
-                        .next()
-                        .map(|ch| ch.len_utf8())
-                        .unwrap_or(1);
-                    end = std::cmp::min(start + ch_len, text.len());
-                }
-                out.push(text[start..end].to_string());
-                start = end;
-            }
-            out
-        }
-
-        fn utf8_truncate_to_bytes(s: &str, bound_bytes: usize) -> &str {
-            if s.len() <= bound_bytes {
-                return s;
-            }
-            let mut end = std::cmp::min(bound_bytes, s.len());
-            while end > 0 && !s.is_char_boundary(end) {
-                end -= 1;
-            }
-            &s[..end]
+            vec![AgentWrapperEvent {
+                agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
+                kind: AgentWrapperEventKind::TextOutput,
+                channel: channel.map(|c| c.to_string()),
+                text: Some(text.to_string()),
+                message: None,
+                data: None,
+            }]
         }
 
         fn redact_parse_error(err: &claude_code::ClaudeStreamJsonParseError) -> String {
             err.message.clone()
+        }
+
+        #[cfg(all(test, feature = "claude_code"))]
+        mod tests {
+            use super::*;
+            use crate::{AgentWrapperBackend, AgentWrapperEventKind};
+            use claude_code::{ClaudeStreamJsonEvent, ClaudeStreamJsonParser};
+
+            const SYSTEM_INIT: &str =
+                include_str!("../../claude_code/tests/fixtures/stream_json/v1/system_init.jsonl");
+            const SYSTEM_OTHER: &str =
+                include_str!("../../claude_code/tests/fixtures/stream_json/v1/system_other.jsonl");
+            const RESULT_ERROR: &str =
+                include_str!("../../claude_code/tests/fixtures/stream_json/v1/result_error.jsonl");
+            const ASSISTANT_MESSAGE_TEXT: &str = include_str!(
+                "../../claude_code/tests/fixtures/stream_json/v1/assistant_message_text.jsonl"
+            );
+            const ASSISTANT_MESSAGE_TOOL_USE: &str = include_str!(
+                "../../claude_code/tests/fixtures/stream_json/v1/assistant_message_tool_use.jsonl"
+            );
+            const ASSISTANT_MESSAGE_TOOL_RESULT: &str = include_str!(
+                "../../claude_code/tests/fixtures/stream_json/v1/assistant_message_tool_result.jsonl"
+            );
+            const STREAM_EVENT_TEXT_DELTA: &str = include_str!(
+                "../../claude_code/tests/fixtures/stream_json/v1/stream_event_text_delta.jsonl"
+            );
+            const STREAM_EVENT_INPUT_JSON_DELTA: &str = include_str!(
+                "../../claude_code/tests/fixtures/stream_json/v1/stream_event_input_json_delta.jsonl"
+            );
+            const STREAM_EVENT_TOOL_USE_START: &str = include_str!(
+                "../../claude_code/tests/fixtures/stream_json/v1/stream_event_tool_use_start.jsonl"
+            );
+            const STREAM_EVENT_TOOL_RESULT_START: &str = include_str!(
+                "../../claude_code/tests/fixtures/stream_json/v1/stream_event_tool_result_start.jsonl"
+            );
+            const UNKNOWN_OUTER_TYPE: &str = include_str!(
+                "../../claude_code/tests/fixtures/stream_json/v1/unknown_outer_type.jsonl"
+            );
+
+            fn parse_stream_json_fixture(text: &str) -> ClaudeStreamJsonEvent {
+                let line = text
+                    .lines()
+                    .find(|line| !line.chars().all(|ch| ch.is_whitespace()))
+                    .expect("fixture contains a non-empty line");
+                let mut parser = ClaudeStreamJsonParser::new();
+                parser
+                    .parse_line(line)
+                    .expect("fixture parses")
+                    .expect("fixture yields a typed event")
+            }
+
+            fn map_fixture(text: &str) -> AgentWrapperEvent {
+                let event = parse_stream_json_fixture(text);
+                let mapped = map_stream_json_event(event);
+                assert_eq!(
+                    mapped.len(),
+                    1,
+                    "fixture should map to exactly one wrapper event"
+                );
+                mapped
+                    .into_iter()
+                    .next()
+                    .expect("fixture mapping returns at least one event")
+            }
+
+            #[test]
+            fn claude_backend_reports_required_capabilities() {
+                let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig::default());
+                let capabilities = backend.capabilities();
+                assert!(capabilities.contains("agent_api.run"));
+                assert!(capabilities.contains("agent_api.events"));
+                assert!(!capabilities.contains("agent_api.events.live"));
+            }
+
+            #[test]
+            fn claude_backend_registers_under_claude_code_kind_id() {
+                let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig::default());
+                assert_eq!(backend.kind().as_str(), "claude_code");
+            }
+
+            #[test]
+            fn system_init_maps_to_status() {
+                let mapped = map_fixture(SYSTEM_INIT);
+                assert_eq!(mapped.agent_kind.as_str(), "claude_code");
+                assert_eq!(mapped.kind, AgentWrapperEventKind::Status);
+                assert_eq!(mapped.text, None);
+            }
+
+            #[test]
+            fn system_other_maps_to_status() {
+                let mapped = map_fixture(SYSTEM_OTHER);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::Status);
+                assert_eq!(mapped.text, None);
+            }
+
+            #[test]
+            fn result_error_maps_to_error_with_message() {
+                let mapped = map_fixture(RESULT_ERROR);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::Error);
+                assert_eq!(mapped.text, None);
+                assert!(mapped.message.is_some());
+            }
+
+            #[test]
+            fn assistant_message_text_maps_to_text_output_and_uses_text_field() {
+                let mapped = map_fixture(ASSISTANT_MESSAGE_TEXT);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::TextOutput);
+                assert_eq!(mapped.text.as_deref(), Some("hello"));
+                assert_eq!(mapped.message, None);
+            }
+
+            #[test]
+            fn assistant_message_tool_use_maps_to_tool_call() {
+                let mapped = map_fixture(ASSISTANT_MESSAGE_TOOL_USE);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::ToolCall);
+                assert_eq!(mapped.text, None);
+                assert_eq!(mapped.message, None);
+            }
+
+            #[test]
+            fn assistant_message_tool_result_maps_to_tool_result() {
+                let mapped = map_fixture(ASSISTANT_MESSAGE_TOOL_RESULT);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::ToolResult);
+                assert_eq!(mapped.text, None);
+                assert_eq!(mapped.message, None);
+            }
+
+            #[test]
+            fn stream_event_text_delta_maps_to_text_output_and_uses_text_field() {
+                let mapped = map_fixture(STREAM_EVENT_TEXT_DELTA);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::TextOutput);
+                assert_eq!(mapped.text.as_deref(), Some("hel"));
+                assert_eq!(mapped.message, None);
+            }
+
+            #[test]
+            fn stream_event_input_json_delta_maps_to_tool_call() {
+                let mapped = map_fixture(STREAM_EVENT_INPUT_JSON_DELTA);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::ToolCall);
+                assert_eq!(mapped.text, None);
+                assert_eq!(mapped.message, None);
+            }
+
+            #[test]
+            fn stream_event_tool_use_start_maps_to_tool_call() {
+                let mapped = map_fixture(STREAM_EVENT_TOOL_USE_START);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::ToolCall);
+            }
+
+            #[test]
+            fn stream_event_tool_result_start_maps_to_tool_result() {
+                let mapped = map_fixture(STREAM_EVENT_TOOL_RESULT_START);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::ToolResult);
+            }
+
+            #[test]
+            fn unknown_outer_type_maps_to_unknown() {
+                let mapped = map_fixture(UNKNOWN_OUTER_TYPE);
+                assert_eq!(mapped.kind, AgentWrapperEventKind::Unknown);
+                assert_eq!(mapped.text, None);
+            }
         }
     }
 }

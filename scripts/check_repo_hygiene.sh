@@ -34,10 +34,10 @@ check_no_tracked_under "cli_manifests/codex/raw_help"
 
 # Common artifact types that should not be committed.
 check_no_tracked_glob "\\.log$"
+check_no_tracked_glob "universal-agent-api-planning-pack_.*\\.zip$"
 
 if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi
 
 echo "repo hygiene: OK"
-
