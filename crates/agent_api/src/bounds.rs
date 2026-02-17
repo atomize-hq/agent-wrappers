@@ -124,6 +124,19 @@ mod tests {
     use super::*;
     use crate::{AgentWrapperEventKind, AgentWrapperKind};
 
+    fn success_exit_status() -> std::process::ExitStatus {
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            std::process::ExitStatus::from_raw(0)
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::ExitStatusExt;
+            std::process::ExitStatus::from_raw(0)
+        }
+    }
+
     #[test]
     fn channel_over_bound_is_dropped() {
         let event = AgentWrapperEvent {
@@ -203,9 +216,7 @@ mod tests {
     #[test]
     fn completion_data_over_bound_is_replaced_with_dropped_reason() {
         let completion = AgentWrapperCompletion {
-            status: std::process::Command::new("true")
-                .status()
-                .expect("spawn true"),
+            status: success_exit_status(),
             final_text: None,
             data: Some(serde_json::Value::String("a".repeat(DATA_BOUND_BYTES + 10))),
         };

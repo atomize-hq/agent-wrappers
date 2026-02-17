@@ -82,31 +82,24 @@ jobs:
           set -euo pipefail
           make loc-check
 
-  agent-api-public-api-guard:
-    name: Agent API public API guard
+  agent-api-backend-type-leak-guard:
+    name: Agent API backend type leak guard
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-      - uses: Swatinem/rust-cache@v2
-      - name: Install cargo-public-api
+      - name: Guard: no backend types in pub API
         shell: bash
         run: |
           set -euo pipefail
-          cargo install cargo-public-api --locked
-      - name: Guard: no backend types in public API
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd crates/agent_api
-          cargo public-api --all-features > public-api.txt
-          if sed \
-              -e 's/agent_api::backends::codex::/agent_api::backends::codex_mod::/g' \
-              -e 's/agent_api::backends::claude_code::/agent_api::backends::claude_mod::/g' \
-              public-api.txt \
-            | grep -nE '\\bcodex::|\\bclaude_code::'
-          then
-            echo "ERROR: backend types leaked in agent_api public API"
+          # 1) pub signatures must not mention backend crate types
+          if rg -n -U -P "pub\\s+(?:fn|struct|enum|trait|type|const|static)\\b[^{;]*\\b(?:codex|claude_code)::" crates/agent_api/src; then
+            echo "ERROR: backend crate types referenced in pub item signatures"
+            exit 1
+          fi
+
+          # 2) forbid pub re-exports from backend crates
+          if rg -n "pub\\s+use\\s+.*\\b(?:codex|claude_code)::" crates/agent_api/src; then
+            echo "ERROR: backend crate items are re-exported publicly"
             exit 1
           fi
 

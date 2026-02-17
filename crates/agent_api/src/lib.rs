@@ -858,9 +858,13 @@ pub mod backends {
             let res = match client.print(print_req).await {
                 Ok(res) => res,
                 Err(err) => {
-                    let _ = tx
-                        .send(error_event(format!("claude_code error: {err}")))
-                        .await;
+                    for bounded in crate::bounds::enforce_event_bounds(error_event(format!(
+                        "claude_code error: {err}"
+                    ))) {
+                        if tx.send(bounded).await.is_err() {
+                            break;
+                        }
+                    }
                     drop(tx);
                     return Err(AgentWrapperError::Backend {
                         message: format!("claude_code error: {err}"),
