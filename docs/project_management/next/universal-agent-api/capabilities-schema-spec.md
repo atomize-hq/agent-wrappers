@@ -3,11 +3,11 @@
 Status: Draft  
 Date (UTC): 2026-02-16
 
-This spec defines `AgentCapabilities` naming and stability.
+This spec defines `AgentWrapperCapabilities` naming and stability.
 
 ## Agent kind naming (normative)
 
-`AgentKind` ids MUST:
+`AgentWrapperKind` ids MUST:
 
 - be lowercase ASCII
 - match regex: `^[a-z][a-z0-9_]*$`
@@ -23,7 +23,7 @@ Reserved ids (v1):
   - Prefix: `agent_api.`
   - Examples:
     - `agent_api.run` — backend supports the core run contract
-    - `agent_api.events` — backend produces `AgentEvent`s (live or buffered)
+    - `agent_api.events` — backend produces `AgentWrapperEvent`s (live or buffered)
     - `agent_api.events.live` — backend supports live streaming events
 - Backend-specific capabilities:
   - Prefix: `backend.<agent_kind>.`
@@ -49,4 +49,4 @@ Backends that provide live streaming MUST include:
 
 ## Extension keys (v1, normative)
 
-- Every supported `AgentRunRequest.extensions` key MUST be present in `AgentCapabilities.ids` as the same string.
+- Every supported `AgentWrapperRunRequest.extensions` key MUST be present in `AgentWrapperCapabilities.ids` as the same string.

@@ -13,16 +13,16 @@ Implement a Claude Code backend for the universal API behind a feature flag.
 - `agent_api` Cargo feature: `claude_code`
   - When enabled, compiles a Claude backend that depends on `crates/claude_code`.
 - Backend identity:
-  - The backend MUST register under `AgentKind` id `claude_code`.
+  - The backend MUST register under `AgentWrapperKind` id `claude_code`.
 - Run semantics:
   - Buffered event production is allowed and must be reflected in capabilities (DR-0001).
-  - If live streaming is not available, the backend must still return a coherent `AgentEvent` sequence post-hoc (after the underlying process exits).
+  - If live streaming is not available, the backend must still return a coherent `AgentWrapperEvent` sequence post-hoc (after the underlying process exits).
 - Event mapping:
-  - Map Claude stream-json output into `AgentEvent` per `event-envelope-schema-spec.md`.
+  - Map Claude stream-json output into `AgentWrapperEvent` per `event-envelope-schema-spec.md`.
 
 ### Event kind mapping (normative)
 
-The Claude Code backend MUST map stream-json lines into `AgentEventKind` using the following rules (best-effort):
+The Claude Code backend MUST map stream-json lines into `AgentWrapperEventKind` using the following rules (best-effort):
 
 - System/init/other events → `Status`
 - Result error events → `Error`
@@ -34,9 +34,9 @@ The Claude Code backend MUST map stream-json lines into `AgentEventKind` using t
 
 ### Stable payload population (normative)
 
-- For `TextOutput` events, the backend MUST set `AgentEvent.text=Some(<chunk>)` and MUST NOT set `message`.
-- For `Status` events, the backend SHOULD set `AgentEvent.message=Some(<status>)` when a safe summary is available.
-- For `Error` events, the backend MUST set `AgentEvent.message=Some(<redacted_error>)`.
+- For `TextOutput` events, the backend MUST set `AgentWrapperEvent.text=Some(<chunk>)` and MUST NOT set `message`.
+- For `Status` events, the backend SHOULD set `AgentWrapperEvent.message=Some(<status>)` when a safe summary is available.
+- For `Error` events, the backend MUST set `AgentWrapperEvent.message=Some(<redacted_error>)`.
 
 ### Out of scope (explicit)
 

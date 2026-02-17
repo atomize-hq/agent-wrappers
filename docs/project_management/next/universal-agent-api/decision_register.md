@@ -77,7 +77,7 @@ Namespace rules (normative for specs):
 - Pros: fewer struct fields.
 - Cons: forces consumers to parse JSON; higher drift risk across backends; hurts orthogonality.
 
-**B) Add stable `text`/`message` fields to `AgentEvent` (Selected)**
+**B) Add stable `text`/`message` fields to `AgentWrapperEvent` (Selected)**
 - Pros: backend-agnostic consumption for `TextOutput`/`Status`/`Error`; easier to document and enforce.
 - Cons: slightly larger struct surface.
 

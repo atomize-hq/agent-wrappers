@@ -13,28 +13,28 @@ Implement a Codex backend for the universal API behind a feature flag.
 - `agent_api` Cargo feature: `codex`
   - When enabled, compiles a Codex backend that depends on `crates/codex`.
 - Backend identity:
-  - The backend MUST register under `AgentKind` id `codex`.
+  - The backend MUST register under `AgentWrapperKind` id `codex`.
 - Event mapping:
-  - Map Codex `ThreadEvent`/item events into `AgentEvent` per `event-envelope-schema-spec.md`.
+  - Map Codex `ThreadEvent`/item events into `AgentWrapperEvent` per `event-envelope-schema-spec.md`.
   - Preserve safety posture: v1 MUST NOT retain or emit raw backend line capture.
 
 ### Event kind mapping (normative)
 
-The Codex backend MUST map events to `AgentEventKind` using the following rules (best-effort):
+The Codex backend MUST map events to `AgentWrapperEventKind` using the following rules (best-effort):
 
 - `ThreadStarted`, `TurnStarted`, `TurnCompleted`, `TurnFailed` → `Status`
 - `Error`, `ItemFailed` → `Error`
 - Item payloads / deltas:
-  - `AgentMessage`, `Reasoning` → `TextOutput`
+  - `agent_message`, `reasoning` → `TextOutput`
   - `CommandExecution`, `FileChange`, `McpToolCall`, `WebSearch` → `ToolCall`
   - `TodoList` → `Status`
   - `Error` → `Error`
 
 ### Stable payload population (normative)
 
-- For `TextOutput` events, the backend MUST set `AgentEvent.text=Some(<chunk>)` and MUST NOT set `message`.
-- For `Status` events, the backend SHOULD set `AgentEvent.message=Some(<status>)` when a safe summary is available.
-- For `Error` events, the backend MUST set `AgentEvent.message=Some(<redacted_error>)`.
+- For `TextOutput` events, the backend MUST set `AgentWrapperEvent.text=Some(<chunk>)` and MUST NOT set `message`.
+- For `Status` events, the backend SHOULD set `AgentWrapperEvent.message=Some(<status>)` when a safe summary is available.
+- For `Error` events, the backend MUST set `AgentWrapperEvent.message=Some(<redacted_error>)`.
 - Capability mapping:
   - MUST include `agent_api.run`.
   - MUST include `agent_api.events`.

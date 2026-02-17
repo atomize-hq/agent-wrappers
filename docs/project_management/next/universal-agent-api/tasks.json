@@ -154,7 +154,7 @@
     ],
     "acceptance_criteria": [
       "`agent_api` builds with `--features codex`",
-      "Codex events map into AgentEvent kinds per schema spec",
+      "Codex events map into AgentWrapperEvent kinds per schema spec",
       "No tests added/modified"
     ],
     "start_checklist": [
@@ -287,7 +287,7 @@
     ],
     "acceptance_criteria": [
       "`agent_api` builds with `--features claude_code`",
-      "Claude events map into AgentEvent kinds per schema spec",
+      "Claude events map into AgentWrapperEvent kinds per schema spec",
       "No tests added/modified"
     ],
     "start_checklist": [

@@ -38,7 +38,7 @@ Owner(s): spensermcconnell
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: e6061afe98827bb2bcda966d059135364b48ce5990cc45ba5213f05c7e1b3753
+ADR_BODY_SHA256: 89e63c019bf7ebcd192043d60c7e5404127b100f91de1ef3331fd94f68c45bf1
 
 ### Changes (operator-facing)
 
@@ -79,7 +79,7 @@ while still allowing agent-specific capabilities without distorting the core API
 
 - Wrapping interactive/TUI modes for upstream CLIs (universal API targets headless flows only).
 - Replacing `wrapper_events` with a new ingestion boundary (it remains the shared ingestion primitive).
-- Defining a Substrate-style “AgentEvent envelope” or correlation model in this repo.
+- Defining a Substrate-style envelope or correlation model in this repo.
 - Guaranteeing perfect semantic parity across agents (capabilities differ; the core API must reflect that).
 
 ## User Contract (Authoritative)
@@ -93,21 +93,21 @@ Introduce a new crate:
 Contract:
 
 - The crate exposes:
-  - a stable agent identity type (`AgentKind`) that is an **open set** (string-backed; supports unknown/future agents)
-  - a unified async execution surface (`AgentGateway` + `AgentBackend` + `AgentRunHandle`)
-  - a unified event envelope (`AgentEvent`) with a small stable core and an extension payload
-  - an explicit capability model (`AgentCapabilities`) used to gate optional operations
+  - a stable agent identity type (`AgentWrapperKind`) that is an **open set** (string-backed; supports unknown/future agents)
+  - a unified async execution surface (`AgentWrapperGateway` + `AgentWrapperBackend` + `AgentWrapperRunHandle`)
+  - a unified event envelope (`AgentWrapperEvent`) with a small stable core and an extension payload
+  - an explicit capability model (`AgentWrapperCapabilities`) used to gate optional operations
 - The crate MUST NOT require consumers to depend directly on `codex`/`claude_code` unless they enable
   the corresponding feature flags.
 
 ### Backend selection
 
-- A consumer selects a backend by `AgentKind` at runtime.
+- A consumer selects a backend by `AgentWrapperKind` at runtime.
 - The universal API does not force a compile-time enum expansion for new agents.
 
 ### Capability model
 
-- `AgentCapabilities` declares:
+- `AgentWrapperCapabilities` declares:
   - which “core” operations are available (e.g., prompt/run with streaming events)
   - which optional extensions are available (named capabilities, string-backed)
 - If an operation is invoked that is not supported, the call fails with a structured
@@ -141,12 +141,12 @@ The event stream is a unified, minimal contract:
 
 - `crates/agent_api`:
   - Core types/traits:
-    - `AgentKind` (open set identity)
-    - `AgentCapabilities`
-    - `AgentRequest` / `AgentRunRequest` (core request with extension options)
-    - `AgentEvent` (unified event envelope)
-    - `AgentBackend` (trait)
-    - `AgentGateway` (backend registry + routing)
+    - `AgentWrapperKind` (open set identity)
+    - `AgentWrapperCapabilities`
+    - `AgentWrapperRunRequest` (core request with extension options)
+    - `AgentWrapperEvent` (unified event envelope)
+    - `AgentWrapperBackend` (trait)
+    - `AgentWrapperGateway` (backend registry + routing)
   - Feature-gated backends (no default features):
     - `agent_api/codex` feature: backend implemented via `codex` crate
     - `agent_api/claude_code` feature: backend implemented via `claude_code` crate
@@ -156,17 +156,17 @@ The event stream is a unified, minimal contract:
 ### End-to-end flow
 
 - Inputs:
-  - `AgentKind`
-  - `AgentRunRequest` (core request + optional extension options)
+  - `AgentWrapperKind`
+  - `AgentWrapperRunRequest` (core request + optional extension options)
 - Derived state:
-  - backend resolution (`AgentGateway`)
-  - capability validation (`AgentCapabilities`)
+  - backend resolution (`AgentWrapperGateway`)
+  - capability validation (`AgentWrapperCapabilities`)
 - Actions:
   - spawn backend wrapper client (`codex` or `claude_code`) and start the run
-  - map backend-specific events into `AgentEvent`
+  - map backend-specific events into `AgentWrapperEvent`
 - Outputs:
-  - `AgentRunHandle`:
-    - `events()` stream of `AgentEvent`
+  - `AgentWrapperRunHandle`:
+    - `events()` stream of `AgentWrapperEvent`
     - `wait()` completion result (exit status / final response summary as applicable)
 
 ## Sequencing / Dependencies
@@ -190,7 +190,7 @@ The event stream is a unified, minimal contract:
       process.
 - Observability:
   - Events must carry `agent_kind`.
-  - Correlation ids (when needed) MUST be carried only in bounded, backend-specific structured payloads (`AgentEvent.data`), not as a universal v1 field.
+  - Correlation ids (when needed) MUST be carried only in bounded, backend-specific structured payloads (`AgentWrapperEvent.data`), not as a universal v1 field.
 
 ## Validation Plan (Authoritative)
 

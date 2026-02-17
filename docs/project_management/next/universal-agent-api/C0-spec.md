@@ -14,11 +14,11 @@ Implement the core `agent_api` crate as an agent-agnostic facade and registry.
 - New CI workflow (enables CP1 checkpoints on GitHub-hosted runners):
   - `.github/workflows/universal-agent-api-smoke.yml`
 - Core types (names are part of the contract; see `contract.md`):
-  - `AgentKind` (open-set agent identity; string-backed)
-  - `AgentCapabilities` (namespaced string capability ids)
-  - `AgentEvent` + `AgentEventKind` (unified minimal event envelope)
-  - `AgentRunRequest` (core run request, with bounded extension options)
-  - `AgentBackend` (trait) and `AgentGateway` (registry + routing)
+  - `AgentWrapperKind` (open-set agent identity; string-backed)
+  - `AgentWrapperCapabilities` (namespaced string capability ids)
+  - `AgentWrapperEvent` + `AgentWrapperEventKind` (unified minimal event envelope)
+  - `AgentWrapperRunRequest` (core run request, with bounded extension options)
+  - `AgentWrapperBackend` (trait) and `AgentWrapperGateway` (registry + routing)
   - Error taxonomy for unknown backend + unsupported capability
 - No real backend implementations in C0 (backends land in C1/C2 behind feature flags).
 
@@ -38,7 +38,7 @@ Implement the core `agent_api` crate as an agent-agnostic facade and registry.
   - type names
   - feature flags
   - error variants and when they are emitted
-- `AgentKind` is open-set (no “update enum for every new agent” requirement).
+- `AgentWrapperKind` is open-set (no “update enum for every new agent” requirement).
 
 ## Notes / constraints
 

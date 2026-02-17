@@ -13,7 +13,7 @@
 
 ## Requirements
 - Tests must not require a real Codex binary.
-- Prefer fixture-based Codex `ThreadEvent` samples mapped into `AgentEvent`.
+- Prefer fixture-based Codex `ThreadEvent` samples mapped into `AgentWrapperEvent`.
 - Run required commands (capture outputs in END log):
   - `cargo fmt`
   - targeted `cargo test ...`
@@ -23,4 +23,3 @@
 2. Commit worktree changes on branch `uaa-c1-codex-test`.
 3. Checkout `feat/universal-agent-api`; set `C1-test` to `completed`; add END entry to `session_log.md`; commit docs (`docs: finish C1-test`).
 4. Remove worktree `wt/uaa-c1-codex-test`.
-

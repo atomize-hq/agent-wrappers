@@ -13,7 +13,7 @@
 
 ## Requirements
 - Tests must not require a real `claude` binary.
-- Prefer fixture-based stream-json samples mapped into `AgentEvent`.
+- Prefer fixture-based stream-json samples mapped into `AgentWrapperEvent`.
 - Run required commands (capture outputs in END log):
   - `cargo fmt`
   - targeted `cargo test ...`
@@ -23,4 +23,3 @@
 2. Commit worktree changes on branch `uaa-c2-claude-test`.
 3. Checkout `feat/universal-agent-api`; set `C2-test` to `completed`; add END entry to `session_log.md`; commit docs (`docs: finish C2-test`).
 4. Remove worktree `wt/uaa-c2-claude-test`.
-

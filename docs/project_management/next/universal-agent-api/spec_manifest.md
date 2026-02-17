@@ -56,8 +56,8 @@ Trigger: ADR introduces a stable “run + streaming events + completion” execu
 
 Trigger: ADR introduces a normalized event envelope and a capability model that must remain stable.
 
-- `docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md` — authoritative schema + constraints for `AgentEvent` (and any serialized representation if applicable).
-- `docs/project_management/next/universal-agent-api/capabilities-schema-spec.md` — authoritative schema + constraints for `AgentCapabilities` (open-set capability ids, stability rules, naming).
+- `docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md` — authoritative schema + constraints for `AgentWrapperEvent` (and any serialized representation if applicable).
+- `docs/project_management/next/universal-agent-api/capabilities-schema-spec.md` — authoritative schema + constraints for `AgentWrapperCapabilities` (open-set capability ids, stability rules, naming).
 
 ### Platform parity spec
 
@@ -81,7 +81,7 @@ Trigger: cross-platform validation is required, and we want bounded CI gates rat
 | Public Rust API (types/traits/builders) | `contract.md` |
 | Cargo feature flags (`codex`, `claude_code`, any runtime features) | `contract.md` |
 | Error taxonomy (`UnknownBackend`, `UnsupportedCapability`, mapping rules) | `contract.md` |
-| Agent identity (`AgentKind` open-set rules) | `capabilities-schema-spec.md` |
+| Agent identity (`AgentWrapperKind` open-set rules) | `capabilities-schema-spec.md` |
 | Capabilities: naming, stability, gating rules | `capabilities-schema-spec.md` + `run-protocol-spec.md` |
 | Unified event envelope fields and invariants | `event-envelope-schema-spec.md` |
 | What goes into event `data` vs redacted/safe defaults | `event-envelope-schema-spec.md` |
@@ -111,7 +111,7 @@ Trigger: cross-platform validation is required, and we want bounded CI gates rat
 
 ### `event-envelope-schema-spec.md`
 
-- Defines `AgentEvent.kind` mapping rules (including `Unknown` behavior).
+- Defines `AgentWrapperEvent.kind` mapping rules (including `Unknown` behavior).
 - Defines `channel` semantics (optional, best-effort; allowed values; stability).
 - Defines `data` bounds (size limits), redaction rules, and the v1 prohibition on raw backend line capture.
 - Defines forward/backward policy if events are serialized/stored.

@@ -3,15 +3,15 @@
 Status: Draft  
 Date (UTC): 2026-02-16
 
-This spec defines the stable schema/invariants for `AgentEvent`.
+This spec defines the stable schema/invariants for `AgentWrapperEvent`.
 
 Definition (v1):
 - “raw backend lines” means unparsed stdout/stderr line capture from the spawned CLI process.
 
 ## Fields (minimum)
 
-- `agent_kind` (string-backed `AgentKind`)
-- `kind` (`AgentEventKind`)
+- `agent_kind` (string-backed `AgentWrapperKind`)
+- `kind` (`AgentWrapperEventKind`)
 - `channel` (optional string)
 - `text` (optional string; stable for `TextOutput`)
 - `message` (optional string; stable for `Status` and `Error`)
@@ -51,7 +51,7 @@ Definition (v1):
 
 ## Completion payload bounds (v1, normative)
 
-`AgentCompletion.data` MUST follow the same size limit and enforcement behavior as `AgentEvent.data`:
+`AgentWrapperCompletion.data` MUST follow the same size limit and enforcement behavior as `AgentWrapperEvent.data`:
 
 - bounded: `serialized_json_bytes(data) <= 65536`
 - if oversized: replace with `{"dropped": {"reason": "oversize"}}`
@@ -74,4 +74,4 @@ Recommended channel values when applicable:
 
 - Backends MUST NOT emit raw line content from upstream processes in v1.
 - If a downstream consumer needs raw lines, it MUST capture them at the ingestion boundary itself
-  (outside `AgentEvent.data`), rather than expanding the universal event contract.
+  (outside `AgentWrapperEvent.data`), rather than expanding the universal event contract.

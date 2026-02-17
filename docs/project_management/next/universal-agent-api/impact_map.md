@@ -79,7 +79,7 @@ defined for “streaming” vs “buffered” backends:
 ### 1) Agent identity: open-set vs closed enums
 
 - Direct impact:
-  - The universal API will identify agents via a string-backed `AgentKind` (open set).
+  - The universal API will identify agents via a string-backed `AgentWrapperKind` (open set).
 - Second-order impact:
   - Any existing “agent kind” enums (e.g., `wrapper_events::WrapperAgentKind`) become a potential
     impedance mismatch for shared consumers.
@@ -110,7 +110,7 @@ defined for “streaming” vs “buffered” backends:
   - `crates/codex` already exposes runtime probing (`CodexCapabilities`) and wrapper coverage uses
     “capability-guarded” notes (ADR 0002 and the coverage specs).
 - Second-order impact:
-  - The universal `AgentCapabilities` must either:
+  - The universal `AgentWrapperCapabilities` must either:
     - treat backend capabilities as opaque strings, or
     - define a stable namespace strategy to avoid collisions and confusion.
 - Contradiction risks:

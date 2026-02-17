@@ -31,8 +31,9 @@ resolve for downstream consumers):
 
 ```rust
 use agent_api::{
-    AgentBackend, AgentCapabilities, AgentCompletion, AgentError, AgentEvent, AgentEventKind,
-    AgentGateway, AgentKind, AgentRunHandle, AgentRunRequest, AgentRunResult,
+    AgentWrapperBackend, AgentWrapperCapabilities, AgentWrapperCompletion, AgentWrapperError,
+    AgentWrapperEvent, AgentWrapperEventKind, AgentWrapperGateway, AgentWrapperKind,
+    AgentWrapperRunHandle, AgentWrapperRunRequest, AgentWrapperRunResult,
 };
 ```
 
@@ -50,30 +51,30 @@ use std::time::Duration;
 use futures_core::Stream;
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct AgentKind(String);
+pub struct AgentWrapperKind(String);
 
-impl AgentKind {
+impl AgentWrapperKind {
     /// Creates an agent kind from a string.
     ///
     /// The value MUST follow `capabilities-schema-spec.md` naming rules.
-    pub fn new(value: impl Into<String>) -> Result<Self, AgentError>;
+    pub fn new(value: impl Into<String>) -> Result<Self, AgentWrapperError>;
 
     /// Returns the canonical string id.
     pub fn as_str(&self) -> &str;
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct AgentCapabilities {
+pub struct AgentWrapperCapabilities {
     /// Set of namespaced capability ids (see `capabilities-schema-spec.md`).
     pub ids: BTreeSet<String>,
 }
 
-impl AgentCapabilities {
+impl AgentWrapperCapabilities {
     pub fn contains(&self, capability_id: &str) -> bool;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum AgentEventKind {
+pub enum AgentWrapperEventKind {
     TextOutput,
     ToolCall,
     ToolResult,
@@ -83,9 +84,9 @@ pub enum AgentEventKind {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct AgentEvent {
-    pub agent_kind: AgentKind,
-    pub kind: AgentEventKind,
+pub struct AgentWrapperEvent {
+    pub agent_kind: AgentWrapperKind,
+    pub kind: AgentWrapperEventKind,
     pub channel: Option<String>,
     /// Stable payload for `TextOutput` events.
     pub text: Option<String>,
@@ -95,7 +96,7 @@ pub struct AgentEvent {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct AgentRunRequest {
+pub struct AgentWrapperRunRequest {
     pub prompt: String,
     pub working_dir: Option<PathBuf>,
     pub timeout: Option<Duration>,
@@ -104,18 +105,18 @@ pub struct AgentRunRequest {
     pub extensions: BTreeMap<String, serde_json::Value>,
 }
 
-pub type DynAgentEventStream = Pin<Box<dyn Stream<Item = AgentEvent> + Send>>;
-pub type DynAgentCompletion =
-    Pin<Box<dyn Future<Output = Result<AgentCompletion, AgentError>> + Send>>;
+pub type DynAgentWrapperEventStream = Pin<Box<dyn Stream<Item = AgentWrapperEvent> + Send>>;
+pub type DynAgentWrapperCompletion =
+    Pin<Box<dyn Future<Output = Result<AgentWrapperCompletion, AgentWrapperError>> + Send>>;
 
 #[derive(Debug)]
-pub struct AgentRunHandle {
-    pub events: DynAgentEventStream,
-    pub completion: DynAgentCompletion,
+pub struct AgentWrapperRunHandle {
+    pub events: DynAgentWrapperEventStream,
+    pub completion: DynAgentWrapperCompletion,
 }
 
 #[derive(Clone, Debug)]
-pub struct AgentCompletion {
+pub struct AgentWrapperCompletion {
     pub status: ExitStatus,
     /// A backend may populate `final_text` when it can deterministically extract it.
     pub final_text: Option<String>,
@@ -127,12 +128,12 @@ pub struct AgentCompletion {
 }
 
 #[derive(Clone, Debug)]
-pub struct AgentRunResult {
-    pub completion: AgentCompletion,
+pub struct AgentWrapperRunResult {
+    pub completion: AgentWrapperCompletion,
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum AgentError {
+pub enum AgentWrapperError {
     #[error("unknown backend: {agent_kind}")]
     UnknownBackend { agent_kind: String },
     #[error("unsupported capability for {agent_kind}: {capability}")]
@@ -145,53 +146,53 @@ pub enum AgentError {
     Backend { message: String },
 }
 
-pub trait AgentBackend: Send + Sync {
-    fn kind(&self) -> AgentKind;
-    fn capabilities(&self) -> AgentCapabilities;
+pub trait AgentWrapperBackend: Send + Sync {
+    fn kind(&self) -> AgentWrapperKind;
+    fn capabilities(&self) -> AgentWrapperCapabilities;
 
     /// Starts a run and returns a handle producing events and a completion result.
     ///
     /// Backends MUST enforce capability gating per `run-protocol-spec.md`.
-    fn run(&self, request: AgentRunRequest) -> Pin<Box<dyn Future<Output = Result<AgentRunHandle, AgentError>> + Send + '_>>;
+    fn run(&self, request: AgentWrapperRunRequest) -> Pin<Box<dyn Future<Output = Result<AgentWrapperRunHandle, AgentWrapperError>> + Send + '_>>;
 }
 
 #[derive(Clone, Default)]
-pub struct AgentGateway {
+pub struct AgentWrapperGateway {
     // private
 }
 
-impl AgentGateway {
+impl AgentWrapperGateway {
     pub fn new() -> Self;
 
     /// Registers a backend.
     ///
-    /// If a backend with the same `AgentKind` is already registered, this MUST return an error.
-    pub fn register(&mut self, backend: Arc<dyn AgentBackend>) -> Result<(), AgentError>;
+    /// If a backend with the same `AgentWrapperKind` is already registered, this MUST return an error.
+    pub fn register(&mut self, backend: Arc<dyn AgentWrapperBackend>) -> Result<(), AgentWrapperError>;
 
-    /// Resolves a backend by `AgentKind`.
-    pub fn backend(&self, agent_kind: &AgentKind) -> Option<Arc<dyn AgentBackend>>;
+    /// Resolves a backend by `AgentWrapperKind`.
+    pub fn backend(&self, agent_kind: &AgentWrapperKind) -> Option<Arc<dyn AgentWrapperBackend>>;
 
     /// Convenience entrypoint: resolves a backend and starts a run.
     ///
-    /// This MUST return `AgentError::UnknownBackend` when no backend is registered for `agent_kind`.
-    pub fn run(&self, agent_kind: &AgentKind, request: AgentRunRequest) -> Pin<Box<dyn Future<Output = Result<AgentRunHandle, AgentError>> + Send + '_>>;
+    /// This MUST return `AgentWrapperError::UnknownBackend` when no backend is registered for `agent_kind`.
+    pub fn run(&self, agent_kind: &AgentWrapperKind, request: AgentWrapperRunRequest) -> Pin<Box<dyn Future<Output = Result<AgentWrapperRunHandle, AgentWrapperError>> + Send + '_>>;
 }
 ```
 
 ## Stable payload rules for core event kinds (v1, normative)
 
-For each emitted `AgentEvent`:
+For each emitted `AgentWrapperEvent`:
 
-- `AgentEventKind::TextOutput`
+- `AgentWrapperEventKind::TextOutput`
   - `text` MUST be `Some`.
   - `message` MUST be `None`.
-- `AgentEventKind::Status`
+- `AgentWrapperEventKind::Status`
   - `message` SHOULD be `Some`.
   - `text` MUST be `None`.
-- `AgentEventKind::Error`
+- `AgentWrapperEventKind::Error`
   - `message` MUST be `Some` and MUST be safe/redacted.
   - `text` MUST be `None`.
-- `AgentEventKind::{ToolCall, ToolResult, Unknown}`
+- `AgentWrapperEventKind::{ToolCall, ToolResult, Unknown}`
   - `text` MUST be `None`.
   - `message` MAY be `Some` (safe/redacted) for operator-facing summaries, but SHOULD be `None` by default.
 
@@ -215,7 +216,10 @@ pub mod backends {
     pub mod codex {
         use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 
-        use super::super::{AgentBackend, AgentError, AgentKind, AgentRunHandle, AgentRunRequest};
+        use super::super::{
+            AgentWrapperBackend, AgentWrapperError, AgentWrapperKind, AgentWrapperRunHandle,
+            AgentWrapperRunRequest,
+        };
 
         #[derive(Clone, Debug, Default)]
         pub struct CodexBackendConfig {
@@ -232,10 +236,10 @@ pub mod backends {
             pub fn new(config: CodexBackendConfig) -> Self;
         }
 
-        impl AgentBackend for CodexBackend {
-            fn kind(&self) -> AgentKind; // MUST be "codex"
-            fn capabilities(&self) -> super::super::AgentCapabilities;
-            fn run(&self, request: AgentRunRequest) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<AgentRunHandle, AgentError>> + Send + '_>>;
+        impl AgentWrapperBackend for CodexBackend {
+            fn kind(&self) -> AgentWrapperKind; // MUST be "codex"
+            fn capabilities(&self) -> super::super::AgentWrapperCapabilities;
+            fn run(&self, request: AgentWrapperRunRequest) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<AgentWrapperRunHandle, AgentWrapperError>> + Send + '_>>;
         }
     }
 
@@ -244,7 +248,10 @@ pub mod backends {
     pub mod claude_code {
         use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 
-        use super::super::{AgentBackend, AgentError, AgentKind, AgentRunHandle, AgentRunRequest};
+        use super::super::{
+            AgentWrapperBackend, AgentWrapperError, AgentWrapperKind, AgentWrapperRunHandle,
+            AgentWrapperRunRequest,
+        };
 
         #[derive(Clone, Debug, Default)]
         pub struct ClaudeCodeBackendConfig {
@@ -260,10 +267,10 @@ pub mod backends {
             pub fn new(config: ClaudeCodeBackendConfig) -> Self;
         }
 
-        impl AgentBackend for ClaudeCodeBackend {
-            fn kind(&self) -> AgentKind; // MUST be "claude_code"
-            fn capabilities(&self) -> super::super::AgentCapabilities;
-            fn run(&self, request: AgentRunRequest) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<AgentRunHandle, AgentError>> + Send + '_>>;
+        impl AgentWrapperBackend for ClaudeCodeBackend {
+            fn kind(&self) -> AgentWrapperKind; // MUST be "claude_code"
+            fn capabilities(&self) -> super::super::AgentWrapperCapabilities;
+            fn run(&self, request: AgentWrapperRunRequest) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<AgentWrapperRunHandle, AgentWrapperError>> + Send + '_>>;
         }
     }
 }
@@ -272,22 +279,22 @@ pub mod backends {
 ### Config and request precedence (v1, normative)
 
 - Backend config provides defaults.
-- `AgentRunRequest` fields MUST override backend config defaults for that run.
-- The backend MUST apply `AgentRunRequest.env` on top of backend config env (request keys win).
+- `AgentWrapperRunRequest` fields MUST override backend config defaults for that run.
+- The backend MUST apply `AgentWrapperRunRequest.env` on top of backend config env (request keys win).
 
 ## Extensions and capability gating (v1, normative)
 
-- Every supported `AgentRunRequest.extensions` key MUST correspond 1:1 to a capability id of the
-  same string present in `AgentCapabilities.ids`.
-- If a request includes an extension key that is not present in `AgentCapabilities.ids`, the backend
-  MUST fail-closed with `AgentError::UnsupportedCapability { capability: <key> }`.
+- Every supported `AgentWrapperRunRequest.extensions` key MUST correspond 1:1 to a capability id of the
+  same string present in `AgentWrapperCapabilities.ids`.
+- If a request includes an extension key that is not present in `AgentWrapperCapabilities.ids`, the backend
+  MUST fail-closed with `AgentWrapperError::UnsupportedCapability { capability: <key> }`.
 - If an extension key is supported but its value is invalid, the backend MUST return
-  `AgentError::InvalidRequest`.
+  `AgentWrapperError::InvalidRequest`.
 - Validation of extension keys and values MUST occur before spawning any backend process.
 
 ### Extension option key naming (v1, normative)
 
-Keys in `AgentRunRequest.extensions` MUST:
+Keys in `AgentWrapperRunRequest.extensions` MUST:
 
 - be lowercase ASCII
 - match regex: `^[a-z][a-z0-9_.-]*$`
@@ -298,20 +305,20 @@ Keys in `AgentRunRequest.extensions` MUST:
     - `backend.<agent_kind>.` (backend-specific options)
 
 If a key starts with `backend.`, the backend MUST validate that the key begins with
-`backend.<this backend's AgentKind>.` and MUST reject other backends’ namespaces as
-`AgentError::UnsupportedCapability`.
+`backend.<this backend's AgentWrapperKind>.` and MUST reject other backends’ namespaces as
+`AgentWrapperError::UnsupportedCapability`.
 
 ## Error taxonomy (normative)
 
-- `AgentError::UnknownBackend` MUST be emitted when a caller targets an `AgentKind` with no registered backend.
-- `AgentError::UnsupportedCapability` MUST be emitted when a caller invokes an operation not supported by that backend’s capabilities.
-- `AgentGateway::register` MUST emit `AgentError::InvalidRequest` when a backend is registered with an already-registered `AgentKind`.
+- `AgentWrapperError::UnknownBackend` MUST be emitted when a caller targets an `AgentWrapperKind` with no registered backend.
+- `AgentWrapperError::UnsupportedCapability` MUST be emitted when a caller invokes an operation not supported by that backend’s capabilities.
+- `AgentWrapperGateway::register` MUST emit `AgentWrapperError::InvalidRequest` when a backend is registered with an already-registered `AgentWrapperKind`.
 
 All error messages MUST be safe-by-default and MUST NOT include raw backend output in v1.
 
 ## Absence semantics (normative)
 
-- If `AgentRunRequest.timeout` is absent: backend-specific default applies (the universal API MUST NOT invent a global default).
-- If `AgentRunRequest.working_dir` is absent: backend-specific default applies (wrappers may use temp dirs).
-- The universal API MUST NOT mutate the parent process environment; `AgentRunRequest.env` applies only to spawned backend processes.
-- If `AgentRunRequest.extensions` contains any key that the backend does not recognize, the backend MUST fail-closed with `AgentError::UnsupportedCapability` per the 1:1 mapping rule above.
+- If `AgentWrapperRunRequest.timeout` is absent: backend-specific default applies (the universal API MUST NOT invent a global default).
+- If `AgentWrapperRunRequest.working_dir` is absent: backend-specific default applies (wrappers may use temp dirs).
+- The universal API MUST NOT mutate the parent process environment; `AgentWrapperRunRequest.env` applies only to spawned backend processes.
+- If `AgentWrapperRunRequest.extensions` contains any key that the backend does not recognize, the backend MUST fail-closed with `AgentWrapperError::UnsupportedCapability` per the 1:1 mapping rule above.
