@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 
 [features]
 default = []
-codex = ["dep:codex"]
+codex = ["dep:codex", "dep:tokio"]
 claude_code = ["dep:claude_code"]
 
 [dependencies]
@@ -18,4 +18,4 @@ thiserror = { workspace = true }
 
 codex = { path = "../codex", optional = true }
 claude_code = { path = "../claude_code", optional = true }
-
+tokio = { workspace = true, optional = true }

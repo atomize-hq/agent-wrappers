@@ -191,10 +191,27 @@ impl AgentWrapperGateway {
 pub mod backends {
     #[cfg(feature = "codex")]
     pub mod codex {
-        use std::{collections::BTreeMap, path::PathBuf, pin::Pin, time::Duration};
+        use std::{
+            collections::{BTreeMap, BTreeSet},
+            future::Future,
+            path::PathBuf,
+            pin::Pin,
+            process::Stdio,
+            task::{Context, Poll},
+            time::Duration,
+        };
+
+        use codex::{ExecStreamError, JsonlThreadEventParser, ThreadEvent};
+        use futures_core::Stream;
+        use tokio::{
+            io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+            process::Command,
+            sync::{mpsc, oneshot},
+        };
 
         use super::super::{
-            AgentWrapperBackend, AgentWrapperCapabilities, AgentWrapperError, AgentWrapperKind,
+            AgentWrapperBackend, AgentWrapperCapabilities, AgentWrapperCompletion,
+            AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind, AgentWrapperKind,
             AgentWrapperRunHandle, AgentWrapperRunRequest,
         };
 
@@ -208,12 +225,130 @@ pub mod backends {
         }
 
         pub struct CodexBackend {
-            _config: CodexBackendConfig,
+            config: CodexBackendConfig,
         }
 
         impl CodexBackend {
             pub fn new(config: CodexBackendConfig) -> Self {
-                Self { _config: config }
+                Self { config }
+            }
+        }
+
+        pub fn map_thread_event(event: &ThreadEvent) -> AgentWrapperEvent {
+            match event {
+                ThreadEvent::ThreadStarted(_) => status_event(None),
+                ThreadEvent::TurnStarted(_) => status_event(None),
+                ThreadEvent::TurnCompleted(_) => status_event(None),
+                ThreadEvent::TurnFailed(_) => status_event(Some("turn failed".to_string())),
+                ThreadEvent::Error(err) => error_event(err.message.clone()),
+                ThreadEvent::ItemFailed(envelope) => {
+                    error_event(envelope.item.error.message.clone())
+                }
+                ThreadEvent::ItemStarted(envelope) | ThreadEvent::ItemCompleted(envelope) => {
+                    map_item_payload(&envelope.item.payload)
+                }
+                ThreadEvent::ItemDelta(delta) => map_item_delta(&delta.delta),
+            }
+        }
+
+        fn status_event(message: Option<String>) -> AgentWrapperEvent {
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind("codex".to_string()),
+                kind: AgentWrapperEventKind::Status,
+                channel: Some("status".to_string()),
+                text: None,
+                message,
+                data: None,
+            }
+        }
+
+        fn error_event(message: String) -> AgentWrapperEvent {
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind("codex".to_string()),
+                kind: AgentWrapperEventKind::Error,
+                channel: Some("error".to_string()),
+                text: None,
+                message: Some(message),
+                data: None,
+            }
+        }
+
+        fn map_item_payload(payload: &codex::ItemPayload) -> AgentWrapperEvent {
+            match payload {
+                codex::ItemPayload::AgentMessage(content)
+                | codex::ItemPayload::Reasoning(content) => AgentWrapperEvent {
+                    agent_kind: AgentWrapperKind("codex".to_string()),
+                    kind: AgentWrapperEventKind::TextOutput,
+                    channel: Some("assistant".to_string()),
+                    text: Some(content.text.clone()),
+                    message: None,
+                    data: None,
+                },
+                codex::ItemPayload::CommandExecution(_)
+                | codex::ItemPayload::FileChange(_)
+                | codex::ItemPayload::McpToolCall(_)
+                | codex::ItemPayload::WebSearch(_) => AgentWrapperEvent {
+                    agent_kind: AgentWrapperKind("codex".to_string()),
+                    kind: AgentWrapperEventKind::ToolCall,
+                    channel: Some("tool".to_string()),
+                    text: None,
+                    message: None,
+                    data: None,
+                },
+                codex::ItemPayload::TodoList(_) => status_event(None),
+                codex::ItemPayload::Error(err) => error_event(err.message.clone()),
+            }
+        }
+
+        fn map_item_delta(delta: &codex::ItemDeltaPayload) -> AgentWrapperEvent {
+            match delta {
+                codex::ItemDeltaPayload::AgentMessage(content)
+                | codex::ItemDeltaPayload::Reasoning(content) => AgentWrapperEvent {
+                    agent_kind: AgentWrapperKind("codex".to_string()),
+                    kind: AgentWrapperEventKind::TextOutput,
+                    channel: Some("assistant".to_string()),
+                    text: Some(content.text_delta.clone()),
+                    message: None,
+                    data: None,
+                },
+                codex::ItemDeltaPayload::CommandExecution(_)
+                | codex::ItemDeltaPayload::FileChange(_)
+                | codex::ItemDeltaPayload::McpToolCall(_)
+                | codex::ItemDeltaPayload::WebSearch(_) => AgentWrapperEvent {
+                    agent_kind: AgentWrapperKind("codex".to_string()),
+                    kind: AgentWrapperEventKind::ToolCall,
+                    channel: Some("tool".to_string()),
+                    text: None,
+                    message: None,
+                    data: None,
+                },
+                codex::ItemDeltaPayload::TodoList(_) => status_event(None),
+                codex::ItemDeltaPayload::Error(err) => error_event(err.message.clone()),
+            }
+        }
+
+        fn redacted_exec_error(err: &ExecStreamError) -> String {
+            match err {
+                ExecStreamError::Codex(_) => "codex error".to_string(),
+                ExecStreamError::Parse { source, .. } => format!("parse error: {source}"),
+                ExecStreamError::Normalize { message, .. } => format!("normalize error: {message}"),
+                ExecStreamError::IdleTimeout { .. } => "idle timeout".to_string(),
+                ExecStreamError::ChannelClosed => "stream closed unexpectedly".to_string(),
+            }
+        }
+
+        struct ReceiverEventStream {
+            rx: mpsc::Receiver<AgentWrapperEvent>,
+        }
+
+        impl Stream for ReceiverEventStream {
+            type Item = AgentWrapperEvent;
+
+            fn poll_next(
+                mut self: Pin<&mut Self>,
+                cx: &mut Context<'_>,
+            ) -> Poll<Option<Self::Item>> {
+                Pin::new(&mut self.rx).poll_recv(cx)
             }
         }
 
@@ -223,9 +358,10 @@ pub mod backends {
             }
 
             fn capabilities(&self) -> AgentWrapperCapabilities {
-                let mut ids = std::collections::BTreeSet::new();
+                let mut ids = BTreeSet::new();
                 ids.insert("agent_api.run".to_string());
                 ids.insert("agent_api.events".to_string());
+                ids.insert("agent_api.events.live".to_string());
                 AgentWrapperCapabilities { ids }
             }
 
@@ -234,24 +370,155 @@ pub mod backends {
                 request: AgentWrapperRunRequest,
             ) -> Pin<
                 Box<
-                    dyn std::future::Future<
-                            Output = Result<AgentWrapperRunHandle, AgentWrapperError>,
-                        > + Send
+                    dyn Future<Output = Result<AgentWrapperRunHandle, AgentWrapperError>>
+                        + Send
                         + '_,
                 >,
             > {
-                Box::pin(async move {
-                    if let Some((capability, _)) = request.extensions.into_iter().next() {
-                        return Err(AgentWrapperError::UnsupportedCapability {
-                            agent_kind: "codex".to_string(),
-                            capability,
-                        });
-                    }
+                let config = self.config.clone();
+                Box::pin(async move { run_impl(config, request).await })
+            }
+        }
+
+        async fn run_impl(
+            config: CodexBackendConfig,
+            request: AgentWrapperRunRequest,
+        ) -> Result<AgentWrapperRunHandle, AgentWrapperError> {
+            if request.prompt.trim().is_empty() {
+                return Err(AgentWrapperError::InvalidRequest {
+                    message: "prompt must not be empty".to_string(),
+                });
+            }
+
+            if let Some((capability, _)) = request.extensions.iter().next() {
+                return Err(AgentWrapperError::UnsupportedCapability {
+                    agent_kind: "codex".to_string(),
+                    capability: capability.clone(),
+                });
+            }
+
+            let (tx, rx) = mpsc::channel::<AgentWrapperEvent>(32);
+            let (completion_tx, completion_rx) =
+                oneshot::channel::<Result<AgentWrapperCompletion, AgentWrapperError>>();
+
+            tokio::spawn(async move {
+                let result = run_codex(config, request, tx).await;
+                let _ = completion_tx.send(result);
+            });
+
+            let events: super::super::DynAgentWrapperEventStream =
+                Box::pin(ReceiverEventStream { rx });
+
+            let completion: super::super::DynAgentWrapperCompletion = Box::pin(async move {
+                completion_rx.await.unwrap_or_else(|_| {
                     Err(AgentWrapperError::Backend {
-                        message: "codex backend not implemented in C0".to_string(),
+                        message: "completion channel dropped".to_string(),
                     })
                 })
+            });
+
+            Ok(AgentWrapperRunHandle { events, completion })
+        }
+
+        async fn run_codex(
+            config: CodexBackendConfig,
+            request: AgentWrapperRunRequest,
+            tx: mpsc::Sender<AgentWrapperEvent>,
+        ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
+            let binary = config.binary.unwrap_or_else(|| PathBuf::from("codex"));
+            let mut command = Command::new(binary);
+            command
+                .arg("exec")
+                .arg("--color")
+                .arg("never")
+                .arg("--skip-git-repo-check")
+                .arg("--json")
+                .arg("--full-auto")
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .stdin(Stdio::piped())
+                .kill_on_drop(true);
+
+            let working_dir = request
+                .working_dir
+                .clone()
+                .or_else(|| config.default_working_dir.clone());
+            if let Some(dir) = working_dir {
+                command.current_dir(dir);
             }
+
+            if let Some(codex_home) = config.codex_home.clone() {
+                command.env("CODEX_HOME", codex_home);
+            }
+
+            for (k, v) in config.env.iter() {
+                command.env(k, v);
+            }
+            for (k, v) in request.env.iter() {
+                command.env(k, v);
+            }
+
+            let mut child = command.spawn().map_err(|err| AgentWrapperError::Backend {
+                message: format!("failed to spawn codex: {err}"),
+            })?;
+
+            {
+                let mut stdin = child
+                    .stdin
+                    .take()
+                    .ok_or_else(|| AgentWrapperError::Backend {
+                        message: "stdin unavailable".to_string(),
+                    })?;
+                if let Err(err) = stdin.write_all(request.prompt.as_bytes()).await {
+                    if err.kind() != std::io::ErrorKind::BrokenPipe {
+                        return Err(AgentWrapperError::Backend {
+                            message: format!("failed to write stdin: {err}"),
+                        });
+                    }
+                }
+                let _ = stdin.write_all(b"\n").await;
+                let _ = stdin.shutdown().await;
+            }
+
+            let stdout = child
+                .stdout
+                .take()
+                .ok_or_else(|| AgentWrapperError::Backend {
+                    message: "stdout unavailable".to_string(),
+                })?;
+
+            let mut parser = JsonlThreadEventParser::new();
+            let mut lines = BufReader::new(stdout).lines();
+
+            while let Ok(Some(line)) = lines.next_line().await {
+                match parser.parse_line(&line) {
+                    Ok(None) => {}
+                    Ok(Some(event)) => {
+                        if tx.send(map_thread_event(&event)).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(err) => {
+                        let message = redacted_exec_error(&err);
+                        let _ = tx.send(error_event(message)).await;
+                    }
+                }
+            }
+
+            let status = child
+                .wait()
+                .await
+                .map_err(|err| AgentWrapperError::Backend {
+                    message: format!("failed to wait for codex: {err}"),
+                })?;
+
+            drop(tx);
+
+            Ok(AgentWrapperCompletion {
+                status,
+                final_text: None,
+                data: None,
+            })
         }
     }
 
