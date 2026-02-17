@@ -2,6 +2,9 @@ name: Universal Agent API smoke
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feat/universal-agent-api
 
 permissions:
   contents: read
