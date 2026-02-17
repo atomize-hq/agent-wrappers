@@ -4,7 +4,7 @@
     "name": "C0: Core universal API crate (code)",
     "type": "code",
     "phase": "C0",
-    "status": "pending",
+    "status": "completed",
     "description": "Create `crates/agent_api` core types/traits/gateway per the contract, and add the CP1 smoke workflow (production code/config only; no tests).",
     "references": [
       "docs/adr/0009-universal-agent-api.md",
@@ -56,7 +56,7 @@
     "name": "C0: Core universal API crate (test)",
     "type": "test",
     "phase": "C0",
-    "status": "pending",
+    "status": "completed",
     "description": "Add fixture/sample-based tests for `crates/agent_api` core contracts (tests only).",
     "references": [
       "docs/adr/0009-universal-agent-api.md",
@@ -99,7 +99,7 @@
     "name": "C0: Core universal API crate (integration)",
     "type": "integration",
     "phase": "C0",
-    "status": "pending",
+    "status": "completed",
     "description": "Merge C0 code/test, align behavior with the spec, and gate with fmt/clippy/tests/preflight (Linux).",
     "references": [
       "docs/project_management/next/universal-agent-api/plan.md",

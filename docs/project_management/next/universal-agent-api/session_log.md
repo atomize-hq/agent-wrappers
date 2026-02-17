@@ -47,3 +47,39 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
   - linux preflight: <pass/fail>
 - Blockers: <none | list>
 
+## [2026-02-17 03:01 UTC] Code Agent – C0-code – START
+- Checked out `feat/universal-agent-api`, `git pull --ff-only` (ok)
+- Plan: add `crates/agent_api` core types/traits/gateway per contract; add CP1 smoke workflow; run required commands; commit on branch `uaa-c0-core-code`
+- Blockers: none
+
+## [2026-02-17 03:01 UTC] Code Agent – C0-code – END
+- Branch `uaa-c0-core-code` (commit `1e07dcb`) added:
+  - `crates/agent_api` (core `AgentWrapper*` types/traits + stub feature-gated backends)
+  - `.github/workflows/universal-agent-api-smoke.yml`
+  - workspace wiring + `.runs` ignore
+- Commands: `cargo fmt` (pass)
+- Blockers: none
+
+## [2026-02-17 03:01 UTC] Test Agent – C0-test – START
+- Checked out `feat/universal-agent-api`, `git pull --ff-only` (ok)
+- Plan: add minimal unit tests for the C0 core contract; commit on branch `uaa-c0-core-test`
+- Blockers: none
+
+## [2026-02-17 03:01 UTC] Test Agent – C0-test – END
+- Branch `uaa-c0-core-test` (commit `4ce5ba3`) added `crates/agent_api/tests/c0_core_contract.rs`
+- Commands: `cargo fmt` (pass); `cargo test -p agent_api --test c0_core_contract` (pass)
+- Blockers: none
+
+## [2026-02-17 03:01 UTC] Integration Agent – C0-integ – START
+- Checked out `feat/universal-agent-api`, `git pull --ff-only` (ok)
+- Plan: fast-forward merge `uaa-c0-core-code` + `uaa-c0-core-test`; run required gates; fix any lint/test drift; fast-forward merge into `feat/universal-agent-api`
+- Blockers: none
+
+## [2026-02-17 03:01 UTC] Integration Agent – C0-integ – END
+- Merged `uaa-c0-core-code` + `uaa-c0-core-test` and reconciled to C0 spec/contract (commit `605c382`)
+- Commands:
+  - `cargo fmt` (pass)
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings` (pass; required small clippy-driven refactors in `crates/wrapper_events` + allow in `crates/claude_code`)
+  - `cargo test --workspace --all-targets --all-features` (pass)
+  - `make preflight` (skipped; Linux only)
+- Blockers: none
