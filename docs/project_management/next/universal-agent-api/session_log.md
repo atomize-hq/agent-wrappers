@@ -83,3 +83,37 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
   - `cargo test --workspace --all-targets --all-features` (pass)
   - `make preflight` (skipped; Linux only)
 - Blockers: none
+
+## [2026-02-17 13:09 UTC] Code Agent – C1-code – START
+- Plan: implement Codex feature-gated backend (`agent_api` + `codex`) per C1 spec; run fmt/clippy; commit on branch `uaa-c1-codex-code`
+- Blockers: none
+
+## [2026-02-17 13:09 UTC] Code Agent – C1-code – END
+- Branch `uaa-c1-codex-code` (commit `d6c102e`) implemented:
+  - `agent_api::backends::codex::CodexBackend` run + capabilities (`agent_api.events.live`)
+  - `agent_api::backends::codex::map_thread_event` mapping `codex::ThreadEvent` → `AgentWrapperEvent`
+- Commands: `cargo fmt` (pass); `cargo clippy --workspace --all-targets --all-features -- -D warnings` (pass)
+- Blockers: none
+
+## [2026-02-17 13:09 UTC] Test Agent – C1-test – START
+- Plan: add fixture-based tests for Codex event mapping per C1 spec; commit on branch `uaa-c1-codex-test`
+- Blockers: none
+
+## [2026-02-17 13:09 UTC] Test Agent – C1-test – END
+- Branch `uaa-c1-codex-test` (commit `3b2ebe8`) added `crates/agent_api/tests/c1_codex_event_mapping.rs` (feature-gated)
+- Commands: `cargo fmt` (pass); `cargo test -p agent_api` (pass)
+- Blockers: none
+
+## [2026-02-17 13:09 UTC] Integration Agent – C1-integ – START
+- Plan: merge `uaa-c1-codex-code` + `uaa-c1-codex-test` into `uaa-c1-codex-integ`; run gates; fast-forward merge into `feat/universal-agent-api`
+- Blockers: none
+
+## [2026-02-17 13:09 UTC] Integration Agent – C1-integ – END
+- Merged `uaa-c1-codex-code` + `uaa-c1-codex-test` and reconciled to C1 spec (commit `8d5f12a`)
+- Commands:
+  - `cargo fmt` (pass)
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings` (pass)
+  - `cargo test -p agent_api --features codex` (pass)
+  - `cargo test --workspace --all-targets --all-features` (pass)
+  - `make preflight` (skipped; Linux only)
+- Blockers: none

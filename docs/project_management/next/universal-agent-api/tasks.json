@@ -141,7 +141,7 @@
     "name": "C1: Codex backend adapter (code)",
     "type": "code",
     "phase": "C1",
-    "status": "pending",
+    "status": "completed",
     "description": "Implement `agent_api` feature-gated Codex backend adapter (production code only).",
     "references": [
       "docs/project_management/next/universal-agent-api/plan.md",
@@ -187,7 +187,7 @@
     "name": "C1: Codex backend adapter (test)",
     "type": "test",
     "phase": "C1",
-    "status": "pending",
+    "status": "completed",
     "description": "Add fixture/sample-based tests for Codex backend mapping (tests only).",
     "references": [
       "docs/project_management/next/universal-agent-api/plan.md",
@@ -230,7 +230,7 @@
     "name": "C1: Codex backend adapter (integration)",
     "type": "integration",
     "phase": "C1",
-    "status": "pending",
+    "status": "completed",
     "description": "Merge C1 code/test, align behavior with the spec, and gate with fmt/clippy/tests/preflight (Linux).",
     "references": [
       "docs/project_management/next/universal-agent-api/plan.md",
