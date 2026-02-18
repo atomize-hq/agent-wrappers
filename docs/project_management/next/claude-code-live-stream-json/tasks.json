@@ -53,7 +53,7 @@
     "name": "C0: claude_code streaming API (test)",
     "type": "test",
     "phase": "C0",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Add fixture/synthetic tests for the streaming adapter and framing rules (tests only).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
@@ -90,7 +90,8 @@
     "depends_on": [],
     "concurrent_with": [
       "C0-code"
-    ]
+    ],
+    "started_at": "2026-02-18T19:23:34Z"
   },
   {
     "id": "C0-integ",
