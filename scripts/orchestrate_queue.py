@@ -356,6 +356,7 @@ def _make_prompt_text(
             "  - docs/project_management/next/**/session_log.md",
             "- Do NOT create/remove git worktrees; the orchestrator handles that.",
             "- Do NOT update task statuses; the orchestrator handles that.",
+            "- Do NOT run `git checkout` / `git pull` or otherwise switch branches; the orchestrator already prepared the worktree on the task branch.",
             "- Work only in the provided worktree (git repo cwd).",
             "- Run the required commands listed under 'Commands (required)' in the kickoff prompt.",
             "- End with a concise report including: files changed, branch/worktree, commits, commands run + pass/fail, and any blockers.",
