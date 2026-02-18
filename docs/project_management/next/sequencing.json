@@ -181,6 +181,45 @@
           "spec": "docs/project_management/next/codex-wrapper-iu-subtree-inheritance/C1-spec.md"
         }
       ]
+    },
+    {
+      "id": "universal_agent_api",
+      "name": "UNIVERSAL_AGENT_API",
+      "source": "docs/adr/0009-universal-agent-api.md",
+      "phases": [
+        {
+          "id": "C0",
+          "name": "Core universal API crate",
+          "spec": "docs/project_management/next/universal-agent-api/C0-spec.md"
+        },
+        {
+          "id": "C1",
+          "name": "Codex backend adapter",
+          "spec": "docs/project_management/next/universal-agent-api/C1-spec.md"
+        },
+        {
+          "id": "C2",
+          "name": "Claude Code backend adapter",
+          "spec": "docs/project_management/next/universal-agent-api/C2-spec.md"
+        }
+      ]
+    },
+    {
+      "id": "claude_code_live_stream_json",
+      "name": "CLAUDE_CODE_LIVE_STREAM_JSON",
+      "source": "docs/adr/0010-claude-code-live-stream-json.md",
+      "phases": [
+        {
+          "id": "C0",
+          "name": "claude_code streaming API (print stream-json)",
+          "spec": "docs/project_management/next/claude-code-live-stream-json/C0-spec.md"
+        },
+        {
+          "id": "C1",
+          "name": "agent_api Claude live events",
+          "spec": "docs/project_management/next/claude-code-live-stream-json/C1-spec.md"
+        }
+      ]
     }
   ],
   "sequence": [
@@ -351,6 +390,42 @@
       "id": "codex_jsonl_log_parser_api:C0",
       "title": "Offline JSONL parsing API",
       "depends_on": ["codex_wrapper_iu_subtree_inheritance:C1"],
+      "blocks": []
+    }
+    ,
+    {
+      "order": 330,
+      "id": "universal_agent_api:C0",
+      "title": "Core universal API crate",
+      "depends_on": ["codex_jsonl_log_parser_api:C0"],
+      "blocks": ["universal_agent_api:C1", "universal_agent_api:C2"]
+    },
+    {
+      "order": 340,
+      "id": "universal_agent_api:C1",
+      "title": "Codex backend adapter",
+      "depends_on": ["universal_agent_api:C0"],
+      "blocks": ["universal_agent_api:C2"]
+    },
+    {
+      "order": 350,
+      "id": "universal_agent_api:C2",
+      "title": "Claude Code backend adapter",
+      "depends_on": ["universal_agent_api:C1"],
+      "blocks": []
+    },
+    {
+      "order": 360,
+      "id": "claude_code_live_stream_json:C0",
+      "title": "claude_code streaming API (print stream-json)",
+      "depends_on": ["universal_agent_api:C2"],
+      "blocks": ["claude_code_live_stream_json:C1"]
+    },
+    {
+      "order": 370,
+      "id": "claude_code_live_stream_json:C1",
+      "title": "agent_api Claude live events",
+      "depends_on": ["claude_code_live_stream_json:C0"],
       "blocks": []
     }
   ]

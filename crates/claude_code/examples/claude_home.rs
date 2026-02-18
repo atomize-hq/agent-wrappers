@@ -81,4 +81,3 @@ async fn main() -> Result<(), Box<dyn Error>> {
     print!("{}", String::from_utf8_lossy(&out.stdout));
     Ok(())
 }
-

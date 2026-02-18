@@ -82,6 +82,27 @@ jobs:
           set -euo pipefail
           make loc-check
 
+  agent-api-backend-type-leak-guard:
+    name: Agent API backend type leak guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Guard: no backend types in pub API"
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 1) pub signatures must not mention backend crate types
+          if rg -n -U -P "pub\\s+(?:fn|struct|enum|trait|type|const|static)\\b[^{;]*\\b(?:codex|claude_code)::" crates/agent_api/src; then
+            echo "ERROR: backend crate types referenced in pub item signatures"
+            exit 1
+          fi
+
+          # 2) forbid pub re-exports from backend crates
+          if rg -n "pub\\s+use\\s+.*\\b(?:codex|claude_code)::" crates/agent_api/src; then
+            echo "ERROR: backend crate items are re-exported publicly"
+            exit 1
+          fi
+
   codex-validate-artifacts:
     name: Validate Codex committed artifacts
     runs-on: ubuntu-latest

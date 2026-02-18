@@ -58,9 +58,7 @@ impl LineParser for CodexLineParser {
     }
 
     fn parse_line(&mut self, input: LineInput<'_>) -> Result<Option<Self::Event>, Self::Error> {
-        self.parser
-            .parse_line(input.line)
-            .map_err(|err| codex_err(err))
+        self.parser.parse_line(input.line).map_err(codex_err)
     }
 }
 

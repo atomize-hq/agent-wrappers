@@ -1,2 +1,0 @@
-==== cargo fmt --all -- --check (final) 2026-02-05T16:17:08Z ====
-==== exit_code=0 ====

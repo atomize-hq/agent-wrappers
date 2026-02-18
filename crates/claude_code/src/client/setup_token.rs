@@ -477,6 +477,7 @@ fn portable_exit_status_to_std(status: portable_pty::ExitStatus) -> std::process
 }
 
 #[cfg(unix)]
+#[allow(clippy::too_many_arguments)]
 fn spawn_setup_token_pty(
     binary: &std::path::Path,
     argv: &[String],

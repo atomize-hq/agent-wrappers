@@ -1,0 +1,441 @@
+[
+  {
+    "id": "C0-code",
+    "name": "C0: Core universal API crate (code)",
+    "type": "code",
+    "phase": "C0",
+    "status": "completed",
+    "description": "Create `crates/agent_api` core types/traits/gateway per the contract, and add the CP1 smoke workflow (production code/config only; no tests).",
+    "references": [
+      "docs/adr/0009-universal-agent-api.md",
+      "docs/project_management/next/universal-agent-api/plan.md",
+      "docs/project_management/next/universal-agent-api/spec_manifest.md",
+      "docs/project_management/next/universal-agent-api/impact_map.md",
+      "docs/project_management/next/universal-agent-api/decision_register.md",
+      "docs/project_management/next/universal-agent-api/ci_checkpoint_plan.md",
+      "docs/project_management/next/universal-agent-api/contract.md",
+      "docs/project_management/next/universal-agent-api/run-protocol-spec.md",
+      "docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/project_management/next/universal-agent-api/capabilities-schema-spec.md",
+      "docs/project_management/next/universal-agent-api/platform-parity-spec.md",
+      "docs/project_management/next/universal-agent-api/C0-spec.md",
+      "docs/project_management/next/universal-agent-api/kickoff_prompts/C0-code.md"
+    ],
+    "acceptance_criteria": [
+      "`crates/agent_api` compiles with default features",
+      "Core types/traits exist per contract",
+      "Workflow `.github/workflows/universal-agent-api-smoke.yml` exists and runs the feature-local smoke scripts on ubuntu/macos/windows (GitHub-hosted runners)",
+      "Workflow `.github/workflows/universal-agent-api-smoke.yml` runs `make preflight` on `ubuntu-latest` for the same tested ref",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/universal-agent-api && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-code'",
+      "Create the task branch and worktree: `git worktree add -b uaa-c0-core-code wt/uaa-c0-core-code feat/universal-agent-api`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings.",
+      "Inside wt/uaa-c0-core-code, commit C0-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/universal-agent-api.",
+      "Checkout feat/universal-agent-api; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-code'.",
+      "Remove worktree wt/uaa-c0-core-code."
+    ],
+    "worktree": "wt/uaa-c0-core-code",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/universal-agent-api/kickoff_prompts/C0-code.md",
+    "depends_on": [],
+    "concurrent_with": [
+      "C0-test"
+    ]
+  },
+  {
+    "id": "C0-test",
+    "name": "C0: Core universal API crate (test)",
+    "type": "test",
+    "phase": "C0",
+    "status": "completed",
+    "description": "Add fixture/sample-based tests for `crates/agent_api` core contracts (tests only).",
+    "references": [
+      "docs/adr/0009-universal-agent-api.md",
+      "docs/project_management/next/universal-agent-api/plan.md",
+      "docs/project_management/next/universal-agent-api/C0-spec.md",
+      "docs/project_management/next/universal-agent-api/contract.md",
+      "docs/project_management/next/universal-agent-api/run-protocol-spec.md",
+      "docs/project_management/next/universal-agent-api/kickoff_prompts/C0-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests cover C0 acceptance criteria without requiring real agent binaries",
+      "No production code changes",
+      "Required commands executed (fmt + targeted tests) and recorded in session_log.md"
+    ],
+    "start_checklist": [
+      "git checkout feat/universal-agent-api && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-test'",
+      "Create the task branch and worktree: `git worktree add -b uaa-c0-core-test wt/uaa-c0-core-test feat/universal-agent-api`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; targeted cargo test commands for suites added/updated.",
+      "Inside wt/uaa-c0-core-test, commit C0-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/universal-agent-api.",
+      "Checkout feat/universal-agent-api; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-test'.",
+      "Remove worktree wt/uaa-c0-core-test."
+    ],
+    "worktree": "wt/uaa-c0-core-test",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/universal-agent-api/kickoff_prompts/C0-test.md",
+    "depends_on": [],
+    "concurrent_with": [
+      "C0-code"
+    ]
+  },
+  {
+    "id": "C0-integ",
+    "name": "C0: Core universal API crate (integration)",
+    "type": "integration",
+    "phase": "C0",
+    "status": "completed",
+    "description": "Merge C0 code/test, align behavior with the spec, and gate with fmt/clippy/tests/preflight (Linux).",
+    "references": [
+      "docs/project_management/next/universal-agent-api/plan.md",
+      "docs/project_management/next/universal-agent-api/C0-spec.md",
+      "docs/project_management/next/universal-agent-api/contract.md",
+      "docs/project_management/next/universal-agent-api/kickoff_prompts/C0-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C0 code/test merged and match C0-spec + contract",
+      "cargo fmt + clippy + relevant tests + make preflight executed and logged",
+      "Merged fast-forward into feat/universal-agent-api; tasks/logs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/universal-agent-api && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-integ'",
+      "Create the integration branch and worktree: `git worktree add -b uaa-c0-core-integ wt/uaa-c0-core-integ feat/universal-agent-api`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C0 into the integration worktree and reconcile behavior to the spec.",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
+      "Commit integration changes on branch uaa-c0-core-integ.",
+      "Fast-forward merge uaa-c0-core-integ into feat/universal-agent-api; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-integ'.",
+      "Remove worktree wt/uaa-c0-core-integ."
+    ],
+    "worktree": "wt/uaa-c0-core-integ",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/universal-agent-api/kickoff_prompts/C0-integ.md",
+    "depends_on": [
+      "C0-code",
+      "C0-test"
+    ],
+    "concurrent_with": []
+  },
+  {
+    "id": "C1-code",
+    "name": "C1: Codex backend adapter (code)",
+    "type": "code",
+    "phase": "C1",
+    "status": "completed",
+    "description": "Implement `agent_api` feature-gated Codex backend adapter (production code only).",
+    "references": [
+      "docs/project_management/next/universal-agent-api/plan.md",
+      "docs/project_management/next/universal-agent-api/C1-spec.md",
+      "docs/project_management/next/universal-agent-api/contract.md",
+      "docs/project_management/next/universal-agent-api/run-protocol-spec.md",
+      "docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/project_management/next/universal-agent-api/capabilities-schema-spec.md",
+      "docs/project_management/next/universal-agent-api/kickoff_prompts/C1-code.md"
+    ],
+    "acceptance_criteria": [
+      "`agent_api` builds with `--features codex`",
+      "Codex events map into AgentWrapperEvent kinds per schema spec",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/universal-agent-api && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C1-code'",
+      "Create the task branch and worktree: `git worktree add -b uaa-c1-codex-code wt/uaa-c1-codex-code feat/universal-agent-api`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings.",
+      "Inside wt/uaa-c1-codex-code, commit C1-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/universal-agent-api.",
+      "Checkout feat/universal-agent-api; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-code'.",
+      "Remove worktree wt/uaa-c1-codex-code."
+    ],
+    "worktree": "wt/uaa-c1-codex-code",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/universal-agent-api/kickoff_prompts/C1-code.md",
+    "depends_on": [
+      "C0-integ"
+    ],
+    "concurrent_with": [
+      "C1-test"
+    ]
+  },
+  {
+    "id": "C1-test",
+    "name": "C1: Codex backend adapter (test)",
+    "type": "test",
+    "phase": "C1",
+    "status": "completed",
+    "description": "Add fixture/sample-based tests for Codex backend mapping (tests only).",
+    "references": [
+      "docs/project_management/next/universal-agent-api/plan.md",
+      "docs/project_management/next/universal-agent-api/C1-spec.md",
+      "docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/project_management/next/universal-agent-api/kickoff_prompts/C1-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests validate Codex event mapping without requiring a real Codex binary",
+      "No production code changes",
+      "Required commands executed and recorded in session_log.md"
+    ],
+    "start_checklist": [
+      "git checkout feat/universal-agent-api && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C1-test'",
+      "Create the task branch and worktree: `git worktree add -b uaa-c1-codex-test wt/uaa-c1-codex-test feat/universal-agent-api`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; targeted cargo test commands for suites added/updated.",
+      "Inside wt/uaa-c1-codex-test, commit C1-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/universal-agent-api.",
+      "Checkout feat/universal-agent-api; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-test'.",
+      "Remove worktree wt/uaa-c1-codex-test."
+    ],
+    "worktree": "wt/uaa-c1-codex-test",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/universal-agent-api/kickoff_prompts/C1-test.md",
+    "depends_on": [
+      "C0-integ"
+    ],
+    "concurrent_with": [
+      "C1-code"
+    ]
+  },
+  {
+    "id": "C1-integ",
+    "name": "C1: Codex backend adapter (integration)",
+    "type": "integration",
+    "phase": "C1",
+    "status": "completed",
+    "description": "Merge C1 code/test, align behavior with the spec, and gate with fmt/clippy/tests/preflight (Linux).",
+    "references": [
+      "docs/project_management/next/universal-agent-api/plan.md",
+      "docs/project_management/next/universal-agent-api/C1-spec.md",
+      "docs/project_management/next/universal-agent-api/contract.md",
+      "docs/project_management/next/universal-agent-api/run-protocol-spec.md",
+      "docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/project_management/next/universal-agent-api/kickoff_prompts/C1-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C1 code/test merged and match C1-spec",
+      "cargo fmt + clippy + relevant tests + make preflight executed and logged",
+      "Merged fast-forward into feat/universal-agent-api; tasks/logs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/universal-agent-api && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C1-integ'",
+      "Create the integration branch and worktree: `git worktree add -b uaa-c1-codex-integ wt/uaa-c1-codex-integ feat/universal-agent-api`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C1 into the integration worktree and reconcile behavior to the spec.",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
+      "Commit integration changes on branch uaa-c1-codex-integ.",
+      "Fast-forward merge uaa-c1-codex-integ into feat/universal-agent-api; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-integ'.",
+      "Remove worktree wt/uaa-c1-codex-integ."
+    ],
+    "worktree": "wt/uaa-c1-codex-integ",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/universal-agent-api/kickoff_prompts/C1-integ.md",
+    "depends_on": [
+      "C1-code",
+      "C1-test"
+    ],
+    "concurrent_with": []
+  },
+  {
+    "id": "C2-code",
+    "name": "C2: Claude Code backend adapter (code)",
+    "type": "code",
+    "phase": "C2",
+    "status": "completed",
+    "description": "Implement `agent_api` feature-gated Claude Code backend adapter (production code only).",
+    "references": [
+      "docs/project_management/next/universal-agent-api/plan.md",
+      "docs/project_management/next/universal-agent-api/C2-spec.md",
+      "docs/project_management/next/universal-agent-api/contract.md",
+      "docs/project_management/next/universal-agent-api/run-protocol-spec.md",
+      "docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/project_management/next/universal-agent-api/capabilities-schema-spec.md",
+      "docs/project_management/next/universal-agent-api/kickoff_prompts/C2-code.md"
+    ],
+    "acceptance_criteria": [
+      "`agent_api` builds with `--features claude_code`",
+      "Claude events map into AgentWrapperEvent kinds per schema spec",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/universal-agent-api && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C2-code'",
+      "Create the task branch and worktree: `git worktree add -b uaa-c2-claude-code wt/uaa-c2-claude-code feat/universal-agent-api`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings.",
+      "Inside wt/uaa-c2-claude-code, commit C2-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/universal-agent-api.",
+      "Checkout feat/universal-agent-api; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-code'.",
+      "Remove worktree wt/uaa-c2-claude-code."
+    ],
+    "worktree": "wt/uaa-c2-claude-code",
+    "integration_task": "C2-integ",
+    "kickoff_prompt": "docs/project_management/next/universal-agent-api/kickoff_prompts/C2-code.md",
+    "depends_on": [
+      "C1-integ"
+    ],
+    "concurrent_with": [
+      "C2-test"
+    ]
+  },
+  {
+    "id": "C2-test",
+    "name": "C2: Claude Code backend adapter (test)",
+    "type": "test",
+    "phase": "C2",
+    "status": "completed",
+    "description": "Add fixture/sample-based tests for Claude backend mapping (tests only).",
+    "references": [
+      "docs/project_management/next/universal-agent-api/plan.md",
+      "docs/project_management/next/universal-agent-api/C2-spec.md",
+      "docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/project_management/next/universal-agent-api/kickoff_prompts/C2-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests validate Claude event mapping without requiring a real claude binary",
+      "No production code changes",
+      "Required commands executed and recorded in session_log.md"
+    ],
+    "start_checklist": [
+      "git checkout feat/universal-agent-api && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C2-test'",
+      "Create the task branch and worktree: `git worktree add -b uaa-c2-claude-test wt/uaa-c2-claude-test feat/universal-agent-api`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; targeted cargo test commands for suites added/updated.",
+      "Inside wt/uaa-c2-claude-test, commit C2-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/universal-agent-api.",
+      "Checkout feat/universal-agent-api; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-test'.",
+      "Remove worktree wt/uaa-c2-claude-test."
+    ],
+    "worktree": "wt/uaa-c2-claude-test",
+    "integration_task": "C2-integ",
+    "kickoff_prompt": "docs/project_management/next/universal-agent-api/kickoff_prompts/C2-test.md",
+    "depends_on": [
+      "C1-integ"
+    ],
+    "concurrent_with": [
+      "C2-code"
+    ]
+  },
+  {
+    "id": "C2-integ",
+    "name": "C2: Claude Code backend adapter (integration)",
+    "type": "integration",
+    "phase": "C2",
+    "status": "completed",
+    "description": "Merge C2 code/test, align behavior with the spec, and gate with fmt/clippy/tests/preflight (Linux).",
+    "references": [
+      "docs/project_management/next/universal-agent-api/plan.md",
+      "docs/project_management/next/universal-agent-api/C2-spec.md",
+      "docs/project_management/next/universal-agent-api/contract.md",
+      "docs/project_management/next/universal-agent-api/run-protocol-spec.md",
+      "docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/project_management/next/universal-agent-api/kickoff_prompts/C2-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C2 code/test merged and match C2-spec",
+      "cargo fmt + clippy + relevant tests + make preflight executed and logged",
+      "Merged fast-forward into feat/universal-agent-api; tasks/logs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/universal-agent-api && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C2-integ'",
+      "Create the integration branch and worktree: `git worktree add -b uaa-c2-claude-integ wt/uaa-c2-claude-integ feat/universal-agent-api`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C2 into the integration worktree and reconcile behavior to the spec.",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
+      "Commit integration changes on branch uaa-c2-claude-integ.",
+      "Fast-forward merge uaa-c2-claude-integ into feat/universal-agent-api; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-integ'.",
+      "Remove worktree wt/uaa-c2-claude-integ."
+    ],
+    "worktree": "wt/uaa-c2-claude-integ",
+    "integration_task": "C2-integ",
+    "kickoff_prompt": "docs/project_management/next/universal-agent-api/kickoff_prompts/C2-integ.md",
+    "depends_on": [
+      "C2-code",
+      "C2-test"
+    ],
+    "concurrent_with": []
+  },
+  {
+    "id": "CP1-ci-checkpoint",
+    "name": "CP1: CI checkpoint (GitHub-hosted multi-OS)",
+    "type": "integration",
+    "phase": "CP1",
+    "status": "completed",
+    "description": "Run the bounded multi-OS CI gates defined in ci_checkpoint_plan.md after C2 is integrated.",
+    "references": [
+      "docs/project_management/next/universal-agent-api/ci_checkpoint_plan.md",
+      "docs/project_management/next/universal-agent-api/platform-parity-spec.md",
+      "docs/project_management/next/universal-agent-api/kickoff_prompts/CP1-ci-checkpoint.md"
+    ],
+    "acceptance_criteria": [
+      "GitHub-hosted ubuntu/macos/windows smoke scripts pass for the tested SHA",
+      "Linux preflight passes for the tested SHA",
+      "Evidence recorded in session_log.md"
+    ],
+    "start_checklist": [
+      "git checkout feat/universal-agent-api && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, ci_checkpoint_plan.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start CP1-ci-checkpoint'"
+    ],
+    "end_checklist": [
+      "Trigger the checkpoint CI gates for the target SHA (see kickoff prompt); wait for completion.",
+      "Record run ids/links and pass/fail in session_log.md and set task status to completed.",
+      "Commit docs with message 'docs: finish CP1-ci-checkpoint'."
+    ],
+    "worktree": "N/A",
+    "integration_task": "CP1-ci-checkpoint",
+    "kickoff_prompt": "docs/project_management/next/universal-agent-api/kickoff_prompts/CP1-ci-checkpoint.md",
+    "depends_on": [
+      "C2-integ"
+    ],
+    "concurrent_with": []
+  }
+]

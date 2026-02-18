@@ -1,3 +1,0 @@
-$ cargo deny --color never --offline --locked check licenses
-licenses ok
-0

@@ -15,7 +15,7 @@ In practice, consumers (including multi-agent/orchestrator CLIs) want to ingest 
 
 - Replaying or summarizing a prior run from a saved `json_event_log`.
 - Debugging failures using logs captured by the wrapper or stored under `CODEX_HOME` (e.g., transcripts under `conversations/`).
-- Building higher-level adapters that convert Codex-native events into an agent-agnostic `AgentEvent` stream.
+- Building higher-level adapters that convert Codex-native events into an agent-agnostic `AgentWrapperEvent` stream.
 
 Today, the tolerant parsing and context inference logic is effectively available only through the live streaming APIs (`stream_exec`, `stream_resume`) that spawn a Codex process and read stdout in real time. There is no small, public, offline parsing API that reuses the same normalization rules.
 
@@ -73,7 +73,7 @@ Add unit tests that exercise the public API using the existing versioned JSONL f
 
 ## Non-goals
 
-- Do not add an agent-agnostic event schema (`AgentEvent`) to `crates/codex`.
+- Do not add an agent-agnostic event schema (`AgentWrapperEvent`) to `crates/codex`.
 - Do not add analytics/reporting (summaries, metrics, dashboards) to the wrapper.
 - Do not attempt to parse non-`ThreadEvent` logs (e.g., arbitrary `codex-*.log` trace logs) as part of this ADR.
 

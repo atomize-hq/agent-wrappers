@@ -1,3 +1,0 @@
-$ cargo deny check advisories
-advisories ok
-0

@@ -159,7 +159,7 @@ mod tests {
     fn oversized_line_is_discarded_and_iteration_continues() {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(b"ok\n");
-        bytes.extend_from_slice(&vec![b'a'; 50]);
+        bytes.extend_from_slice(&[b'a'; 50]);
         bytes.extend_from_slice(b"\nnext\n");
 
         let reader = SyncBoundedLineReader::new(std::io::Cursor::new(bytes), 16);
