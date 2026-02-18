@@ -4,7 +4,7 @@
     "name": "C0: claude_code streaming API (code)",
     "type": "code",
     "phase": "C0",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Implement the C0 spec in `crates/claude_code` (production code + CI workflow/scripts; no tests).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
@@ -43,7 +43,10 @@
     "integration_task": "C0-integ",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-code.md",
     "depends_on": [],
-    "concurrent_with": ["C0-test"]
+    "concurrent_with": [
+      "C0-test"
+    ],
+    "started_at": "2026-02-18T19:09:20Z"
   },
   {
     "id": "C0-test",
@@ -85,7 +88,9 @@
     "integration_task": "C0-integ",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-test.md",
     "depends_on": [],
-    "concurrent_with": ["C0-code"]
+    "concurrent_with": [
+      "C0-code"
+    ]
   },
   {
     "id": "C0-integ",
@@ -126,7 +131,10 @@
     "worktree": "wt/ccsj-c0-stream-api-integ",
     "integration_task": "C0-integ",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-integ.md",
-    "depends_on": ["C0-code", "C0-test"],
+    "depends_on": [
+      "C0-code",
+      "C0-test"
+    ],
     "concurrent_with": []
   },
   {
@@ -171,8 +179,12 @@
     "worktree": "wt/ccsj-c1-agent-api-wiring-code",
     "integration_task": "C1-integ",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-code.md",
-    "depends_on": ["C0-integ"],
-    "concurrent_with": ["C1-test"]
+    "depends_on": [
+      "C0-integ"
+    ],
+    "concurrent_with": [
+      "C1-test"
+    ]
   },
   {
     "id": "C1-test",
@@ -213,8 +225,12 @@
     "worktree": "wt/ccsj-c1-agent-api-wiring-test",
     "integration_task": "C1-integ",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-test.md",
-    "depends_on": ["C0-integ"],
-    "concurrent_with": ["C1-code"]
+    "depends_on": [
+      "C0-integ"
+    ],
+    "concurrent_with": [
+      "C1-code"
+    ]
   },
   {
     "id": "C1-integ",
@@ -255,7 +271,10 @@
     "worktree": "wt/ccsj-c1-agent-api-wiring-integ",
     "integration_task": "C1-integ",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-integ.md",
-    "depends_on": ["C1-code", "C1-test"],
+    "depends_on": [
+      "C1-code",
+      "C1-test"
+    ],
     "concurrent_with": []
   },
   {
@@ -288,7 +307,9 @@
     "worktree": "N/A",
     "integration_task": "CP1-ci-checkpoint",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/CP1-ci-checkpoint.md",
-    "depends_on": ["C1-integ"],
+    "depends_on": [
+      "C1-integ"
+    ],
     "concurrent_with": []
   }
 ]
