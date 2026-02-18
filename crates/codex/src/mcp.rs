@@ -31,9 +31,9 @@ mod jsonrpc;
 mod client;
 pub use client::*;
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod test_support;
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests_core;
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests_runtime_app;

@@ -186,3 +186,13 @@ hygiene:
 
 .PHONY: preflight
 preflight: hygiene flightcheck
+
+.PHONY: adr-check
+adr-check:
+	@test -n "$(ADR)" || (echo "usage: make adr-check ADR=docs/adr/0009-....md" && exit 2)
+	@python3 scripts/adr_hash.py "$(ADR)" >/dev/null
+
+.PHONY: adr-fix
+adr-fix:
+	@test -n "$(ADR)" || (echo "usage: make adr-fix ADR=docs/adr/0009-....md" && exit 2)
+	@python3 scripts/adr_hash.py --fix "$(ADR)" >/dev/null

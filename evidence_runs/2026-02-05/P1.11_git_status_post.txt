@@ -1,3 +1,0 @@
-?? evidence_runs/2026-02-05/P1.11_git_commit.txt
-?? evidence_runs/2026-02-05/P1.11_git_commit_amend.txt
-?? evidence_runs/2026-02-05/P1.11_git_status_post.txt

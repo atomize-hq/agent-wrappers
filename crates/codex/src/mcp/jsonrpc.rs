@@ -321,7 +321,16 @@ async fn reader_task(
     mirror_stdio: bool,
 ) {
     let mut lines = BufReader::new(stdout).lines();
-    while let Ok(Some(line)) = lines.next_line().await {
+    loop {
+        let line = match lines.next_line().await {
+            Ok(Some(line)) => line,
+            Ok(None) => break,
+            Err(err) => {
+                warn!("failed to read MCP stdout: {err}");
+                break;
+            }
+        };
+
         if mirror_stdio {
             eprintln!("[mcp stdout] {line}");
         }
@@ -373,7 +382,16 @@ async fn reader_task(
 
 async fn stderr_task(stderr: ChildStderr, mirror_stdio: bool) {
     let mut lines = BufReader::new(stderr).lines();
-    while let Ok(Some(line)) = lines.next_line().await {
+    loop {
+        let line = match lines.next_line().await {
+            Ok(Some(line)) => line,
+            Ok(None) => break,
+            Err(err) => {
+                warn!("failed to read MCP stderr: {err}");
+                break;
+            }
+        };
+
         if mirror_stdio {
             eprintln!("[mcp stderr] {line}");
         } else {

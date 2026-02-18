@@ -53,9 +53,7 @@ impl LineParser for ClaudeCodeLineParser {
     }
 
     fn parse_line(&mut self, input: LineInput<'_>) -> Result<Option<Self::Event>, Self::Error> {
-        self.parser
-            .parse_line(input.line)
-            .map_err(|err| claude_err(err))
+        self.parser.parse_line(input.line).map_err(claude_err)
     }
 }
 

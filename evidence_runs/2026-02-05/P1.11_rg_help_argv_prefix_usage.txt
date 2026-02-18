@@ -1,2 +1,0 @@
-1224:            .argv_prefix()
-3291:    fn argv_prefix(&self) -> &'static [&'static str] {

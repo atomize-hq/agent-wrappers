@@ -2,12 +2,13 @@ use super::*;
 
 pub(super) mod prelude {
     pub(crate) use serde_json::Value;
+    #[cfg(unix)]
+    pub(crate) use std::os::unix::fs::PermissionsExt;
     pub(crate) use std::{
         collections::{BTreeMap, HashMap},
         env,
         ffi::OsString,
         fs,
-        os::unix::fs::PermissionsExt,
         path::PathBuf,
         sync::Arc,
         time::Duration,
@@ -126,9 +127,12 @@ for line in sys.stdin:
 "#;
 
     fs::write(&script_path, script).expect("write script");
-    let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&script_path, perms).expect("chmod");
+    #[cfg(unix)]
+    {
+        let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).expect("chmod");
+    }
     (dir, script_path)
 }
 
@@ -225,9 +229,12 @@ for line in sys.stdin:
 "#;
 
     fs::write(&script_path, script).expect("write script");
-    let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&script_path, perms).expect("chmod");
+    #[cfg(unix)]
+    {
+        let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).expect("chmod");
+    }
     (dir, script_path)
 }
 
@@ -247,9 +254,12 @@ time.sleep(30)
     );
 
     fs::write(&script_path, script).expect("write script");
-    let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&script_path, perms).expect("chmod");
+    #[cfg(unix)]
+    {
+        let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).expect("chmod");
+    }
     (dir, script_path)
 }
 

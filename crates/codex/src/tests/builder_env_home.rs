@@ -236,6 +236,7 @@ fn command_env_applies_home_and_binary_per_command() {
 }
 
 #[cfg(unix)]
+#[cfg(unix)]
 #[tokio::test]
 async fn apply_and_diff_capture_outputs_and_status() {
     let dir = tempfile::tempdir().unwrap();

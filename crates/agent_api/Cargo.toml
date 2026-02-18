@@ -1,0 +1,21 @@
+[package]
+name = "agent_api"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.78"
+description = "Agent-agnostic facade and registry for wrapper backends"
+license = "MIT OR Apache-2.0"
+
+[features]
+default = []
+codex = ["dep:codex", "dep:tokio"]
+claude_code = ["dep:claude_code", "dep:tokio"]
+
+[dependencies]
+futures-core = "0.3"
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+codex = { path = "../codex", optional = true }
+claude_code = { path = "../claude_code", optional = true }
+tokio = { workspace = true, optional = true }
