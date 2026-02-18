@@ -392,12 +392,13 @@ def main(argv: list[str] | None = None) -> int:
     repo_root = Path(args.repo_root).resolve()
     queue_path = Path(args.queue).resolve()
     run_root = (repo_root / args.run_root).resolve()
-    run_root.mkdir(parents=True, exist_ok=True)
 
     spawn_script = (repo_root / "scripts" / "spawn_worker.py").resolve()
-    if not spawn_script.exists():
-        print(f"Missing spawn script: {spawn_script}", file=sys.stderr)
-        return 2
+    if not args.dry_run:
+        run_root.mkdir(parents=True, exist_ok=True)
+        if not spawn_script.exists():
+            print(f"Missing spawn script: {spawn_script}", file=sys.stderr)
+            return 2
 
     base_branch = _git_current_branch(repo_root)
 
@@ -430,6 +431,29 @@ def main(argv: list[str] | None = None) -> int:
             return 1
 
         runnable = _runnable_tasks(tasks, done)
+
+        # Dry-run is a pure scheduling preview: do not mutate queue state, logs, worktrees, or
+        # run-root artifacts.
+        if args.dry_run:
+            active_streams = _active_workstreams(payload)
+            planned: list[Task] = []
+            for t in runnable:
+                if len(planned) >= int(args.max_workers):
+                    break
+                if int(args.per_workstream) > 0 and t.workstream_id in active_streams:
+                    continue
+                planned.append(t)
+                active_streams.add(t.workstream_id)
+
+            if not planned:
+                print("DRY RUN: no runnable tasks (within scope).")
+                return 0
+
+            for t in planned:
+                planned_cwd = repo_root / t.worktree if t.worktree and t.worktree.strip().upper() != "N/A" else repo_root
+                print(f"DRY RUN: would spawn {t.id} ({t.workstream_id}) in {planned_cwd}")
+            return 0
+
         if not runnable and not running:
             print("DONE: no runnable tasks and no running workers (within scope).")
             return 0
