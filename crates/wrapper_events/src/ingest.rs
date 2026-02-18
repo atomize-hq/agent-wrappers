@@ -127,6 +127,7 @@ impl<R: Read, P: LineParser> LineIngestor<R, P> {
     fn adapter_error_record<T>(
         &mut self,
         line_number: usize,
+        captured_raw: Option<CapturedRaw>,
         code: AdapterErrorCode,
         summary: String,
         full_details: String,
@@ -141,7 +142,11 @@ impl<R: Read, P: LineParser> LineIngestor<R, P> {
                 });
             }
         }
-        self.record_error(line_number, LineRecordError::Adapter { code, summary })
+        LineRecord {
+            line_number,
+            captured_raw,
+            outcome: Err(LineRecordError::Adapter { code, summary }),
+        }
     }
 }
 
@@ -193,6 +198,7 @@ impl<R: Read, P: LineParser> Iterator for LineIngestor<R, P> {
                         Err(err) => {
                             return Some(self.adapter_error_record(
                                 line_number,
+                                captured_raw,
                                 err.code(),
                                 err.redacted_summary(),
                                 err.full_details(),
@@ -306,6 +312,7 @@ mod tokio_ingest {
         fn adapter_error_record<T>(
             &mut self,
             line_number: usize,
+            captured_raw: Option<CapturedRaw>,
             code: AdapterErrorCode,
             summary: String,
             full_details: String,
@@ -320,7 +327,11 @@ mod tokio_ingest {
                     });
                 }
             }
-            self.record_error(line_number, LineRecordError::Adapter { code, summary })
+            LineRecord {
+                line_number,
+                captured_raw,
+                outcome: Err(LineRecordError::Adapter { code, summary }),
+            }
         }
 
         pub async fn next_record(&mut self) -> Option<LineRecord<P::Event>> {
@@ -370,6 +381,7 @@ mod tokio_ingest {
                             Err(err) => {
                                 return Some(self.adapter_error_record(
                                     line_number,
+                                    captured_raw,
                                     err.code(),
                                     err.redacted_summary(),
                                     err.full_details(),
@@ -388,6 +400,9 @@ mod tokio_ingest {
 
         #[derive(Default)]
         struct TestParser;
+
+        #[derive(Default)]
+        struct FailingParser;
 
         #[derive(Debug, thiserror::Error)]
         #[error("boom")]
@@ -421,6 +436,20 @@ mod tokio_ingest {
             }
         }
 
+        impl crate::LineParser for FailingParser {
+            type Event = String;
+            type Error = TestErr;
+
+            fn reset(&mut self) {}
+
+            fn parse_line(
+                &mut self,
+                _input: crate::LineInput<'_>,
+            ) -> Result<Option<Self::Event>, Self::Error> {
+                Err(TestErr)
+            }
+        }
+
         #[tokio::test]
         async fn budget_skips_capture_deterministically() {
             let data = b"{\"k\":1}\n";
@@ -439,6 +468,89 @@ mod tokio_ingest {
             assert!(rec.captured_raw.is_none());
             assert!(rec.outcome.is_ok());
         }
+
+        #[tokio::test]
+        async fn preserves_line_capture_on_adapter_error() {
+            let data = b"hello\n";
+            let mut config = IngestConfig::default();
+            config.capture_raw = CaptureRaw::Line;
+
+            let mut ingestor = AsyncLineIngestor::new(
+                std::io::Cursor::new(data),
+                FailingParser::default(),
+                config,
+                "test",
+            );
+
+            let rec = ingestor.next_record().await.unwrap();
+            assert!(matches!(rec.outcome, Err(LineRecordError::Adapter { .. })));
+            assert_eq!(
+                rec.captured_raw.as_ref().and_then(|r| r.line.as_deref()),
+                Some("hello")
+            );
+        }
+
+        #[tokio::test]
+        async fn preserves_json_capture_on_adapter_error() {
+            let data = br#"{"k":1}"#;
+            let mut bytes = Vec::new();
+            bytes.extend_from_slice(data);
+            bytes.extend_from_slice(b"\n");
+
+            let mut config = IngestConfig::default();
+            config.capture_raw = CaptureRaw::Json;
+
+            let mut ingestor = AsyncLineIngestor::new(
+                std::io::Cursor::new(bytes),
+                FailingParser::default(),
+                config,
+                "test",
+            );
+
+            let rec = ingestor.next_record().await.unwrap();
+            assert!(matches!(rec.outcome, Err(LineRecordError::Adapter { .. })));
+            let captured = rec.captured_raw.expect("expected captured_raw");
+            assert_eq!(captured.line, None);
+            assert_eq!(
+                captured
+                    .json
+                    .as_ref()
+                    .and_then(|v| v.get("k"))
+                    .and_then(|v| v.as_i64()),
+                Some(1)
+            );
+        }
+
+        #[tokio::test]
+        async fn preserves_both_capture_on_adapter_error() {
+            let data = br#"{"k":1}"#;
+            let mut bytes = Vec::new();
+            bytes.extend_from_slice(data);
+            bytes.extend_from_slice(b"\n");
+
+            let mut config = IngestConfig::default();
+            config.capture_raw = CaptureRaw::Both;
+
+            let mut ingestor = AsyncLineIngestor::new(
+                std::io::Cursor::new(bytes),
+                FailingParser::default(),
+                config,
+                "test",
+            );
+
+            let rec = ingestor.next_record().await.unwrap();
+            assert!(matches!(rec.outcome, Err(LineRecordError::Adapter { .. })));
+            let captured = rec.captured_raw.expect("expected captured_raw");
+            assert_eq!(captured.line.as_deref(), Some("{\"k\":1}"));
+            assert_eq!(
+                captured
+                    .json
+                    .as_ref()
+                    .and_then(|v| v.get("k"))
+                    .and_then(|v| v.as_i64()),
+                Some(1)
+            );
+        }
     }
 }
 
@@ -451,6 +563,9 @@ mod tests {
 
     #[derive(Default)]
     struct TestParser;
+
+    #[derive(Default)]
+    struct FailingParser;
 
     #[derive(Debug, thiserror::Error)]
     #[error("boom")]
@@ -481,6 +596,20 @@ mod tests {
         }
     }
 
+    impl LineParser for FailingParser {
+        type Event = String;
+        type Error = TestErr;
+
+        fn reset(&mut self) {}
+
+        fn parse_line(
+            &mut self,
+            _input: LineInput<'_>,
+        ) -> Result<Option<Self::Event>, Self::Error> {
+            Err(TestErr)
+        }
+    }
+
     #[test]
     fn captures_line_before_parsing() {
         let data = b"hello\n";
@@ -500,5 +629,88 @@ mod tests {
             Some("hello")
         );
         assert!(rec.outcome.is_ok());
+    }
+
+    #[test]
+    fn preserves_line_capture_on_adapter_error() {
+        let data = b"hello\n";
+        let mut config = IngestConfig::default();
+        config.capture_raw = CaptureRaw::Line;
+
+        let mut ingestor = LineIngestor::new(
+            std::io::Cursor::new(data),
+            FailingParser::default(),
+            config,
+            "test",
+        );
+
+        let rec = ingestor.next().unwrap();
+        assert!(matches!(rec.outcome, Err(LineRecordError::Adapter { .. })));
+        assert_eq!(
+            rec.captured_raw.as_ref().and_then(|r| r.line.as_deref()),
+            Some("hello")
+        );
+    }
+
+    #[test]
+    fn preserves_json_capture_on_adapter_error() {
+        let data = br#"{"k":1}"#;
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(data);
+        bytes.extend_from_slice(b"\n");
+
+        let mut config = IngestConfig::default();
+        config.capture_raw = CaptureRaw::Json;
+
+        let mut ingestor = LineIngestor::new(
+            std::io::Cursor::new(bytes),
+            FailingParser::default(),
+            config,
+            "test",
+        );
+
+        let rec = ingestor.next().unwrap();
+        assert!(matches!(rec.outcome, Err(LineRecordError::Adapter { .. })));
+        let captured = rec.captured_raw.expect("expected captured_raw");
+        assert_eq!(captured.line, None);
+        assert_eq!(
+            captured
+                .json
+                .as_ref()
+                .and_then(|v| v.get("k"))
+                .and_then(|v| v.as_i64()),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn preserves_both_capture_on_adapter_error() {
+        let data = br#"{"k":1}"#;
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(data);
+        bytes.extend_from_slice(b"\n");
+
+        let mut config = IngestConfig::default();
+        config.capture_raw = CaptureRaw::Both;
+
+        let mut ingestor = LineIngestor::new(
+            std::io::Cursor::new(bytes),
+            FailingParser::default(),
+            config,
+            "test",
+        );
+
+        let rec = ingestor.next().unwrap();
+        assert!(matches!(rec.outcome, Err(LineRecordError::Adapter { .. })));
+        let captured = rec.captured_raw.expect("expected captured_raw");
+        assert_eq!(captured.line.as_deref(), Some("{\"k\":1}"));
+        assert_eq!(
+            captured
+                .json
+                .as_ref()
+                .and_then(|v| v.get("k"))
+                .and_then(|v| v.as_i64()),
+            Some(1)
+        );
     }
 }
