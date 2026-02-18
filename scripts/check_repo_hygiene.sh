@@ -16,7 +16,11 @@ check_no_tracked_under() {
 check_no_tracked_glob() {
   local pattern="$1"
   local hits
-  hits="$(git ls-files | rg -n "$pattern" || true)"
+  if command -v rg >/dev/null 2>&1; then
+    hits="$(git ls-files | rg -n "$pattern" || true)"
+  else
+    hits="$(git ls-files | grep -En "$pattern" || true)"
+  fi
   if [[ -n "$hits" ]]; then
     echo "ERROR: repo hygiene: tracked files match pattern: $pattern"
     echo "$hits"

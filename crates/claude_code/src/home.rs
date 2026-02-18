@@ -228,11 +228,12 @@ fn copy_if_exists(
         Ok(meta) => {
             if !meta.is_file() {
                 outcome.skipped_paths.push(src.to_path_buf());
-                return Ok(());
+                Ok(())
+            } else {
+                copy_file(src, dst)?;
+                outcome.copied_paths.push(dst.to_path_buf());
+                Ok(())
             }
-            copy_file(src, dst)?;
-            outcome.copied_paths.push(dst.to_path_buf());
-            Ok(())
         }
         Err(err) if err.kind() == io::ErrorKind::NotFound => {
             outcome.skipped_paths.push(src.to_path_buf());
@@ -254,11 +255,12 @@ fn copy_dir_if_exists(
         Ok(meta) => {
             if !meta.is_dir() {
                 outcome.skipped_paths.push(src.to_path_buf());
-                return Ok(());
+                Ok(())
+            } else {
+                copy_dir_recursive(src, dst)?;
+                outcome.copied_paths.push(dst.to_path_buf());
+                Ok(())
             }
-            copy_dir_recursive(src, dst)?;
-            outcome.copied_paths.push(dst.to_path_buf());
-            Ok(())
         }
         Err(err) if err.kind() == io::ErrorKind::NotFound => {
             outcome.skipped_paths.push(src.to_path_buf());
