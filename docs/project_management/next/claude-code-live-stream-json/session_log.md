@@ -218,3 +218,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - **Blockers:** Can’t fast-forward merge into `feat/claude-code-live-stream-json` or update docs from this worktree per hard rules; orchestrator should handle the FF merge + docs END entry + worktree removal.
 ```
 - Blockers: none
+## [2026-02-18 21:39 UTC] Integration Agent – CP1-ci-checkpoint – START
+- Orchestrator: set `CP1-ci-checkpoint` → `in_progress` in `tasks.json`
+- Base branch: `feat/claude-code-live-stream-json`
+- Kickoff prompt: `docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/CP1-ci-checkpoint.md`
+- Worktree: N/A
+- Blockers: none
