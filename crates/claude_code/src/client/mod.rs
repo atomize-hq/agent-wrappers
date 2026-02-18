@@ -630,6 +630,32 @@ async fn run_print_stream_json_child(
         return Err(err);
     }
 
+    if cancelled {
+        let status = match time::timeout(Duration::from_secs(2), child.wait()).await {
+            Ok(res) => res.map_err(ClaudeCodeError::Wait)?,
+            Err(_) => {
+                return Err(ClaudeCodeError::Wait(std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    "timed out waiting for claude process after cancellation",
+                )));
+            }
+        };
+
+        if let Some(task) = stderr_task {
+            match task.await {
+                Ok(Ok(())) => {}
+                Ok(Err(err)) => {
+                    return Err(ClaudeCodeError::StderrRead(err));
+                }
+                Err(err) => {
+                    return Err(ClaudeCodeError::Join(err.to_string()));
+                }
+            }
+        }
+
+        return Ok(status);
+    }
+
     if timed_out {
         if let Some(timeout) = timeout {
             let _ = time::timeout(Duration::from_secs(2), child.wait()).await;
