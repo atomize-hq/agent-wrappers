@@ -147,7 +147,7 @@
     "name": "C1: agent_api Claude live events (code)",
     "type": "code",
     "phase": "C1",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Wire `crates/agent_api` Claude backend to streaming API + advertise `agent_api.events.live` (production code only; no tests).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
@@ -190,7 +190,8 @@
     "concurrent_with": [
       "C1-test"
     ],
-    "started_at": "2026-02-18T21:16:54Z"
+    "started_at": "2026-02-18T21:16:54Z",
+    "completed_at": "2026-02-18T21:22:29Z"
   },
   {
     "id": "C1-test",

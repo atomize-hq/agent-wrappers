@@ -147,3 +147,21 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Kickoff prompt: `docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-test.md`
 - Worktree: `wt/ccsj-c1-agent-api-wiring-test`
 - Blockers: none
+## [2026-02-18 21:22 UTC] Code Agent – C1-code – END
+- Worktree: `wt/ccsj-c1-agent-api-wiring-code`
+- Worker output: `/Users/spensermcconnell/__Active_Code/codex-wrapper/.runs/C1-code/last_message.md`
+- Worker summary (first ~40 lines):
+```text
+- Implemented live Claude event streaming in `agent_api` by switching `crates/agent_api/src/backends/claude_code.rs` to use `ClaudeClient::print_stream_json(...)` and forward mapped `AgentWrapperEvent`s as they arrive; backend now advertises `agent_api.events.live`.
+- Added feature-gated `futures-util` dep for `agent_api` Claude streaming iteration in `crates/agent_api/Cargo.toml` (lockfile updated).
+
+**Report**
+- Worktree/branch: `/Users/spensermcconnell/__Active_Code/codex-wrapper/wt/ccsj-c1-agent-api-wiring-code` @ `ccsj-c1-agent-api-wiring-code`
+- Files changed: `crates/agent_api/src/backends/claude_code.rs`, `crates/agent_api/Cargo.toml`, `Cargo.lock`
+- Commits: `8a1a6ad feat(agent_api): stream claude events live`
+- Commands run:
+  - `cargo fmt` (pass)
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings` (pass)
+- Blockers: none
+```
+- Blockers: none
