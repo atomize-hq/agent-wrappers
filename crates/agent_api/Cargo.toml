@@ -9,10 +9,11 @@ license = "MIT OR Apache-2.0"
 [features]
 default = []
 codex = ["dep:codex", "dep:tokio"]
-claude_code = ["dep:claude_code", "dep:tokio"]
+claude_code = ["dep:claude_code", "dep:tokio", "dep:futures-util"]
 
 [dependencies]
 futures-core = "0.3"
+futures-util = { version = "0.3", optional = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 
