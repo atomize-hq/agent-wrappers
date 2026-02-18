@@ -63,3 +63,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
   - `git add`/`git commit` fails with `fatal: Unable to create '.../.git/worktrees/ccsj-c0-stream-api-test/index.lock': Operation not permitted` because the worktree git metadata directory is outside the writable roots in this sandbox.
 ```
 - Blockers: none
+## [2026-02-18 19:23 UTC] Code Agent – C0-code – START
+- Orchestrator: set `C0-code` → `in_progress` in `tasks.json`
+- Base branch: `feat/claude-code-live-stream-json`
+- Kickoff prompt: `docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-code.md`
+- Worktree: `wt/ccsj-c0-stream-api-code`
+- Blockers: none

@@ -4,7 +4,7 @@
     "name": "C0: claude_code streaming API (code)",
     "type": "code",
     "phase": "C0",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Implement the C0 spec in `crates/claude_code` (production code + CI workflow/scripts; no tests).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
@@ -45,7 +45,8 @@
     "depends_on": [],
     "concurrent_with": [
       "C0-test"
-    ]
+    ],
+    "started_at": "2026-02-18T19:23:34Z"
   },
   {
     "id": "C0-test",
