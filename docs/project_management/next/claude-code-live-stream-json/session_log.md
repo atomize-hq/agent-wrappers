@@ -192,3 +192,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Claude backend does not yet emit events live before process exit (timeout waiting for first event in the long-delay fake CLI scenario).
 ```
 - Blockers: none
+## [2026-02-18 21:27 UTC] Integration Agent – C1-integ – START
+- Orchestrator: set `C1-integ` → `in_progress` in `tasks.json`
+- Base branch: `feat/claude-code-live-stream-json`
+- Kickoff prompt: `docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-integ.md`
+- Worktree: `wt/ccsj-c1-agent-api-wiring-integ`
+- Blockers: none
