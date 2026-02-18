@@ -197,7 +197,7 @@
     "name": "C1: agent_api Claude live events (test)",
     "type": "test",
     "phase": "C1",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Add tests validating `agent_api.events.live` capability + Universal Agent API DR-0012 completion gating (tests only).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
@@ -236,7 +236,8 @@
     ],
     "concurrent_with": [
       "C1-code"
-    ]
+    ],
+    "started_at": "2026-02-18T21:16:54Z"
   },
   {
     "id": "C1-integ",
