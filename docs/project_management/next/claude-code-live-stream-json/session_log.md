@@ -198,3 +198,23 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Kickoff prompt: `docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-integ.md`
 - Worktree: `wt/ccsj-c1-agent-api-wiring-integ`
 - Blockers: none
+## [2026-02-18 21:33 UTC] Integration Agent – C1-integ – END
+- Worktree: `wt/ccsj-c1-agent-api-wiring-integ`
+- Worker output: `/Users/spensermcconnell/__Active_Code/codex-wrapper/.runs/C1-integ/last_message.md`
+- Orchestrator: fast-forward merged `ccsj-c1-agent-api-wiring-integ` → `feat/claude-code-live-stream-json`
+- Worker summary (first ~40 lines):
+```text
+**C1-integ report**
+
+- **Worktree/branch:** `/Users/spensermcconnell/__Active_Code/codex-wrapper/wt/ccsj-c1-agent-api-wiring-integ` on `ccsj-c1-agent-api-wiring-integ`
+- **Commits (this branch):** `deda458` (merge `ccsj-c1-agent-api-wiring-code`), `c048702` (merge `ccsj-c1-agent-api-wiring-test`), `b47a4d0` (fix(agent_api): drain claude stream after events drop)
+- **Files changed (vs `feat/claude-code-live-stream-json`):** `Cargo.lock`, `crates/agent_api/Cargo.toml`, `crates/agent_api/src/backends/claude_code.rs`, `crates/agent_api/src/bin/fake_claude_stream_json_agent_api.rs`, `crates/agent_api/tests/c1_claude_live_events.rs`
+- **Commands run (required):**
+  - `cargo fmt` — PASS
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings` — PASS
+  - `cargo test -p agent_api --all-targets --all-features` — PASS
+  - `cargo test -p claude_code --all-targets --all-features` — PASS
+  - `make preflight` — SKIPPED (Linux-only; host is `Darwin 24.6.0 arm64`)
+- **Blockers:** Can’t fast-forward merge into `feat/claude-code-live-stream-json` or update docs from this worktree per hard rules; orchestrator should handle the FF merge + docs END entry + worktree removal.
+```
+- Blockers: none
