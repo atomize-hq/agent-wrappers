@@ -89,3 +89,37 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - **Notes/blockers:** C0 “incrementality” is proven via a synthetic `AsyncRead` streaming harness (no real `claude`), but it does **not** exercise a `ClaudeClient::print_stream_json(...)` API (I couldn’t find that API in `crates/claude_code` on this branch). Also, kickoff asks to log commands in `session_log.md`, but hard rules prohibit editing it from this worktree.
 ```
 - Blockers: none
+## [2026-02-18 19:39 UTC] Code Agent – C0-code – END
+- Worktree: `wt/ccsj-c0-stream-api-code`
+- Worker output: `/Users/spensermcconnell/__Active_Code/codex-wrapper/.runs/C0-code/last_message.md`
+- Worker summary (first ~40 lines):
+```text
+- Implemented `claude_code::ClaudeClient::print_stream_json(...)` streaming API (bounded channel=32, CRLF tolerant, blank-line skip, redacted parse errors, `kill_on_drop(true)`, stderr discarded by default + optional mirror) via `crates/claude_code/src/client/mod.rs`.
+- Smoke workflow/scripts already present and unchanged: `.github/workflows/claude-code-live-stream-json-smoke.yml`, `docs/project_management/next/claude-code-live-stream-json/smoke/*`.
+
+**Files changed**
+- `Cargo.lock`
+- `crates/claude_code/Cargo.toml`
+- `crates/claude_code/src/lib.rs`
+- `crates/claude_code/src/client/mod.rs`
+- `crates/claude_code/src/home.rs`
+- `crates/claude_code/examples/print_tools_safe_bash.rs`
+- `crates/wrapper_events/src/channel.rs`
+- `crates/wrapper_events/src/ingest.rs`
+
+**Branch / worktree**
+- Branch: `ccsj-c0-stream-api-code`
+- Worktree: `/Users/spensermcconnell/__Active_Code/codex-wrapper/wt/ccsj-c0-stream-api-code`
+
+**Commits**
+- `3fe8f13` feat(claude_code): add live stream-json print API
+- `087f73e` chore: fix clippy lints
+
+**Commands run (required)**
+- `cargo fmt` — pass
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` — pass
+
+**Blockers**
+- None
+```
+- Blockers: none
