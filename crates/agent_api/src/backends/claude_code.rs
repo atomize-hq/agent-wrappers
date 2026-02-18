@@ -432,7 +432,7 @@ mod tests {
         let capabilities = backend.capabilities();
         assert!(capabilities.contains("agent_api.run"));
         assert!(capabilities.contains("agent_api.events"));
-        assert!(!capabilities.contains("agent_api.events.live"));
+        assert!(capabilities.contains("agent_api.events.live"));
     }
 
     #[test]
