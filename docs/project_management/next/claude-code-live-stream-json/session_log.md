@@ -123,3 +123,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - None
 ```
 - Blockers: none
+## [2026-02-18 19:39 UTC] Integration Agent – C0-integ – START
+- Orchestrator: set `C0-integ` → `in_progress` in `tasks.json`
+- Base branch: `feat/claude-code-live-stream-json`
+- Kickoff prompt: `docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-integ.md`
+- Worktree: `wt/ccsj-c0-stream-api-integ`
+- Blockers: none

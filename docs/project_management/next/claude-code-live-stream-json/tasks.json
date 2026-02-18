@@ -100,7 +100,7 @@
     "name": "C0: claude_code streaming API (integration)",
     "type": "integration",
     "phase": "C0",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Merge C0 code/test, reconcile to spec, and gate with fmt/clippy/tests/preflight (Linux).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
@@ -138,7 +138,8 @@
       "C0-code",
       "C0-test"
     ],
-    "concurrent_with": []
+    "concurrent_with": [],
+    "started_at": "2026-02-18T19:39:39Z"
   },
   {
     "id": "C1-code",
