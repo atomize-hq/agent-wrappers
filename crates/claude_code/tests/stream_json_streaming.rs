@@ -1,119 +1,58 @@
 use std::time::Duration;
 
-use claude_code::{ClaudeStreamJsonEvent, ClaudeStreamJsonParseError, ClaudeStreamJsonParser};
-use tokio::{
-    io::{AsyncBufReadExt, AsyncRead, AsyncWriteExt, BufReader},
-    sync::mpsc,
-};
+use claude_code::{ClaudeClient, ClaudePrintRequest, ClaudeStreamJsonEvent};
+use futures_util::StreamExt;
 
-const SYSTEM_INIT: &str = include_str!("fixtures/stream_json/v1/system_init.jsonl");
-const USER_MESSAGE: &str = include_str!("fixtures/stream_json/v1/user_message.jsonl");
-
-fn first_nonempty_line(text: &str) -> &str {
-    text.lines()
-        .find(|line| !line.chars().all(|ch| ch.is_whitespace()))
-        .expect("fixture contains a non-empty line")
-}
-
-async fn stream_parse_typed_events<R>(
-    reader: R,
-    tx: mpsc::Sender<Result<ClaudeStreamJsonEvent, ClaudeStreamJsonParseError>>,
-) where
-    R: AsyncRead + Unpin + Send + 'static,
-{
-    let mut parser = ClaudeStreamJsonParser::new();
-    let mut lines = BufReader::new(reader).lines();
-    while let Ok(Some(line)) = lines.next_line().await {
-        match parser.parse_line(&line) {
-            Ok(None) => {}
-            Ok(Some(ev)) => {
-                if tx.send(Ok(ev)).await.is_err() {
-                    break;
-                }
-            }
-            Err(err) => {
-                if tx.send(Err(err)).await.is_err() {
-                    break;
-                }
-            }
-        }
-    }
+fn make_fake_client(scenario: &str) -> ClaudeClient {
+    ClaudeClient::builder()
+        .binary(std::path::PathBuf::from(env!(
+            "CARGO_BIN_EXE_fake_claude_stream_json"
+        )))
+        .env("FAKE_CLAUDE_SCENARIO", scenario)
+        .build()
 }
 
 #[tokio::test]
-async fn yields_events_incrementally_before_eof() {
-    let (mut writer, reader) = tokio::io::duplex(1024);
-    let (tx, mut rx) =
-        mpsc::channel::<Result<ClaudeStreamJsonEvent, ClaudeStreamJsonParseError>>(8);
+async fn print_stream_json_yields_events_incrementally_before_process_exit() {
+    let client = make_fake_client("two_events_delayed");
+    let request = ClaudePrintRequest::new("hello");
+    let handle = client.print_stream_json(request).await.unwrap();
 
-    let handle = tokio::spawn(stream_parse_typed_events(reader, tx));
+    let mut events = handle.events;
+    let mut completion = handle.completion;
 
-    let init = first_nonempty_line(SYSTEM_INIT);
-    writer.write_all(init.as_bytes()).await.unwrap();
-    writer.write_all(b"\n").await.unwrap();
-
-    let first = tokio::time::timeout(Duration::from_secs(1), rx.recv())
-        .await
-        .expect("expected first event before writer closes")
-        .expect("channel open")
-        .expect("event parses");
+    let first = tokio::select! {
+        biased;
+        res = &mut completion => panic!("completion resolved before first event: {res:?}"),
+        item = events.next() => item.expect("stream open").expect("event parses"),
+    };
     assert!(matches!(first, ClaudeStreamJsonEvent::SystemInit { .. }));
-    assert!(
-        !handle.is_finished(),
-        "stream task should remain active before EOF"
-    );
 
-    let user = first_nonempty_line(USER_MESSAGE);
-    writer.write_all(user.as_bytes()).await.unwrap();
-    writer.write_all(b"\n").await.unwrap();
-    drop(writer);
-
-    let second = tokio::time::timeout(Duration::from_secs(1), rx.recv())
+    let second = tokio::time::timeout(Duration::from_secs(1), events.next())
         .await
         .expect("expected second event")
-        .expect("channel open")
+        .expect("stream open")
         .expect("event parses");
     assert!(matches!(second, ClaudeStreamJsonEvent::UserMessage { .. }));
 
-    tokio::time::timeout(Duration::from_secs(1), handle)
-        .await
-        .expect("stream task should finish after EOF")
-        .unwrap();
+    completion.await.unwrap();
 }
 
 #[tokio::test]
-async fn crlf_and_blank_lines_are_ignored_in_streaming_mode() {
-    let (mut writer, reader) = tokio::io::duplex(1024);
-    let (tx, mut rx) =
-        mpsc::channel::<Result<ClaudeStreamJsonEvent, ClaudeStreamJsonParseError>>(8);
+async fn print_stream_json_ignores_crlf_and_blank_lines() {
+    let client = make_fake_client("crlf_blank_lines");
+    let request = ClaudePrintRequest::new("hello");
+    let handle = client.print_stream_json(request).await.unwrap();
 
-    let handle = tokio::spawn(stream_parse_typed_events(reader, tx));
+    let mut events = handle.events;
+    let completion = handle.completion;
 
-    writer.write_all(b"\r\n").await.unwrap();
-    writer.write_all(b"   \r\n").await.unwrap();
-
-    let init = first_nonempty_line(SYSTEM_INIT);
-    writer
-        .write_all(format!("{init}\r\n").as_bytes())
-        .await
-        .unwrap();
-
-    writer.write_all(b"\r\n").await.unwrap();
-
-    let user = first_nonempty_line(USER_MESSAGE);
-    writer
-        .write_all(format!("{user}\r\n").as_bytes())
-        .await
-        .unwrap();
-
-    drop(writer);
-
-    let a = tokio::time::timeout(Duration::from_secs(1), rx.recv())
+    let a = tokio::time::timeout(Duration::from_secs(1), events.next())
         .await
         .unwrap()
         .unwrap()
         .unwrap();
-    let b = tokio::time::timeout(Duration::from_secs(1), rx.recv())
+    let b = tokio::time::timeout(Duration::from_secs(1), events.next())
         .await
         .unwrap()
         .unwrap()
@@ -121,51 +60,35 @@ async fn crlf_and_blank_lines_are_ignored_in_streaming_mode() {
     assert!(matches!(a, ClaudeStreamJsonEvent::SystemInit { .. }));
     assert!(matches!(b, ClaudeStreamJsonEvent::UserMessage { .. }));
 
-    tokio::time::timeout(Duration::from_secs(1), handle)
-        .await
-        .expect("stream task should finish after EOF")
-        .unwrap();
-
-    let extra = tokio::time::timeout(Duration::from_secs(1), rx.recv())
-        .await
-        .expect("receiver should resolve after channel close");
-    assert!(extra.is_none(), "no extra events expected");
+    assert!(events.next().await.is_none(), "no extra events expected");
+    completion.await.unwrap();
 }
 
 #[tokio::test]
-async fn parse_errors_are_redacted_and_do_not_embed_raw_line_content() {
-    let (mut writer, reader) = tokio::io::duplex(1024);
-    let (tx, mut rx) =
-        mpsc::channel::<Result<ClaudeStreamJsonEvent, ClaudeStreamJsonParseError>>(8);
+async fn print_stream_json_redacts_parse_errors() {
+    let client = make_fake_client("parse_error_redaction");
+    let request = ClaudePrintRequest::new("hello");
+    let handle = client.print_stream_json(request).await.unwrap();
 
-    let handle = tokio::spawn(stream_parse_typed_events(reader, tx));
+    let mut events = handle.events;
+    let completion = handle.completion;
 
-    let secret = "VERY_SECRET_SHOULD_NOT_APPEAR";
-    let bad_line = format!("not json {secret}\n");
-    writer.write_all(bad_line.as_bytes()).await.unwrap();
-
-    let init = first_nonempty_line(SYSTEM_INIT);
-    writer.write_all(init.as_bytes()).await.unwrap();
-    writer.write_all(b"\n").await.unwrap();
-    drop(writer);
-
-    let first = tokio::time::timeout(Duration::from_secs(1), rx.recv())
+    let first = tokio::time::timeout(Duration::from_secs(1), events.next())
         .await
         .unwrap()
         .unwrap()
         .expect_err("expected parse error first");
+    let secret = "VERY_SECRET_SHOULD_NOT_APPEAR";
     assert!(!first.message.contains(secret));
     assert!(!first.details.contains(secret));
 
-    let second = tokio::time::timeout(Duration::from_secs(1), rx.recv())
+    let second = tokio::time::timeout(Duration::from_secs(1), events.next())
         .await
         .unwrap()
         .unwrap()
         .unwrap();
     assert!(matches!(second, ClaudeStreamJsonEvent::SystemInit { .. }));
 
-    tokio::time::timeout(Duration::from_secs(1), handle)
-        .await
-        .expect("stream task should finish after EOF")
-        .unwrap();
+    assert!(events.next().await.is_none(), "no extra events expected");
+    completion.await.unwrap();
 }

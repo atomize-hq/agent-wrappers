@@ -20,3 +20,4 @@ portable-pty = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+futures-util = "0.3"

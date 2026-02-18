@@ -222,6 +222,7 @@ name = "claude_code"
 version = "0.2.0"
 dependencies = [
  "futures-core",
+ "futures-util",
  "portable-pty",
  "serde",
  "serde_json",
