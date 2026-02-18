@@ -224,3 +224,25 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Kickoff prompt: `docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/CP1-ci-checkpoint.md`
 - Worktree: N/A
 - Blockers: none
+## [2026-02-18 22:12 UTC] Integration Agent – CP1-ci-checkpoint – END
+- Worktree: N/A
+- Worker output: `/Users/spensermcconnell/__Active_Code/codex-wrapper/.runs/CP1-ci-checkpoint/last_message.md`
+- Worker summary (first ~40 lines):
+```text
+**CP1-ci-checkpoint report**
+
+- Worktree: `/Users/spensermcconnell/__Active_Code/codex-wrapper`
+- Branch: `feat/claude-code-live-stream-json` (tracking `origin/feat/claude-code-live-stream-json`)
+- Tested SHA: `3c1dc03e29a984fbe4d7f326fbb8c632850bd8e7`
+- Files changed: `crates/claude_code/src/home.rs`, `scripts/check_repo_hygiene.sh`
+- Commits: `3c1dc03` (`fix(ci): clippy hygiene + rg fallback`)
+- Commands run:
+  - `make preflight` (PASS, local)
+  - `gh workflow run .github/workflows/claude-code-live-stream-json-smoke.yml --ref feat/claude-code-live-stream-json` → run `22159285860` (PASS) `https://github.com/atomize-hq/agent-wrappers/actions/runs/22159285860`
+    - Public API guard (ubuntu): PASS
+    - Smoke: ubuntu PASS, macOS PASS, windows PASS
+    - Preflight (ubuntu): PASS
+- Note: prior workflow run `22158908026` failed because it ran against stale remote `headSha=1d7c309...`; fixed by pushing the branch + clippy hygiene changes and re-running.
+- Blockers: hard rules prohibit updating `docs/project_management/next/**/tasks.json` and `docs/project_management/next/**/session_log.md`, so evidence/status updates were not written there.
+```
+- Blockers: none

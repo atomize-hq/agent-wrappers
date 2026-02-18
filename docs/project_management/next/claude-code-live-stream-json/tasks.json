@@ -293,7 +293,7 @@
     "name": "CP1: CI checkpoint (GitHub-hosted multi-OS)",
     "type": "integration",
     "phase": "CP1",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Run the bounded multi-OS CI gates defined in ci_checkpoint_plan.md after C1 is integrated.",
     "references": [
       "docs/project_management/next/claude-code-live-stream-json/ci_checkpoint_plan.md",
@@ -322,6 +322,7 @@
       "C1-integ"
     ],
     "concurrent_with": [],
-    "started_at": "2026-02-18T21:39:22Z"
+    "started_at": "2026-02-18T21:39:22Z",
+    "completed_at": "2026-02-18T22:12:15Z"
   }
 ]
