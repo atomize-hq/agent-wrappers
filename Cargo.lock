@@ -9,6 +9,7 @@ dependencies = [
  "claude_code",
  "codex",
  "futures-core",
+ "futures-util",
  "serde_json",
  "thiserror",
  "tokio",
