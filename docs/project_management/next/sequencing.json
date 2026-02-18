@@ -203,6 +203,23 @@
           "spec": "docs/project_management/next/universal-agent-api/C2-spec.md"
         }
       ]
+    },
+    {
+      "id": "claude_code_live_stream_json",
+      "name": "CLAUDE_CODE_LIVE_STREAM_JSON",
+      "source": "docs/adr/0010-claude-code-live-stream-json.md",
+      "phases": [
+        {
+          "id": "C0",
+          "name": "claude_code streaming API (print stream-json)",
+          "spec": "docs/project_management/next/claude-code-live-stream-json/C0-spec.md"
+        },
+        {
+          "id": "C1",
+          "name": "agent_api Claude live events",
+          "spec": "docs/project_management/next/claude-code-live-stream-json/C1-spec.md"
+        }
+      ]
     }
   ],
   "sequence": [
@@ -395,6 +412,20 @@
       "id": "universal_agent_api:C2",
       "title": "Claude Code backend adapter",
       "depends_on": ["universal_agent_api:C1"],
+      "blocks": []
+    },
+    {
+      "order": 360,
+      "id": "claude_code_live_stream_json:C0",
+      "title": "claude_code streaming API (print stream-json)",
+      "depends_on": ["universal_agent_api:C2"],
+      "blocks": ["claude_code_live_stream_json:C1"]
+    },
+    {
+      "order": 370,
+      "id": "claude_code_live_stream_json:C1",
+      "title": "agent_api Claude live events",
+      "depends_on": ["claude_code_live_stream_json:C0"],
       "blocks": []
     }
   ]

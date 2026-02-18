@@ -79,6 +79,10 @@ Each decision is exactly two options (A/B) with explicit tradeoffs and one selec
 
 **Selected:** A
 
+Clarification (normative for this feature):
+- `agent_api.events.live` is the only *live-streaming marker* this feature introduces.
+- Backends may continue to advertise non-live capability ids such as `backend.claude_code.print_stream_json`; this decision only forbids adding an additional live-specific backend capability id.
+
 ## DR-0007 — Completion semantics for non-zero exit status in the streaming API
 
 **A) Completion resolves `Ok(ExitStatus)` regardless of success/failure (Selected)**
@@ -106,7 +110,7 @@ Each decision is exactly two options (A/B) with explicit tradeoffs and one selec
 ## DR-0009 — Backpressure behavior when streaming JSONL events
 
 **A) Apply backpressure (block on bounded channel send) (Selected)**
-- Pros: deterministic “no drops” behavior; bounded memory; keeps ordering; aligns with safety posture and DR-0012 completion gating (if you want completion, drain the stream or drop it).
+- Pros: deterministic “no drops” behavior; bounded memory; keeps ordering; aligns with safety posture and Universal Agent API DR-0012 completion gating (if you want completion, drain the stream or drop it).
 - Cons: a slow/paused consumer can cause the reader task to stop draining stdout, which can in turn cause the child process to block on a full pipe (expected).
 
 **B) Drop events under load (best-effort streaming)**
@@ -117,12 +121,48 @@ Each decision is exactly two options (A/B) with explicit tradeoffs and one selec
 
 ## DR-0010 — Stderr handling for live streaming (`claude --print --output-format stream-json`)
 
-**A) Drain stderr but do not retain it (Selected)**
+**A) Discard stderr by default; optionally mirror to console; never retain (Selected)**
 - Pros: avoids deadlocks; preserves v1 safety posture (no raw backend line retention); aligns with Codex adapter behavior (stderr discarded by default).
 - Cons: less post-mortem debugging info unless the operator opts into mirroring to console.
 
 **B) Capture stderr bytes and return in completion**
 - Pros: richer debugging surface.
 - Cons: implies retaining raw backend output; higher secret-leak risk; increases memory use and stable contract surface; conflicts with DR-0004.
+
+**Selected:** A
+
+## DR-0011 — Streaming channel capacity (events + parse errors)
+
+**A) Use a bounded channel capacity of `32` items (Selected)**
+- Pros: aligns with existing `crates/agent_api` backend channels; bounded memory; predictable backpressure.
+- Cons: slow consumers can apply backpressure sooner; may block stdout draining earlier.
+
+**B) Use a larger bounded channel capacity (e.g., `128`)**
+- Pros: more buffering before backpressure; fewer stalls for moderately slow consumers.
+- Cons: larger burst memory; diverges from existing repo conventions; can mask consumer slowness.
+
+**Selected:** A
+
+## DR-0012 — Timeout semantics for the streaming handle
+
+**A) Timeout covers the entire streaming run (spawn → exit) and kills the child on timeout (Selected)**
+- Pros: deterministic; aligns with `agent_api` backend timeout posture; avoids “wait-only timeout” footguns.
+- Cons: requires ensuring kill/teardown is correct across platforms.
+
+**B) Timeout applies only to process wait (not stdout streaming)**
+- Pros: simpler to implement if stdout reader is independent.
+- Cons: can leave long-running reader tasks and ambiguous shutdown behavior; harder to reason about.
+
+**Selected:** A
+
+## DR-0013 — Cancellation trigger and mechanism
+
+**A) Treat dropping the `events` receiver as cancellation and rely on `kill_on_drop(true)` (Selected)**
+- Pros: matches Codex backend pattern; minimal new deps; deterministic teardown when consumer opts out.
+- Cons: relies on platform best-effort termination behavior; completion may vary in rare cases.
+
+**B) Require an explicit `cancel()` API and keep streaming alive when receiver is dropped**
+- Pros: explicit semantics; avoids surprising cancellation on receiver drop.
+- Cons: adds new public API surface; complicates `agent_api` Universal Agent API DR-0012 gating and consumer ergonomics.
 
 **Selected:** A

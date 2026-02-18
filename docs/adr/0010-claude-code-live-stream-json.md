@@ -21,28 +21,28 @@
 - Prior planning pack (baseline): `docs/project_management/next/universal-agent-api/`
 - Spec manifest: `docs/project_management/next/claude-code-live-stream-json/spec_manifest.md`
 - Decision Register: `docs/project_management/next/claude-code-live-stream-json/decision_register.md`
-- Plan (to be created): `docs/project_management/next/claude-code-live-stream-json/plan.md`
-- Tasks (to be created): `docs/project_management/next/claude-code-live-stream-json/tasks.json`
-- Session log (to be created): `docs/project_management/next/claude-code-live-stream-json/session_log.md`
-- Specs (to be created; pinned by `spec_manifest.md`):
+- Plan: `docs/project_management/next/claude-code-live-stream-json/plan.md`
+- Tasks: `docs/project_management/next/claude-code-live-stream-json/tasks.json`
+- Session log: `docs/project_management/next/claude-code-live-stream-json/session_log.md`
+- Specs (pinned by `spec_manifest.md`):
   - `docs/project_management/next/claude-code-live-stream-json/contract.md`
   - `docs/project_management/next/claude-code-live-stream-json/stream-json-print-protocol-spec.md`
   - `docs/project_management/next/claude-code-live-stream-json/platform-parity-spec.md`
   - `docs/project_management/next/claude-code-live-stream-json/ci_checkpoint_plan.md`
   - `docs/project_management/next/claude-code-live-stream-json/C0-spec.md`
   - `docs/project_management/next/claude-code-live-stream-json/C1-spec.md`
-- Impact Map (to be created): `docs/project_management/next/claude-code-live-stream-json/impact_map.md`
-- Manual Playbook (to be created): `docs/project_management/next/claude-code-live-stream-json/manual_testing_playbook.md`
+- Impact Map: `docs/project_management/next/claude-code-live-stream-json/impact_map.md`
+- Manual Playbook: `docs/project_management/next/claude-code-live-stream-json/manual_testing_playbook.md`
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 4903bd6e7995c67e1ddb2524148ba9860ec73df6b503b73be11b399fd4ab7e56
+ADR_BODY_SHA256: f77831dba37ac8c5bcfc5ffb6c10916984e3291aaf0ac8978a0ddf8525050cc4
 
 ### Changes (operator-facing)
 - Enable live event streaming for Claude Code in the Universal Agent API
   - Existing: `agent_api`’s Claude Code backend emits events only after the `claude` process exits because it buffers stdout before parsing.
   - New: `crates/claude_code` exposes a streaming `--print --output-format stream-json` API that yields parsed JSONL events as they arrive; `agent_api`’s Claude backend forwards these events live and advertises `agent_api.events.live`.
-  - Why: Unlocks real-time UX/progress for Claude runs, aligns Claude backend behavior with operator expectations, and preserves DR-0012 completion safety guarantees (completion resolves only after the event stream is final).
+  - Why: Unlocks real-time UX/progress for Claude runs, aligns Claude backend behavior with operator expectations, and preserves Universal Agent API DR-0012 completion safety guarantees (completion resolves only after the event stream is final).
   - Links:
     - Current buffered parsing (to be replaced in `agent_api`): `crates/agent_api/src/backends/claude_code.rs`
     - Current buffered stdout collection in Claude wrapper: `crates/claude_code/src/process.rs`
@@ -59,7 +59,7 @@ ADR_BODY_SHA256: 4903bd6e7995c67e1ddb2524148ba9860ec73df6b503b73be11b399fd4ab7e5
 
 - Add a first-class streaming API in `crates/claude_code` for `--print --output-format stream-json` that yields parsed stream-json events as they arrive.
 - Wire `agent_api`’s Claude backend to use that streaming API and advertise `agent_api.events.live`.
-- Preserve DR-0012 semantics in `agent_api`: `completion` MUST NOT resolve until the event stream is final (or explicitly dropped by the consumer).
+- Preserve Universal Agent API DR-0012 semantics in `agent_api`: `completion` MUST NOT resolve until the event stream is final (or explicitly dropped by the consumer).
 - Keep tests fixture/synthetic; no requirement for a real `claude` binary on CI runners.
 - Preserve safety posture:
   - `agent_api` MUST NOT emit raw backend lines in events (`AgentWrapperEvent.data` remains bounded and safe-by-default).
@@ -129,7 +129,7 @@ impl claude_code::ClaudeClient {
 Update the built-in Claude backend (`feature = "claude_code"`) so that:
 - It uses the new `claude_code` streaming API to emit `AgentWrapperEvent`s as events arrive.
 - It advertises `agent_api.events.live` in `AgentWrapperCapabilities.ids`.
-- It continues to enforce DR-0012 completion gating semantics via the shared run-handle gate.
+- It continues to enforce Universal Agent API DR-0012 completion gating semantics via the shared run-handle gate.
 
 ### Config
 - No new config files are introduced.
@@ -158,7 +158,7 @@ Update the built-in Claude backend (`feature = "claude_code"`) so that:
     - call `ClaudeClient::print_stream_json(...)`
     - map streamed Claude events to `AgentWrapperEvent` immediately
     - advertise `agent_api.events.live`
-    - preserve DR-0012 via `run_handle_gate::build_gated_run_handle`
+    - preserve Universal Agent API DR-0012 via `run_handle_gate::build_gated_run_handle`
 
 ### End-to-end flow
 - Inputs:
@@ -169,7 +169,7 @@ Update the built-in Claude backend (`feature = "claude_code"`) so that:
   - spawn `claude --print --output-format stream-json ...`
   - incrementally parse stdout JSONL → typed Claude events
   - map typed events → `AgentWrapperEvent` and forward on the universal event stream
-  - wait for process exit and resolve completion only after the universal stream is final (DR-0012)
+  - wait for process exit and resolve completion only after the universal stream is final (Universal Agent API DR-0012)
 - Outputs:
   - `AgentWrapperRunHandle` with live `events` + gated `completion`
 
@@ -212,7 +212,7 @@ Update the built-in Claude backend (`feature = "claude_code"`) so that:
 - Manual playbook (required): `docs/project_management/next/claude-code-live-stream-json/manual_testing_playbook.md`
   - Run a real `claude` print stream-json session and confirm:
     - at least one event arrives before process exit
-    - `completion` resolves only after events stream finality (DR-0012)
+    - `completion` resolves only after events stream finality (Universal Agent API DR-0012)
 
 ### Smoke scripts
 - A dedicated feature-local smoke set MUST exist under:
@@ -235,4 +235,4 @@ Update the built-in Claude backend (`feature = "claude_code"`) so that:
 - This body of work contains multiple architectural decisions; a Decision Register is required.
 - Decision Register entries:
   - `docs/project_management/next/claude-code-live-stream-json/decision_register.md`:
-    - DR-0001, DR-0002, DR-0003, DR-0004, DR-0005, DR-0006, DR-0007, DR-0008, DR-0009, DR-0010
+    - DR-0001, DR-0002, DR-0003, DR-0004, DR-0005, DR-0006, DR-0007, DR-0008, DR-0009, DR-0010, DR-0011, DR-0012, DR-0013

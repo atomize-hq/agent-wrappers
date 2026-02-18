@@ -12,7 +12,7 @@
 3. Set `C0-test` status to `in_progress` in `tasks.json` (orchestration branch only).
 4. Add START entry to `session_log.md`; commit docs (`docs: start C0-test`).
 5. Create worktree: `git worktree add -b ccsj-c0-stream-api-test wt/ccsj-c0-stream-api-test feat/claude-code-live-stream-json`.
-6. Do not edit docs/tasks/session_log.md from the worktree.
+6. Do not edit `docs/project_management/next/claude-code-live-stream-json/tasks.json` or `docs/project_management/next/claude-code-live-stream-json/session_log.md` from the worktree.
 
 ## Requirements
 - Add synthetic/fixture-based tests proving:
@@ -30,4 +30,3 @@
 2. Commit changes from inside `wt/ccsj-c0-stream-api-test` (no docs/tasks/session_log edits).
 3. Checkout `feat/claude-code-live-stream-json`; set `C0-test` to `completed` in `tasks.json`; add END entry to `session_log.md`; commit docs (`docs: finish C0-test`).
 4. Remove worktree: `git worktree remove wt/ccsj-c0-stream-api-test`.
-

@@ -12,12 +12,12 @@
 3. Set `C1-code` status to `in_progress` in `tasks.json` (orchestration branch only).
 4. Add START entry to `session_log.md`; commit docs (`docs: start C1-code`).
 5. Create worktree: `git worktree add -b ccsj-c1-agent-api-wiring-code wt/ccsj-c1-agent-api-wiring-code feat/claude-code-live-stream-json`.
-6. Do not edit docs/tasks/session_log.md from the worktree.
+6. Do not edit `docs/project_management/next/claude-code-live-stream-json/tasks.json` or `docs/project_management/next/claude-code-live-stream-json/session_log.md` from the worktree.
 
 ## Requirements
 - Wire the Claude backend to the streaming API and emit events live.
 - Advertise `agent_api.events.live`.
-- Preserve DR-0012 completion gating and safety posture (no raw backend lines).
+- Preserve Universal Agent API DR-0012 completion gating and safety posture (no raw backend lines).
 
 ## Commands (required)
 - `cargo fmt`
@@ -28,4 +28,3 @@
 2. Commit changes from inside `wt/ccsj-c1-agent-api-wiring-code` (no docs/tasks/session_log edits).
 3. Checkout `feat/claude-code-live-stream-json`; set `C1-code` to `completed` in `tasks.json`; add END entry to `session_log.md`; commit docs (`docs: finish C1-code`).
 4. Remove worktree: `git worktree remove wt/ccsj-c1-agent-api-wiring-code`.
-

@@ -11,7 +11,12 @@ so callers receive `AgentWrapperEvent`s before the process exits.
 - Triads only: code / test / integration. No mixed roles.
 - Code: production code only; no tests. Required commands: `cargo fmt`; `cargo clippy --workspace --all-targets --all-features -- -D warnings`.
 - Test: tests/fixtures/harnesses only; no production logic. Required commands: `cargo fmt`; targeted `cargo test ...` for suites added/touched.
-- Integration: merges code+tests, reconciles to spec, and must run `cargo fmt`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, relevant tests, and the repo gate: `make preflight` (Linux only).
+- Integration: merges code+tests, reconciles to spec, and must run:
+  - `cargo fmt`
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  - `cargo test -p agent_api --all-targets --all-features`
+  - `cargo test -p claude_code --all-targets --all-features`
+  - Linux-only gate: `make preflight`
 - Docs/tasks/session_log edits happen only on the orchestration branch (`feat/claude-code-live-stream-json`), never from worktrees.
 - Do not introduce tests that require a locally-installed `claude` binary. All gating must be fixture/synthetic and runnable on GitHub-hosted runners.
 - Safety rule: do not emit raw backend lines in `agent_api` events; all parse errors must be redacted (see ADR-0010 + DRs).
@@ -28,7 +33,7 @@ so callers receive `AgentWrapperEvent`s before the process exits.
 - **C0 — `claude_code` streaming API:** Add a first-class streaming API to `crates/claude_code` for
   `--print --output-format stream-json`, yielding parsed events incrementally and supporting CRLF.
 - **C1 — `agent_api` Claude live events:** Wire `agent_api` Claude backend to use the streaming API,
-  emit events live, advertise `agent_api.events.live`, and preserve DR-0012 completion gating.
+  emit events live, advertise `agent_api.events.live`, and preserve Universal Agent API DR-0012 completion gating.
 
 ## CI Checkpoints
 
@@ -61,7 +66,8 @@ Bounded multi-OS validation runs only at explicit checkpoints:
 2. Run (capture outputs):
    - `cargo fmt`
    - `cargo clippy --workspace --all-targets --all-features -- -D warnings`
-   - Relevant tests (at minimum, suites introduced by the triad’s test task)
+   - `cargo test -p agent_api --all-targets --all-features`
+   - `cargo test -p claude_code --all-targets --all-features`
    - Linux-only gate: `make preflight`
 3. Commit integration changes to the integration branch.
 4. Fast-forward merge the integration branch into `feat/claude-code-live-stream-json`; update `tasks.json` and `session_log.md` with the END entry (commands/results/blockers); commit docs (`docs: finish <task-id>`).
@@ -72,4 +78,3 @@ Bounded multi-OS validation runs only at explicit checkpoints:
 - Keep each triad ≤ ~40–50% of a 272k token context window (~110–150k tokens).
 - If the streaming API or protocol semantics expand significantly (more CLI surfaces, PTY, stderr mirroring),
   add more triads rather than growing C0/C1 beyond a single agent’s context.
-

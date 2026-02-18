@@ -12,7 +12,7 @@
 3. Set `C0-code` status to `in_progress` in `tasks.json` (orchestration branch only).
 4. Add START entry to `session_log.md`; commit docs (`docs: start C0-code`).
 5. Create worktree: `git worktree add -b ccsj-c0-stream-api-code wt/ccsj-c0-stream-api-code feat/claude-code-live-stream-json`.
-6. Do not edit docs/tasks/session_log.md from the worktree.
+6. Do not edit `docs/project_management/next/claude-code-live-stream-json/tasks.json` or `docs/project_management/next/claude-code-live-stream-json/session_log.md` from the worktree.
 
 ## Requirements
 - Implement the streaming API surface described in ADR-0010.
@@ -30,4 +30,3 @@
 2. Commit changes from inside `wt/ccsj-c0-stream-api-code` (no docs/tasks/session_log edits).
 3. Checkout `feat/claude-code-live-stream-json`; set `C0-code` to `completed` in `tasks.json`; add END entry to `session_log.md`; commit docs (`docs: finish C0-code`).
 4. Remove worktree: `git worktree remove wt/ccsj-c0-stream-api-code`.
-

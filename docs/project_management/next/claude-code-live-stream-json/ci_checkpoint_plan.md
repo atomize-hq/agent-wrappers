@@ -85,5 +85,4 @@ When authoring `docs/project_management/next/claude-code-live-stream-json/tasks.
 ## Notes / constraints
 
 - This plan intentionally runs multi-OS gates only at the checkpoint; per-slice integration remains
-  responsible for local gating (`cargo fmt`, `cargo clippy`, relevant tests, and `make preflight`).
-
+  responsible for local gating (fmt + clippy + pinned crate tests + `make preflight` as listed in the feature plan/specs).

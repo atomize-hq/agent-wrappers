@@ -38,8 +38,7 @@ Feature directory: `docs/project_management/next/claude-code-live-stream-json/`
   - `docs/project_management/next/claude-code-live-stream-json/stream-json-print-protocol-spec.md`
   - `docs/project_management/next/claude-code-live-stream-json/platform-parity-spec.md`
 - CI wiring (per `ci_checkpoint_plan.md` decision):
-  - Either a new workflow: `.github/workflows/claude-code-live-stream-json-smoke.yml`, or
-  - a small update to reuse/extend an existing workflow (see DR-0005).
+  - New workflow (selected; see DR-0005): `.github/workflows/claude-code-live-stream-json-smoke.yml`
 
 ### Edit (existing files / existing surfaces)
 
@@ -52,8 +51,8 @@ Feature directory: `docs/project_management/next/claude-code-live-stream-json/`
   - `crates/claude_code/src/stream_json.rs` (parser remains the source of truth; edits only if streaming reveals missing invariants)
 - Universal API crate (`crates/agent_api`) Claude backend behavior change:
   - `crates/agent_api/src/backends/claude_code.rs` (switch to streaming API; emit events live; advertise `agent_api.events.live`)
-  - `crates/agent_api/src/run_handle_gate.rs` (no semantic change expected; verify integration remains DR-0012 compliant)
-  - `crates/agent_api/tests/c2_claude_event_mapping.rs` (if assumptions about buffering are encoded in tests)
+  - `crates/agent_api/src/run_handle_gate.rs` (no semantic change expected; verify integration remains Universal Agent API DR-0012 compliant)
+  - `crates/agent_api/tests/dr0012_completion_gating.rs` (if assumptions about buffering are encoded in tests)
   - `crates/agent_api/src/backends/mod.rs` (only if module wiring changes)
 - Repo docs + sequencing:
   - `docs/adr/0010-claude-code-live-stream-json.md` (keep `Related Docs` and `ADR_BODY_SHA256` current)
@@ -80,7 +79,7 @@ Feature directory: `docs/project_management/next/claude-code-live-stream-json/`
 - Second-order impact:
   - Consumers must be prepared to handle a stream item type that can represent parse errors in-order (`Result<..., ClaudeStreamJsonParseError>`).
 - Contradiction risks:
-  - If streaming continues to buffer stderr (or fails to drain it), the process can deadlock. The protocol spec MUST pin “stderr is drained (discarded or mirrored) but not retained” to match DR-0004.
+  - If streaming continues to buffer stderr (or fails to drain it), the process can deadlock. The protocol spec MUST pin “stderr is drained (discarded or mirrored) but not retained” to match DR-0010.
 
 ### 2) `agent_api` Claude backend becomes “live” (`agent_api.events.live`)
 
@@ -88,7 +87,7 @@ Feature directory: `docs/project_management/next/claude-code-live-stream-json/`
   - `AgentWrapperCapabilities` for Claude will include `agent_api.events.live`, changing consumer behavior for UIs that gate on this capability.
   - Consumers will observe events earlier in the run lifecycle (before process exit) rather than post-hoc.
 - Second-order impact:
-  - Completion safety semantics remain mandatory (DR-0012): `completion` MUST still wait for stream finality (or stream drop).
+  - Completion safety semantics remain mandatory (Universal Agent API DR-0012): `completion` MUST still wait for stream finality (or stream drop).
 - Contradiction risks:
   - Any docs/tests that currently assume “Claude is buffered” will drift and must be updated as part of the integration reconciliation.
 

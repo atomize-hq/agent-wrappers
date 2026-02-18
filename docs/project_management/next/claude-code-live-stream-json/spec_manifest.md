@@ -64,7 +64,7 @@ Trigger: ADR targets multi-platform process I/O behavior (stdout streaming) and 
 - `docs/project_management/next/claude-code-live-stream-json/platform-parity-spec.md` — authoritative guarantees/divergences for Linux/macOS/Windows for:
   - process spawning + stdout line framing expectations
   - newline handling (LF vs CRLF) and UTF-8 assumptions
-  - cancellation behavior expectations (best-effort) by platform
+  - cancellation behavior expectations by platform
   - required validation evidence
 
 ## CI checkpoint plan
@@ -81,7 +81,7 @@ Trigger: cross-platform validation is required and this feature changes process 
 | `crates/claude_code` streaming error model + redaction rules | `contract.md` |
 | `crates/claude_code` streaming framing/ordering/backpressure/timeout/cancel semantics | `stream-json-print-protocol-spec.md` |
 | `agent_api` Claude backend capability advertisement (`agent_api.events.live`) | `contract.md` |
-| `agent_api` completion vs stream finality (DR-0012) | `docs/project_management/next/universal-agent-api/run-protocol-spec.md` |
+| `agent_api` completion vs stream finality (Universal Agent API DR-0012) | `docs/project_management/next/universal-agent-api/run-protocol-spec.md` + `docs/project_management/next/universal-agent-api/decision_register.md` |
 | `agent_api` event envelope bounds + raw-line prohibition | `docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md` |
 | Capability id naming/stability rules (`agent_api.events.live`, `backend.claude_code.*`) | `docs/project_management/next/universal-agent-api/capabilities-schema-spec.md` |
 | Platform guarantees/divergences for streaming stdout | `platform-parity-spec.md` |
@@ -123,7 +123,7 @@ Trigger: cross-platform validation is required and this feature changes process 
 
 - Per-OS expectations for:
   - stdout pipe behavior and newline boundaries
-  - best-effort cancellation semantics
+  - cancellation semantics
   - known divergences (if any) and the allowed behavior envelope
 - Required evidence: exactly what must pass in CI and what can be manual-only.
 

@@ -13,6 +13,9 @@
       "docs/project_management/next/claude-code-live-stream-json/impact_map.md",
       "docs/project_management/next/claude-code-live-stream-json/decision_register.md",
       "docs/project_management/next/claude-code-live-stream-json/ci_checkpoint_plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/contract.md",
+      "docs/project_management/next/claude-code-live-stream-json/stream-json-print-protocol-spec.md",
+      "docs/project_management/next/claude-code-live-stream-json/platform-parity-spec.md",
       "docs/project_management/next/claude-code-live-stream-json/C0-spec.md",
       "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-code.md"
     ],
@@ -27,7 +30,7 @@
       "Set task status to in_progress in tasks.json (orchestration branch)",
       "Add START entry to session_log.md; commit docs with message 'docs: start C0-code'",
       "Create the task branch and worktree: `git worktree add -b ccsj-c0-stream-api-code wt/ccsj-c0-stream-api-code feat/claude-code-live-stream-json`.",
-      "Do not edit docs/tasks/session_log.md from the worktree."
+      "Do not edit `docs/project_management/next/claude-code-live-stream-json/tasks.json` or `docs/project_management/next/claude-code-live-stream-json/session_log.md` from the worktree."
     ],
     "end_checklist": [
       "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings.",
@@ -52,6 +55,9 @@
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
       "docs/project_management/next/claude-code-live-stream-json/plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/contract.md",
+      "docs/project_management/next/claude-code-live-stream-json/stream-json-print-protocol-spec.md",
+      "docs/project_management/next/claude-code-live-stream-json/platform-parity-spec.md",
       "docs/project_management/next/claude-code-live-stream-json/C0-spec.md",
       "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-test.md"
     ],
@@ -66,7 +72,7 @@
       "Set task status to in_progress in tasks.json (orchestration branch)",
       "Add START entry to session_log.md; commit docs with message 'docs: start C0-test'",
       "Create the task branch and worktree: `git worktree add -b ccsj-c0-stream-api-test wt/ccsj-c0-stream-api-test feat/claude-code-live-stream-json`.",
-      "Do not edit docs/tasks/session_log.md from the worktree."
+      "Do not edit `docs/project_management/next/claude-code-live-stream-json/tasks.json` or `docs/project_management/next/claude-code-live-stream-json/session_log.md` from the worktree."
     ],
     "end_checklist": [
       "Run required commands (capture outputs): cargo fmt; targeted cargo test commands for suites added/updated.",
@@ -91,12 +97,15 @@
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
       "docs/project_management/next/claude-code-live-stream-json/plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/contract.md",
+      "docs/project_management/next/claude-code-live-stream-json/stream-json-print-protocol-spec.md",
+      "docs/project_management/next/claude-code-live-stream-json/platform-parity-spec.md",
       "docs/project_management/next/claude-code-live-stream-json/C0-spec.md",
       "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-integ.md"
     ],
     "acceptance_criteria": [
       "C0 code/test merged and match C0-spec",
-      "cargo fmt + clippy + relevant tests + make preflight executed and logged",
+      "cargo fmt + clippy + cargo test -p claude_code + make preflight executed and logged",
       "Merged fast-forward into feat/claude-code-live-stream-json; tasks/logs updated"
     ],
     "start_checklist": [
@@ -105,11 +114,11 @@
       "Set task status to in_progress in tasks.json (orchestration branch)",
       "Add START entry to session_log.md; commit docs with message 'docs: start C0-integ'",
       "Create the integration branch and worktree: `git worktree add -b ccsj-c0-stream-api-integ wt/ccsj-c0-stream-api-integ feat/claude-code-live-stream-json`.",
-      "Do not edit docs/tasks/session_log.md from the worktree."
+      "Do not edit `docs/project_management/next/claude-code-live-stream-json/tasks.json` or `docs/project_management/next/claude-code-live-stream-json/session_log.md` from the worktree."
     ],
     "end_checklist": [
       "Merge upstream code/test branches for C0 into the integration worktree and reconcile behavior to the spec.",
-      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; cargo test -p claude_code --all-targets --all-features; make preflight (Linux only).",
       "Commit integration changes on branch ccsj-c0-stream-api-integ.",
       "Fast-forward merge ccsj-c0-stream-api-integ into feat/claude-code-live-stream-json; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-integ'.",
       "Remove worktree wt/ccsj-c0-stream-api-integ."
@@ -133,6 +142,9 @@
       "docs/project_management/next/claude-code-live-stream-json/spec_manifest.md",
       "docs/project_management/next/claude-code-live-stream-json/decision_register.md",
       "docs/project_management/next/claude-code-live-stream-json/ci_checkpoint_plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/contract.md",
+      "docs/project_management/next/claude-code-live-stream-json/stream-json-print-protocol-spec.md",
+      "docs/project_management/next/claude-code-live-stream-json/platform-parity-spec.md",
       "docs/project_management/next/claude-code-live-stream-json/C1-spec.md",
       "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-code.md"
     ],
@@ -147,7 +159,7 @@
       "Set task status to in_progress in tasks.json (orchestration branch)",
       "Add START entry to session_log.md; commit docs with message 'docs: start C1-code'",
       "Create the task branch and worktree: `git worktree add -b ccsj-c1-agent-api-wiring-code wt/ccsj-c1-agent-api-wiring-code feat/claude-code-live-stream-json`.",
-      "Do not edit docs/tasks/session_log.md from the worktree."
+      "Do not edit `docs/project_management/next/claude-code-live-stream-json/tasks.json` or `docs/project_management/next/claude-code-live-stream-json/session_log.md` from the worktree."
     ],
     "end_checklist": [
       "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings.",
@@ -168,10 +180,13 @@
     "type": "test",
     "phase": "C1",
     "status": "pending",
-    "description": "Add tests validating `agent_api.events.live` capability + DR-0012 completion gating (tests only).",
+    "description": "Add tests validating `agent_api.events.live` capability + Universal Agent API DR-0012 completion gating (tests only).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
       "docs/project_management/next/claude-code-live-stream-json/plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/contract.md",
+      "docs/project_management/next/claude-code-live-stream-json/stream-json-print-protocol-spec.md",
+      "docs/project_management/next/claude-code-live-stream-json/platform-parity-spec.md",
       "docs/project_management/next/claude-code-live-stream-json/C1-spec.md",
       "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-test.md"
     ],
@@ -186,7 +201,7 @@
       "Set task status to in_progress in tasks.json (orchestration branch)",
       "Add START entry to session_log.md; commit docs with message 'docs: start C1-test'",
       "Create the task branch and worktree: `git worktree add -b ccsj-c1-agent-api-wiring-test wt/ccsj-c1-agent-api-wiring-test feat/claude-code-live-stream-json`.",
-      "Do not edit docs/tasks/session_log.md from the worktree."
+      "Do not edit `docs/project_management/next/claude-code-live-stream-json/tasks.json` or `docs/project_management/next/claude-code-live-stream-json/session_log.md` from the worktree."
     ],
     "end_checklist": [
       "Run required commands (capture outputs): cargo fmt; targeted cargo test commands for suites added/updated.",
@@ -211,12 +226,15 @@
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
       "docs/project_management/next/claude-code-live-stream-json/plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/contract.md",
+      "docs/project_management/next/claude-code-live-stream-json/stream-json-print-protocol-spec.md",
+      "docs/project_management/next/claude-code-live-stream-json/platform-parity-spec.md",
       "docs/project_management/next/claude-code-live-stream-json/C1-spec.md",
       "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-integ.md"
     ],
     "acceptance_criteria": [
       "C1 code/test merged and match C1-spec",
-      "cargo fmt + clippy + relevant tests + make preflight executed and logged",
+      "cargo fmt + clippy + cargo test -p agent_api + cargo test -p claude_code + make preflight executed and logged",
       "Merged fast-forward into feat/claude-code-live-stream-json; tasks/logs updated"
     ],
     "start_checklist": [
@@ -225,11 +243,11 @@
       "Set task status to in_progress in tasks.json (orchestration branch)",
       "Add START entry to session_log.md; commit docs with message 'docs: start C1-integ'",
       "Create the integration branch and worktree: `git worktree add -b ccsj-c1-agent-api-wiring-integ wt/ccsj-c1-agent-api-wiring-integ feat/claude-code-live-stream-json`.",
-      "Do not edit docs/tasks/session_log.md from the worktree."
+      "Do not edit `docs/project_management/next/claude-code-live-stream-json/tasks.json` or `docs/project_management/next/claude-code-live-stream-json/session_log.md` from the worktree."
     ],
     "end_checklist": [
       "Merge upstream code/test branches for C1 into the integration worktree and reconcile behavior to the spec.",
-      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; cargo test -p agent_api --all-targets --all-features; cargo test -p claude_code --all-targets --all-features; make preflight (Linux only).",
       "Commit integration changes on branch ccsj-c1-agent-api-wiring-integ.",
       "Fast-forward merge ccsj-c1-agent-api-wiring-integ into feat/claude-code-live-stream-json; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-integ'.",
       "Remove worktree wt/ccsj-c1-agent-api-wiring-integ."
@@ -274,4 +292,3 @@
     "concurrent_with": []
   }
 ]
-
