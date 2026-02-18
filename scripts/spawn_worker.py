@@ -25,6 +25,25 @@ def _which(cmd: str) -> str | None:
     return which(cmd)
 
 
+def _script_supports_command_flag() -> bool:
+    """
+    util-linux `script` expects `-c/--command <cmd>` to run a command.
+    BSD/macOS `script` uses `script [options] [file [command ...]]` and has no -c.
+    """
+    try:
+        help_text = subprocess.run(
+            ["script", "--help"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            check=False,
+        ).stdout
+    except Exception:
+        return False
+
+    return ("--command" in help_text) or (" -c, --command" in help_text)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Spawn a coding agent worker and write a DONE sentinel on exit.")
     parser.add_argument("--repo-root", required=True, help="Repo root (cwd for codex)")
@@ -67,13 +86,22 @@ def main(argv: list[str] | None = None) -> int:
         _write_text(done_path, f"status=failed\ntask_id={task_id}\nfinished_at={_utc_now()}\nerror=missing_repo\n")
         return 2
 
-    use_script = _which("script") is not None
+    script_path = _which("script")
+    use_script = script_path is not None
     codex_prefix = args.codex_cmd.strip()
 
     inner = f'{codex_prefix} -o {shlex.quote(str(last_message_path))} - < {shlex.quote(str(prompt_path))}'
 
     if use_script:
-        cmd = ["script", "-eq", "/dev/null", "bash", "-lc", inner]
+        # `script` provides a PTY; we run bash -lc so redirection works.
+        #
+        # IMPORTANT: util-linux `script` requires `-c/--command` to run a command.
+        # BSD/macOS `script` takes `[file [command...]]` and does not support `-c`.
+        if _script_supports_command_flag():
+            bash_cmd = f"bash -lc {shlex.quote(inner)}"
+            cmd = ["script", "-q", "-e", "-c", bash_cmd, "/dev/null"]
+        else:
+            cmd = ["script", "-e", "-q", "/dev/null", "bash", "-lc", inner]
     else:
         cmd = ["bash", "-lc", inner]
 
