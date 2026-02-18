@@ -4,6 +4,10 @@
 //! This crate intentionally does **not** attempt to wrap interactive default mode (no `--print`)
 //! as a parity target. It shells out to a locally installed/pinned `claude` binary.
 
+use std::{future::Future, pin::Pin};
+
+use futures_core::Stream;
+
 mod builder;
 mod cli;
 mod client;
@@ -46,3 +50,23 @@ pub use stream_json::{
 };
 
 pub use process::CommandOutput;
+
+pub type DynClaudeStreamJsonEventStream =
+    Pin<Box<dyn Stream<Item = Result<ClaudeStreamJsonEvent, ClaudeStreamJsonParseError>> + Send>>;
+
+pub type DynClaudeStreamJsonCompletion =
+    Pin<Box<dyn Future<Output = Result<std::process::ExitStatus, ClaudeCodeError>> + Send>>;
+
+pub struct ClaudePrintStreamJsonHandle {
+    pub events: DynClaudeStreamJsonEventStream,
+    pub completion: DynClaudeStreamJsonCompletion,
+}
+
+impl std::fmt::Debug for ClaudePrintStreamJsonHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClaudePrintStreamJsonHandle")
+            .field("events", &"<stream>")
+            .field("completion", &"<future>")
+            .finish()
+    }
+}
