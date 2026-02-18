@@ -165,3 +165,30 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Blockers: none
 ```
 - Blockers: none
+## [2026-02-18 21:27 UTC] Test Agent – C1-test – END
+- Worktree: `wt/ccsj-c1-agent-api-wiring-test`
+- Worker output: `/Users/spensermcconnell/__Active_Code/codex-wrapper/.runs/C1-test/last_message.md`
+- Worker summary (first ~40 lines):
+```text
+**Worktree/branch**
+- Worktree: `/Users/spensermcconnell/__Active_Code/codex-wrapper/wt/ccsj-c1-agent-api-wiring-test`
+- Branch: `ccsj-c1-agent-api-wiring-test`
+
+**Changes (tests/fixtures/harnesses only)**
+- Added fake CLI harness: `crates/agent_api/src/bin/fake_claude_stream_json_agent_api.rs`
+- Added C1 synthetic tests: `crates/agent_api/tests/c1_claude_live_events.rs`
+- Updated test assertion only (inside `#[cfg(test)]`): `crates/agent_api/src/backends/claude_code.rs`
+
+**Commit**
+- `06dd90123c4cbd645d0308605e084243e252b0f5` (`test(agent_api): add C1 live-events synthetic tests`)
+
+**Commands run (required)**
+- `cargo fmt` — PASS
+- `cargo test -p agent_api --test c1_claude_live_events --features claude_code` — FAIL (2 failing tests)
+- `cargo test -p agent_api --features claude_code claude_backend_reports_required_capabilities` — FAIL
+
+**Blockers / expected failures until `C1-code` lands**
+- `agent_api` Claude backend does not yet advertise `agent_api.events.live` (capability assertion fails).
+- Claude backend does not yet emit events live before process exit (timeout waiting for first event in the long-delay fake CLI scenario).
+```
+- Blockers: none
