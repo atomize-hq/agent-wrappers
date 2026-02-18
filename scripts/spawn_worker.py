@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import sys
+
+sys.dont_write_bytecode = True
+
 import argparse
 import os
 import shlex
 import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 

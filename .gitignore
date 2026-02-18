@@ -17,3 +17,6 @@ evidence_runs
 audit_pack
 .runs
 universal-agent-api-planning-pack_*.zip
+__pycache__/
+*.pyc
+*.pyo
