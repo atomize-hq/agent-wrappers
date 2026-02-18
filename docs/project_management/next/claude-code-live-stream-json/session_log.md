@@ -129,3 +129,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Kickoff prompt: `docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-integ.md`
 - Worktree: `wt/ccsj-c0-stream-api-integ`
 - Blockers: none
+## [2026-02-18 20:05 UTC] Integration Agent – C0-integ – END
+- Fast-forwarded `ccsj-c0-stream-api-integ` into `feat/claude-code-live-stream-json` (required integration merge)
+- Additional follow-up commit on `feat/claude-code-live-stream-json`: `2577003` (adds a cross-platform fake `claude` test bin + exercises `print_stream_json`)
+- Commands: `cargo fmt` (pass); `cargo clippy --workspace --all-targets --all-features -- -D warnings` (pass); `cargo test -p claude_code --all-targets --all-features` (pass); `make preflight` (pass)
+- Worker evidence: `.runs/C0-integ/last_message.md`
+- Blockers: none
