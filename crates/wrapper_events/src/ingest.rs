@@ -77,7 +77,7 @@ impl<R: Read, P: LineParser> LineIngestor<R, P> {
         if !matches!(self.config.capture_raw, CaptureRaw::Line | CaptureRaw::Both) {
             return None;
         }
-        let bytes = line.as_bytes().len();
+        let bytes = line.len();
         if !self.budget.can_spend(bytes) {
             return None;
         }
@@ -262,7 +262,7 @@ mod tokio_ingest {
             if !matches!(self.config.capture_raw, CaptureRaw::Line | CaptureRaw::Both) {
                 return None;
             }
-            let bytes = line.as_bytes().len();
+            let bytes = line.len();
             if !self.budget.can_spend(bytes) {
                 return None;
             }
@@ -453,16 +453,17 @@ mod tokio_ingest {
         #[tokio::test]
         async fn budget_skips_capture_deterministically() {
             let data = b"{\"k\":1}\n";
-            let mut config = IngestConfig::default();
-            config.capture_raw = CaptureRaw::Both;
-            config.limits.max_raw_bytes_total = Some(2);
+            let config = IngestConfig {
+                capture_raw: CaptureRaw::Both,
+                limits: crate::IngestLimits {
+                    max_raw_bytes_total: Some(2),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
 
-            let mut ingestor = AsyncLineIngestor::new(
-                std::io::Cursor::new(data),
-                TestParser::default(),
-                config,
-                "test",
-            );
+            let mut ingestor =
+                AsyncLineIngestor::new(std::io::Cursor::new(data), TestParser, config, "test");
 
             let rec = ingestor.next_record().await.unwrap();
             assert!(rec.captured_raw.is_none());
@@ -472,15 +473,13 @@ mod tokio_ingest {
         #[tokio::test]
         async fn preserves_line_capture_on_adapter_error() {
             let data = b"hello\n";
-            let mut config = IngestConfig::default();
-            config.capture_raw = CaptureRaw::Line;
+            let config = IngestConfig {
+                capture_raw: CaptureRaw::Line,
+                ..Default::default()
+            };
 
-            let mut ingestor = AsyncLineIngestor::new(
-                std::io::Cursor::new(data),
-                FailingParser::default(),
-                config,
-                "test",
-            );
+            let mut ingestor =
+                AsyncLineIngestor::new(std::io::Cursor::new(data), FailingParser, config, "test");
 
             let rec = ingestor.next_record().await.unwrap();
             assert!(matches!(rec.outcome, Err(LineRecordError::Adapter { .. })));
@@ -497,15 +496,13 @@ mod tokio_ingest {
             bytes.extend_from_slice(data);
             bytes.extend_from_slice(b"\n");
 
-            let mut config = IngestConfig::default();
-            config.capture_raw = CaptureRaw::Json;
+            let config = IngestConfig {
+                capture_raw: CaptureRaw::Json,
+                ..Default::default()
+            };
 
-            let mut ingestor = AsyncLineIngestor::new(
-                std::io::Cursor::new(bytes),
-                FailingParser::default(),
-                config,
-                "test",
-            );
+            let mut ingestor =
+                AsyncLineIngestor::new(std::io::Cursor::new(bytes), FailingParser, config, "test");
 
             let rec = ingestor.next_record().await.unwrap();
             assert!(matches!(rec.outcome, Err(LineRecordError::Adapter { .. })));
@@ -528,15 +525,13 @@ mod tokio_ingest {
             bytes.extend_from_slice(data);
             bytes.extend_from_slice(b"\n");
 
-            let mut config = IngestConfig::default();
-            config.capture_raw = CaptureRaw::Both;
+            let config = IngestConfig {
+                capture_raw: CaptureRaw::Both,
+                ..Default::default()
+            };
 
-            let mut ingestor = AsyncLineIngestor::new(
-                std::io::Cursor::new(bytes),
-                FailingParser::default(),
-                config,
-                "test",
-            );
+            let mut ingestor =
+                AsyncLineIngestor::new(std::io::Cursor::new(bytes), FailingParser, config, "test");
 
             let rec = ingestor.next_record().await.unwrap();
             assert!(matches!(rec.outcome, Err(LineRecordError::Adapter { .. })));
@@ -613,16 +608,17 @@ mod tests {
     #[test]
     fn captures_line_before_parsing() {
         let data = b"hello\n";
-        let mut config = IngestConfig::default();
-        config.capture_raw = CaptureRaw::Line;
-        config.limits.max_raw_bytes_total = Some(32);
+        let config = IngestConfig {
+            capture_raw: CaptureRaw::Line,
+            limits: crate::IngestLimits {
+                max_raw_bytes_total: Some(32),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
 
-        let mut ingestor = LineIngestor::new(
-            std::io::Cursor::new(data),
-            TestParser::default(),
-            config,
-            "test",
-        );
+        let mut ingestor =
+            LineIngestor::new(std::io::Cursor::new(data), TestParser, config, "test");
         let rec = ingestor.next().unwrap();
         assert_eq!(
             rec.captured_raw.as_ref().and_then(|r| r.line.as_deref()),
@@ -634,15 +630,13 @@ mod tests {
     #[test]
     fn preserves_line_capture_on_adapter_error() {
         let data = b"hello\n";
-        let mut config = IngestConfig::default();
-        config.capture_raw = CaptureRaw::Line;
+        let config = IngestConfig {
+            capture_raw: CaptureRaw::Line,
+            ..Default::default()
+        };
 
-        let mut ingestor = LineIngestor::new(
-            std::io::Cursor::new(data),
-            FailingParser::default(),
-            config,
-            "test",
-        );
+        let mut ingestor =
+            LineIngestor::new(std::io::Cursor::new(data), FailingParser, config, "test");
 
         let rec = ingestor.next().unwrap();
         assert!(matches!(rec.outcome, Err(LineRecordError::Adapter { .. })));
@@ -659,15 +653,13 @@ mod tests {
         bytes.extend_from_slice(data);
         bytes.extend_from_slice(b"\n");
 
-        let mut config = IngestConfig::default();
-        config.capture_raw = CaptureRaw::Json;
+        let config = IngestConfig {
+            capture_raw: CaptureRaw::Json,
+            ..Default::default()
+        };
 
-        let mut ingestor = LineIngestor::new(
-            std::io::Cursor::new(bytes),
-            FailingParser::default(),
-            config,
-            "test",
-        );
+        let mut ingestor =
+            LineIngestor::new(std::io::Cursor::new(bytes), FailingParser, config, "test");
 
         let rec = ingestor.next().unwrap();
         assert!(matches!(rec.outcome, Err(LineRecordError::Adapter { .. })));
@@ -690,15 +682,13 @@ mod tests {
         bytes.extend_from_slice(data);
         bytes.extend_from_slice(b"\n");
 
-        let mut config = IngestConfig::default();
-        config.capture_raw = CaptureRaw::Both;
+        let config = IngestConfig {
+            capture_raw: CaptureRaw::Both,
+            ..Default::default()
+        };
 
-        let mut ingestor = LineIngestor::new(
-            std::io::Cursor::new(bytes),
-            FailingParser::default(),
-            config,
-            "test",
-        );
+        let mut ingestor =
+            LineIngestor::new(std::io::Cursor::new(bytes), FailingParser, config, "test");
 
         let rec = ingestor.next().unwrap();
         assert!(matches!(rec.outcome, Err(LineRecordError::Adapter { .. })));
