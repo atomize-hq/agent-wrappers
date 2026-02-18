@@ -135,3 +135,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Commands: `cargo fmt` (pass); `cargo clippy --workspace --all-targets --all-features -- -D warnings` (pass); `cargo test -p claude_code --all-targets --all-features` (pass); `make preflight` (pass)
 - Worker evidence: `.runs/C0-integ/last_message.md`
 - Blockers: none
+## [2026-02-18 21:16 UTC] Code Agent – C1-code – START
+- Orchestrator: set `C1-code` → `in_progress` in `tasks.json`
+- Base branch: `feat/claude-code-live-stream-json`
+- Kickoff prompt: `docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-code.md`
+- Worktree: `wt/ccsj-c1-agent-api-wiring-code`
+- Blockers: none
