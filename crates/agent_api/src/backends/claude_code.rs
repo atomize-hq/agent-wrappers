@@ -271,7 +271,7 @@ fn map_stream_event(raw: &serde_json::Value) -> Vec<AgentWrapperEvent> {
             match block_type {
                 "tool_use" => vec![tool_call_event()],
                 "tool_result" => vec![tool_result_event()],
-                _ => vec![status_event(None)],
+                _ => vec![unknown_event()],
             }
         }
         "content_block_delta" => {
@@ -290,7 +290,7 @@ fn map_stream_event(raw: &serde_json::Value) -> Vec<AgentWrapperEvent> {
                 _ => vec![unknown_event()],
             }
         }
-        _ => vec![status_event(None)],
+        _ => vec![unknown_event()],
     }
 }
 
@@ -514,6 +514,28 @@ mod tests {
     fn stream_event_tool_result_start_maps_to_tool_result() {
         let mapped = map_fixture(STREAM_EVENT_TOOL_RESULT_START);
         assert_eq!(mapped.kind, AgentWrapperEventKind::ToolResult);
+    }
+
+    #[test]
+    fn stream_event_unknown_type_maps_to_unknown() {
+        let raw = serde_json::json!({
+            "type": "new_stream_event_type",
+            "foo": "bar",
+        });
+        let mapped = map_stream_event(&raw);
+        assert_eq!(mapped.len(), 1);
+        assert_eq!(mapped[0].kind, AgentWrapperEventKind::Unknown);
+    }
+
+    #[test]
+    fn stream_event_content_block_start_unknown_block_type_maps_to_unknown() {
+        let raw = serde_json::json!({
+            "type": "content_block_start",
+            "content_block": { "type": "new_block_type" },
+        });
+        let mapped = map_stream_event(&raw);
+        assert_eq!(mapped.len(), 1);
+        assert_eq!(mapped[0].kind, AgentWrapperEventKind::Unknown);
     }
 
     #[test]

@@ -280,28 +280,11 @@ async fn run_codex_inner(
             message: "stdout unavailable".to_string(),
         })?;
 
-    let mut parser = JsonlThreadEventParser::new();
-    let mut lines = BufReader::new(stdout).lines();
-
-    while let Ok(Some(line)) = lines.next_line().await {
-        match parser.parse_line(&line) {
-            Ok(None) => {}
-            Ok(Some(event)) => {
-                for mapped in crate::bounds::enforce_event_bounds(map_thread_event(&event)) {
-                    if tx.send(mapped).await.is_err() {
-                        break;
-                    }
-                }
-            }
-            Err(err) => {
-                let message = redacted_exec_error(&err);
-                for mapped in crate::bounds::enforce_event_bounds(error_event(message)) {
-                    if tx.send(mapped).await.is_err() {
-                        break;
-                    }
-                }
-            }
-        }
+    if let Err(err) = forward_codex_stdout_as_events(stdout, &tx).await {
+        let _ = child.kill().await;
+        let _ = tokio::time::timeout(Duration::from_secs(5), child.wait()).await;
+        drop(tx);
+        return Err(err);
     }
 
     let status = child
@@ -320,6 +303,46 @@ async fn run_codex_inner(
             data: None,
         },
     ))
+}
+
+async fn forward_codex_stdout_as_events<R>(
+    stdout: R,
+    tx: &mpsc::Sender<AgentWrapperEvent>,
+) -> Result<(), AgentWrapperError>
+where
+    R: tokio::io::AsyncRead + Unpin,
+{
+    let mut parser = JsonlThreadEventParser::new();
+    let mut lines = BufReader::new(stdout).lines();
+
+    loop {
+        let line = match lines.next_line().await {
+            Ok(Some(line)) => line,
+            Ok(None) => return Ok(()),
+            Err(err) => {
+                let message = format!("failed to read codex stdout: {err}");
+                for mapped in crate::bounds::enforce_event_bounds(error_event(message.clone())) {
+                    let _ = tx.send(mapped).await;
+                }
+                return Err(AgentWrapperError::Backend { message });
+            }
+        };
+
+        match parser.parse_line(&line) {
+            Ok(None) => {}
+            Ok(Some(event)) => {
+                for mapped in crate::bounds::enforce_event_bounds(map_thread_event(&event)) {
+                    let _ = tx.send(mapped).await;
+                }
+            }
+            Err(err) => {
+                let message = redacted_exec_error(&err);
+                for mapped in crate::bounds::enforce_event_bounds(error_event(message)) {
+                    let _ = tx.send(mapped).await;
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -447,5 +470,40 @@ mod tests {
         );
         assert_eq!(mapped.kind, AgentWrapperEventKind::Error);
         assert!(mapped.message.is_some());
+    }
+
+    #[tokio::test]
+    async fn stdout_read_errors_surface_as_backend_error_and_event() {
+        let (mut writer, reader) = tokio::io::duplex(256);
+        writer
+            .write_all(br#"{"type":"thread.started","thread_id":"thread-1"}"#)
+            .await
+            .unwrap();
+        writer.write_all(b"\n").await.unwrap();
+        writer.write_all(&[0xff, b'\n']).await.unwrap();
+        drop(writer);
+
+        let (tx, mut rx) = mpsc::channel::<AgentWrapperEvent>(32);
+        let err = forward_codex_stdout_as_events(reader, &tx)
+            .await
+            .expect_err("expected stdout read to fail");
+        drop(tx);
+
+        let mut saw_error_event = false;
+        while let Some(ev) = rx.recv().await {
+            if ev.kind == AgentWrapperEventKind::Error {
+                let msg = ev.message.unwrap_or_default();
+                assert!(msg.starts_with("failed to read codex stdout:"));
+                saw_error_event = true;
+            }
+        }
+        assert!(saw_error_event, "expected an Error event to be emitted");
+
+        match err {
+            AgentWrapperError::Backend { message } => {
+                assert!(message.starts_with("failed to read codex stdout:"));
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
     }
 }
