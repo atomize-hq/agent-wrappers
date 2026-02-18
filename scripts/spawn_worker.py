@@ -37,8 +37,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--last-message-file", default="last_message.md", help="Final message capture filename")
     parser.add_argument(
         "--codex-cmd",
-        default="codex exec --full-auto",
-        help="Codex command prefix (default: 'codex exec --full-auto')",
+        default="codex exec --dangerously-bypass-approvals-and-sandbox",
+        help="Codex command prefix (default: 'codex exec --dangerously-bypass-approvals-and-sandbox')",
     )
     args = parser.parse_args(argv)
 
@@ -115,4 +115,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -280,6 +280,15 @@ def _session_log_end(
         msg_lines = msg.splitlines()
         snippet_lines = msg_lines[:40]
         snippet = "\n".join(snippet_lines).strip()
+    blockers_line = "- Blockers: none"
+    if last_message_path.exists():
+        msg = last_message_path.read_text(encoding="utf-8", errors="replace")
+        m = re.search(r"(?im)^-\\s*\\*\\*Blocker[s]?\\*\\*:\\s*(.*)$", msg)
+        if m:
+            tail = m.group(1).strip()
+            if tail and tail.lower() not in {"none", "<none>"}:
+                blockers_line = f"- Blockers: {tail}"
+
     lines: list[str] = [
         f"## [{ts}] {role} Agent – {task_id} – END",
         f"- Worktree: `{worktree}`" if worktree else "- Worktree: N/A",
@@ -289,7 +298,7 @@ def _session_log_end(
         lines.extend(extra)
     if snippet:
         lines.extend(["- Worker summary (first ~40 lines):", "```text", snippet, "```"])
-    lines.extend(["- Blockers: none", ""])
+    lines.extend([blockers_line, ""])
     _append_session_log(session_log, "\n".join(lines))
 
 
@@ -372,7 +381,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true", help="Print what would run, do not spawn workers")
     parser.add_argument("--only-task-ids", default="", help="Comma-separated allowlist of task IDs to run")
     parser.add_argument("--id-regex", default="", help="Regex allowlist for task IDs to run (applied after only-task-ids)")
-    parser.add_argument("--codex-cmd", default="codex exec --full-auto", help="Codex command prefix")
+    parser.add_argument(
+        "--codex-cmd",
+        default="codex exec --dangerously-bypass-approvals-and-sandbox",
+        help="Codex command prefix (default enables git + .git writes in worktrees)",
+    )
     args = parser.parse_args(argv)
 
     repo_root = Path(args.repo_root).resolve()
@@ -397,6 +410,7 @@ def main(argv: list[str] | None = None) -> int:
 
     running: dict[str, subprocess.Popen[bytes]] = {}
     task_to_worktree: dict[str, str] = {}
+    task_base_sha: dict[str, str] = {}
 
     while True:
         payload = _read_json(queue_path)
@@ -445,6 +459,12 @@ def main(argv: list[str] | None = None) -> int:
             if t.worktree and t.worktree.strip().upper() != "N/A":
                 worktree_path, worktree_branch = _ensure_worktree(repo_root=repo_root, base_branch=base_branch, worktree=t.worktree)
                 task_to_worktree[t.id] = t.worktree
+                # Persist the starting SHA so we can verify the worker produced a commit even if
+                # the orchestration branch advances due to other doc commits.
+                if worktree_branch:
+                    sha = _run(["git", "rev-parse", worktree_branch], cwd=repo_root, check=True).stdout.strip()
+                    task_base_sha[t.id] = sha
+                    (run_dir / "base_sha.txt").write_text(sha + "\n", encoding="utf-8")
 
             # Docs START (orchestration branch).
             _update_task(payload, t.id, {"status": "in_progress", "started_at": _utc_now()})
@@ -566,6 +586,41 @@ def main(argv: list[str] | None = None) -> int:
             role = _role_label(this.type if this else "")
             wt = task_to_worktree.get(task_id, this.worktree if this else "")
 
+            # Require a commit on the task branch when a worktree is involved. This prevents
+            # "success" exits that still failed to commit due to sandboxed .git restrictions.
+            if this and wt and wt.strip().upper() != "N/A":
+                branch = Path(wt).name
+                base_sha = task_base_sha.get(task_id) or (run_dir / "base_sha.txt").read_text(encoding="utf-8").strip()
+                branch_sha = _run(["git", "rev-parse", branch], cwd=repo_root, check=False).stdout.strip()
+                if not branch_sha or branch_sha == base_sha:
+                    _update_task(
+                        payload,
+                        task_id,
+                        {
+                            "status": "blocked",
+                            "blocked_at": _utc_now(),
+                            "blockers": [f"No commit produced on branch '{branch}' (likely commit failed)."],
+                            "unblock_steps": [
+                                f"Inspect {run_dir / 'last_message.md'}",
+                                f"Inspect {run_dir / 'worker.log'}",
+                                "Re-run the task with a less-restrictive codex sandbox.",
+                            ],
+                        },
+                    )
+                    _write_json(queue_path, payload)
+                    if session_log.exists():
+                        _session_log_end(
+                            session_log=session_log,
+                            task_id=task_id,
+                            role=role,
+                            worktree=wt if wt and wt.strip().upper() != "N/A" else "",
+                            last_message_path=last_message_path,
+                            extra=["- Orchestrator: marked task blocked (no commit produced)"],
+                        )
+                        _git_commit_paths(repo_root, track_paths, f"docs: finish {task_id} (blocked)")
+                    # Keep worktree for inspection.
+                    continue
+
             # If this is an integration task, fast-forward merge integration branch to base branch.
             extra: list[str] = []
             if this and this.type.strip().lower() == "integration" and wt and wt.strip().upper() != "N/A":
@@ -608,4 +663,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
