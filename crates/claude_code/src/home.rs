@@ -151,62 +151,72 @@ fn seed_minimal(
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 fn seed_full_profile(
     seed_home: &Path,
     target_home: &Path,
     outcome: &mut ClaudeHomeSeedOutcome,
 ) -> Result<(), ClaudeCodeError> {
-    #[cfg(target_os = "macos")]
-    {
-        copy_dir_if_exists(
-            &seed_home
-                .join("Library")
-                .join("Application Support")
-                .join("Claude"),
-            &target_home
-                .join("Library")
-                .join("Application Support")
-                .join("Claude"),
-            outcome,
-        )?;
-        return Ok(());
-    }
+    copy_dir_if_exists(
+        &seed_home
+            .join("Library")
+            .join("Application Support")
+            .join("Claude"),
+        &target_home
+            .join("Library")
+            .join("Application Support")
+            .join("Claude"),
+        outcome,
+    )?;
+    Ok(())
+}
 
-    #[cfg(windows)]
-    {
-        copy_dir_if_exists(
-            &seed_home.join("AppData").join("Roaming").join("Claude"),
-            &target_home.join("AppData").join("Roaming").join("Claude"),
-            outcome,
-        )?;
-        copy_dir_if_exists(
-            &seed_home.join("AppData").join("Local").join("Claude"),
-            &target_home.join("AppData").join("Local").join("Claude"),
-            outcome,
-        )?;
-        return Ok(());
-    }
+#[cfg(windows)]
+fn seed_full_profile(
+    seed_home: &Path,
+    target_home: &Path,
+    outcome: &mut ClaudeHomeSeedOutcome,
+) -> Result<(), ClaudeCodeError> {
+    copy_dir_if_exists(
+        &seed_home.join("AppData").join("Roaming").join("Claude"),
+        &target_home.join("AppData").join("Roaming").join("Claude"),
+        outcome,
+    )?;
+    copy_dir_if_exists(
+        &seed_home.join("AppData").join("Local").join("Claude"),
+        &target_home.join("AppData").join("Local").join("Claude"),
+        outcome,
+    )?;
+    Ok(())
+}
 
-    #[cfg(all(unix, not(target_os = "macos")))]
-    {
-        copy_dir_if_exists(
-            &seed_home.join(".config").join("claude"),
-            &target_home.join(".config").join("claude"),
-            outcome,
-        )?;
-        copy_dir_if_exists(
-            &seed_home.join(".local").join("share").join("claude"),
-            &target_home.join(".local").join("share").join("claude"),
-            outcome,
-        )?;
-        return Ok(());
-    }
+#[cfg(all(unix, not(target_os = "macos")))]
+fn seed_full_profile(
+    seed_home: &Path,
+    target_home: &Path,
+    outcome: &mut ClaudeHomeSeedOutcome,
+) -> Result<(), ClaudeCodeError> {
+    copy_dir_if_exists(
+        &seed_home.join(".config").join("claude"),
+        &target_home.join(".config").join("claude"),
+        outcome,
+    )?;
+    copy_dir_if_exists(
+        &seed_home.join(".local").join("share").join("claude"),
+        &target_home.join(".local").join("share").join("claude"),
+        outcome,
+    )?;
+    Ok(())
+}
 
-    #[cfg(not(any(target_os = "macos", windows, all(unix, not(target_os = "macos")))))]
-    {
-        let _ = (seed_home, target_home, outcome);
-        return Ok(());
-    }
+#[cfg(not(any(target_os = "macos", windows, all(unix, not(target_os = "macos")))))]
+fn seed_full_profile(
+    seed_home: &Path,
+    target_home: &Path,
+    outcome: &mut ClaudeHomeSeedOutcome,
+) -> Result<(), ClaudeCodeError> {
+    let _ = (seed_home, target_home, outcome);
+    Ok(())
 }
 
 fn copy_if_exists(
@@ -312,24 +322,21 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), ClaudeCodeError> {
 
         if meta.file_type().is_symlink() {
             // Best-effort: resolve link and copy target contents. If unreadable, skip.
-            match fs::read_link(&path) {
-                Ok(link_target) => {
-                    let resolved = if link_target.is_absolute() {
-                        link_target
-                    } else {
-                        path.parent()
-                            .unwrap_or_else(|| Path::new("/"))
-                            .join(link_target)
-                    };
-                    if let Ok(target_meta) = fs::metadata(&resolved) {
-                        if target_meta.is_dir() {
-                            copy_dir_recursive(&resolved, &target_path)?;
-                        } else if target_meta.is_file() {
-                            copy_file(&resolved, &target_path)?;
-                        }
+            if let Ok(link_target) = fs::read_link(&path) {
+                let resolved = if link_target.is_absolute() {
+                    link_target
+                } else {
+                    path.parent()
+                        .unwrap_or_else(|| Path::new("/"))
+                        .join(link_target)
+                };
+                if let Ok(target_meta) = fs::metadata(&resolved) {
+                    if target_meta.is_dir() {
+                        copy_dir_recursive(&resolved, &target_path)?;
+                    } else if target_meta.is_file() {
+                        copy_file(&resolved, &target_path)?;
                     }
                 }
-                Err(_) => {}
             }
             continue;
         }

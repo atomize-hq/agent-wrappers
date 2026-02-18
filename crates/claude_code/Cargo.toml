@@ -10,6 +10,7 @@ categories = ["api-bindings", "command-line-interface"]
 readme = "README.md"
 
 [dependencies]
+futures-core = "0.3"
 tokio = { workspace = true, features = ["process", "io-util", "io-std", "macros", "rt", "rt-multi-thread", "time", "sync", "fs"] }
 thiserror = { workspace = true }
 tracing = { workspace = true }

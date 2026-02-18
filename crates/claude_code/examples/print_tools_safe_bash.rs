@@ -58,13 +58,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .working_dir(work.path())
             .build();
 
-    let prompt = format!(
-        "You are running in a sandbox directory.\n\
+    let prompt = "You are running in a sandbox directory.\n\
 Only use tools within this directory.\n\
 1) Use the Read tool to read input.txt.\n\
 2) Use Bash to run: ls -la\n\
 3) Reply with a single sentence summarizing what you found.\n"
-    );
+        .to_string();
 
     let res = client
         .print(
