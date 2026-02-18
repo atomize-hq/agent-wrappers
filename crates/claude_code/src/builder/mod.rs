@@ -125,7 +125,9 @@ impl ClaudeClientBuilder {
 
         if let Some(layout) = claude_home.as_ref() {
             let root = layout.root().to_string_lossy().to_string();
-            self.env.entry("CLAUDE_HOME".to_string()).or_insert(root.clone());
+            self.env
+                .entry("CLAUDE_HOME".to_string())
+                .or_insert(root.clone());
             self.env.entry("HOME".to_string()).or_insert(root.clone());
             self.env
                 .entry("XDG_CONFIG_HOME".to_string())

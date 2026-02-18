@@ -53,8 +53,14 @@ echo "XDG_CACHE_HOME=${XDG_CACHE_HOME:-}"
         let envs = parse_env_dump(&String::from_utf8_lossy(&out.stdout));
 
         let layout = ClaudeHomeLayout::new(&home_root);
-        assert_eq!(envs.get("CLAUDE_HOME").map(String::as_str), Some(layout.root().to_str().unwrap()));
-        assert_eq!(envs.get("HOME").map(String::as_str), Some(layout.root().to_str().unwrap()));
+        assert_eq!(
+            envs.get("CLAUDE_HOME").map(String::as_str),
+            Some(layout.root().to_str().unwrap())
+        );
+        assert_eq!(
+            envs.get("HOME").map(String::as_str),
+            Some(layout.root().to_str().unwrap())
+        );
         assert_eq!(
             envs.get("XDG_CONFIG_HOME").map(String::as_str),
             Some(layout.xdg_config_home().to_str().unwrap())
@@ -111,11 +117,8 @@ echo "XDG_CACHE_HOME=${XDG_CACHE_HOME:-}"
         .expect("write plugin config");
 
         // Excluded artifacts (should not be copied by MinimalAuth).
-        fs::write(
-            seed.path().join(".claude").join("history.jsonl"),
-            "history",
-        )
-        .expect("write history");
+        fs::write(seed.path().join(".claude").join("history.jsonl"), "history")
+            .expect("write history");
 
         let layout = ClaudeHomeLayout::new(target.path().join("home"));
         let outcome = layout
@@ -123,7 +126,11 @@ echo "XDG_CACHE_HOME=${XDG_CACHE_HOME:-}"
             .expect("seed minimal");
 
         assert!(layout.root().join(".claude.json").is_file());
-        assert!(layout.root().join(".claude").join("settings.json").is_file());
+        assert!(layout
+            .root()
+            .join(".claude")
+            .join("settings.json")
+            .is_file());
         assert!(layout
             .root()
             .join(".claude")
@@ -175,4 +182,3 @@ echo "XDG_CACHE_HOME=${XDG_CACHE_HOME:-}"
         assert!(dst.is_file(), "expected full profile to be copied");
     }
 }
-

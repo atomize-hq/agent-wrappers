@@ -1,6 +1,5 @@
 use std::{
-    fs,
-    io,
+    fs, io,
     path::{Path, PathBuf},
 };
 
@@ -125,7 +124,10 @@ fn seed_minimal(
     outcome: &mut ClaudeHomeSeedOutcome,
 ) -> Result<(), ClaudeCodeError> {
     let mappings = [
-        (seed_home.join(".claude.json"), target_home.join(".claude.json")),
+        (
+            seed_home.join(".claude.json"),
+            target_home.join(".claude.json"),
+        ),
         (
             seed_home.join(".claude").join("settings.json"),
             target_home.join(".claude").join("settings.json"),
@@ -200,11 +202,7 @@ fn seed_full_profile(
         return Ok(());
     }
 
-    #[cfg(not(any(
-        target_os = "macos",
-        windows,
-        all(unix, not(target_os = "macos"))
-    )))]
+    #[cfg(not(any(target_os = "macos", windows, all(unix, not(target_os = "macos")))))]
     {
         let _ = (seed_home, target_home, outcome);
         return Ok(());
@@ -296,10 +294,11 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), ClaudeCodeError> {
         let file_name = entry.file_name();
         let target_path = dst.join(file_name);
 
-        let meta = fs::symlink_metadata(&path).map_err(|source| ClaudeCodeError::ClaudeHomeSeedIo {
-            path: path.clone(),
-            source,
-        })?;
+        let meta =
+            fs::symlink_metadata(&path).map_err(|source| ClaudeCodeError::ClaudeHomeSeedIo {
+                path: path.clone(),
+                source,
+            })?;
 
         if meta.is_dir() {
             copy_dir_recursive(&path, &target_path)?;

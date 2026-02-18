@@ -77,7 +77,7 @@ impl<R: Read, P: LineParser> LineIngestor<R, P> {
         if !matches!(self.config.capture_raw, CaptureRaw::Line | CaptureRaw::Both) {
             return None;
         }
-        let bytes = line.len();
+        let bytes = line.as_bytes().len();
         if !self.budget.can_spend(bytes) {
             return None;
         }
@@ -256,7 +256,7 @@ mod tokio_ingest {
             if !matches!(self.config.capture_raw, CaptureRaw::Line | CaptureRaw::Both) {
                 return None;
             }
-            let bytes = line.len();
+            let bytes = line.as_bytes().len();
             if !self.budget.can_spend(bytes) {
                 return None;
             }
@@ -424,17 +424,16 @@ mod tokio_ingest {
         #[tokio::test]
         async fn budget_skips_capture_deterministically() {
             let data = b"{\"k\":1}\n";
-            let config = IngestConfig {
-                capture_raw: CaptureRaw::Both,
-                limits: crate::config::IngestLimits {
-                    max_raw_bytes_total: Some(2),
-                    ..Default::default()
-                },
-                ..Default::default()
-            };
+            let mut config = IngestConfig::default();
+            config.capture_raw = CaptureRaw::Both;
+            config.limits.max_raw_bytes_total = Some(2);
 
-            let mut ingestor =
-                AsyncLineIngestor::new(std::io::Cursor::new(data), TestParser, config, "test");
+            let mut ingestor = AsyncLineIngestor::new(
+                std::io::Cursor::new(data),
+                TestParser::default(),
+                config,
+                "test",
+            );
 
             let rec = ingestor.next_record().await.unwrap();
             assert!(rec.captured_raw.is_none());
@@ -485,17 +484,16 @@ mod tests {
     #[test]
     fn captures_line_before_parsing() {
         let data = b"hello\n";
-        let config = IngestConfig {
-            capture_raw: CaptureRaw::Line,
-            limits: crate::config::IngestLimits {
-                max_raw_bytes_total: Some(32),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
+        let mut config = IngestConfig::default();
+        config.capture_raw = CaptureRaw::Line;
+        config.limits.max_raw_bytes_total = Some(32);
 
-        let mut ingestor =
-            LineIngestor::new(std::io::Cursor::new(data), TestParser, config, "test");
+        let mut ingestor = LineIngestor::new(
+            std::io::Cursor::new(data),
+            TestParser::default(),
+            config,
+            "test",
+        );
         let rec = ingestor.next().unwrap();
         assert_eq!(
             rec.captured_raw.as_ref().and_then(|r| r.line.as_deref()),
