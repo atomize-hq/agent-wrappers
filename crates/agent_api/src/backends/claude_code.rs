@@ -163,7 +163,15 @@ async fn run_claude_code_inner(
     let mut events = handle.events;
     let completion = handle.completion;
 
-    'stream: while let Some(outcome) = events.next().await {
+    // If the caller drops the universal events stream, we MUST keep draining the backend stream so
+    // the underlying process isn't accidentally cancelled (and so we avoid deadlocks on bounded
+    // channels). We simply stop forwarding once the receiver is gone.
+    let mut forward = true;
+    while let Some(outcome) = events.next().await {
+        if !forward {
+            continue;
+        }
+
         let mapped_events = match outcome {
             Ok(ev) => map_stream_json_event(ev),
             Err(err) => vec![error_event(redact_parse_error(&err))],
@@ -172,8 +180,12 @@ async fn run_claude_code_inner(
         for event in mapped_events {
             for bounded in crate::bounds::enforce_event_bounds(event) {
                 if tx.send(bounded).await.is_err() {
-                    break 'stream;
+                    forward = false;
+                    break;
                 }
+            }
+            if !forward {
+                break;
             }
         }
     }
