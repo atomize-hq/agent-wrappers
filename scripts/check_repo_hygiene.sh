@@ -40,4 +40,6 @@ if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi
 
+python3 scripts/lint_ci_checkpoint_plans.py
+
 echo "repo hygiene: OK"

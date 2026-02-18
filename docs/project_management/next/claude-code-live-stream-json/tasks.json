@@ -1,0 +1,277 @@
+[
+  {
+    "id": "C0-code",
+    "name": "C0: claude_code streaming API (code)",
+    "type": "code",
+    "phase": "C0",
+    "status": "pending",
+    "description": "Implement the C0 spec in `crates/claude_code` (production code + CI workflow/scripts; no tests).",
+    "references": [
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/project_management/next/claude-code-live-stream-json/plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/spec_manifest.md",
+      "docs/project_management/next/claude-code-live-stream-json/impact_map.md",
+      "docs/project_management/next/claude-code-live-stream-json/decision_register.md",
+      "docs/project_management/next/claude-code-live-stream-json/ci_checkpoint_plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/C0-spec.md",
+      "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-code.md"
+    ],
+    "acceptance_criteria": [
+      "C0 behavior matches C0-spec and ADR-0010",
+      "Feature-local smoke workflow and scripts exist",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/claude-code-live-stream-json && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-code'",
+      "Create the task branch and worktree: `git worktree add -b ccsj-c0-stream-api-code wt/ccsj-c0-stream-api-code feat/claude-code-live-stream-json`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings.",
+      "Inside wt/ccsj-c0-stream-api-code, commit C0-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/claude-code-live-stream-json.",
+      "Checkout feat/claude-code-live-stream-json; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; create downstream prompts if missing; commit docs with 'docs: finish C0-code'.",
+      "Remove worktree wt/ccsj-c0-stream-api-code."
+    ],
+    "worktree": "wt/ccsj-c0-stream-api-code",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-code.md",
+    "depends_on": [],
+    "concurrent_with": ["C0-test"]
+  },
+  {
+    "id": "C0-test",
+    "name": "C0: claude_code streaming API (test)",
+    "type": "test",
+    "phase": "C0",
+    "status": "pending",
+    "description": "Add fixture/synthetic tests for the streaming adapter and framing rules (tests only).",
+    "references": [
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/project_management/next/claude-code-live-stream-json/plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/C0-spec.md",
+      "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests validate incrementality + CRLF/blank-line handling + redaction policy",
+      "No production code changes",
+      "Required commands executed (fmt + targeted tests) and recorded in session_log.md"
+    ],
+    "start_checklist": [
+      "git checkout feat/claude-code-live-stream-json && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-test'",
+      "Create the task branch and worktree: `git worktree add -b ccsj-c0-stream-api-test wt/ccsj-c0-stream-api-test feat/claude-code-live-stream-json`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; targeted cargo test commands for suites added/updated.",
+      "Inside wt/ccsj-c0-stream-api-test, commit C0-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/claude-code-live-stream-json.",
+      "Checkout feat/claude-code-live-stream-json; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; create downstream prompts if missing; commit docs with 'docs: finish C0-test'.",
+      "Remove worktree wt/ccsj-c0-stream-api-test."
+    ],
+    "worktree": "wt/ccsj-c0-stream-api-test",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-test.md",
+    "depends_on": [],
+    "concurrent_with": ["C0-code"]
+  },
+  {
+    "id": "C0-integ",
+    "name": "C0: claude_code streaming API (integration)",
+    "type": "integration",
+    "phase": "C0",
+    "status": "pending",
+    "description": "Merge C0 code/test, reconcile to spec, and gate with fmt/clippy/tests/preflight (Linux).",
+    "references": [
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/project_management/next/claude-code-live-stream-json/plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/C0-spec.md",
+      "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C0 code/test merged and match C0-spec",
+      "cargo fmt + clippy + relevant tests + make preflight executed and logged",
+      "Merged fast-forward into feat/claude-code-live-stream-json; tasks/logs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/claude-code-live-stream-json && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-integ'",
+      "Create the integration branch and worktree: `git worktree add -b ccsj-c0-stream-api-integ wt/ccsj-c0-stream-api-integ feat/claude-code-live-stream-json`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C0 into the integration worktree and reconcile behavior to the spec.",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
+      "Commit integration changes on branch ccsj-c0-stream-api-integ.",
+      "Fast-forward merge ccsj-c0-stream-api-integ into feat/claude-code-live-stream-json; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-integ'.",
+      "Remove worktree wt/ccsj-c0-stream-api-integ."
+    ],
+    "worktree": "wt/ccsj-c0-stream-api-integ",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-integ.md",
+    "depends_on": ["C0-code", "C0-test"],
+    "concurrent_with": []
+  },
+  {
+    "id": "C1-code",
+    "name": "C1: agent_api Claude live events (code)",
+    "type": "code",
+    "phase": "C1",
+    "status": "pending",
+    "description": "Wire `crates/agent_api` Claude backend to streaming API + advertise `agent_api.events.live` (production code only; no tests).",
+    "references": [
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/project_management/next/claude-code-live-stream-json/plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/spec_manifest.md",
+      "docs/project_management/next/claude-code-live-stream-json/decision_register.md",
+      "docs/project_management/next/claude-code-live-stream-json/ci_checkpoint_plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/C1-spec.md",
+      "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-code.md"
+    ],
+    "acceptance_criteria": [
+      "Claude backend emits universal events live (before process exit) using the streaming API",
+      "Claude backend capabilities include `agent_api.events.live`",
+      "No tests added/modified"
+    ],
+    "start_checklist": [
+      "git checkout feat/claude-code-live-stream-json && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C1-code'",
+      "Create the task branch and worktree: `git worktree add -b ccsj-c1-agent-api-wiring-code wt/ccsj-c1-agent-api-wiring-code feat/claude-code-live-stream-json`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings.",
+      "Inside wt/ccsj-c1-agent-api-wiring-code, commit C1-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/claude-code-live-stream-json.",
+      "Checkout feat/claude-code-live-stream-json; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; create downstream prompts if missing; commit docs with 'docs: finish C1-code'.",
+      "Remove worktree wt/ccsj-c1-agent-api-wiring-code."
+    ],
+    "worktree": "wt/ccsj-c1-agent-api-wiring-code",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-code.md",
+    "depends_on": ["C0-integ"],
+    "concurrent_with": ["C1-test"]
+  },
+  {
+    "id": "C1-test",
+    "name": "C1: agent_api Claude live events (test)",
+    "type": "test",
+    "phase": "C1",
+    "status": "pending",
+    "description": "Add tests validating `agent_api.events.live` capability + DR-0012 completion gating (tests only).",
+    "references": [
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/project_management/next/claude-code-live-stream-json/plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/C1-spec.md",
+      "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests cover C1 acceptance criteria without requiring a real `claude` binary",
+      "No production code changes",
+      "Required commands executed (fmt + targeted tests) and recorded in session_log.md"
+    ],
+    "start_checklist": [
+      "git checkout feat/claude-code-live-stream-json && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C1-test'",
+      "Create the task branch and worktree: `git worktree add -b ccsj-c1-agent-api-wiring-test wt/ccsj-c1-agent-api-wiring-test feat/claude-code-live-stream-json`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; targeted cargo test commands for suites added/updated.",
+      "Inside wt/ccsj-c1-agent-api-wiring-test, commit C1-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/claude-code-live-stream-json.",
+      "Checkout feat/claude-code-live-stream-json; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; create downstream prompts if missing; commit docs with 'docs: finish C1-test'.",
+      "Remove worktree wt/ccsj-c1-agent-api-wiring-test."
+    ],
+    "worktree": "wt/ccsj-c1-agent-api-wiring-test",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-test.md",
+    "depends_on": ["C0-integ"],
+    "concurrent_with": ["C1-code"]
+  },
+  {
+    "id": "C1-integ",
+    "name": "C1: agent_api Claude live events (integration)",
+    "type": "integration",
+    "phase": "C1",
+    "status": "pending",
+    "description": "Merge C1 code/test, reconcile to spec, and gate with fmt/clippy/tests/preflight (Linux).",
+    "references": [
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/project_management/next/claude-code-live-stream-json/plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/C1-spec.md",
+      "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C1 code/test merged and match C1-spec",
+      "cargo fmt + clippy + relevant tests + make preflight executed and logged",
+      "Merged fast-forward into feat/claude-code-live-stream-json; tasks/logs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/claude-code-live-stream-json && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C1-integ'",
+      "Create the integration branch and worktree: `git worktree add -b ccsj-c1-agent-api-wiring-integ wt/ccsj-c1-agent-api-wiring-integ feat/claude-code-live-stream-json`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream code/test branches for C1 into the integration worktree and reconcile behavior to the spec.",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
+      "Commit integration changes on branch ccsj-c1-agent-api-wiring-integ.",
+      "Fast-forward merge ccsj-c1-agent-api-wiring-integ into feat/claude-code-live-stream-json; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-integ'.",
+      "Remove worktree wt/ccsj-c1-agent-api-wiring-integ."
+    ],
+    "worktree": "wt/ccsj-c1-agent-api-wiring-integ",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-integ.md",
+    "depends_on": ["C1-code", "C1-test"],
+    "concurrent_with": []
+  },
+  {
+    "id": "CP1-ci-checkpoint",
+    "name": "CP1: CI checkpoint (GitHub-hosted multi-OS)",
+    "type": "integration",
+    "phase": "CP1",
+    "status": "pending",
+    "description": "Run the bounded multi-OS CI gates defined in ci_checkpoint_plan.md after C1 is integrated.",
+    "references": [
+      "docs/project_management/next/claude-code-live-stream-json/ci_checkpoint_plan.md",
+      "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/CP1-ci-checkpoint.md"
+    ],
+    "acceptance_criteria": [
+      "GitHub-hosted ubuntu/macos/windows smoke scripts pass for the tested SHA",
+      "Linux preflight passes for the tested SHA",
+      "Evidence recorded in session_log.md"
+    ],
+    "start_checklist": [
+      "git checkout feat/claude-code-live-stream-json && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, ci_checkpoint_plan.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start CP1-ci-checkpoint'"
+    ],
+    "end_checklist": [
+      "Trigger the checkpoint CI gates for the target SHA (see kickoff prompt); wait for completion.",
+      "Record run ids/links and pass/fail in session_log.md and set task status to completed.",
+      "Commit docs with message 'docs: finish CP1-ci-checkpoint'."
+    ],
+    "worktree": "N/A",
+    "integration_task": "CP1-ci-checkpoint",
+    "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/CP1-ci-checkpoint.md",
+    "depends_on": ["C1-integ"],
+    "concurrent_with": []
+  }
+]
+
