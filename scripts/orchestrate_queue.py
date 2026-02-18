@@ -456,15 +456,6 @@ def main(argv: list[str] | None = None) -> int:
             kickoff_text = _load_kickoff_text(repo_root, t.kickoff_ref)
             worktree_path: Path | None = None
             worktree_branch: str | None = None
-            if t.worktree and t.worktree.strip().upper() != "N/A":
-                worktree_path, worktree_branch = _ensure_worktree(repo_root=repo_root, base_branch=base_branch, worktree=t.worktree)
-                task_to_worktree[t.id] = t.worktree
-                # Persist the starting SHA so we can verify the worker produced a commit even if
-                # the orchestration branch advances due to other doc commits.
-                if worktree_branch:
-                    sha = _run(["git", "rev-parse", worktree_branch], cwd=repo_root, check=True).stdout.strip()
-                    task_base_sha[t.id] = sha
-                    (run_dir / "base_sha.txt").write_text(sha + "\n", encoding="utf-8")
 
             # Docs START (orchestration branch).
             _update_task(payload, t.id, {"status": "in_progress", "started_at": _utc_now()})
@@ -480,6 +471,20 @@ def main(argv: list[str] | None = None) -> int:
             _write_json(queue_path, payload)
             if not args.dry_run:
                 _git_commit_paths(repo_root, track_paths, f"docs: start {t.id}")
+
+            # Create worktree AFTER the docs start commit so task branches include it. This is
+            # required for integration tasks to be fast-forward mergeable back into the base branch.
+            if t.worktree and t.worktree.strip().upper() != "N/A":
+                worktree_path, worktree_branch = _ensure_worktree(
+                    repo_root=repo_root,
+                    base_branch=base_branch,
+                    worktree=t.worktree,
+                )
+                task_to_worktree[t.id] = t.worktree
+                if worktree_branch:
+                    sha = _run(["git", "rev-parse", worktree_branch], cwd=repo_root, check=True).stdout.strip()
+                    task_base_sha[t.id] = sha
+                    (run_dir / "base_sha.txt").write_text(sha + "\n", encoding="utf-8")
 
             prompt_text = _make_prompt_text(
                 repo_root=repo_root,
