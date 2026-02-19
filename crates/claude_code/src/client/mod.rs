@@ -13,7 +13,7 @@ use tokio::{
     io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
     process::Command,
     sync::{mpsc, oneshot},
-    task, time,
+    time,
 };
 
 use crate::{
@@ -527,6 +527,7 @@ async fn run_print_stream_json_child(
 ) -> Result<std::process::ExitStatus, ClaudeCodeError> {
     let mut parser = ClaudeStreamJsonParser::new();
     let mut lines = BufReader::new(stdout).lines();
+    let mut stdout_mirror = mirror_stdout.then(tokio::io::stdout);
 
     let stderr_task =
         stderr.map(|stderr| tokio::spawn(mirror_child_stream_to_parent_stderr(stderr)));
@@ -574,14 +575,16 @@ async fn run_print_stream_json_child(
             continue;
         }
 
-        if mirror_stdout {
-            if let Err(err) = task::block_in_place(|| {
-                use std::io::Write as _;
-                let mut out = std::io::stdout();
-                out.write_all(line.as_bytes())?;
-                out.write_all(b"\n")?;
-                out.flush()
-            }) {
+        if let Some(out) = stdout_mirror.as_mut() {
+            let res: Result<(), std::io::Error> = async {
+                use tokio::io::AsyncWriteExt as _;
+                out.write_all(line.as_bytes()).await?;
+                out.write_all(b"\n").await?;
+                out.flush().await
+            }
+            .await;
+
+            if let Err(err) = res {
                 io_error = Some(ClaudeCodeError::StdoutRead(err));
                 break;
             }
