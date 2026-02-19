@@ -4,7 +4,7 @@
     "name": "C0: claude_code streaming API (code)",
     "type": "code",
     "phase": "C0",
-    "status": "pending",
+    "status": "completed",
     "description": "Implement the C0 spec in `crates/claude_code` (production code + CI workflow/scripts; no tests).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
@@ -43,14 +43,18 @@
     "integration_task": "C0-integ",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-code.md",
     "depends_on": [],
-    "concurrent_with": ["C0-test"]
+    "concurrent_with": [
+      "C0-test"
+    ],
+    "started_at": "2026-02-18T19:23:34Z",
+    "completed_at": "2026-02-18T19:39:39Z"
   },
   {
     "id": "C0-test",
     "name": "C0: claude_code streaming API (test)",
     "type": "test",
     "phase": "C0",
-    "status": "pending",
+    "status": "completed",
     "description": "Add fixture/synthetic tests for the streaming adapter and framing rules (tests only).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
@@ -85,14 +89,18 @@
     "integration_task": "C0-integ",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-test.md",
     "depends_on": [],
-    "concurrent_with": ["C0-code"]
+    "concurrent_with": [
+      "C0-code"
+    ],
+    "started_at": "2026-02-18T19:23:34Z",
+    "completed_at": "2026-02-18T19:29:00Z"
   },
   {
     "id": "C0-integ",
     "name": "C0: claude_code streaming API (integration)",
     "type": "integration",
     "phase": "C0",
-    "status": "pending",
+    "status": "completed",
     "description": "Merge C0 code/test, reconcile to spec, and gate with fmt/clippy/tests/preflight (Linux).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
@@ -126,15 +134,20 @@
     "worktree": "wt/ccsj-c0-stream-api-integ",
     "integration_task": "C0-integ",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C0-integ.md",
-    "depends_on": ["C0-code", "C0-test"],
-    "concurrent_with": []
+    "depends_on": [
+      "C0-code",
+      "C0-test"
+    ],
+    "concurrent_with": [],
+    "started_at": "2026-02-18T19:39:39Z",
+    "completed_at": "2026-02-18T20:05:27Z"
   },
   {
     "id": "C1-code",
     "name": "C1: agent_api Claude live events (code)",
     "type": "code",
     "phase": "C1",
-    "status": "pending",
+    "status": "completed",
     "description": "Wire `crates/agent_api` Claude backend to streaming API + advertise `agent_api.events.live` (production code only; no tests).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
@@ -171,15 +184,21 @@
     "worktree": "wt/ccsj-c1-agent-api-wiring-code",
     "integration_task": "C1-integ",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-code.md",
-    "depends_on": ["C0-integ"],
-    "concurrent_with": ["C1-test"]
+    "depends_on": [
+      "C0-integ"
+    ],
+    "concurrent_with": [
+      "C1-test"
+    ],
+    "started_at": "2026-02-18T21:16:54Z",
+    "completed_at": "2026-02-18T21:22:29Z"
   },
   {
     "id": "C1-test",
     "name": "C1: agent_api Claude live events (test)",
     "type": "test",
     "phase": "C1",
-    "status": "pending",
+    "status": "completed",
     "description": "Add tests validating `agent_api.events.live` capability + Universal Agent API DR-0012 completion gating (tests only).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
@@ -213,15 +232,21 @@
     "worktree": "wt/ccsj-c1-agent-api-wiring-test",
     "integration_task": "C1-integ",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-test.md",
-    "depends_on": ["C0-integ"],
-    "concurrent_with": ["C1-code"]
+    "depends_on": [
+      "C0-integ"
+    ],
+    "concurrent_with": [
+      "C1-code"
+    ],
+    "started_at": "2026-02-18T21:16:54Z",
+    "completed_at": "2026-02-18T21:27:12Z"
   },
   {
     "id": "C1-integ",
     "name": "C1: agent_api Claude live events (integration)",
     "type": "integration",
     "phase": "C1",
-    "status": "pending",
+    "status": "completed",
     "description": "Merge C1 code/test, reconcile to spec, and gate with fmt/clippy/tests/preflight (Linux).",
     "references": [
       "docs/adr/0010-claude-code-live-stream-json.md",
@@ -255,15 +280,20 @@
     "worktree": "wt/ccsj-c1-agent-api-wiring-integ",
     "integration_task": "C1-integ",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/C1-integ.md",
-    "depends_on": ["C1-code", "C1-test"],
-    "concurrent_with": []
+    "depends_on": [
+      "C1-code",
+      "C1-test"
+    ],
+    "concurrent_with": [],
+    "started_at": "2026-02-18T21:27:13Z",
+    "completed_at": "2026-02-18T21:33:10Z"
   },
   {
     "id": "CP1-ci-checkpoint",
     "name": "CP1: CI checkpoint (GitHub-hosted multi-OS)",
     "type": "integration",
     "phase": "CP1",
-    "status": "pending",
+    "status": "completed",
     "description": "Run the bounded multi-OS CI gates defined in ci_checkpoint_plan.md after C1 is integrated.",
     "references": [
       "docs/project_management/next/claude-code-live-stream-json/ci_checkpoint_plan.md",
@@ -288,7 +318,11 @@
     "worktree": "N/A",
     "integration_task": "CP1-ci-checkpoint",
     "kickoff_prompt": "docs/project_management/next/claude-code-live-stream-json/kickoff_prompts/CP1-ci-checkpoint.md",
-    "depends_on": ["C1-integ"],
-    "concurrent_with": []
+    "depends_on": [
+      "C1-integ"
+    ],
+    "concurrent_with": [],
+    "started_at": "2026-02-18T21:39:22Z",
+    "completed_at": "2026-02-18T22:12:15Z"
   }
 ]

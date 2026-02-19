@@ -6,7 +6,8 @@ use std::{
     time::Duration,
 };
 
-use claude_code::{ClaudeOutputFormat, ClaudePrintRequest, ClaudeStreamJsonParser};
+use claude_code::{ClaudeOutputFormat, ClaudePrintRequest};
+use futures_util::StreamExt;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
@@ -46,6 +47,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
         let mut ids = BTreeSet::new();
         ids.insert("agent_api.run".to_string());
         ids.insert("agent_api.events".to_string());
+        ids.insert("agent_api.events.live".to_string());
         ids.insert("backend.claude_code.print_stream_json".to_string());
         AgentWrapperCapabilities { ids }
     }
@@ -141,8 +143,8 @@ async fn run_claude_code_inner(
         .output_format(ClaudeOutputFormat::StreamJson)
         .include_partial_messages(true);
 
-    let res = match client.print(print_req).await {
-        Ok(res) => res,
+    let handle = match client.print_stream_json(print_req).await {
+        Ok(handle) => handle,
         Err(err) => {
             for bounded in crate::bounds::enforce_event_bounds(error_event(format!(
                 "claude_code error: {err}"
@@ -158,39 +160,56 @@ async fn run_claude_code_inner(
         }
     };
 
-    let stdout = String::from_utf8_lossy(&res.output.stdout);
-    let mut parser = ClaudeStreamJsonParser::new();
+    let mut events = handle.events;
+    let completion = handle.completion;
 
-    for line in stdout.lines() {
-        match parser.parse_line(line) {
-            Ok(None) => {}
-            Ok(Some(ev)) => {
-                let mapped = map_stream_json_event(ev);
-                for event in mapped {
-                    for bounded in crate::bounds::enforce_event_bounds(event) {
-                        if tx.send(bounded).await.is_err() {
-                            break;
-                        }
-                    }
+    // If the caller drops the universal events stream, we MUST keep draining the backend stream so
+    // the underlying process isn't accidentally cancelled (and so we avoid deadlocks on bounded
+    // channels). We simply stop forwarding once the receiver is gone.
+    let mut forward = true;
+    while let Some(outcome) = events.next().await {
+        if !forward {
+            continue;
+        }
+
+        let mapped_events = match outcome {
+            Ok(ev) => map_stream_json_event(ev),
+            Err(err) => vec![error_event(redact_parse_error(&err))],
+        };
+
+        for event in mapped_events {
+            for bounded in crate::bounds::enforce_event_bounds(event) {
+                if tx.send(bounded).await.is_err() {
+                    forward = false;
+                    break;
                 }
             }
-            Err(err) => {
-                for bounded in
-                    crate::bounds::enforce_event_bounds(error_event(redact_parse_error(&err)))
-                {
-                    if tx.send(bounded).await.is_err() {
-                        break;
-                    }
-                }
+            if !forward {
+                break;
             }
         }
     }
+
+    let status = match completion.await {
+        Ok(status) => status,
+        Err(err) => {
+            for bounded in crate::bounds::enforce_event_bounds(error_event(format!(
+                "claude_code error: {err}"
+            ))) {
+                let _ = tx.send(bounded).await;
+            }
+            drop(tx);
+            return Err(AgentWrapperError::Backend {
+                message: format!("claude_code error: {err}"),
+            });
+        }
+    };
 
     drop(tx);
 
     Ok(crate::bounds::enforce_completion_bounds(
         AgentWrapperCompletion {
-            status: res.output.status,
+            status,
             final_text: None,
             data: None,
         },
@@ -432,7 +451,7 @@ mod tests {
         let capabilities = backend.capabilities();
         assert!(capabilities.contains("agent_api.run"));
         assert!(capabilities.contains("agent_api.events"));
-        assert!(!capabilities.contains("agent_api.events.live"));
+        assert!(capabilities.contains("agent_api.events.live"));
     }
 
     #[test]
