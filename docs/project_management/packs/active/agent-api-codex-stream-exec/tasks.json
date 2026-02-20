@@ -357,7 +357,7 @@
     "name": "C2: Validation hardening (fixtures + safety) (test)",
     "type": "test",
     "phase": "C2",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Add fake-binary fixtures and integration tests proving live emission before completion, env precedence, and redaction constraints (tests only).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -400,7 +400,8 @@
     ],
     "concurrent_with": [
       "C2-code"
-    ]
+    ],
+    "started_at": "2026-02-20T23:47:23Z"
   },
   {
     "id": "C2-integ",
