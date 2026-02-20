@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 
 [features]
 default = []
-codex = ["dep:codex", "dep:tokio"]
+codex = ["dep:codex", "dep:tokio", "dep:futures-util"]
 claude_code = ["dep:claude_code", "dep:tokio", "dep:futures-util"]
 
 [dependencies]

@@ -24,9 +24,11 @@ const CHANNEL_TOOL: &str = "tool";
 const EXT_NON_INTERACTIVE: &str = "agent_api.exec.non_interactive";
 
 fn parse_bool(value: &Value, key: &str) -> Result<bool, AgentWrapperError> {
-    value.as_bool().ok_or_else(|| AgentWrapperError::InvalidRequest {
-        message: format!("{key} must be a boolean"),
-    })
+    value
+        .as_bool()
+        .ok_or_else(|| AgentWrapperError::InvalidRequest {
+            message: format!("{key} must be a boolean"),
+        })
 }
 
 fn validate_and_extract_non_interactive(
@@ -127,11 +129,14 @@ async fn run_claude_code(
 ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
     let timeout = request.timeout.or(config.default_timeout);
     if let Some(timeout) = timeout {
-        return tokio::time::timeout(timeout, run_claude_code_inner(config, request, non_interactive, tx))
-            .await
-            .map_err(|_| AgentWrapperError::Backend {
-                message: format!("claude_code exceeded timeout of {timeout:?}"),
-            })?;
+        return tokio::time::timeout(
+            timeout,
+            run_claude_code_inner(config, request, non_interactive, tx),
+        )
+        .await
+        .map_err(|_| AgentWrapperError::Backend {
+            message: format!("claude_code exceeded timeout of {timeout:?}"),
+        })?;
     }
 
     run_claude_code_inner(config, request, non_interactive, tx).await

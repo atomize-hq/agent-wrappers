@@ -37,8 +37,14 @@ fn fake_codex_binary() -> PathBuf {
 
 fn base_env() -> BTreeMap<String, String> {
     [
-        ("FAKE_CODEX_EXPECT_SANDBOX".to_string(), "workspace-write".to_string()),
-        ("FAKE_CODEX_EXPECT_APPROVAL".to_string(), "never".to_string()),
+        (
+            "FAKE_CODEX_EXPECT_SANDBOX".to_string(),
+            "workspace-write".to_string(),
+        ),
+        (
+            "FAKE_CODEX_EXPECT_APPROVAL".to_string(),
+            "never".to_string(),
+        ),
     ]
     .into_iter()
     .collect()
@@ -67,7 +73,8 @@ async fn codex_backend_defaults_to_non_interactive_and_workspace_write_sandbox()
 
     let seen = drain_to_none(events.as_mut(), Duration::from_secs(2)).await;
     assert!(
-        seen.iter().any(|ev| ev.kind == AgentWrapperEventKind::Status),
+        seen.iter()
+            .any(|ev| ev.kind == AgentWrapperEventKind::Status),
         "expected at least one Status event"
     );
 
@@ -90,7 +97,10 @@ async fn sandbox_mode_extension_overrides_codex_sandbox() {
                 "FAKE_CODEX_EXPECT_SANDBOX".to_string(),
                 "danger-full-access".to_string(),
             ),
-            ("FAKE_CODEX_EXPECT_APPROVAL".to_string(), "never".to_string()),
+            (
+                "FAKE_CODEX_EXPECT_APPROVAL".to_string(),
+                "never".to_string(),
+            ),
         ]
         .into_iter()
         .collect(),
@@ -162,7 +172,8 @@ async fn non_interactive_false_does_not_force_ask_for_approval() {
     let completion = handle.completion;
     let seen = drain_to_none(events.as_mut(), Duration::from_secs(2)).await;
     assert!(
-        seen.iter().any(|ev| ev.kind == AgentWrapperEventKind::Status),
+        seen.iter()
+            .any(|ev| ev.kind == AgentWrapperEventKind::Status),
         "expected status events even when interactive"
     );
 

@@ -3,7 +3,8 @@ use std::{
     io::{self, Write},
 };
 
-const STREAMING_JSONL: &str = include_str!("../../../codex/examples/fixtures/versioned/0.61.0/streaming.jsonl");
+const STREAMING_JSONL: &str =
+    include_str!("../../../codex/examples/fixtures/versioned/0.61.0/streaming.jsonl");
 
 fn write_line(out: &mut impl Write, line: &str) -> io::Result<()> {
     out.write_all(line.as_bytes())?;
@@ -56,11 +57,18 @@ fn main() -> io::Result<()> {
         std::process::exit(2);
     }
 
-    let expected_sandbox = env::var("FAKE_CODEX_EXPECT_SANDBOX").unwrap_or_else(|_| "workspace-write".to_string());
-    let expected_approval = env::var("FAKE_CODEX_EXPECT_APPROVAL").unwrap_or_else(|_| "never".to_string());
+    let expected_sandbox =
+        env::var("FAKE_CODEX_EXPECT_SANDBOX").unwrap_or_else(|_| "workspace-write".to_string());
+    let expected_approval =
+        env::var("FAKE_CODEX_EXPECT_APPROVAL").unwrap_or_else(|_| "never".to_string());
 
     let sandbox = flag_value(&args, "--sandbox");
-    if !require_eq(&mut out, "--sandbox", sandbox, Some(expected_sandbox.as_str()))? {
+    if !require_eq(
+        &mut out,
+        "--sandbox",
+        sandbox,
+        Some(expected_sandbox.as_str()),
+    )? {
         std::process::exit(1);
     }
 
