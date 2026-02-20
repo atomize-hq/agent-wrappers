@@ -254,14 +254,94 @@ fn map_item_delta(delta: &codex::ItemDeltaPayload) -> AgentWrapperEvent {
     }
 }
 
+fn codex_error_kind(err: &CodexError) -> &'static str {
+    match err {
+        CodexError::Spawn { .. } => "spawn",
+        CodexError::Wait { .. } => "wait",
+        CodexError::Timeout { .. } => "timeout",
+        CodexError::EmptyPrompt
+        | CodexError::EmptySandboxCommand
+        | CodexError::EmptyExecPolicyCommand
+        | CodexError::EmptyApiKey
+        | CodexError::EmptyTaskId
+        | CodexError::EmptyEnvId
+        | CodexError::EmptyMcpServerName
+        | CodexError::EmptyMcpCommand
+        | CodexError::EmptyMcpUrl
+        | CodexError::EmptySocketPath => "invalid_request",
+        CodexError::TempDir(_)
+        | CodexError::WorkingDirectory { .. }
+        | CodexError::PrepareOutputDirectory { .. }
+        | CodexError::PrepareCodexHome { .. }
+        | CodexError::StdoutUnavailable
+        | CodexError::StderrUnavailable
+        | CodexError::StdinUnavailable
+        | CodexError::CaptureIo(_)
+        | CodexError::StdinWrite(_)
+        | CodexError::ResponsesApiProxyInfoRead { .. } => "io",
+        CodexError::NonZeroExit { .. }
+        | CodexError::InvalidUtf8(_)
+        | CodexError::JsonParse { .. }
+        | CodexError::ExecPolicyParse { .. }
+        | CodexError::FeatureListParse { .. }
+        | CodexError::ResponsesApiProxyInfoParse { .. }
+        | CodexError::Join(_) => "other",
+    }
+}
+
 fn redacted_exec_error(err: &ExecStreamError) -> String {
     match err {
-        ExecStreamError::Codex(_) => "codex error".to_string(),
-        ExecStreamError::Parse { source, .. } => format!("parse error: {source}"),
-        ExecStreamError::Normalize { message, .. } => format!("normalize error: {message}"),
-        ExecStreamError::IdleTimeout { .. } => "idle timeout".to_string(),
-        ExecStreamError::ChannelClosed => "stream closed unexpectedly".to_string(),
+        ExecStreamError::Parse { source, line } => format!(
+            "codex stream parse error (redacted): {source} (line_bytes={})",
+            line.len()
+        ),
+        ExecStreamError::Normalize { message, line } => format!(
+            "codex stream normalize error (redacted): {message} (line_bytes={})",
+            line.len()
+        ),
+        ExecStreamError::IdleTimeout { idle_for } => {
+            format!("codex stream idle timeout: {idle_for:?}")
+        }
+        ExecStreamError::ChannelClosed => "codex stream closed unexpectedly".to_string(),
+        ExecStreamError::Codex(CodexError::NonZeroExit { status, .. }) => {
+            format!("codex exited non-zero: {status:?} (stderr redacted)")
+        }
+        ExecStreamError::Codex(err) => format!(
+            "codex backend error: {} (details redacted when unsafe)",
+            codex_error_kind(err)
+        ),
     }
+}
+
+fn enforce_final_text_bound(text: Option<String>) -> Option<String> {
+    fn utf8_truncate_to_bytes(s: &str, bound_bytes: usize) -> &str {
+        if s.len() <= bound_bytes {
+            return s;
+        }
+        let mut end = std::cmp::min(bound_bytes, s.len());
+        while end > 0 && !s.is_char_boundary(end) {
+            end -= 1;
+        }
+        &s[..end]
+    }
+
+    let text = text?;
+    if text.len() <= crate::bounds::TEXT_BOUND_BYTES {
+        return Some(text);
+    }
+
+    const SUFFIX: &str = "…(truncated)";
+    let suffix_bytes = SUFFIX.len();
+    let bound = crate::bounds::TEXT_BOUND_BYTES;
+    if bound <= suffix_bytes {
+        return Some(utf8_truncate_to_bytes("…", bound).to_string());
+    }
+
+    let prefix = utf8_truncate_to_bytes(&text, bound - suffix_bytes);
+    let mut out = String::with_capacity(bound);
+    out.push_str(prefix);
+    out.push_str(SUFFIX);
+    Some(out)
 }
 
 impl AgentWrapperBackend for CodexBackend {
@@ -302,13 +382,14 @@ async fn run_impl(
     }
 
     let policy = validate_and_extract_exec_policy(&request)?;
+    let run_start_cwd = std::env::current_dir().ok();
 
     let (tx, rx) = mpsc::channel::<AgentWrapperEvent>(32);
     let (completion_tx, completion_rx) =
         oneshot::channel::<Result<AgentWrapperCompletion, AgentWrapperError>>();
 
     tokio::spawn(async move {
-        let result = run_codex(config, request, policy, tx).await;
+        let result = run_codex_inner(config, request, policy, run_start_cwd, tx).await;
         let _ = completion_tx.send(result);
     });
 
@@ -318,28 +399,11 @@ async fn run_impl(
     ))
 }
 
-async fn run_codex(
-    config: CodexBackendConfig,
-    request: AgentWrapperRunRequest,
-    policy: CodexExecPolicy,
-    tx: mpsc::Sender<AgentWrapperEvent>,
-) -> Result<AgentWrapperCompletion, AgentWrapperError> {
-    let timeout = request.timeout.or(config.default_timeout);
-    if let Some(timeout) = timeout {
-        return tokio::time::timeout(timeout, run_codex_inner(config, request, policy, tx))
-            .await
-            .map_err(|_| AgentWrapperError::Backend {
-                message: format!("codex exceeded timeout of {timeout:?}"),
-            })?;
-    }
-
-    run_codex_inner(config, request, policy, tx).await
-}
-
 async fn run_codex_inner(
     config: CodexBackendConfig,
     request: AgentWrapperRunRequest,
     policy: CodexExecPolicy,
+    run_start_cwd: Option<PathBuf>,
     tx: mpsc::Sender<AgentWrapperEvent>,
 ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
     fn map_approval_policy(policy: &CodexApprovalPolicy) -> codex::ApprovalPolicy {
@@ -384,9 +448,9 @@ async fn run_codex_inner(
         .working_dir
         .clone()
         .or_else(|| config.default_working_dir.clone())
-        .or_else(|| std::env::current_dir().ok());
+        .or(run_start_cwd);
     let working_dir = working_dir.ok_or_else(|| AgentWrapperError::Backend {
-        message: "failed to resolve working directory".to_string(),
+        message: "codex backend failed to resolve working directory".to_string(),
     })?;
     builder = builder.working_dir(working_dir);
 
@@ -496,7 +560,7 @@ async fn run_codex_inner(
     Ok(crate::bounds::enforce_completion_bounds(
         AgentWrapperCompletion {
             status: completion.status,
-            final_text: completion.last_message,
+            final_text: enforce_final_text_bound(completion.last_message),
             data: None,
         },
     ))
