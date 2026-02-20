@@ -205,7 +205,7 @@
     "name": "C1: agent_api Codex backend stream_exec refactor (test)",
     "type": "test",
     "phase": "C1",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Add fixture/sample-based tests validating Codex typed event mapping and live streaming behavior for the new stream_exec adapter (tests only).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -247,7 +247,8 @@
     ],
     "concurrent_with": [
       "C1-code"
-    ]
+    ],
+    "started_at": "2026-02-20T23:18:52Z"
   },
   {
     "id": "C1-integ",
