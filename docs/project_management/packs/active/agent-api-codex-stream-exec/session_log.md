@@ -69,3 +69,33 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - None
 ```
 - Blockers: none
+## [2026-02-20 22:47 UTC] Test Agent – C0-test – END
+- Worktree: `wt/cse-c0-codex-env-test`
+- Worker output: `/Users/spensermcconnell/__Active_Code/codex-wrapper/.runs/C0-test/last_message.md`
+- Worker summary (first ~40 lines):
+```text
+**Worktree / Branch**
+- Worktree: `/Users/spensermcconnell/__Active_Code/codex-wrapper/wt/cse-c0-codex-env-test`
+- Branch: `cse-c0-codex-env-test`
+
+**What Changed (tests + fmt-only)**
+- `crates/codex/src/tests/stream_exec_env_overrides.rs`
+- `crates/codex/src/tests/mod.rs`
+- `crates/agent_api/src/backends/codex.rs` (rustfmt-only)
+- `crates/agent_api/src/backends/claude_code.rs` (rustfmt-only)
+- `crates/agent_api/src/bin/fake_codex_stream_json_agent_api.rs` (rustfmt-only)
+- `crates/agent_api/tests/c1_codex_exec_policy.rs` (rustfmt-only)
+
+**Commits**
+- `ea14f03` test(codex): assert empty overrides match stream_exec
+- `74cc488` style(agent_api): cargo fmt
+- `ccd6838` test(codex): cover stream_exec env overrides
+
+**Commands Run (required)**
+- `cargo fmt` — pass
+- `cargo test -p codex stream_exec_env_overrides -- --nocapture` — pass (2 tests)
+
+**Blockers**
+- None
+```
+- Blockers: none
