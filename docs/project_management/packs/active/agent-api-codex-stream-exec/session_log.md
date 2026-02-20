@@ -186,3 +186,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - None
 ```
 - Blockers: none
+## [2026-02-20 23:27 UTC] Integration Agent – C1-integ – START
+- Orchestrator: set `C1-integ` → `in_progress` in `tasks.json`
+- Base branch: `feat/agent-api-codex-stream-exec`
+- Kickoff prompt: `docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C1-integ.md`
+- Worktree: `wt/cse-c1-codex-stream-exec-integ`
+- Blockers: none
