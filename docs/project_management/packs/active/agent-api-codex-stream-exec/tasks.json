@@ -410,7 +410,7 @@
     "name": "C2: Validation hardening (fixtures + safety) (integration)",
     "type": "integration",
     "phase": "C2",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Merge C2 code/test, align behavior with the specs, and gate with fmt/clippy/tests/preflight (Linux).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -451,6 +451,7 @@
       "C2-code",
       "C2-test"
     ],
-    "concurrent_with": []
+    "concurrent_with": [],
+    "started_at": "2026-02-20T23:56:04Z"
   }
 ]
