@@ -164,3 +164,25 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Blockers: none
 ```
 - Blockers: none
+## [2026-02-20 23:27 UTC] Test Agent – C1-test – END
+- Worktree: `wt/cse-c1-codex-stream-exec-test`
+- Worker output: `/Users/spensermcconnell/__Active_Code/codex-wrapper/.runs/C1-test/last_message.md`
+- Worker summary (first ~40 lines):
+```text
+- Added C1 adapter tests and a scenario-driven fake Codex CLI binary (no prod library changes):
+  - `crates/agent_api/tests/c1_codex_stream_exec_adapter.rs:1`
+  - `crates/agent_api/src/bin/fake_codex_stream_exec_scenarios_agent_api.rs:1`
+
+**Worktree / Branch / Commits**
+- Worktree: `/Users/spensermcconnell/__Active_Code/codex-wrapper/wt/cse-c1-codex-stream-exec-test`
+- Branch: `cse-c1-codex-stream-exec-test`
+- Commits: `692be58` (`test(agent_api): add C1 stream_exec adapter tests`)
+
+**Commands (required)**
+- `cargo fmt` — pass
+- `cargo test -p agent_api --features codex --test c1_codex_stream_exec_adapter` — pass (8 tests)
+
+**Blockers**
+- None
+```
+- Blockers: none
