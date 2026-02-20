@@ -3,17 +3,13 @@ use std::{
     future::Future,
     path::PathBuf,
     pin::Pin,
-    process::Stdio,
     time::Duration,
 };
 
-use codex::{ExecStreamError, JsonlThreadEventParser, ThreadEvent};
+use codex::{CodexError, ExecStreamError, ExecStreamRequest, ThreadEvent};
+use futures_util::StreamExt;
 use serde_json::Value;
-use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-    process::Command,
-    sync::{mpsc, oneshot},
-};
+use tokio::sync::{mpsc, oneshot};
 
 use crate::{
     AgentWrapperBackend, AgentWrapperCapabilities, AgentWrapperCompletion, AgentWrapperError,
@@ -52,32 +48,11 @@ enum CodexApprovalPolicy {
     Never,
 }
 
-impl CodexApprovalPolicy {
-    fn as_cli_value(&self) -> &'static str {
-        match self {
-            Self::Untrusted => "untrusted",
-            Self::OnFailure => "on-failure",
-            Self::OnRequest => "on-request",
-            Self::Never => "never",
-        }
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum CodexSandboxMode {
     ReadOnly,
     WorkspaceWrite,
     DangerFullAccess,
-}
-
-impl CodexSandboxMode {
-    fn as_cli_value(&self) -> &'static str {
-        match self {
-            Self::ReadOnly => "read-only",
-            Self::WorkspaceWrite => "workspace-write",
-            Self::DangerFullAccess => "danger-full-access",
-        }
-    }
 }
 
 fn parse_bool(value: &Value, key: &str) -> Result<bool, AgentWrapperError> {
@@ -358,142 +333,161 @@ async fn run_codex_inner(
     policy: CodexExecPolicy,
     tx: mpsc::Sender<AgentWrapperEvent>,
 ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
-    let binary = config.binary.unwrap_or_else(|| PathBuf::from("codex"));
-    let mut command = Command::new(binary);
-    command
-        .arg("exec")
-        .arg("--color")
-        .arg("never")
-        .arg("--skip-git-repo-check")
-        .arg("--json")
-        .arg("--sandbox")
-        .arg(policy.sandbox_mode.as_cli_value())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .stdin(Stdio::piped())
-        .kill_on_drop(true);
+    fn map_approval_policy(policy: &CodexApprovalPolicy) -> codex::ApprovalPolicy {
+        match policy {
+            CodexApprovalPolicy::Untrusted => codex::ApprovalPolicy::Untrusted,
+            CodexApprovalPolicy::OnFailure => codex::ApprovalPolicy::OnFailure,
+            CodexApprovalPolicy::OnRequest => codex::ApprovalPolicy::OnRequest,
+            CodexApprovalPolicy::Never => codex::ApprovalPolicy::Never,
+        }
+    }
+
+    fn map_sandbox_mode(mode: &CodexSandboxMode) -> codex::SandboxMode {
+        match mode {
+            CodexSandboxMode::ReadOnly => codex::SandboxMode::ReadOnly,
+            CodexSandboxMode::WorkspaceWrite => codex::SandboxMode::WorkspaceWrite,
+            CodexSandboxMode::DangerFullAccess => codex::SandboxMode::DangerFullAccess,
+        }
+    }
+
+    let mut builder = codex::CodexClient::builder()
+        .json(true)
+        .mirror_stdout(false)
+        .quiet(true)
+        .color_mode(codex::ColorMode::Never)
+        .sandbox_mode(map_sandbox_mode(&policy.sandbox_mode));
 
     if policy.non_interactive {
-        command
-            .arg("--ask-for-approval")
-            .arg(CodexApprovalPolicy::Never.as_cli_value());
-    } else if let Some(policy) = policy.approval_policy.as_ref() {
-        command
-            .arg("--ask-for-approval")
-            .arg(policy.as_cli_value());
+        builder = builder.approval_policy(codex::ApprovalPolicy::Never);
+    } else if let Some(value) = policy.approval_policy.as_ref() {
+        builder = builder.approval_policy(map_approval_policy(value));
+    }
+
+    if let Some(binary) = config.binary.as_ref() {
+        builder = builder.binary(binary.clone());
+    }
+
+    if let Some(codex_home) = config.codex_home.as_ref() {
+        builder = builder.codex_home(codex_home.clone());
     }
 
     let working_dir = request
         .working_dir
         .clone()
-        .or_else(|| config.default_working_dir.clone());
-    if let Some(dir) = working_dir {
-        command.current_dir(dir);
-    }
-
-    if let Some(codex_home) = config.codex_home.clone() {
-        command.env("CODEX_HOME", codex_home);
-    }
-
-    for (k, v) in config.env.iter() {
-        command.env(k, v);
-    }
-    for (k, v) in request.env.iter() {
-        command.env(k, v);
-    }
-
-    let mut child = command.spawn().map_err(|err| AgentWrapperError::Backend {
-        message: format!("failed to spawn codex: {err}"),
+        .or_else(|| config.default_working_dir.clone())
+        .or_else(|| std::env::current_dir().ok());
+    let working_dir = working_dir.ok_or_else(|| AgentWrapperError::Backend {
+        message: "failed to resolve working directory".to_string(),
     })?;
+    builder = builder.working_dir(working_dir);
 
+    let timeout = request.timeout.or(config.default_timeout).unwrap_or(Duration::ZERO);
+    builder = builder.timeout(timeout);
+
+    let client = builder.build();
+
+    let mut env_overrides = BTreeMap::new();
+    env_overrides.extend(config.env);
+    env_overrides.extend(request.env);
+
+    let handle = match client
+        .stream_exec_with_env_overrides(
+            ExecStreamRequest {
+                prompt: request.prompt,
+                idle_timeout: None,
+                output_last_message: None,
+                output_schema: None,
+                json_event_log: None,
+            },
+            &env_overrides,
+        )
+        .await
     {
-        let mut stdin = child
-            .stdin
-            .take()
-            .ok_or_else(|| AgentWrapperError::Backend {
-                message: "stdin unavailable".to_string(),
-            })?;
-        if let Err(err) = stdin.write_all(request.prompt.as_bytes()).await {
-            if err.kind() != std::io::ErrorKind::BrokenPipe {
-                return Err(AgentWrapperError::Backend {
-                    message: format!("failed to write stdin: {err}"),
-                });
+        Ok(handle) => handle,
+        Err(err) => {
+            for bounded in crate::bounds::enforce_event_bounds(error_event(redacted_exec_error(
+                &err,
+            ))) {
+                if tx.send(bounded).await.is_err() {
+                    break;
+                }
+            }
+            drop(tx);
+            return Err(AgentWrapperError::Backend {
+                message: redacted_exec_error(&err),
+            });
+        }
+    };
+
+    let mut events = handle.events;
+    let completion = handle.completion;
+
+    // If the caller drops the universal events stream, we MUST keep draining the backend stream so
+    // the underlying process isn't accidentally cancelled (and so we avoid deadlocks on bounded
+    // channels). We simply stop forwarding once the receiver is gone.
+    let mut forward = true;
+    while let Some(outcome) = events.next().await {
+        if !forward {
+            continue;
+        }
+
+        let mapped_events = match outcome {
+            Ok(event) => vec![map_thread_event(&event)],
+            Err(err) => vec![error_event(redacted_exec_error(&err))],
+        };
+
+        for event in mapped_events {
+            for bounded in crate::bounds::enforce_event_bounds(event) {
+                if tx.send(bounded).await.is_err() {
+                    forward = false;
+                    break;
+                }
+            }
+            if !forward {
+                break;
             }
         }
-        let _ = stdin.write_all(b"\n").await;
-        let _ = stdin.shutdown().await;
     }
 
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or_else(|| AgentWrapperError::Backend {
-            message: "stdout unavailable".to_string(),
-        })?;
-
-    if let Err(err) = forward_codex_stdout_as_events(stdout, &tx).await {
-        let _ = child.kill().await;
-        let _ = tokio::time::timeout(Duration::from_secs(5), child.wait()).await;
-        drop(tx);
-        return Err(err);
-    }
-
-    let status = child
-        .wait()
-        .await
-        .map_err(|err| AgentWrapperError::Backend {
-            message: format!("failed to wait for codex: {err}"),
-        })?;
+    let completion = match completion.await {
+        Ok(completion) => completion,
+        Err(ExecStreamError::Codex(CodexError::NonZeroExit { status, .. })) => {
+            for bounded in crate::bounds::enforce_event_bounds(error_event(format!(
+                "codex exited non-zero: {status:?} (stderr redacted)"
+            ))) {
+                let _ = tx.send(bounded).await;
+            }
+            drop(tx);
+            return Ok(crate::bounds::enforce_completion_bounds(
+                AgentWrapperCompletion {
+                    status,
+                    final_text: None,
+                    data: None,
+                },
+            ));
+        }
+        Err(err) => {
+            for bounded in crate::bounds::enforce_event_bounds(error_event(redacted_exec_error(
+                &err,
+            ))) {
+                let _ = tx.send(bounded).await;
+            }
+            drop(tx);
+            return Err(AgentWrapperError::Backend {
+                message: redacted_exec_error(&err),
+            });
+        }
+    };
 
     drop(tx);
 
     Ok(crate::bounds::enforce_completion_bounds(
         AgentWrapperCompletion {
-            status,
-            final_text: None,
+            status: completion.status,
+            final_text: completion.last_message,
             data: None,
         },
     ))
-}
-
-async fn forward_codex_stdout_as_events<R>(
-    stdout: R,
-    tx: &mpsc::Sender<AgentWrapperEvent>,
-) -> Result<(), AgentWrapperError>
-where
-    R: tokio::io::AsyncRead + Unpin,
-{
-    let mut parser = JsonlThreadEventParser::new();
-    let mut lines = BufReader::new(stdout).lines();
-
-    loop {
-        let line = match lines.next_line().await {
-            Ok(Some(line)) => line,
-            Ok(None) => return Ok(()),
-            Err(err) => {
-                let message = format!("failed to read codex stdout: {err}");
-                for mapped in crate::bounds::enforce_event_bounds(error_event(message.clone())) {
-                    let _ = tx.send(mapped).await;
-                }
-                return Err(AgentWrapperError::Backend { message });
-            }
-        };
-
-        match parser.parse_line(&line) {
-            Ok(None) => {}
-            Ok(Some(event)) => {
-                for mapped in crate::bounds::enforce_event_bounds(map_thread_event(&event)) {
-                    let _ = tx.send(mapped).await;
-                }
-            }
-            Err(err) => {
-                let message = redacted_exec_error(&err);
-                for mapped in crate::bounds::enforce_event_bounds(error_event(message)) {
-                    let _ = tx.send(mapped).await;
-                }
-            }
-        }
-    }
 }
 
 #[cfg(test)]
@@ -625,40 +619,5 @@ mod tests {
         );
         assert_eq!(mapped.kind, AgentWrapperEventKind::Error);
         assert!(mapped.message.is_some());
-    }
-
-    #[tokio::test]
-    async fn stdout_read_errors_surface_as_backend_error_and_event() {
-        let (mut writer, reader) = tokio::io::duplex(256);
-        writer
-            .write_all(br#"{"type":"thread.started","thread_id":"thread-1"}"#)
-            .await
-            .unwrap();
-        writer.write_all(b"\n").await.unwrap();
-        writer.write_all(&[0xff, b'\n']).await.unwrap();
-        drop(writer);
-
-        let (tx, mut rx) = mpsc::channel::<AgentWrapperEvent>(32);
-        let err = forward_codex_stdout_as_events(reader, &tx)
-            .await
-            .expect_err("expected stdout read to fail");
-        drop(tx);
-
-        let mut saw_error_event = false;
-        while let Some(ev) = rx.recv().await {
-            if ev.kind == AgentWrapperEventKind::Error {
-                let msg = ev.message.unwrap_or_default();
-                assert!(msg.starts_with("failed to read codex stdout:"));
-                saw_error_event = true;
-            }
-        }
-        assert!(saw_error_event, "expected an Error event to be emitted");
-
-        match err {
-            AgentWrapperError::Backend { message } => {
-                assert!(message.starts_with("failed to read codex stdout:"));
-            }
-            other => panic!("unexpected error: {other:?}"),
-        }
     }
 }
