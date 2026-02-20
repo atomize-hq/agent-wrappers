@@ -215,4 +215,21 @@ exit 0
     let second_snapshot = second.last_message.expect("snapshot present");
     let second_parsed = parse_env_snapshot(&second_snapshot);
     assert_eq!(second_parsed.get("FOO"), Some(&"missing".to_string()));
+
+    let third = client
+        .stream_exec(ExecStreamRequest {
+            prompt: "hello".to_string(),
+            idle_timeout: None,
+            output_last_message: None,
+            output_schema: None,
+            json_event_log: None,
+        })
+        .await
+        .unwrap()
+        .completion
+        .await
+        .unwrap();
+    let third_snapshot = third.last_message.expect("snapshot present");
+    let third_parsed = parse_env_snapshot(&third_snapshot);
+    assert_eq!(third_parsed.get("FOO"), Some(&"missing".to_string()));
 }
