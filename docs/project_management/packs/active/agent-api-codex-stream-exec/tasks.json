@@ -104,7 +104,7 @@
     "name": "C0: Codex wrapper per-run env override API (integration)",
     "type": "integration",
     "phase": "C0",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Merge C0 code/test, align behavior with the spec/contract, and gate with fmt/clippy/tests/preflight (Linux).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -145,7 +145,8 @@
       "C0-code",
       "C0-test"
     ],
-    "concurrent_with": []
+    "concurrent_with": [],
+    "started_at": "2026-02-20T22:47:14Z"
   },
   {
     "id": "C1-code",
