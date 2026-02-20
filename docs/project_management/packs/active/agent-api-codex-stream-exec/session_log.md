@@ -192,3 +192,24 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Kickoff prompt: `docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C1-integ.md`
 - Worktree: `wt/cse-c1-codex-stream-exec-integ`
 - Blockers: none
+## [2026-02-20 23:33 UTC] Integration Agent – C1-integ – END
+- Worktree: `wt/cse-c1-codex-stream-exec-integ`
+- Worker output: `/Users/spensermcconnell/__Active_Code/codex-wrapper/.runs/C1-integ/last_message.md`
+- Orchestrator: fast-forward merged `cse-c1-codex-stream-exec-integ` → `feat/agent-api-codex-stream-exec`
+- Worker summary (first ~40 lines):
+```text
+- **Worktree/branch:** `/Users/spensermcconnell/__Active_Code/codex-wrapper/wt/cse-c1-codex-stream-exec-integ` on `cse-c1-codex-stream-exec-integ` (Darwin 24.6.0 arm64)
+- **Merged:** `cse-c1-codex-stream-exec-code` and `cse-c1-codex-stream-exec-test` via merge commits `b341b58`, `e847b49`
+- **Files changed (vs `feat/agent-api-codex-stream-exec`):** `crates/agent_api/src/backends/codex.rs`, `crates/agent_api/src/bin/fake_codex_stream_exec_scenarios_agent_api.rs`, `crates/agent_api/tests/c1_codex_stream_exec_adapter.rs`
+- **Commits on integ branch (ahead of `feat/agent-api-codex-stream-exec`):** `0152aaa`, `692be58`, `b341b58`, `e847b49`
+
+- **Commands run (results):**
+  - `cargo fmt` (pass)
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings` (pass)
+  - `cargo test -p agent_api --features codex --test c1_codex_stream_exec_adapter` (pass)
+  - `cargo test -p agent_api --features codex --test c1_codex_exec_policy` (pass)
+  - `make preflight` (not run; Linux-only gate)
+
+- **Blockers:** none
+```
+- Blockers: none

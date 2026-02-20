@@ -257,7 +257,7 @@
     "name": "C1: agent_api Codex backend stream_exec refactor (integration)",
     "type": "integration",
     "phase": "C1",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Merge C1 code/test, align behavior with the specs, and gate with fmt/clippy/tests/preflight (Linux).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -299,7 +299,8 @@
       "C1-test"
     ],
     "concurrent_with": [],
-    "started_at": "2026-02-20T23:27:30Z"
+    "started_at": "2026-02-20T23:27:30Z",
+    "completed_at": "2026-02-20T23:33:33Z"
   },
   {
     "id": "C2-code",
