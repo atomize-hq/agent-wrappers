@@ -256,3 +256,34 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - None
 ```
 - Blockers: none
+## [2026-02-20 23:56 UTC] Code Agent – C2-code – END
+- Worktree: `wt/cse-c2-validation-hardening-code`
+- Worker output: `/Users/spensermcconnell/__Active_Code/codex-wrapper/.runs/C2-code/last_message.md`
+- Worker summary (first ~40 lines):
+```text
+**Changes (C2 production code only)**
+- Updated `crates/agent_api/src/bin/fake_codex_stream_json_agent_api.rs` to match C2 fixture contract:
+  - `FAKE_CODEX_SCENARIO`: `live_two_events_long_delay`, `emit_normalize_error_with_rawline_secret`, `dump_env_then_exit`
+  - Validates `FAKE_CODEX_EXPECT_SANDBOX` (default `workspace-write`) + `FAKE_CODEX_EXPECT_APPROVAL` (default `never`, supports `"<absent>"`)
+  - Implements env dump to `CODEX_WRAPPER_TEST_DUMP_ENV` (creates parent dirs; deterministic sorted output)
+- Hardened/redocumented redaction entrypoint naming in `crates/agent_api/src/backends/codex.rs` (still never leaks raw JSONL lines from `ExecStreamError::{Parse,Normalize}`).
+
+**Worktree / Branch**
+- Worktree: `/Users/spensermcconnell/__Active_Code/codex-wrapper/wt/cse-c2-validation-hardening-code`
+- Branch: `cse-c2-validation-hardening-code`
+
+**Files Changed**
+- `crates/agent_api/src/bin/fake_codex_stream_json_agent_api.rs`
+- `crates/agent_api/src/backends/codex.rs`
+
+**Commits**
+- `84f0660` `c2: harden codex fixture + redaction`
+
+**Commands Run (required)**
+- `cargo fmt` — PASS
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` — PASS
+
+**Blockers**
+- None
+```
+- Blockers: none
