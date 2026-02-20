@@ -4,7 +4,7 @@
     "name": "C0: Codex wrapper per-run env override API (code)",
     "type": "code",
     "phase": "C0",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Implement the minimum additive `crates/codex` API needed so `agent_api` can apply per-run environment overrides while still executing via `CodexClient::stream_exec` (production code only; no tests).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -46,7 +46,8 @@
     "depends_on": [],
     "concurrent_with": [
       "C0-test"
-    ]
+    ],
+    "started_at": "2026-02-20T22:28:20Z"
   },
   {
     "id": "C0-test",
@@ -164,7 +165,7 @@
     ],
     "acceptance_criteria": [
       "C1 changes satisfy `C1-spec.md` and the user-facing semantics pinned in `contract.md`",
-      "Streaming “live” behavior and ordering rules match `codex-stream-exec-adapter-protocol-spec.md`",
+      "Streaming \u201clive\u201d behavior and ordering rules match `codex-stream-exec-adapter-protocol-spec.md`",
       "No tests added/modified",
       "Required commands executed and recorded in `session_log.md`"
     ],

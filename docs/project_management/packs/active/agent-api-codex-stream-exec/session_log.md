@@ -32,3 +32,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Commands: `cargo fmt` (<pass/fail>); `cargo clippy --workspace --all-targets --all-features -- -D warnings` (<pass/fail>); <tests> (<pass/fail>); `make preflight` (<pass/fail; Linux only>)
 - Blockers: <none | list>
 
+## [2026-02-20 22:28 UTC] Code Agent – C0-code – START
+- Orchestrator: set `C0-code` → `in_progress` in `tasks.json`
+- Base branch: `feat/agent-api-codex-stream-exec`
+- Kickoff prompt: `docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C0-code.md`
+- Worktree: `wt/cse-c0-codex-env-code`
+- Blockers: none
