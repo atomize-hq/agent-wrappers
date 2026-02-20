@@ -154,7 +154,7 @@
     "name": "C1: agent_api Codex backend stream_exec refactor (code)",
     "type": "code",
     "phase": "C1",
-    "status": "in_progress",
+    "status": "completed",
     "description": "Refactor the `agent_api` Codex backend to consume `codex::CodexClient::stream_exec` and map typed Codex events (`ThreadEvent`) to `AgentWrapperEvent` live (production code only; no tests).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -198,7 +198,8 @@
     "concurrent_with": [
       "C1-test"
     ],
-    "started_at": "2026-02-20T23:18:51Z"
+    "started_at": "2026-02-20T23:18:51Z",
+    "completed_at": "2026-02-20T23:26:29Z"
   },
   {
     "id": "C1-test",

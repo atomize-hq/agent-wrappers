@@ -149,3 +149,18 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Kickoff prompt: `docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C1-test.md`
 - Worktree: `wt/cse-c1-codex-stream-exec-test`
 - Blockers: none
+## [2026-02-20 23:26 UTC] Code Agent – C1-code – END
+- Worktree: `wt/cse-c1-codex-stream-exec-code`
+- Worker output: `/Users/spensermcconnell/__Active_Code/codex-wrapper/.runs/C1-code/last_message.md`
+- Worker summary (first ~40 lines):
+```text
+- Implemented spec-compliant Codex `stream_exec` adapter behavior in `crates/agent_api/src/backends/codex.rs` (redacted `ExecStreamError` mapping w/ stable kinds + `line_bytes`, removed outer `tokio::time::timeout` in favor of wrapper timeout, and enforced `final_text` 65_536-byte truncation w/ `…(truncated)`).
+- Files changed: `crates/agent_api/src/backends/codex.rs`
+- Branch / worktree: `cse-c1-codex-stream-exec-code` in `/Users/spensermcconnell/__Active_Code/codex-wrapper/wt/cse-c1-codex-stream-exec-code`
+- Commits: `0152aaa fix(agent_api): harden codex stream_exec adapter`
+- Commands run:
+  - `cargo fmt` — pass
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings` — fail (clippy warnings) then pass after fixes
+- Blockers: none
+```
+- Blockers: none
