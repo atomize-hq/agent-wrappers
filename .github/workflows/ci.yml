@@ -69,6 +69,19 @@ jobs:
           set -euo pipefail
           cargo test --workspace --all-targets
 
+  agent-api-all-features:
+    name: Agent API tests (all features)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo test -p agent_api --all-features
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test -p agent_api --all-features
+
   loc-check:
     name: LOC cap (Rust files)
     runs-on: ubuntu-latest

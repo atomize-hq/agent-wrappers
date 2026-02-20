@@ -22,11 +22,32 @@ fn write_line(out: &mut impl Write, line: &str) -> io::Result<()> {
     Ok(())
 }
 
+fn has_flag_value(args: &[String], flag: &str, expected: &str) -> bool {
+    args.iter()
+        .position(|arg| arg == flag)
+        .and_then(|idx| args.get(idx + 1))
+        .is_some_and(|value| value == expected)
+}
+
 fn main() -> io::Result<()> {
     // Cross-platform test binary used by `agent_api` tests.
     //
     // Emulates: `claude --print --output-format stream-json ...`
     // Scenario is selected via env var so tests can validate incrementality + gating.
+    //
+    // The universal agent wrapper contract defaults to non-interactive behavior; require that the
+    // wrapper passes `--permission-mode bypassPermissions` so tests fail loudly if we regress.
+    let args: Vec<String> = env::args().collect();
+    if !has_flag_value(&args, "--permission-mode", "bypassPermissions") {
+        let mut out = io::stdout().lock();
+        write_line(
+            &mut out,
+            r#"{"type":"result","subtype":"error","error":{"type":"invalid_request_error","message":"missing --permission-mode bypassPermissions"}}"#,
+        )?;
+        write_line(&mut out, "\n")?;
+        std::process::exit(1);
+    }
+
     let scenario = env::var("FAKE_CLAUDE_SCENARIO").unwrap_or_else(|_| "two_events_delayed".into());
 
     let init = first_nonempty_line(SYSTEM_INIT);

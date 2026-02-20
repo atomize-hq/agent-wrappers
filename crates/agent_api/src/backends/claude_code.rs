@@ -8,6 +8,7 @@ use std::{
 
 use claude_code::{ClaudeOutputFormat, ClaudePrintRequest};
 use futures_util::StreamExt;
+use serde_json::Value;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
@@ -19,6 +20,34 @@ use crate::{
 const AGENT_KIND: &str = "claude_code";
 const CHANNEL_ASSISTANT: &str = "assistant";
 const CHANNEL_TOOL: &str = "tool";
+
+const EXT_NON_INTERACTIVE: &str = "agent_api.exec.non_interactive";
+
+fn parse_bool(value: &Value, key: &str) -> Result<bool, AgentWrapperError> {
+    value.as_bool().ok_or_else(|| AgentWrapperError::InvalidRequest {
+        message: format!("{key} must be a boolean"),
+    })
+}
+
+fn validate_and_extract_non_interactive(
+    request: &AgentWrapperRunRequest,
+) -> Result<bool, AgentWrapperError> {
+    for key in request.extensions.keys() {
+        if key != EXT_NON_INTERACTIVE {
+            return Err(AgentWrapperError::UnsupportedCapability {
+                agent_kind: AGENT_KIND.to_string(),
+                capability: key.clone(),
+            });
+        }
+    }
+
+    Ok(request
+        .extensions
+        .get(EXT_NON_INTERACTIVE)
+        .map(|value| parse_bool(value, EXT_NON_INTERACTIVE))
+        .transpose()?
+        .unwrap_or(true))
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct ClaudeCodeBackendConfig {
@@ -49,6 +78,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
         ids.insert("agent_api.events".to_string());
         ids.insert("agent_api.events.live".to_string());
         ids.insert("backend.claude_code.print_stream_json".to_string());
+        ids.insert(EXT_NON_INTERACTIVE.to_string());
         AgentWrapperCapabilities { ids }
     }
 
@@ -72,19 +102,14 @@ async fn run_impl(
         });
     }
 
-    if let Some((capability, _)) = request.extensions.iter().next() {
-        return Err(AgentWrapperError::UnsupportedCapability {
-            agent_kind: AGENT_KIND.to_string(),
-            capability: capability.clone(),
-        });
-    }
+    let non_interactive = validate_and_extract_non_interactive(&request)?;
 
     let (tx, rx) = mpsc::channel::<AgentWrapperEvent>(32);
     let (completion_tx, completion_rx) =
         oneshot::channel::<Result<AgentWrapperCompletion, AgentWrapperError>>();
 
     tokio::spawn(async move {
-        let result = run_claude_code(config, request, tx).await;
+        let result = run_claude_code(config, request, non_interactive, tx).await;
         let _ = completion_tx.send(result);
     });
 
@@ -97,23 +122,25 @@ async fn run_impl(
 async fn run_claude_code(
     config: ClaudeCodeBackendConfig,
     request: AgentWrapperRunRequest,
+    non_interactive: bool,
     tx: mpsc::Sender<AgentWrapperEvent>,
 ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
     let timeout = request.timeout.or(config.default_timeout);
     if let Some(timeout) = timeout {
-        return tokio::time::timeout(timeout, run_claude_code_inner(config, request, tx))
+        return tokio::time::timeout(timeout, run_claude_code_inner(config, request, non_interactive, tx))
             .await
             .map_err(|_| AgentWrapperError::Backend {
                 message: format!("claude_code exceeded timeout of {timeout:?}"),
             })?;
     }
 
-    run_claude_code_inner(config, request, tx).await
+    run_claude_code_inner(config, request, non_interactive, tx).await
 }
 
 async fn run_claude_code_inner(
     config: ClaudeCodeBackendConfig,
     request: AgentWrapperRunRequest,
+    non_interactive: bool,
     tx: mpsc::Sender<AgentWrapperEvent>,
 ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
     let mut builder = claude_code::ClaudeClient::builder();
@@ -139,9 +166,12 @@ async fn run_claude_code_inner(
     }
 
     let client = builder.build();
-    let print_req = ClaudePrintRequest::new(request.prompt)
+    let mut print_req = ClaudePrintRequest::new(request.prompt)
         .output_format(ClaudeOutputFormat::StreamJson)
         .include_partial_messages(true);
+    if non_interactive {
+        print_req = print_req.permission_mode("bypassPermissions");
+    }
 
     let handle = match client.print_stream_json(print_req).await {
         Ok(handle) => handle,

@@ -205,6 +205,17 @@ For each emitted `AgentWrapperEvent`:
 When enabled, `agent_api` MUST provide built-in backends with stable paths and constructor/config
 types that use **only** std + serde-friendly types (no `codex::*` / `claude_code::*` in the public API).
 
+## Extensions (authoritative; v1)
+
+`AgentWrapperRunRequest.extensions` is an open map of namespaced keys to JSON values.
+
+Canonical rules for:
+- core extension keys under `agent_api.*` (schema, defaults, absence semantics), and
+- ownership rules for backend keys under `backend.<agent_kind>.*`
+
+are defined in:
+- `docs/project_management/next/universal-agent-api/extensions-spec.md`
+
 ### Backend module layout (normative)
 
 The crate MUST expose:

@@ -47,6 +47,7 @@ Feature directory: `docs/project_management/next/universal-agent-api/`
   - `docs/project_management/next/universal-agent-api/run-protocol-spec.md`
   - `docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md`
   - `docs/project_management/next/universal-agent-api/capabilities-schema-spec.md`
+  - `docs/project_management/next/universal-agent-api/extensions-spec.md`
   - `docs/project_management/next/universal-agent-api/platform-parity-spec.md`
 
 ### Edit (existing files / existing surfaces)

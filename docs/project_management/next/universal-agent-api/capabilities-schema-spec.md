@@ -50,3 +50,5 @@ Backends that provide live streaming MUST include:
 ## Extension keys (v1, normative)
 
 - Every supported `AgentWrapperRunRequest.extensions` key MUST be present in `AgentWrapperCapabilities.ids` as the same string.
+- Core extension keys under `agent_api.*` (schema + defaults) are defined in:
+  - `docs/project_management/next/universal-agent-api/extensions-spec.md`

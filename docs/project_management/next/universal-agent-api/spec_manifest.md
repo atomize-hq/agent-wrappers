@@ -58,6 +58,7 @@ Trigger: ADR introduces a normalized event envelope and a capability model that 
 
 - `docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md` — authoritative schema + constraints for `AgentWrapperEvent` (and any serialized representation if applicable).
 - `docs/project_management/next/universal-agent-api/capabilities-schema-spec.md` — authoritative schema + constraints for `AgentWrapperCapabilities` (open-set capability ids, stability rules, naming).
+- `docs/project_management/next/universal-agent-api/extensions-spec.md` — authoritative registry + ownership rules for `AgentWrapperRunRequest.extensions` (core keys under `agent_api.*`).
 
 ### Platform parity spec
 
@@ -83,6 +84,7 @@ Trigger: cross-platform validation is required, and we want bounded CI gates rat
 | Error taxonomy (`UnknownBackend`, `UnsupportedCapability`, mapping rules) | `contract.md` |
 | Agent identity (`AgentWrapperKind` open-set rules) | `capabilities-schema-spec.md` |
 | Capabilities: naming, stability, gating rules | `capabilities-schema-spec.md` + `run-protocol-spec.md` |
+| Core extension key schemas + defaults (`agent_api.*`) | `extensions-spec.md` |
 | Unified event envelope fields and invariants | `event-envelope-schema-spec.md` |
 | What goes into event `data` vs redacted/safe defaults | `event-envelope-schema-spec.md` |
 | Run lifecycle, ordering, cancellation, completion | `run-protocol-spec.md` |
@@ -108,6 +110,14 @@ Trigger: cross-platform validation is required, and we want bounded CI gates rat
 - Defines cancellation: how a run is terminated and what downstream observables must occur.
 - Defines when capability validation happens (pre-run vs mid-run) and error behavior.
 - Defines completion result semantics (what “success” means across agents).
+
+### `extensions-spec.md`
+
+- Enumerates core extension keys under `agent_api.*` and pins:
+  - schema (type/allowed values)
+  - defaults + absence semantics
+  - validation and contradiction rules
+  - ownership rules for backend-specific keys (`backend.<agent_kind>.*`)
 
 ### `event-envelope-schema-spec.md`
 

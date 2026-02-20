@@ -8,6 +8,7 @@ use std::{
 };
 
 use codex::{ExecStreamError, JsonlThreadEventParser, ThreadEvent};
+use serde_json::Value;
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     process::Command,
@@ -37,6 +38,144 @@ impl CodexBackend {
     pub fn new(config: CodexBackendConfig) -> Self {
         Self { config }
     }
+}
+
+const EXT_NON_INTERACTIVE: &str = "agent_api.exec.non_interactive";
+const EXT_CODEX_APPROVAL_POLICY: &str = "backend.codex.exec.approval_policy";
+const EXT_CODEX_SANDBOX_MODE: &str = "backend.codex.exec.sandbox_mode";
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum CodexApprovalPolicy {
+    Untrusted,
+    OnFailure,
+    OnRequest,
+    Never,
+}
+
+impl CodexApprovalPolicy {
+    fn as_cli_value(&self) -> &'static str {
+        match self {
+            Self::Untrusted => "untrusted",
+            Self::OnFailure => "on-failure",
+            Self::OnRequest => "on-request",
+            Self::Never => "never",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum CodexSandboxMode {
+    ReadOnly,
+    WorkspaceWrite,
+    DangerFullAccess,
+}
+
+impl CodexSandboxMode {
+    fn as_cli_value(&self) -> &'static str {
+        match self {
+            Self::ReadOnly => "read-only",
+            Self::WorkspaceWrite => "workspace-write",
+            Self::DangerFullAccess => "danger-full-access",
+        }
+    }
+}
+
+fn parse_bool(value: &Value, key: &str) -> Result<bool, AgentWrapperError> {
+    value.as_bool().ok_or_else(|| AgentWrapperError::InvalidRequest {
+        message: format!("{key} must be a boolean"),
+    })
+}
+
+fn parse_string<'a>(value: &'a Value, key: &str) -> Result<&'a str, AgentWrapperError> {
+    value.as_str().ok_or_else(|| AgentWrapperError::InvalidRequest {
+        message: format!("{key} must be a string"),
+    })
+}
+
+fn parse_codex_approval_policy(value: &Value) -> Result<CodexApprovalPolicy, AgentWrapperError> {
+    let raw = parse_string(value, EXT_CODEX_APPROVAL_POLICY)?;
+    match raw {
+        "untrusted" => Ok(CodexApprovalPolicy::Untrusted),
+        "on-failure" => Ok(CodexApprovalPolicy::OnFailure),
+        "on-request" => Ok(CodexApprovalPolicy::OnRequest),
+        "never" => Ok(CodexApprovalPolicy::Never),
+        other => Err(AgentWrapperError::InvalidRequest {
+            message: format!(
+                "{EXT_CODEX_APPROVAL_POLICY} must be one of: untrusted | on-failure | on-request | never (got {other:?})"
+            ),
+        }),
+    }
+}
+
+fn parse_codex_sandbox_mode(value: &Value) -> Result<CodexSandboxMode, AgentWrapperError> {
+    let raw = parse_string(value, EXT_CODEX_SANDBOX_MODE)?;
+    match raw {
+        "read-only" => Ok(CodexSandboxMode::ReadOnly),
+        "workspace-write" => Ok(CodexSandboxMode::WorkspaceWrite),
+        "danger-full-access" => Ok(CodexSandboxMode::DangerFullAccess),
+        other => Err(AgentWrapperError::InvalidRequest {
+            message: format!(
+                "{EXT_CODEX_SANDBOX_MODE} must be one of: read-only | workspace-write | danger-full-access (got {other:?})"
+            ),
+        }),
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CodexExecPolicy {
+    non_interactive: bool,
+    approval_policy: Option<CodexApprovalPolicy>,
+    sandbox_mode: CodexSandboxMode,
+}
+
+fn validate_and_extract_exec_policy(
+    request: &AgentWrapperRunRequest,
+) -> Result<CodexExecPolicy, AgentWrapperError> {
+    for key in request.extensions.keys() {
+        if key != EXT_NON_INTERACTIVE && key != EXT_CODEX_APPROVAL_POLICY && key != EXT_CODEX_SANDBOX_MODE
+        {
+            return Err(AgentWrapperError::UnsupportedCapability {
+                agent_kind: "codex".to_string(),
+                capability: key.clone(),
+            });
+        }
+    }
+
+    let non_interactive = request
+        .extensions
+        .get(EXT_NON_INTERACTIVE)
+        .map(|value| parse_bool(value, EXT_NON_INTERACTIVE))
+        .transpose()?
+        .unwrap_or(true);
+
+    let approval_policy = request
+        .extensions
+        .get(EXT_CODEX_APPROVAL_POLICY)
+        .map(parse_codex_approval_policy)
+        .transpose()?;
+
+    let sandbox_mode = request
+        .extensions
+        .get(EXT_CODEX_SANDBOX_MODE)
+        .map(parse_codex_sandbox_mode)
+        .transpose()?
+        .unwrap_or(CodexSandboxMode::WorkspaceWrite);
+
+    if non_interactive {
+        if matches!(approval_policy, Some(ref policy) if policy != &CodexApprovalPolicy::Never) {
+            return Err(AgentWrapperError::InvalidRequest {
+                message: format!(
+                    "{EXT_CODEX_APPROVAL_POLICY} must be \"never\" when {EXT_NON_INTERACTIVE} is true"
+                ),
+            });
+        }
+    }
+
+    Ok(CodexExecPolicy {
+        non_interactive,
+        approval_policy,
+        sandbox_mode,
+    })
 }
 
 fn map_thread_event(event: &ThreadEvent) -> AgentWrapperEvent {
@@ -151,6 +290,10 @@ impl AgentWrapperBackend for CodexBackend {
         ids.insert("agent_api.run".to_string());
         ids.insert("agent_api.events".to_string());
         ids.insert("agent_api.events.live".to_string());
+        ids.insert("backend.codex.exec_stream".to_string());
+        ids.insert(EXT_NON_INTERACTIVE.to_string());
+        ids.insert(EXT_CODEX_APPROVAL_POLICY.to_string());
+        ids.insert(EXT_CODEX_SANDBOX_MODE.to_string());
         AgentWrapperCapabilities { ids }
     }
 
@@ -174,19 +317,14 @@ async fn run_impl(
         });
     }
 
-    if let Some((capability, _)) = request.extensions.iter().next() {
-        return Err(AgentWrapperError::UnsupportedCapability {
-            agent_kind: "codex".to_string(),
-            capability: capability.clone(),
-        });
-    }
+    let policy = validate_and_extract_exec_policy(&request)?;
 
     let (tx, rx) = mpsc::channel::<AgentWrapperEvent>(32);
     let (completion_tx, completion_rx) =
         oneshot::channel::<Result<AgentWrapperCompletion, AgentWrapperError>>();
 
     tokio::spawn(async move {
-        let result = run_codex(config, request, tx).await;
+        let result = run_codex(config, request, policy, tx).await;
         let _ = completion_tx.send(result);
     });
 
@@ -199,23 +337,25 @@ async fn run_impl(
 async fn run_codex(
     config: CodexBackendConfig,
     request: AgentWrapperRunRequest,
+    policy: CodexExecPolicy,
     tx: mpsc::Sender<AgentWrapperEvent>,
 ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
     let timeout = request.timeout.or(config.default_timeout);
     if let Some(timeout) = timeout {
-        return tokio::time::timeout(timeout, run_codex_inner(config, request, tx))
+        return tokio::time::timeout(timeout, run_codex_inner(config, request, policy, tx))
             .await
             .map_err(|_| AgentWrapperError::Backend {
                 message: format!("codex exceeded timeout of {timeout:?}"),
             })?;
     }
 
-    run_codex_inner(config, request, tx).await
+    run_codex_inner(config, request, policy, tx).await
 }
 
 async fn run_codex_inner(
     config: CodexBackendConfig,
     request: AgentWrapperRunRequest,
+    policy: CodexExecPolicy,
     tx: mpsc::Sender<AgentWrapperEvent>,
 ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
     let binary = config.binary.unwrap_or_else(|| PathBuf::from("codex"));
@@ -226,11 +366,22 @@ async fn run_codex_inner(
         .arg("never")
         .arg("--skip-git-repo-check")
         .arg("--json")
-        .arg("--full-auto")
+        .arg("--sandbox")
+        .arg(policy.sandbox_mode.as_cli_value())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .stdin(Stdio::piped())
         .kill_on_drop(true);
+
+    if policy.non_interactive {
+        command
+            .arg("--ask-for-approval")
+            .arg(CodexApprovalPolicy::Never.as_cli_value());
+    } else if let Some(policy) = policy.approval_policy.as_ref() {
+        command
+            .arg("--ask-for-approval")
+            .arg(policy.as_cli_value());
+    }
 
     let working_dir = request
         .working_dir
@@ -366,6 +517,10 @@ mod tests {
         assert!(capabilities.contains("agent_api.run"));
         assert!(capabilities.contains("agent_api.events"));
         assert!(capabilities.contains("agent_api.events.live"));
+        assert!(capabilities.contains("backend.codex.exec_stream"));
+        assert!(capabilities.contains(EXT_NON_INTERACTIVE));
+        assert!(capabilities.contains(EXT_CODEX_APPROVAL_POLICY));
+        assert!(capabilities.contains(EXT_CODEX_SANDBOX_MODE));
     }
 
     #[test]
