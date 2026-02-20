@@ -54,7 +54,7 @@
     "name": "C0: Codex wrapper per-run env override API (test)",
     "type": "test",
     "phase": "C0",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Add tests/fixtures validating the C0 env override behavior without modifying production logic (tests only).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -94,7 +94,8 @@
     "depends_on": [],
     "concurrent_with": [
       "C0-code"
-    ]
+    ],
+    "started_at": "2026-02-20T22:28:20Z"
   },
   {
     "id": "C0-integ",

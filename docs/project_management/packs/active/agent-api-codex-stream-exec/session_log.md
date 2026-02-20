@@ -38,3 +38,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Kickoff prompt: `docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C0-code.md`
 - Worktree: `wt/cse-c0-codex-env-code`
 - Blockers: none
+## [2026-02-20 22:28 UTC] Test Agent – C0-test – START
+- Orchestrator: set `C0-test` → `in_progress` in `tasks.json`
+- Base branch: `feat/agent-api-codex-stream-exec`
+- Kickoff prompt: `docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C0-test.md`
+- Worktree: `wt/cse-c0-codex-env-test`
+- Blockers: none
