@@ -289,7 +289,7 @@ fn codex_error_kind(err: &CodexError) -> &'static str {
     }
 }
 
-fn redacted_exec_error(err: &ExecStreamError) -> String {
+fn redact_exec_stream_error(err: &ExecStreamError) -> String {
     match err {
         ExecStreamError::Parse { source, line } => format!(
             "codex stream parse error (redacted): {source} (line_bytes={})",
@@ -481,17 +481,14 @@ async fn run_codex_inner(
     {
         Ok(handle) => handle,
         Err(err) => {
-            for bounded in
-                crate::bounds::enforce_event_bounds(error_event(redacted_exec_error(&err)))
-            {
+            let message = redact_exec_stream_error(&err);
+            for bounded in crate::bounds::enforce_event_bounds(error_event(message.clone())) {
                 if tx.send(bounded).await.is_err() {
                     break;
                 }
             }
             drop(tx);
-            return Err(AgentWrapperError::Backend {
-                message: redacted_exec_error(&err),
-            });
+            return Err(AgentWrapperError::Backend { message });
         }
     };
 
@@ -509,7 +506,7 @@ async fn run_codex_inner(
 
         let mapped_events = match outcome {
             Ok(event) => vec![map_thread_event(&event)],
-            Err(err) => vec![error_event(redacted_exec_error(&err))],
+            Err(err) => vec![error_event(redact_exec_stream_error(&err))],
         };
 
         for event in mapped_events {
@@ -544,13 +541,13 @@ async fn run_codex_inner(
         }
         Err(err) => {
             for bounded in
-                crate::bounds::enforce_event_bounds(error_event(redacted_exec_error(&err)))
+                crate::bounds::enforce_event_bounds(error_event(redact_exec_stream_error(&err)))
             {
                 let _ = tx.send(bounded).await;
             }
             drop(tx);
             return Err(AgentWrapperError::Backend {
-                message: redacted_exec_error(&err),
+                message: redact_exec_stream_error(&err),
             });
         }
     };

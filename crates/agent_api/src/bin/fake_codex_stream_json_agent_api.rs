@@ -1,14 +1,22 @@
 use std::{
-    env,
+    collections::BTreeMap,
+    env, fs,
     io::{self, Write},
+    path::Path,
+    time::Duration,
 };
 
-const STREAMING_JSONL: &str =
-    include_str!("../../../codex/examples/fixtures/versioned/0.61.0/streaming.jsonl");
+const NEWLINE: &[u8] = b"\r\n";
 
-fn write_line(out: &mut impl Write, line: &str) -> io::Result<()> {
-    out.write_all(line.as_bytes())?;
+fn write_bytes(out: &mut impl Write, bytes: &[u8]) -> io::Result<()> {
+    out.write_all(bytes)?;
     out.flush()?;
+    Ok(())
+}
+
+fn emit_jsonl(out: &mut impl Write, line: &str) -> io::Result<()> {
+    write_bytes(out, line.as_bytes())?;
+    write_bytes(out, NEWLINE)?;
     Ok(())
 }
 
@@ -33,15 +41,42 @@ fn require_eq(
         return Ok(true);
     }
     let msg = format!("expected {name}={expected:?}, got {got:?}");
-    write_line(out, &format!(r#"{{"type":"error","message":"{msg}"}}"#))?;
-    write_line(out, "\n")?;
+    emit_jsonl(out, &format!(r#"{{"type":"error","message":"{msg}"}}"#))?;
     Ok(false)
+}
+
+fn dump_env_to_path(path: &Path) -> io::Result<()> {
+    let mut vars: BTreeMap<String, String> = BTreeMap::new();
+    for (k, v) in env::vars() {
+        vars.insert(k, v);
+    }
+
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+
+    let mut buf = String::new();
+    for (k, v) in vars {
+        buf.push_str(&k);
+        buf.push('=');
+        buf.push_str(&v);
+        buf.push('\n');
+    }
+
+    fs::write(path, buf.as_bytes())
 }
 
 fn main() -> io::Result<()> {
     // Cross-platform test binary used by `agent_api` tests.
     //
-    // Emulates: `codex exec --json ...` by printing a small JSONL fixture set.
+    // Emulates: `codex exec --json ...` by printing JSONL event lines.
+    //
+    // Scenario is selected via `FAKE_CODEX_SCENARIO`:
+    // - live_two_events_long_delay
+    // - emit_normalize_error_with_rawline_secret
+    // - dump_env_then_exit
     //
     // The wrapper validates argv deterministically via env vars so tests can assert that the
     // universal backend pins non-interactive behavior and sandbox mode.
@@ -49,11 +84,10 @@ fn main() -> io::Result<()> {
     let mut out = io::stdout().lock();
 
     if !args.get(1).is_some_and(|arg| arg == "exec") {
-        write_line(
+        emit_jsonl(
             &mut out,
             r#"{"type":"error","message":"expected argv[1] to be \"exec\""}"#,
         )?;
-        write_line(&mut out, "\n")?;
         std::process::exit(2);
     }
 
@@ -74,11 +108,10 @@ fn main() -> io::Result<()> {
 
     if expected_approval == "<absent>" {
         if has_flag(&args, "--ask-for-approval") {
-            write_line(
+            emit_jsonl(
                 &mut out,
                 r#"{"type":"error","message":"did not expect --ask-for-approval"}"#,
             )?;
-            write_line(&mut out, "\n")?;
             std::process::exit(1);
         }
     } else {
@@ -93,12 +126,53 @@ fn main() -> io::Result<()> {
         }
     }
 
-    for line in STREAMING_JSONL.lines() {
-        if line.trim().is_empty() {
-            continue;
+    let scenario = env::var("FAKE_CODEX_SCENARIO")
+        .unwrap_or_else(|_| "live_two_events_long_delay".to_string());
+    match scenario.as_str() {
+        "live_two_events_long_delay" => {
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"turn.started","thread_id":"thread-1","turn_id":"turn-1"}"#,
+            )?;
+            std::thread::sleep(Duration::from_millis(300));
         }
-        write_line(&mut out, line)?;
-        write_line(&mut out, "\n")?;
+        "emit_normalize_error_with_rawline_secret" => {
+            // Parses as JSON, but is missing required context so `codex` emits
+            // `ExecStreamError::Normalize { line, message }`.
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","secret":"RAWLINE_SECRET_DO_NOT_LEAK"}"#,
+            )?;
+        }
+        "dump_env_then_exit" => {
+            let path = match env::var("CODEX_WRAPPER_TEST_DUMP_ENV") {
+                Ok(path) if !path.trim().is_empty() => path,
+                _ => {
+                    emit_jsonl(
+                        &mut out,
+                        r#"{"type":"error","message":"CODEX_WRAPPER_TEST_DUMP_ENV must be set"}"#,
+                    )?;
+                    std::process::exit(2);
+                }
+            };
+
+            dump_env_to_path(Path::new(&path))?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+        }
+        other => {
+            emit_jsonl(
+                &mut out,
+                &format!(r#"{{"type":"error","message":"unknown FAKE_CODEX_SCENARIO: {other}"}}"#),
+            )?;
+            std::process::exit(2);
+        }
     }
 
     Ok(())
