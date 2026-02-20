@@ -56,15 +56,19 @@ enum CodexSandboxMode {
 }
 
 fn parse_bool(value: &Value, key: &str) -> Result<bool, AgentWrapperError> {
-    value.as_bool().ok_or_else(|| AgentWrapperError::InvalidRequest {
-        message: format!("{key} must be a boolean"),
-    })
+    value
+        .as_bool()
+        .ok_or_else(|| AgentWrapperError::InvalidRequest {
+            message: format!("{key} must be a boolean"),
+        })
 }
 
 fn parse_string<'a>(value: &'a Value, key: &str) -> Result<&'a str, AgentWrapperError> {
-    value.as_str().ok_or_else(|| AgentWrapperError::InvalidRequest {
-        message: format!("{key} must be a string"),
-    })
+    value
+        .as_str()
+        .ok_or_else(|| AgentWrapperError::InvalidRequest {
+            message: format!("{key} must be a string"),
+        })
 }
 
 fn parse_codex_approval_policy(value: &Value) -> Result<CodexApprovalPolicy, AgentWrapperError> {
@@ -107,7 +111,9 @@ fn validate_and_extract_exec_policy(
     request: &AgentWrapperRunRequest,
 ) -> Result<CodexExecPolicy, AgentWrapperError> {
     for key in request.extensions.keys() {
-        if key != EXT_NON_INTERACTIVE && key != EXT_CODEX_APPROVAL_POLICY && key != EXT_CODEX_SANDBOX_MODE
+        if key != EXT_NON_INTERACTIVE
+            && key != EXT_CODEX_APPROVAL_POLICY
+            && key != EXT_CODEX_SANDBOX_MODE
         {
             return Err(AgentWrapperError::UnsupportedCapability {
                 agent_kind: "codex".to_string(),
@@ -136,14 +142,17 @@ fn validate_and_extract_exec_policy(
         .transpose()?
         .unwrap_or(CodexSandboxMode::WorkspaceWrite);
 
-    if non_interactive {
-        if matches!(approval_policy, Some(ref policy) if policy != &CodexApprovalPolicy::Never) {
-            return Err(AgentWrapperError::InvalidRequest {
-                message: format!(
-                    "{EXT_CODEX_APPROVAL_POLICY} must be \"never\" when {EXT_NON_INTERACTIVE} is true"
-                ),
-            });
-        }
+    if non_interactive
+        && matches!(
+            approval_policy,
+            Some(ref policy) if policy != &CodexApprovalPolicy::Never
+        )
+    {
+        return Err(AgentWrapperError::InvalidRequest {
+            message: format!(
+                "{EXT_CODEX_APPROVAL_POLICY} must be \"never\" when {EXT_NON_INTERACTIVE} is true"
+            ),
+        });
     }
 
     Ok(CodexExecPolicy {
@@ -381,7 +390,10 @@ async fn run_codex_inner(
     })?;
     builder = builder.working_dir(working_dir);
 
-    let timeout = request.timeout.or(config.default_timeout).unwrap_or(Duration::ZERO);
+    let timeout = request
+        .timeout
+        .or(config.default_timeout)
+        .unwrap_or(Duration::ZERO);
     builder = builder.timeout(timeout);
 
     let client = builder.build();
@@ -405,9 +417,9 @@ async fn run_codex_inner(
     {
         Ok(handle) => handle,
         Err(err) => {
-            for bounded in crate::bounds::enforce_event_bounds(error_event(redacted_exec_error(
-                &err,
-            ))) {
+            for bounded in
+                crate::bounds::enforce_event_bounds(error_event(redacted_exec_error(&err)))
+            {
                 if tx.send(bounded).await.is_err() {
                     break;
                 }
@@ -467,9 +479,9 @@ async fn run_codex_inner(
             ));
         }
         Err(err) => {
-            for bounded in crate::bounds::enforce_event_bounds(error_event(redacted_exec_error(
-                &err,
-            ))) {
+            for bounded in
+                crate::bounds::enforce_event_bounds(error_event(redacted_exec_error(&err)))
+            {
                 let _ = tx.send(bounded).await;
             }
             drop(tx);
