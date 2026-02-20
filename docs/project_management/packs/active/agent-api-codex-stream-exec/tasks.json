@@ -307,7 +307,7 @@
     "name": "C2: Validation hardening (fixtures + safety) (code)",
     "type": "code",
     "phase": "C2",
-    "status": "pending",
+    "status": "in_progress",
     "description": "Add production-code support needed for C2 validation hardening (fake-binary support, safety/redaction wiring, harness helpers as needed) per C2 spec (production code only; no tests).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -349,7 +349,8 @@
     ],
     "concurrent_with": [
       "C2-test"
-    ]
+    ],
+    "started_at": "2026-02-20T23:47:23Z"
   },
   {
     "id": "C2-test",
