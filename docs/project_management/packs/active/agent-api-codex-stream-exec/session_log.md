@@ -137,3 +137,9 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - **Blockers:** none
 ```
 - Blockers: none
+## [2026-02-20 23:18 UTC] Code Agent – C1-code – START
+- Orchestrator: set `C1-code` → `in_progress` in `tasks.json`
+- Base branch: `feat/agent-api-codex-stream-exec`
+- Kickoff prompt: `docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C1-code.md`
+- Worktree: `wt/cse-c1-codex-stream-exec-code`
+- Blockers: none
