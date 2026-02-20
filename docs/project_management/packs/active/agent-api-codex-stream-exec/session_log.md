@@ -225,3 +225,34 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Kickoff prompt: `docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C2-test.md`
 - Worktree: `wt/cse-c2-validation-hardening-test`
 - Blockers: none
+## [2026-02-20 23:55 UTC] Test Agent – C2-test – END
+- Worktree: `wt/cse-c2-validation-hardening-test`
+- Worker output: `/Users/spensermcconnell/__Active_Code/codex-wrapper/.runs/C2-test/last_message.md`
+- Worker summary (first ~40 lines):
+```text
+**What changed (tests/fixtures only)**
+- Updated `crates/agent_api/src/bin/fake_codex_stream_json_agent_api.rs` to support C2 scenarios:
+  - `live_two_events_long_delay` (emits 2 events, then sleeps 750ms)
+  - `emit_normalize_error_with_rawline_secret` (emits a normalize-error line containing `RAWLINE_SECRET_DO_NOT_LEAK`, then a valid event)
+  - `dump_env_then_exit` (writes sorted `C2_` env vars to `CODEX_WRAPPER_TEST_DUMP_ENV`)
+- Added `crates/agent_api/tests/c2_codex_stream_exec_parity.rs` with explicit assertions for:
+  - live event observed while completion still pending
+  - request env overrides backend env (via dump file)
+  - redaction prevents sentinel/raw-line leakage
+
+**Worktree / Branch**
+- Worktree: `/Users/spensermcconnell/__Active_Code/codex-wrapper/wt/cse-c2-validation-hardening-test`
+- Branch: `cse-c2-validation-hardening-test`
+
+**Commits**
+- `95598f0 test(agent_api): add C2 codex stream exec parity`
+
+**Commands run (required)**
+- `cargo fmt` — pass
+- `cargo test -p agent_api --features codex --test c2_codex_stream_exec_parity` — pass
+- `cargo test -p agent_api --features codex --test c1_codex_exec_policy` — pass (sanity, since fixture binary changed)
+
+**Blockers**
+- None
+```
+- Blockers: none
