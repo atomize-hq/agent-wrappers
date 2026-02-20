@@ -1,6 +1,8 @@
 use std::{
-    env,
+    env, fs,
     io::{self, Write},
+    path::{Path, PathBuf},
+    time::Duration,
 };
 
 const STREAMING_JSONL: &str =
@@ -36,6 +38,22 @@ fn require_eq(
     write_line(out, &format!(r#"{{"type":"error","message":"{msg}"}}"#))?;
     write_line(out, "\n")?;
     Ok(false)
+}
+
+fn emit_jsonl(out: &mut impl Write, line: &str) -> io::Result<()> {
+    write_line(out, line)?;
+    write_line(out, "\n")?;
+    Ok(())
+}
+
+fn create_parent_dirs(path: &Path) -> io::Result<()> {
+    let Some(parent) = path.parent() else {
+        return Ok(());
+    };
+    if parent.as_os_str().is_empty() {
+        return Ok(());
+    }
+    fs::create_dir_all(parent)
 }
 
 fn main() -> io::Result<()> {
@@ -93,12 +111,66 @@ fn main() -> io::Result<()> {
         }
     }
 
-    for line in STREAMING_JSONL.lines() {
-        if line.trim().is_empty() {
-            continue;
+    let scenario = env::var("FAKE_CODEX_SCENARIO").ok();
+    match scenario.as_deref() {
+        Some("live_two_events_long_delay") => {
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"turn.started","thread_id":"thread-1","turn_id":"turn-1"}"#,
+            )?;
+            std::thread::sleep(Duration::from_millis(750));
         }
-        write_line(&mut out, line)?;
-        write_line(&mut out, "\n")?;
+        Some("emit_normalize_error_with_rawline_secret") => {
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","secret":"RAWLINE_SECRET_DO_NOT_LEAK"}"#,
+            )?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+        }
+        Some("dump_env_then_exit") => {
+            let dump_env = env::var("CODEX_WRAPPER_TEST_DUMP_ENV").map_err(|_| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "missing CODEX_WRAPPER_TEST_DUMP_ENV",
+                )
+            })?;
+            let dump_path = PathBuf::from(dump_env);
+            create_parent_dirs(&dump_path)?;
+
+            let mut entries = env::vars()
+                .filter(|(k, _)| k.starts_with("C2_"))
+                .collect::<Vec<_>>();
+            entries.sort_by(|(a, _), (b, _)| a.cmp(b));
+
+            let mut content = String::new();
+            for (key, value) in entries {
+                content.push_str(&key);
+                content.push('=');
+                content.push_str(&value);
+                content.push('\n');
+            }
+
+            fs::write(&dump_path, content.as_bytes())?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+        }
+        Some(_) | None => {
+            for line in STREAMING_JSONL.lines() {
+                if line.trim().is_empty() {
+                    continue;
+                }
+                emit_jsonl(&mut out, line)?;
+            }
+        }
     }
 
     Ok(())
