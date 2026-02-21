@@ -32,7 +32,7 @@ async fn drain_to_none(
 }
 
 fn fake_codex_binary() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_fake_codex_stream_json_agent_api"))
+    PathBuf::from(env!("CARGO_BIN_EXE_fake_codex_stream_exec_scenarios_agent_api"))
 }
 
 fn base_env() -> BTreeMap<String, String> {
