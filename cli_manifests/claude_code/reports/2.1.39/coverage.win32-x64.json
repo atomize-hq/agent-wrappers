@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-02-10T21:13:30Z",
+  "inputs": {
+    "upstream": {
+      "semantic_version": "2.1.39",
+      "mode": "union",
+      "targets": [
+        "win32-x64"
+      ]
+    },
+    "wrapper": {
+      "schema_version": 1,
+      "wrapper_version": "0.2.0"
+    },
+    "rules": {
+      "rules_schema_version": 1
+    }
+  },
+  "platform_filter": {
+    "mode": "exact_target",
+    "target_triple": "win32-x64"
+  },
+  "deltas": {
+    "missing_commands": [],
+    "missing_flags": [
+      {
+        "path": [],
+        "key": "--effort",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--callback-port",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--client-id",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--client-secret",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add-json"
+        ],
+        "key": "--client-secret",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      }
+    ],
+    "missing_args": [],
+    "intentionally_unsupported": [
+      {
+        "path": [
+          "install"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Claude Code installation is out of scope for this wrapper."
+      },
+      {
+        "path": [
+          "install"
+        ],
+        "key": "--force",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Claude Code installation is out of scope for this wrapper."
+      }
+    ]
+  }
+}
