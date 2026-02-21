@@ -67,6 +67,22 @@ The universal API MUST:
 Rules are owned by:
 - `docs/project_management/next/universal-agent-api/capabilities-schema-spec.md`
 
+### Capability promotion rule
+
+To keep the universal facade orthogonal, any new `agent_api.*` capability id (except the allowlist
+below) is only considered “promoted” once it is supported by **≥2 built-in backends**.
+
+This is CI-enforced by:
+- regenerating and diff-checking `docs/project_management/next/universal-agent-api/capability-matrix.md`
+  via `cargo run -p xtask -- capability-matrix`, and
+- running `cargo run -p xtask -- capability-matrix-audit`.
+
+Allowlist (may be supported by fewer than 2 backends):
+- `agent_api.run`
+- `agent_api.events`
+- `agent_api.events.live`
+- `agent_api.exec.non_interactive`
+
 ### Extension keys
 
 Core extension key registry + ownership rules are owned by:
@@ -133,4 +149,3 @@ The following workflows are expected to remain green for onboarding work:
 - Smoke workflows for feature packs (when present), e.g.:
   - `.github/workflows/universal-agent-api-smoke.yml`
   - `.github/workflows/claude-code-live-stream-json-smoke.yml`
-

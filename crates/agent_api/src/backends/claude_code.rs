@@ -23,6 +23,10 @@ const CHANNEL_TOOL: &str = "tool";
 
 const EXT_NON_INTERACTIVE: &str = "agent_api.exec.non_interactive";
 
+const CAP_TOOLS_STRUCTURED_V1: &str = "agent_api.tools.structured.v1";
+const CAP_TOOLS_RESULTS_V1: &str = "agent_api.tools.results.v1";
+const CAP_ARTIFACTS_FINAL_TEXT_V1: &str = "agent_api.artifacts.final_text.v1";
+
 fn parse_bool(value: &Value, key: &str) -> Result<bool, AgentWrapperError> {
     value
         .as_bool()
@@ -79,6 +83,9 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
         ids.insert("agent_api.run".to_string());
         ids.insert("agent_api.events".to_string());
         ids.insert("agent_api.events.live".to_string());
+        ids.insert(CAP_TOOLS_STRUCTURED_V1.to_string());
+        ids.insert(CAP_TOOLS_RESULTS_V1.to_string());
+        ids.insert(CAP_ARTIFACTS_FINAL_TEXT_V1.to_string());
         ids.insert("backend.claude_code.print_stream_json".to_string());
         ids.insert(EXT_NON_INTERACTIVE.to_string());
         AgentWrapperCapabilities { ids }
@@ -198,6 +205,8 @@ async fn run_claude_code_inner(
     let mut events = handle.events;
     let completion = handle.completion;
 
+    let mut last_assistant_text: Option<String> = None;
+
     // If the caller drops the universal events stream, we MUST keep draining the backend stream so
     // the underlying process isn't accidentally cancelled (and so we avoid deadlocks on bounded
     // channels). We simply stop forwarding once the receiver is gone.
@@ -208,7 +217,14 @@ async fn run_claude_code_inner(
         }
 
         let mapped_events = match outcome {
-            Ok(ev) => map_stream_json_event(ev),
+            Ok(ev) => {
+                if let claude_code::ClaudeStreamJsonEvent::AssistantMessage { raw, .. } = &ev {
+                    if let Some(text) = extract_assistant_message_final_text(raw) {
+                        last_assistant_text = Some(text);
+                    }
+                }
+                map_stream_json_event(ev)
+            }
             Err(err) => vec![error_event(redact_parse_error(&err))],
         };
 
@@ -245,7 +261,7 @@ async fn run_claude_code_inner(
     Ok(crate::bounds::enforce_completion_bounds(
         AgentWrapperCompletion {
             status,
-            final_text: None,
+            final_text: crate::bounds::enforce_final_text_bound(last_assistant_text),
             data: None,
         },
     ))
@@ -276,6 +292,33 @@ fn map_stream_json_event(ev: claude_code::ClaudeStreamJsonEvent) -> Vec<AgentWra
     }
 }
 
+fn extract_assistant_message_final_text(raw: &serde_json::Value) -> Option<String> {
+    let blocks = raw
+        .get("message")
+        .and_then(|m| m.get("content"))
+        .and_then(|c| c.as_array())?;
+
+    let mut texts = Vec::new();
+    for block in blocks {
+        let Some(obj) = block.as_object() else {
+            continue;
+        };
+        if obj.get("type").and_then(|v| v.as_str()) != Some("text") {
+            continue;
+        }
+        let Some(text) = obj.get("text").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        texts.push(text);
+    }
+
+    if texts.is_empty() {
+        None
+    } else {
+        Some(texts.join("\n"))
+    }
+}
+
 fn map_assistant_message(raw: &serde_json::Value) -> Vec<AgentWrapperEvent> {
     let Some(blocks) = raw
         .get("message")
@@ -300,8 +343,24 @@ fn map_assistant_message(raw: &serde_json::Value) -> Vec<AgentWrapperEvent> {
                     out.push(unknown_event());
                 }
             }
-            "tool_use" => out.push(tool_call_event()),
-            "tool_result" => out.push(tool_result_event()),
+            "tool_use" => {
+                let tool_name = obj
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .map(|v| v.to_string());
+                let tool_use_id = obj
+                    .get("id")
+                    .and_then(|v| v.as_str())
+                    .map(|v| v.to_string());
+                out.push(tool_call_start_event(tool_name, tool_use_id));
+            }
+            "tool_result" => {
+                let tool_use_id = obj
+                    .get("tool_use_id")
+                    .and_then(|v| v.as_str())
+                    .map(|v| v.to_string());
+                out.push(tool_result_complete_event(tool_use_id));
+            }
             _ => out.push(unknown_event()),
         }
     }
@@ -323,8 +382,24 @@ fn map_stream_event(raw: &serde_json::Value) -> Vec<AgentWrapperEvent> {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             match block_type {
-                "tool_use" => vec![tool_call_event()],
-                "tool_result" => vec![tool_result_event()],
+                "tool_use" => {
+                    let tool_name = content_block
+                        .get("name")
+                        .and_then(|v| v.as_str())
+                        .map(|v| v.to_string());
+                    let tool_use_id = content_block
+                        .get("id")
+                        .and_then(|v| v.as_str())
+                        .map(|v| v.to_string());
+                    vec![tool_call_start_event(tool_name, tool_use_id)]
+                }
+                "tool_result" => {
+                    let tool_use_id = content_block
+                        .get("tool_use_id")
+                        .and_then(|v| v.as_str())
+                        .map(|v| v.to_string());
+                    vec![tool_result_complete_event(tool_use_id)]
+                }
                 _ => vec![unknown_event()],
             }
         }
@@ -340,7 +415,7 @@ fn map_stream_event(raw: &serde_json::Value) -> Vec<AgentWrapperEvent> {
                     };
                     text_output_events(text, Some(CHANNEL_ASSISTANT))
                 }
-                "input_json_delta" => vec![tool_call_event()],
+                "input_json_delta" => vec![tool_call_delta_event()],
                 _ => vec![unknown_event()],
             }
         }
@@ -348,26 +423,76 @@ fn map_stream_event(raw: &serde_json::Value) -> Vec<AgentWrapperEvent> {
     }
 }
 
-fn tool_call_event() -> AgentWrapperEvent {
+fn tool_call_start_event(
+    tool_name: Option<String>,
+    tool_use_id: Option<String>,
+) -> AgentWrapperEvent {
     AgentWrapperEvent {
         agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
         kind: AgentWrapperEventKind::ToolCall,
         channel: Some(CHANNEL_TOOL.to_string()),
         text: None,
         message: None,
-        data: None,
+        data: Some(tool_facet(
+            "tool_use",
+            "start",
+            "running",
+            tool_name,
+            tool_use_id,
+        )),
     }
 }
 
-fn tool_result_event() -> AgentWrapperEvent {
+fn tool_call_delta_event() -> AgentWrapperEvent {
+    AgentWrapperEvent {
+        agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
+        kind: AgentWrapperEventKind::ToolCall,
+        channel: Some(CHANNEL_TOOL.to_string()),
+        text: None,
+        message: None,
+        data: Some(tool_facet("tool_use", "delta", "running", None, None)),
+    }
+}
+
+fn tool_result_complete_event(tool_use_id: Option<String>) -> AgentWrapperEvent {
     AgentWrapperEvent {
         agent_kind: AgentWrapperKind(AGENT_KIND.to_string()),
         kind: AgentWrapperEventKind::ToolResult,
         channel: Some(CHANNEL_TOOL.to_string()),
         text: None,
         message: None,
-        data: None,
+        data: Some(tool_facet(
+            "tool_result",
+            "complete",
+            "completed",
+            None,
+            tool_use_id,
+        )),
     }
+}
+
+fn tool_facet(
+    kind: &'static str,
+    phase: &'static str,
+    status: &'static str,
+    tool_name: Option<String>,
+    tool_use_id: Option<String>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "schema": CAP_TOOLS_STRUCTURED_V1,
+        "tool": {
+            "backend_item_id": null,
+            "thread_id": null,
+            "turn_id": null,
+            "kind": kind,
+            "phase": phase,
+            "status": status,
+            "exit_code": null,
+            "bytes": { "stdout": 0, "stderr": 0, "diff": 0, "result": 0 },
+            "tool_name": tool_name,
+            "tool_use_id": tool_use_id,
+        },
+    })
 }
 
 fn status_event(message: Option<String>) -> AgentWrapperEvent {
@@ -487,6 +612,9 @@ mod tests {
         assert!(capabilities.contains("agent_api.run"));
         assert!(capabilities.contains("agent_api.events"));
         assert!(capabilities.contains("agent_api.events.live"));
+        assert!(capabilities.contains(CAP_TOOLS_STRUCTURED_V1));
+        assert!(capabilities.contains(CAP_TOOLS_RESULTS_V1));
+        assert!(capabilities.contains(CAP_ARTIFACTS_FINAL_TEXT_V1));
     }
 
     #[test]
@@ -532,6 +660,56 @@ mod tests {
         assert_eq!(mapped.kind, AgentWrapperEventKind::ToolCall);
         assert_eq!(mapped.text, None);
         assert_eq!(mapped.message, None);
+        assert_eq!(mapped.channel.as_deref(), Some(CHANNEL_TOOL));
+        assert!(mapped.data.is_some());
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.get("schema"))
+                .and_then(|v| v.as_str()),
+            Some(CAP_TOOLS_STRUCTURED_V1)
+        );
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/kind"))
+                .and_then(|v| v.as_str()),
+            Some("tool_use")
+        );
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/phase"))
+                .and_then(|v| v.as_str()),
+            Some("start")
+        );
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/status"))
+                .and_then(|v| v.as_str()),
+            Some("running")
+        );
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/tool_name"))
+                .and_then(|v| v.as_str()),
+            Some("bash")
+        );
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/tool_use_id"))
+                .and_then(|v| v.as_str()),
+            Some("t1")
+        );
     }
 
     #[test]
@@ -540,6 +718,40 @@ mod tests {
         assert_eq!(mapped.kind, AgentWrapperEventKind::ToolResult);
         assert_eq!(mapped.text, None);
         assert_eq!(mapped.message, None);
+        assert_eq!(mapped.channel.as_deref(), Some(CHANNEL_TOOL));
+        assert!(mapped.data.is_some());
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/kind"))
+                .and_then(|v| v.as_str()),
+            Some("tool_result")
+        );
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/phase"))
+                .and_then(|v| v.as_str()),
+            Some("complete")
+        );
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/status"))
+                .and_then(|v| v.as_str()),
+            Some("completed")
+        );
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/tool_use_id"))
+                .and_then(|v| v.as_str()),
+            Some("t1")
+        );
     }
 
     #[test]
@@ -556,18 +768,129 @@ mod tests {
         assert_eq!(mapped.kind, AgentWrapperEventKind::ToolCall);
         assert_eq!(mapped.text, None);
         assert_eq!(mapped.message, None);
+        assert_eq!(mapped.channel.as_deref(), Some(CHANNEL_TOOL));
+        assert!(mapped.data.is_some());
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/kind"))
+                .and_then(|v| v.as_str()),
+            Some("tool_use")
+        );
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/phase"))
+                .and_then(|v| v.as_str()),
+            Some("delta")
+        );
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/status"))
+                .and_then(|v| v.as_str()),
+            Some("running")
+        );
+        assert!(mapped
+            .data
+            .as_ref()
+            .and_then(|v| v.pointer("/tool/tool_name"))
+            .is_some_and(|v| v.is_null()));
+        assert!(mapped
+            .data
+            .as_ref()
+            .and_then(|v| v.pointer("/tool/tool_use_id"))
+            .is_some_and(|v| v.is_null()));
     }
 
     #[test]
     fn stream_event_tool_use_start_maps_to_tool_call() {
         let mapped = map_fixture(STREAM_EVENT_TOOL_USE_START);
         assert_eq!(mapped.kind, AgentWrapperEventKind::ToolCall);
+        assert_eq!(mapped.channel.as_deref(), Some(CHANNEL_TOOL));
+        assert!(mapped.data.is_some());
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/tool_name"))
+                .and_then(|v| v.as_str()),
+            Some("bash")
+        );
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/tool_use_id"))
+                .and_then(|v| v.as_str()),
+            Some("t1")
+        );
     }
 
     #[test]
     fn stream_event_tool_result_start_maps_to_tool_result() {
         let mapped = map_fixture(STREAM_EVENT_TOOL_RESULT_START);
         assert_eq!(mapped.kind, AgentWrapperEventKind::ToolResult);
+        assert_eq!(mapped.channel.as_deref(), Some(CHANNEL_TOOL));
+        assert!(mapped.data.is_some());
+        assert_eq!(
+            mapped
+                .data
+                .as_ref()
+                .and_then(|v| v.pointer("/tool/tool_use_id"))
+                .and_then(|v| v.as_str()),
+            Some("t1")
+        );
+    }
+
+    #[test]
+    fn assistant_message_tool_use_missing_name_and_id_emits_tool_call_with_null_tool_ids() {
+        let raw = serde_json::json!({
+            "message": {
+                "content": [
+                    { "type": "tool_use" }
+                ]
+            }
+        });
+        let mapped = map_assistant_message(&raw);
+        assert_eq!(mapped.len(), 1);
+        assert_eq!(mapped[0].kind, AgentWrapperEventKind::ToolCall);
+        assert_eq!(mapped[0].channel.as_deref(), Some(CHANNEL_TOOL));
+        assert!(mapped[0].data.is_some());
+        assert!(mapped[0]
+            .data
+            .as_ref()
+            .and_then(|v| v.pointer("/tool/tool_name"))
+            .is_some_and(|v| v.is_null()));
+        assert!(mapped[0]
+            .data
+            .as_ref()
+            .and_then(|v| v.pointer("/tool/tool_use_id"))
+            .is_some_and(|v| v.is_null()));
+    }
+
+    #[test]
+    fn stream_event_tool_result_start_with_non_string_tool_use_id_emits_tool_result_with_null_id() {
+        let raw = serde_json::json!({
+            "type": "content_block_start",
+            "content_block": {
+                "type": "tool_result",
+                "tool_use_id": 123
+            }
+        });
+        let mapped = map_stream_event(&raw);
+        assert_eq!(mapped.len(), 1);
+        assert_eq!(mapped[0].kind, AgentWrapperEventKind::ToolResult);
+        assert_eq!(mapped[0].channel.as_deref(), Some(CHANNEL_TOOL));
+        assert!(mapped[0].data.is_some());
+        assert!(mapped[0]
+            .data
+            .as_ref()
+            .and_then(|v| v.pointer("/tool/tool_use_id"))
+            .is_some_and(|v| v.is_null()));
     }
 
     #[test]

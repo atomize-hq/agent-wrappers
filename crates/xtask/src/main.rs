@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod capability_matrix;
+mod capability_matrix_audit;
 mod claude_snapshot;
 mod claude_union;
 mod claude_wrapper_coverage;
@@ -50,6 +51,8 @@ enum Command {
     ParityTriadScaffold(parity_triad_scaffold::Args),
     /// Generate a universal agent capability matrix markdown.
     CapabilityMatrix(capability_matrix::Args),
+    /// Audit the capability matrix for orthogonality invariants.
+    CapabilityMatrixAudit(capability_matrix_audit::Args),
 }
 
 fn main() {
@@ -128,6 +131,13 @@ fn main() {
             }
         },
         Command::CapabilityMatrix(args) => match capability_matrix::run(args) {
+            Ok(()) => 0,
+            Err(err) => {
+                eprintln!("{err}");
+                1
+            }
+        },
+        Command::CapabilityMatrixAudit(args) => match capability_matrix_audit::run(args) {
             Ok(()) => 0,
             Err(err) => {
                 eprintln!("{err}");

@@ -24,6 +24,13 @@ pub struct Args {
 }
 
 pub fn run(args: Args) -> Result<(), String> {
+    let backends = collect_builtin_backend_capabilities();
+    let markdown = render_matrix(&backends);
+    write_file(&args.out, &markdown)?;
+    Ok(())
+}
+
+pub(crate) fn collect_builtin_backend_capabilities() -> BTreeMap<String, AgentWrapperCapabilities> {
     let mut backends = BTreeMap::<String, AgentWrapperCapabilities>::new();
 
     let codex = CodexBackend::new(CodexBackendConfig::default());
@@ -32,9 +39,7 @@ pub fn run(args: Args) -> Result<(), String> {
     let claude = ClaudeCodeBackend::new(ClaudeCodeBackendConfig::default());
     backends.insert(claude.kind().as_str().to_string(), claude.capabilities());
 
-    let markdown = render_matrix(&backends);
-    write_file(&args.out, &markdown)?;
-    Ok(())
+    backends
 }
 
 fn write_file(path: &Path, contents: &str) -> Result<(), String> {

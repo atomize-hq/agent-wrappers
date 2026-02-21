@@ -26,14 +26,14 @@ Do not edit by hand.
 
 | capability id | `claude_code` | `codex` |
 |---|---|---|
-| `agent_api.tools.results.v1` | — | ✅ |
-| `agent_api.tools.structured.v1` | — | ✅ |
+| `agent_api.tools.results.v1` | ✅ | ✅ |
+| `agent_api.tools.structured.v1` | ✅ | ✅ |
 
 ## `agent_api.artifacts`
 
 | capability id | `claude_code` | `codex` |
 |---|---|---|
-| `agent_api.artifacts.final_text.v1` | — | ✅ |
+| `agent_api.artifacts.final_text.v1` | ✅ | ✅ |
 
 ## `backend.claude_code`
 

@@ -654,37 +654,6 @@ fn redact_exec_stream_error(err: &ExecStreamError) -> String {
     }
 }
 
-fn enforce_final_text_bound(text: Option<String>) -> Option<String> {
-    fn utf8_truncate_to_bytes(s: &str, bound_bytes: usize) -> &str {
-        if s.len() <= bound_bytes {
-            return s;
-        }
-        let mut end = std::cmp::min(bound_bytes, s.len());
-        while end > 0 && !s.is_char_boundary(end) {
-            end -= 1;
-        }
-        &s[..end]
-    }
-
-    let text = text?;
-    if text.len() <= crate::bounds::TEXT_BOUND_BYTES {
-        return Some(text);
-    }
-
-    const SUFFIX: &str = "…(truncated)";
-    let suffix_bytes = SUFFIX.len();
-    let bound = crate::bounds::TEXT_BOUND_BYTES;
-    if bound <= suffix_bytes {
-        return Some(utf8_truncate_to_bytes("…", bound).to_string());
-    }
-
-    let prefix = utf8_truncate_to_bytes(&text, bound - suffix_bytes);
-    let mut out = String::with_capacity(bound);
-    out.push_str(prefix);
-    out.push_str(SUFFIX);
-    Some(out)
-}
-
 impl AgentWrapperBackend for CodexBackend {
     fn kind(&self) -> AgentWrapperKind {
         AgentWrapperKind("codex".to_string())
@@ -874,7 +843,7 @@ async fn run_codex_inner(
     Ok(crate::bounds::enforce_completion_bounds(
         AgentWrapperCompletion {
             status: completion.status,
-            final_text: enforce_final_text_bound(completion.last_message),
+            final_text: crate::bounds::enforce_final_text_bound(completion.last_message),
             data: None,
         },
     ))

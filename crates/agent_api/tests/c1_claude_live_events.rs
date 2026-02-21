@@ -166,3 +166,92 @@ async fn dropping_events_stream_unblocks_completion() {
         .unwrap();
     assert!(completion.status.success());
 }
+
+#[tokio::test]
+async fn tools_facet_and_final_text_are_populated() {
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
+        binary: Some(fake_claude_binary()),
+        default_timeout: None,
+        default_working_dir: None,
+        env: [(
+            "FAKE_CLAUDE_SCENARIO".to_string(),
+            "final_text_and_tools".to_string(),
+        )]
+        .into_iter()
+        .collect(),
+    });
+
+    let handle = backend
+        .run(AgentWrapperRunRequest {
+            prompt: "hello".to_string(),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    let mut events = handle.events;
+    let completion = handle.completion;
+
+    let mut saw_tool_call = false;
+    let mut saw_tool_result = false;
+    let mut saw_delta = false;
+
+    while let Some(event) = next_event(events.as_mut()).await {
+        match event.kind {
+            AgentWrapperEventKind::ToolCall => {
+                assert_eq!(event.channel.as_deref(), Some("tool"));
+                assert_eq!(event.text, None);
+                assert_eq!(event.message, None);
+                assert!(event.data.is_some());
+
+                let data = event.data.as_ref().expect("tool facet present");
+                assert_eq!(
+                    data.get("schema").and_then(|v| v.as_str()),
+                    Some("agent_api.tools.structured.v1")
+                );
+                assert!(data
+                    .pointer("/tool/backend_item_id")
+                    .is_some_and(|v| v.is_null()));
+                assert!(data.pointer("/tool/thread_id").is_some_and(|v| v.is_null()));
+                assert!(data.pointer("/tool/turn_id").is_some_and(|v| v.is_null()));
+
+                let phase = data.pointer("/tool/phase").and_then(|v| v.as_str());
+                if phase == Some("delta") {
+                    saw_delta = true;
+                }
+
+                saw_tool_call = true;
+            }
+            AgentWrapperEventKind::ToolResult => {
+                assert_eq!(event.channel.as_deref(), Some("tool"));
+                assert_eq!(event.text, None);
+                assert_eq!(event.message, None);
+                assert!(event.data.is_some());
+
+                let data = event.data.as_ref().expect("tool facet present");
+                assert_eq!(
+                    data.get("schema").and_then(|v| v.as_str()),
+                    Some("agent_api.tools.structured.v1")
+                );
+                assert!(data
+                    .pointer("/tool/backend_item_id")
+                    .is_some_and(|v| v.is_null()));
+                assert!(data.pointer("/tool/thread_id").is_some_and(|v| v.is_null()));
+                assert!(data.pointer("/tool/turn_id").is_some_and(|v| v.is_null()));
+
+                saw_tool_result = true;
+            }
+            _ => {}
+        }
+    }
+
+    assert!(saw_tool_call);
+    assert!(saw_tool_result);
+    assert!(saw_delta);
+
+    let completion = tokio::time::timeout(Duration::from_secs(2), completion)
+        .await
+        .expect("completion resolves after stream finality")
+        .unwrap();
+    assert_eq!(completion.final_text.as_deref(), Some("hello"));
+}
