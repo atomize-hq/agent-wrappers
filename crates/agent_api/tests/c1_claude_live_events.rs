@@ -168,6 +168,39 @@ async fn dropping_events_stream_unblocks_completion() {
 }
 
 #[tokio::test]
+async fn final_text_is_populated_even_if_events_stream_is_dropped() {
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
+        binary: Some(fake_claude_binary()),
+        default_timeout: None,
+        default_working_dir: None,
+        env: [(
+            "FAKE_CLAUDE_SCENARIO".to_string(),
+            "final_text_and_tools".to_string(),
+        )]
+        .into_iter()
+        .collect(),
+    });
+
+    let handle = backend
+        .run(AgentWrapperRunRequest {
+            prompt: "hello".to_string(),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    let agent_api::AgentWrapperRunHandle { events, completion } = handle;
+    drop(events);
+
+    let completion = tokio::time::timeout(Duration::from_secs(2), completion)
+        .await
+        .expect("completion resolves after dropping events")
+        .unwrap();
+    assert!(completion.status.success());
+    assert_eq!(completion.final_text.as_deref(), Some("hello"));
+}
+
+#[tokio::test]
 async fn tools_facet_and_final_text_are_populated() {
     let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
         binary: Some(fake_claude_binary()),

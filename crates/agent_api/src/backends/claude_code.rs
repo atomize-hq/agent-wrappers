@@ -212,31 +212,43 @@ async fn run_claude_code_inner(
     // channels). We simply stop forwarding once the receiver is gone.
     let mut forward = true;
     while let Some(outcome) = events.next().await {
-        if !forward {
-            continue;
-        }
-
-        let mapped_events = match outcome {
+        match outcome {
             Ok(ev) => {
                 if let claude_code::ClaudeStreamJsonEvent::AssistantMessage { raw, .. } = &ev {
                     if let Some(text) = extract_assistant_message_final_text(raw) {
                         last_assistant_text = Some(text);
                     }
                 }
-                map_stream_json_event(ev)
-            }
-            Err(err) => vec![error_event(redact_parse_error(&err))],
-        };
 
-        for event in mapped_events {
-            for bounded in crate::bounds::enforce_event_bounds(event) {
-                if tx.send(bounded).await.is_err() {
-                    forward = false;
-                    break;
+                if !forward {
+                    continue;
+                }
+
+                for event in map_stream_json_event(ev) {
+                    for bounded in crate::bounds::enforce_event_bounds(event) {
+                        if tx.send(bounded).await.is_err() {
+                            forward = false;
+                            break;
+                        }
+                    }
+                    if !forward {
+                        break;
+                    }
                 }
             }
-            if !forward {
-                break;
+            Err(err) => {
+                if !forward {
+                    continue;
+                }
+
+                for bounded in crate::bounds::enforce_event_bounds(error_event(redact_parse_error(
+                    &err,
+                ))) {
+                    if tx.send(bounded).await.is_err() {
+                        forward = false;
+                        break;
+                    }
+                }
             }
         }
     }
