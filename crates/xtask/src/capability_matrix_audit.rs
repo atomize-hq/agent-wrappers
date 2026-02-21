@@ -27,10 +27,7 @@ fn audit(backends: &BTreeMap<String, AgentWrapperCapabilities>) -> Result<(), St
             continue;
         }
 
-        if AGENT_API_ORTHOGONALITY_ALLOWLIST
-            .iter()
-            .any(|&allowed| allowed == capability_id.as_str())
-        {
+        if AGENT_API_ORTHOGONALITY_ALLOWLIST.contains(&capability_id.as_str()) {
             continue;
         }
 
