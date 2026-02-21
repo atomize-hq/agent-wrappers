@@ -162,6 +162,12 @@ fn validate_and_extract_exec_policy(
     })
 }
 
+const CAP_TOOLS_STRUCTURED_V1: &str = "agent_api.tools.structured.v1";
+const CAP_TOOLS_RESULTS_V1: &str = "agent_api.tools.results.v1";
+const CAP_ARTIFACTS_FINAL_TEXT_V1: &str = "agent_api.artifacts.final_text.v1";
+
+const TOOLS_FACET_SCHEMA: &str = "agent_api.tools.structured.v1";
+
 fn map_thread_event(event: &ThreadEvent) -> AgentWrapperEvent {
     match event {
         ThreadEvent::ThreadStarted(_) => status_event(None),
@@ -169,11 +175,12 @@ fn map_thread_event(event: &ThreadEvent) -> AgentWrapperEvent {
         ThreadEvent::TurnCompleted(_) => status_event(None),
         ThreadEvent::TurnFailed(_) => status_event(Some("turn failed".to_string())),
         ThreadEvent::Error(err) => error_event(err.message.clone()),
-        ThreadEvent::ItemFailed(envelope) => error_event(envelope.item.error.message.clone()),
-        ThreadEvent::ItemStarted(envelope) | ThreadEvent::ItemCompleted(envelope) => {
-            map_item_payload(&envelope.item.payload)
+        ThreadEvent::ItemStarted(envelope) => map_item_snapshot_event(envelope, ToolPhase::Start),
+        ThreadEvent::ItemCompleted(envelope) => {
+            map_item_snapshot_event(envelope, ToolPhase::Complete)
         }
-        ThreadEvent::ItemDelta(delta) => map_item_delta(&delta.delta),
+        ThreadEvent::ItemDelta(delta) => map_item_delta_event(delta),
+        ThreadEvent::ItemFailed(envelope) => map_item_failed_event(envelope),
     }
 }
 
@@ -199,8 +206,80 @@ fn error_event(message: String) -> AgentWrapperEvent {
     }
 }
 
-fn map_item_payload(payload: &codex::ItemPayload) -> AgentWrapperEvent {
-    match payload {
+#[derive(Copy, Clone, Debug)]
+enum ToolPhase {
+    Start,
+    Delta,
+    Complete,
+    Fail,
+}
+
+#[derive(Copy, Clone, Debug, Default)]
+struct ToolBytes {
+    stdout: usize,
+    stderr: usize,
+    diff: usize,
+    result: usize,
+}
+
+fn is_toolish_item_type(item_type: &str) -> bool {
+    matches!(
+        item_type,
+        "command_execution" | "file_change" | "mcp_tool_call" | "web_search"
+    )
+}
+
+fn tools_facet_data(
+    backend_item_id: Option<&str>,
+    thread_id: Option<&str>,
+    turn_id: Option<&str>,
+    kind: &str,
+    phase: ToolPhase,
+    status: &str,
+    exit_code: Option<i32>,
+    bytes: ToolBytes,
+) -> Value {
+    let phase = match phase {
+        ToolPhase::Start => "start",
+        ToolPhase::Delta => "delta",
+        ToolPhase::Complete => "complete",
+        ToolPhase::Fail => "fail",
+    };
+
+    serde_json::json!({
+        "schema": TOOLS_FACET_SCHEMA,
+        "tool": {
+            "backend_item_id": backend_item_id,
+            "thread_id": thread_id,
+            "turn_id": turn_id,
+            "kind": kind,
+            "phase": phase,
+            "status": status,
+            "exit_code": exit_code,
+            "bytes": {
+                "stdout": bytes.stdout,
+                "stderr": bytes.stderr,
+                "diff": bytes.diff,
+                "result": bytes.result
+            },
+            "tool_name": null,
+            "tool_use_id": null
+        }
+    })
+}
+
+fn tool_result_bytes(value: &Option<Value>) -> usize {
+    let Some(value) = value else {
+        return 0;
+    };
+    serde_json::to_vec(value).map(|v| v.len()).unwrap_or(0)
+}
+
+fn map_item_snapshot_event(
+    envelope: &codex::ItemEnvelope<codex::ItemSnapshot>,
+    phase: ToolPhase,
+) -> AgentWrapperEvent {
+    match &envelope.item.payload {
         codex::ItemPayload::AgentMessage(content) | codex::ItemPayload::Reasoning(content) => {
             AgentWrapperEvent {
                 agent_kind: AgentWrapperKind("codex".to_string()),
@@ -211,24 +290,163 @@ fn map_item_payload(payload: &codex::ItemPayload) -> AgentWrapperEvent {
                 data: None,
             }
         }
-        codex::ItemPayload::CommandExecution(_)
-        | codex::ItemPayload::FileChange(_)
-        | codex::ItemPayload::McpToolCall(_)
-        | codex::ItemPayload::WebSearch(_) => AgentWrapperEvent {
-            agent_kind: AgentWrapperKind("codex".to_string()),
-            kind: AgentWrapperEventKind::ToolCall,
-            channel: Some("tool".to_string()),
-            text: None,
-            message: None,
-            data: None,
-        },
+        codex::ItemPayload::CommandExecution(state) => {
+            let (kind, status, event_kind) = match phase {
+                ToolPhase::Complete => (
+                    "command_execution",
+                    "completed",
+                    AgentWrapperEventKind::ToolResult,
+                ),
+                ToolPhase::Start => (
+                    "command_execution",
+                    "running",
+                    AgentWrapperEventKind::ToolCall,
+                ),
+                ToolPhase::Delta | ToolPhase::Fail => (
+                    "command_execution",
+                    "running",
+                    AgentWrapperEventKind::ToolCall,
+                ),
+            };
+            let bytes = ToolBytes {
+                stdout: state.stdout.len(),
+                stderr: state.stderr.len(),
+                diff: 0,
+                result: 0,
+            };
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind("codex".to_string()),
+                kind: event_kind,
+                channel: Some("tool".to_string()),
+                text: None,
+                message: None,
+                data: Some(tools_facet_data(
+                    Some(envelope.item.item_id.as_str()),
+                    Some(envelope.thread_id.as_str()),
+                    Some(envelope.turn_id.as_str()),
+                    kind,
+                    phase,
+                    status,
+                    state.exit_code,
+                    bytes,
+                )),
+            }
+        }
+        codex::ItemPayload::FileChange(state) => {
+            let (kind, status, event_kind) = match phase {
+                ToolPhase::Complete => (
+                    "file_change",
+                    "completed",
+                    AgentWrapperEventKind::ToolResult,
+                ),
+                ToolPhase::Start => ("file_change", "running", AgentWrapperEventKind::ToolCall),
+                ToolPhase::Delta | ToolPhase::Fail => {
+                    ("file_change", "running", AgentWrapperEventKind::ToolCall)
+                }
+            };
+            let bytes = ToolBytes {
+                stdout: state.stdout.len(),
+                stderr: state.stderr.len(),
+                diff: state.diff.as_ref().map(|s| s.len()).unwrap_or(0),
+                result: 0,
+            };
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind("codex".to_string()),
+                kind: event_kind,
+                channel: Some("tool".to_string()),
+                text: None,
+                message: None,
+                data: Some(tools_facet_data(
+                    Some(envelope.item.item_id.as_str()),
+                    Some(envelope.thread_id.as_str()),
+                    Some(envelope.turn_id.as_str()),
+                    kind,
+                    phase,
+                    status,
+                    state.exit_code,
+                    bytes,
+                )),
+            }
+        }
+        codex::ItemPayload::McpToolCall(state) => {
+            let (kind, status, event_kind) = match phase {
+                ToolPhase::Complete => (
+                    "mcp_tool_call",
+                    "completed",
+                    AgentWrapperEventKind::ToolResult,
+                ),
+                ToolPhase::Start => ("mcp_tool_call", "running", AgentWrapperEventKind::ToolCall),
+                ToolPhase::Delta | ToolPhase::Fail => {
+                    ("mcp_tool_call", "running", AgentWrapperEventKind::ToolCall)
+                }
+            };
+            let bytes = ToolBytes {
+                stdout: 0,
+                stderr: 0,
+                diff: 0,
+                // Count only MCP tool output (`result`), never `arguments`.
+                result: tool_result_bytes(&state.result),
+            };
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind("codex".to_string()),
+                kind: event_kind,
+                channel: Some("tool".to_string()),
+                text: None,
+                message: None,
+                data: Some(tools_facet_data(
+                    Some(envelope.item.item_id.as_str()),
+                    Some(envelope.thread_id.as_str()),
+                    Some(envelope.turn_id.as_str()),
+                    kind,
+                    phase,
+                    status,
+                    None,
+                    bytes,
+                )),
+            }
+        }
+        codex::ItemPayload::WebSearch(state) => {
+            let (kind, status, event_kind) = match phase {
+                ToolPhase::Complete => {
+                    ("web_search", "completed", AgentWrapperEventKind::ToolResult)
+                }
+                ToolPhase::Start => ("web_search", "running", AgentWrapperEventKind::ToolCall),
+                ToolPhase::Delta | ToolPhase::Fail => {
+                    ("web_search", "running", AgentWrapperEventKind::ToolCall)
+                }
+            };
+            let bytes = ToolBytes {
+                stdout: 0,
+                stderr: 0,
+                diff: 0,
+                // Count only web search output (`results`), never `query`.
+                result: tool_result_bytes(&state.results),
+            };
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind("codex".to_string()),
+                kind: event_kind,
+                channel: Some("tool".to_string()),
+                text: None,
+                message: None,
+                data: Some(tools_facet_data(
+                    Some(envelope.item.item_id.as_str()),
+                    Some(envelope.thread_id.as_str()),
+                    Some(envelope.turn_id.as_str()),
+                    kind,
+                    phase,
+                    status,
+                    None,
+                    bytes,
+                )),
+            }
+        }
         codex::ItemPayload::TodoList(_) => status_event(None),
         codex::ItemPayload::Error(err) => error_event(err.message.clone()),
     }
 }
 
-fn map_item_delta(delta: &codex::ItemDeltaPayload) -> AgentWrapperEvent {
-    match delta {
+fn map_item_delta_event(delta: &codex::ItemDelta) -> AgentWrapperEvent {
+    match &delta.delta {
         codex::ItemDeltaPayload::AgentMessage(content)
         | codex::ItemDeltaPayload::Reasoning(content) => AgentWrapperEvent {
             agent_kind: AgentWrapperKind("codex".to_string()),
@@ -238,19 +456,142 @@ fn map_item_delta(delta: &codex::ItemDeltaPayload) -> AgentWrapperEvent {
             message: None,
             data: None,
         },
-        codex::ItemDeltaPayload::CommandExecution(_)
-        | codex::ItemDeltaPayload::FileChange(_)
-        | codex::ItemDeltaPayload::McpToolCall(_)
-        | codex::ItemDeltaPayload::WebSearch(_) => AgentWrapperEvent {
-            agent_kind: AgentWrapperKind("codex".to_string()),
-            kind: AgentWrapperEventKind::ToolCall,
-            channel: Some("tool".to_string()),
-            text: None,
-            message: None,
-            data: None,
-        },
+        codex::ItemDeltaPayload::CommandExecution(state) => {
+            let bytes = ToolBytes {
+                stdout: state.stdout.len(),
+                stderr: state.stderr.len(),
+                diff: 0,
+                result: 0,
+            };
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind("codex".to_string()),
+                kind: AgentWrapperEventKind::ToolCall,
+                channel: Some("tool".to_string()),
+                text: None,
+                message: None,
+                data: Some(tools_facet_data(
+                    Some(delta.item_id.as_str()),
+                    Some(delta.thread_id.as_str()),
+                    Some(delta.turn_id.as_str()),
+                    "command_execution",
+                    ToolPhase::Delta,
+                    "running",
+                    state.exit_code,
+                    bytes,
+                )),
+            }
+        }
+        codex::ItemDeltaPayload::FileChange(state) => {
+            let bytes = ToolBytes {
+                stdout: state.stdout.len(),
+                stderr: state.stderr.len(),
+                diff: state.diff.as_ref().map(|s| s.len()).unwrap_or(0),
+                result: 0,
+            };
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind("codex".to_string()),
+                kind: AgentWrapperEventKind::ToolCall,
+                channel: Some("tool".to_string()),
+                text: None,
+                message: None,
+                data: Some(tools_facet_data(
+                    Some(delta.item_id.as_str()),
+                    Some(delta.thread_id.as_str()),
+                    Some(delta.turn_id.as_str()),
+                    "file_change",
+                    ToolPhase::Delta,
+                    "running",
+                    state.exit_code,
+                    bytes,
+                )),
+            }
+        }
+        codex::ItemDeltaPayload::McpToolCall(state) => {
+            let bytes = ToolBytes {
+                stdout: 0,
+                stderr: 0,
+                diff: 0,
+                // Count only MCP tool output (`result`), never `arguments`.
+                result: tool_result_bytes(&state.result),
+            };
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind("codex".to_string()),
+                kind: AgentWrapperEventKind::ToolCall,
+                channel: Some("tool".to_string()),
+                text: None,
+                message: None,
+                data: Some(tools_facet_data(
+                    Some(delta.item_id.as_str()),
+                    Some(delta.thread_id.as_str()),
+                    Some(delta.turn_id.as_str()),
+                    "mcp_tool_call",
+                    ToolPhase::Delta,
+                    "running",
+                    None,
+                    bytes,
+                )),
+            }
+        }
+        codex::ItemDeltaPayload::WebSearch(state) => {
+            let bytes = ToolBytes {
+                stdout: 0,
+                stderr: 0,
+                diff: 0,
+                // Count only web search output (`results`), never `query`.
+                result: tool_result_bytes(&state.results),
+            };
+            AgentWrapperEvent {
+                agent_kind: AgentWrapperKind("codex".to_string()),
+                kind: AgentWrapperEventKind::ToolCall,
+                channel: Some("tool".to_string()),
+                text: None,
+                message: None,
+                data: Some(tools_facet_data(
+                    Some(delta.item_id.as_str()),
+                    Some(delta.thread_id.as_str()),
+                    Some(delta.turn_id.as_str()),
+                    "web_search",
+                    ToolPhase::Delta,
+                    "running",
+                    None,
+                    bytes,
+                )),
+            }
+        }
         codex::ItemDeltaPayload::TodoList(_) => status_event(None),
         codex::ItemDeltaPayload::Error(err) => error_event(err.message.clone()),
+    }
+}
+
+fn map_item_failed_event(envelope: &codex::ItemEnvelope<codex::ItemFailure>) -> AgentWrapperEvent {
+    // IMPORTANT: `ItemFailure.extra["item_type"]` is populated from a *top-level* `item_type` field
+    // on the `item.failed` JSON object, not from a nested `{ "extra": { ... } }` object.
+    let item_type = envelope.item.extra.get("item_type").and_then(Value::as_str);
+    let Some(item_type) = item_type else {
+        return error_event(envelope.item.error.message.clone());
+    };
+    if !is_toolish_item_type(item_type) {
+        return error_event(envelope.item.error.message.clone());
+    }
+
+    AgentWrapperEvent {
+        agent_kind: AgentWrapperKind("codex".to_string()),
+        kind: AgentWrapperEventKind::ToolResult,
+        channel: Some("tool".to_string()),
+        text: None,
+        message: None,
+        data: Some(tools_facet_data(
+            Some(envelope.item.item_id.as_str()),
+            Some(envelope.thread_id.as_str()),
+            Some(envelope.turn_id.as_str()),
+            // Failed ToolResult kind is derived from the deterministically-attributable item_type.
+            item_type,
+            ToolPhase::Fail,
+            "failed",
+            // Failure attribution is metadata-only: no exit_code, and all byte counts are zero.
+            None,
+            ToolBytes::default(),
+        )),
     }
 }
 
@@ -354,6 +695,9 @@ impl AgentWrapperBackend for CodexBackend {
         ids.insert("agent_api.run".to_string());
         ids.insert("agent_api.events".to_string());
         ids.insert("agent_api.events.live".to_string());
+        ids.insert(CAP_TOOLS_STRUCTURED_V1.to_string());
+        ids.insert(CAP_TOOLS_RESULTS_V1.to_string());
+        ids.insert(CAP_ARTIFACTS_FINAL_TEXT_V1.to_string());
         ids.insert("backend.codex.exec_stream".to_string());
         ids.insert(EXT_NON_INTERACTIVE.to_string());
         ids.insert(EXT_CODEX_APPROVAL_POLICY.to_string());
@@ -597,6 +941,22 @@ mod tests {
         map_thread_event(&event)
     }
 
+    fn tool_schema(event: &AgentWrapperEvent) -> Option<&str> {
+        event
+            .data
+            .as_ref()
+            .and_then(|data| data.get("schema"))
+            .and_then(Value::as_str)
+    }
+
+    fn tool_field<'a>(event: &'a AgentWrapperEvent, field: &str) -> Option<&'a Value> {
+        event
+            .data
+            .as_ref()
+            .and_then(|data| data.get("tool"))
+            .and_then(|tool| tool.get(field))
+    }
+
     #[test]
     fn codex_backend_reports_required_capabilities() {
         let backend = CodexBackend::new(CodexBackendConfig::default());
@@ -604,6 +964,9 @@ mod tests {
         assert!(capabilities.contains("agent_api.run"));
         assert!(capabilities.contains("agent_api.events"));
         assert!(capabilities.contains("agent_api.events.live"));
+        assert!(capabilities.contains(CAP_TOOLS_STRUCTURED_V1));
+        assert!(capabilities.contains(CAP_TOOLS_RESULTS_V1));
+        assert!(capabilities.contains(CAP_ARTIFACTS_FINAL_TEXT_V1));
         assert!(capabilities.contains("backend.codex.exec_stream"));
         assert!(capabilities.contains(EXT_NON_INTERACTIVE));
         assert!(capabilities.contains(EXT_CODEX_APPROVAL_POLICY));
@@ -650,12 +1013,52 @@ mod tests {
     }
 
     #[test]
-    fn item_failed_maps_to_error_with_message() {
+    fn item_failed_without_item_type_maps_to_error_with_message() {
         let mapped = map(
             r#"{"type":"item.failed","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-1","error":{"message":"tool failed"}}"#,
         );
         assert_eq!(mapped.kind, AgentWrapperEventKind::Error);
         assert_eq!(mapped.text, None);
+        assert!(mapped.message.is_some());
+    }
+
+    #[test]
+    fn item_failed_with_tool_item_type_maps_to_tool_result_failed() {
+        // IMPORTANT: item_type must be a top-level field so it lands in ItemFailure.extra["item_type"].
+        let mapped = map(
+            r#"{"type":"item.failed","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-1","item_type":"command_execution","error":{"message":"tool failed"}}"#,
+        );
+        assert_eq!(mapped.kind, AgentWrapperEventKind::ToolResult);
+        assert_eq!(tool_schema(&mapped), Some(TOOLS_FACET_SCHEMA));
+        assert_eq!(
+            tool_field(&mapped, "phase").and_then(Value::as_str),
+            Some("fail")
+        );
+        assert_eq!(
+            tool_field(&mapped, "status").and_then(Value::as_str),
+            Some("failed")
+        );
+        assert_eq!(
+            tool_field(&mapped, "kind").and_then(Value::as_str),
+            Some("command_execution")
+        );
+        assert_eq!(tool_field(&mapped, "exit_code"), Some(&Value::Null));
+        let bytes = tool_field(&mapped, "bytes")
+            .and_then(Value::as_object)
+            .unwrap();
+        assert_eq!(bytes.get("stdout"), Some(&Value::from(0)));
+        assert_eq!(bytes.get("stderr"), Some(&Value::from(0)));
+        assert_eq!(bytes.get("diff"), Some(&Value::from(0)));
+        assert_eq!(bytes.get("result"), Some(&Value::from(0)));
+    }
+
+    #[test]
+    fn item_failed_with_non_tool_item_type_maps_to_error() {
+        // IMPORTANT: item_type must be a top-level field so it lands in ItemFailure.extra["item_type"].
+        let mapped = map(
+            r#"{"type":"item.failed","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-1","item_type":"agent_message","error":{"message":"not a tool failure"}}"#,
+        );
+        assert_eq!(mapped.kind, AgentWrapperEventKind::Error);
         assert!(mapped.message.is_some());
     }
 
@@ -695,6 +1098,28 @@ mod tests {
             r#"{"type":"item.started","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-3","item_type":"command_execution","content":{"command":"echo hi"}}"#,
         );
         assert_eq!(mapped.kind, AgentWrapperEventKind::ToolCall);
+        assert_eq!(tool_schema(&mapped), Some(TOOLS_FACET_SCHEMA));
+        assert_eq!(
+            tool_field(&mapped, "phase").and_then(Value::as_str),
+            Some("start")
+        );
+    }
+
+    #[test]
+    fn command_execution_item_completed_maps_to_tool_result() {
+        let mapped = map(
+            r#"{"type":"item.completed","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-3","item_type":"command_execution","content":{"command":"echo hi","stdout":"ok","stderr":"warn","exit_code":0}}"#,
+        );
+        assert_eq!(mapped.kind, AgentWrapperEventKind::ToolResult);
+        assert_eq!(tool_schema(&mapped), Some(TOOLS_FACET_SCHEMA));
+        assert_eq!(
+            tool_field(&mapped, "phase").and_then(Value::as_str),
+            Some("complete")
+        );
+        assert_eq!(
+            tool_field(&mapped, "status").and_then(Value::as_str),
+            Some("completed")
+        );
     }
 
     #[test]

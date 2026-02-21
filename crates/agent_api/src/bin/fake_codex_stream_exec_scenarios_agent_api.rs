@@ -140,6 +140,72 @@ fn main() -> io::Result<()> {
                 r#"{"type":"thread.started","thread_id":"thread-1"}"#,
             )?;
         }
+        "tool_lifecycle_ok" => {
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"turn.started","thread_id":"thread-1","turn_id":"turn-1"}"#,
+            )?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"item.started","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-tool-1","item_type":"command_execution","content":{"command":"echo hi"}}"#,
+            )?;
+            // Sentinels appear only in tool output fields (stdout/stderr) so leak assertions are meaningful.
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"item.delta","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-tool-1","item_type":"command_execution","delta":{"stdout":"STDOUT-SENTINEL-DO-NOT-LEAK","stderr":"STDERR-SENTINEL-DO-NOT-LEAK"}}"#,
+            )?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"item.completed","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-tool-1","item_type":"command_execution","content":{"command":"echo hi","stdout":"ok","stderr":"warn","exit_code":0}}"#,
+            )?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"turn.completed","thread_id":"thread-1","turn_id":"turn-1"}"#,
+            )?;
+        }
+        "tool_lifecycle_fail_unknown_type" => {
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"turn.started","thread_id":"thread-1","turn_id":"turn-1"}"#,
+            )?;
+            // No top-level item_type, so attribution is not deterministic and should map to Error.
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"item.failed","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-tool-1","error":{"message":"benign failure"}}"#,
+            )?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"turn.completed","thread_id":"thread-1","turn_id":"turn-1"}"#,
+            )?;
+        }
+        "tool_lifecycle_fail_known_type" => {
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"turn.started","thread_id":"thread-1","turn_id":"turn-1"}"#,
+            )?;
+            // IMPORTANT: item_type must be top-level (not nested under an "extra" object) so it
+            // lands in ItemFailure.extra["item_type"].
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"item.failed","thread_id":"thread-1","turn_id":"turn-1","item_id":"item-tool-1","item_type":"command_execution","error":{"message":"benign failure"}}"#,
+            )?;
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"turn.completed","thread_id":"thread-1","turn_id":"turn-1"}"#,
+            )?;
+        }
         "parse_error_midstream" => {
             emit_jsonl(
                 &mut out,
