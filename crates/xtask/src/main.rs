@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+mod capability_matrix;
 mod claude_snapshot;
 mod claude_union;
 mod claude_wrapper_coverage;
@@ -47,6 +48,8 @@ enum Command {
     CodexValidate(codex_validate::Args),
     /// Generate a triad scaffold directory from a parity coverage report.
     ParityTriadScaffold(parity_triad_scaffold::Args),
+    /// Generate a universal agent capability matrix markdown.
+    CapabilityMatrix(capability_matrix::Args),
 }
 
 fn main() {
@@ -118,6 +121,13 @@ fn main() {
         },
         Command::CodexValidate(args) => codex_validate::run(args),
         Command::ParityTriadScaffold(args) => match parity_triad_scaffold::run(args) {
+            Ok(()) => 0,
+            Err(err) => {
+                eprintln!("{err}");
+                1
+            }
+        },
+        Command::CapabilityMatrix(args) => match capability_matrix::run(args) {
             Ok(()) => 0,
             Err(err) => {
                 eprintln!("{err}");
