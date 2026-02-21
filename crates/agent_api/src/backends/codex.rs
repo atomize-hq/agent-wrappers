@@ -573,11 +573,9 @@ async fn drain_events_while_polling_completion(
         }
     }
 
-    completion_rx
-        .await
-        .map_err(|_| AgentWrapperError::Backend {
-            message: "codex completion task dropped".to_string(),
-        })
+    completion_rx.await.map_err(|_| AgentWrapperError::Backend {
+        message: "codex completion task dropped".to_string(),
+    })
 }
 
 #[cfg(test)]
@@ -729,7 +727,9 @@ mod tests {
                 } else {
                     tokio::time::sleep(Duration::from_millis(5)).await;
                     Some((
-                        Ok(parse_thread_event(r#"{"type":"thread.started","thread_id":"thread-1"}"#)),
+                        Ok(parse_thread_event(
+                            r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+                        )),
                         (),
                     ))
                 }
