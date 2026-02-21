@@ -492,37 +492,10 @@ async fn run_codex_inner(
         }
     };
 
-    let mut events = handle.events;
-    let completion = handle.completion;
+    let completion_outcome =
+        drain_events_while_polling_completion(handle.events, handle.completion, &tx).await?;
 
-    // If the caller drops the universal events stream, we MUST keep draining the backend stream so
-    // the underlying process isn't accidentally cancelled (and so we avoid deadlocks on bounded
-    // channels). We simply stop forwarding once the receiver is gone.
-    let mut forward = true;
-    while let Some(outcome) = events.next().await {
-        if !forward {
-            continue;
-        }
-
-        let mapped_events = match outcome {
-            Ok(event) => vec![map_thread_event(&event)],
-            Err(err) => vec![error_event(redact_exec_stream_error(&err))],
-        };
-
-        for event in mapped_events {
-            for bounded in crate::bounds::enforce_event_bounds(event) {
-                if tx.send(bounded).await.is_err() {
-                    forward = false;
-                    break;
-                }
-            }
-            if !forward {
-                break;
-            }
-        }
-    }
-
-    let completion = match completion.await {
+    let completion = match completion_outcome {
         Ok(completion) => completion,
         Err(ExecStreamError::Codex(CodexError::NonZeroExit { status, .. })) => {
             for bounded in crate::bounds::enforce_event_bounds(error_event(format!(
@@ -563,10 +536,59 @@ async fn run_codex_inner(
     ))
 }
 
+async fn drain_events_while_polling_completion(
+    mut events: impl futures_core::Stream<Item = Result<ThreadEvent, ExecStreamError>> + Unpin,
+    completion: impl Future<Output = Result<codex::ExecCompletion, ExecStreamError>> + Send + 'static,
+    tx: &mpsc::Sender<AgentWrapperEvent>,
+) -> Result<Result<codex::ExecCompletion, ExecStreamError>, AgentWrapperError> {
+    let (completion_tx, completion_rx) = oneshot::channel();
+    tokio::spawn(async move {
+        let _ = completion_tx.send(completion.await);
+    });
+
+    // If the caller drops the universal events stream, we MUST keep draining the backend stream so
+    // the underlying process isn't accidentally cancelled (and so we avoid deadlocks on bounded
+    // channels). We simply stop forwarding once the receiver is gone.
+    let mut forward = true;
+    while let Some(outcome) = events.next().await {
+        if !forward {
+            continue;
+        }
+
+        let mapped_events = match outcome {
+            Ok(event) => vec![map_thread_event(&event)],
+            Err(err) => vec![error_event(redact_exec_stream_error(&err))],
+        };
+
+        for event in mapped_events {
+            for bounded in crate::bounds::enforce_event_bounds(event) {
+                if tx.send(bounded).await.is_err() {
+                    forward = false;
+                    break;
+                }
+            }
+            if !forward {
+                break;
+            }
+        }
+    }
+
+    completion_rx
+        .await
+        .map_err(|_| AgentWrapperError::Backend {
+            message: "codex completion task dropped".to_string(),
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{AgentWrapperBackend, AgentWrapperEventKind};
+
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    };
 
     fn parse_thread_event(json: &str) -> ThreadEvent {
         serde_json::from_str(json).expect("valid codex::ThreadEvent JSON")
@@ -692,5 +714,56 @@ mod tests {
         );
         assert_eq!(mapped.kind, AgentWrapperEventKind::Error);
         assert!(mapped.message.is_some());
+    }
+
+    #[tokio::test]
+    async fn codex_backend_enforces_timeout_while_draining_events() {
+        let stop = Arc::new(AtomicBool::new(false));
+
+        let events_stop = Arc::clone(&stop);
+        let events = futures_util::stream::unfold((), move |_| {
+            let events_stop = Arc::clone(&events_stop);
+            async move {
+                if events_stop.load(Ordering::SeqCst) {
+                    None
+                } else {
+                    tokio::time::sleep(Duration::from_millis(5)).await;
+                    Some((
+                        Ok(parse_thread_event(r#"{"type":"thread.started","thread_id":"thread-1"}"#)),
+                        (),
+                    ))
+                }
+            }
+        });
+        let events = Box::pin(events);
+
+        let completion_stop = Arc::clone(&stop);
+        let completion = async move {
+            tokio::time::sleep(Duration::from_millis(30)).await;
+            completion_stop.store(true, Ordering::SeqCst);
+            Err(ExecStreamError::Codex(CodexError::Timeout {
+                timeout: Duration::from_millis(10),
+            }))
+        };
+
+        let (tx, mut rx) = mpsc::channel::<AgentWrapperEvent>(16);
+
+        let outcome = tokio::time::timeout(
+            Duration::from_millis(250),
+            drain_events_while_polling_completion(events, completion, &tx),
+        )
+        .await
+        .expect("should not hang")
+        .expect("helper should not fail");
+
+        match outcome {
+            Err(ExecStreamError::Codex(CodexError::Timeout { .. })) => {}
+            other => panic!("expected codex timeout, got {other:?}"),
+        }
+
+        assert!(
+            rx.recv().await.is_some(),
+            "should forward at least one event while draining"
+        );
     }
 }
