@@ -278,14 +278,14 @@ fn codex_error_kind(err: &CodexError) -> &'static str {
         | CodexError::StdinUnavailable
         | CodexError::CaptureIo(_)
         | CodexError::StdinWrite(_)
-        | CodexError::ResponsesApiProxyInfoRead { .. } => "io",
+        | CodexError::ResponsesApiProxyInfoRead { .. }
+        | CodexError::Join(_) => "io",
         CodexError::NonZeroExit { .. }
         | CodexError::InvalidUtf8(_)
         | CodexError::JsonParse { .. }
         | CodexError::ExecPolicyParse { .. }
         | CodexError::FeatureListParse { .. }
-        | CodexError::ResponsesApiProxyInfoParse { .. }
-        | CodexError::Join(_) => "other",
+        | CodexError::ResponsesApiProxyInfoParse { .. } => "other",
     }
 }
 

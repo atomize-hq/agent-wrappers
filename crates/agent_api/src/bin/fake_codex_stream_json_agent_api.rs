@@ -186,10 +186,7 @@ fn main() -> io::Result<()> {
         }
         "emit_normalize_error_with_rawline_secret" => {
             // 1) Parse error (invalid JSON) with secret in the raw line.
-            write_bytes(
-                &mut out,
-                b"THIS IS NOT JSON RAWLINE_SECRET_DO_NOT_LEAK\r\n",
-            )?;
+            write_bytes(&mut out, b"THIS IS NOT JSON RAWLINE_SECRET_DO_NOT_LEAK\r\n")?;
             // 2) Normalize error (valid JSON missing required context) with the same secret.
             emit_jsonl(
                 &mut out,
