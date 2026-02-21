@@ -293,3 +293,31 @@ Use START/END entries only. Include UTC timestamp, agent role, task ID, commands
 - Kickoff prompt: `docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C2-integ.md`
 - Worktree: `wt/cse-c2-validation-hardening-integ`
 - Blockers: none
+## [2026-02-21 00:06 UTC] Integration Agent – C2-integ – END
+- Worktree: `wt/cse-c2-validation-hardening-integ`
+- Worker output: `/Users/spensermcconnell/__Active_Code/codex-wrapper/.runs/C2-integ/last_message.md`
+- Orchestrator: fast-forward merged `cse-c2-validation-hardening-integ` → `feat/agent-api-codex-stream-exec`
+- Worker summary (first ~40 lines):
+```text
+**Report (C2-integ)**
+
+- **Worktree/branch:** `/Users/spensermcconnell/__Active_Code/codex-wrapper/wt/cse-c2-validation-hardening-integ` on `cse-c2-validation-hardening-integ`
+- **Files changed (vs `feat/agent-api-codex-stream-exec`):**
+  - `crates/agent_api/src/backends/codex.rs`
+  - `crates/agent_api/src/bin/fake_codex_stream_json_agent_api.rs`
+  - `crates/agent_api/tests/c1_codex_exec_policy.rs`
+  - `crates/agent_api/tests/c2_codex_stream_exec_parity.rs`
+- **Commits on `cse-c2-validation-hardening-integ` (since base):**
+  - `8284f62` `c2: finalize validation hardening integration`
+  - `009dc6d` merge `cse-c2-validation-hardening-test`
+  - `3e6f918` merge `cse-c2-validation-hardening-code`
+  - `84f0660` `c2: harden codex fixture + redaction`
+  - `95598f0` `test(agent_api): add C2 codex stream exec parity`
+- **Commands run (required):**
+  - `cargo fmt` ✅
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings` ✅
+  - `cargo test -p agent_api --features codex` ✅
+  - `make preflight` ⏭️ (skipped; Darwin host, Linux-only per prompt)
+- **Blockers:** none
+```
+- Blockers: none
