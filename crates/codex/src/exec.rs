@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     env,
     ffi::OsString,
     future::Future,
@@ -66,6 +67,30 @@ impl CodexClient {
     ) -> Result<ExecStream, ExecStreamError> {
         self.stream_exec_with_overrides(request, CliOverridesPatch::default())
             .await
+    }
+
+    /// Streams JSONL events from `codex exec --json` with per-invocation environment overrides.
+    ///
+    /// Env overrides are applied to the spawned `Command` for this invocation only and do not
+    /// mutate the parent process environment. Overrides are applied after the wrapper's internal
+    /// environment injection (`CODEX_HOME`, `CODEX_BINARY`, default `RUST_LOG`) so callers can
+    /// override those keys when needed.
+    pub async fn stream_exec_with_env_overrides(
+        &self,
+        request: ExecStreamRequest,
+        env_overrides: &BTreeMap<String, String>,
+    ) -> Result<ExecStream, ExecStreamError> {
+        let env_overrides: Vec<(String, String)> = env_overrides
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect();
+        streaming::stream_exec_with_overrides_and_env_overrides(
+            self,
+            request,
+            CliOverridesPatch::default(),
+            &env_overrides,
+        )
+        .await
     }
 
     /// Streams JSONL events with per-request CLI overrides.

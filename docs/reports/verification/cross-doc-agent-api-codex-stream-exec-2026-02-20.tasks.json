@@ -1,0 +1,51 @@
+[
+  {
+    "id": "V-ADR",
+    "order": 10,
+    "status": "completed",
+    "type": "docs",
+    "workstream_id": "WS-DOC",
+    "kickoff_prompt": "Verify ADR-0011 and ADR-0012 are internally consistent and aligned with the referenced pack + universal docs. Report conflicts/gaps/duplication/drift with exact file+line locations."
+  },
+  {
+    "id": "V-UNIV",
+    "order": 20,
+    "status": "completed",
+    "type": "docs",
+    "workstream_id": "WS-DOC",
+    "kickoff_prompt": "Verify `docs/project_management/next/universal-agent-api/*` docs are mutually consistent (contract/run-protocol/event-envelope/capabilities/extensions/spec_manifest/impact_map). Pay special attention to extension key ownership, defaults, and capability gating rules."
+  },
+  {
+    "id": "V-PACK",
+    "order": 30,
+    "status": "completed",
+    "type": "docs",
+    "workstream_id": "WS-DOC",
+    "kickoff_prompt": "Verify all `docs/project_management/packs/active/agent-api-codex-stream-exec/*` docs are mutually consistent and correctly defer to universal baselines. Focus: exec-policy keys + defaults, final_text policy, redaction rules, and platform parity evidence expectations."
+  },
+  {
+    "id": "V-CI",
+    "order": 40,
+    "status": "completed",
+    "type": "ci",
+    "workstream_id": "WS-CI",
+    "kickoff_prompt": "Verify `.github/workflows/ci.yml` and `.github/workflows/agent-api-codex-stream-exec-smoke.yml` implement what the decision register / platform parity spec requires (jobs, OS matrix, smoke scripts, agent_api all-features tests, public API guard)."
+  },
+  {
+    "id": "V-CODE",
+    "order": 50,
+    "status": "completed",
+    "type": "code",
+    "workstream_id": "WS-CODE",
+    "kickoff_prompt": "Verify the Rust changes under `crates/agent_api/*` align with ADR-0011 + the pack contract/protocol specs + universal constraints (bounds, redaction, completion finality, exec-policy extensions). Flag any implementation drift."
+  },
+  {
+    "id": "V-INT",
+    "order": 60,
+    "status": "completed",
+    "type": "integration",
+    "workstream_id": "WS-INT",
+    "depends_on": ["V-ADR", "V-UNIV", "V-PACK", "V-CI", "V-CODE"],
+    "kickoff_prompt": "Integrate all workstream findings, identify cross-group contradictions, compute the overall consistency score (100 - 20*conflicts - 5*gaps - 3*duplication - 1*drift), and update the report at `docs/reports/verification/cross-doc-agent-api-codex-stream-exec-2026-02-20.md`."
+  }
+]

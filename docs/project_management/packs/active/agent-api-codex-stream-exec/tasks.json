@@ -4,7 +4,7 @@
     "name": "C0: Codex wrapper per-run env override API (code)",
     "type": "code",
     "phase": "C0",
-    "status": "pending",
+    "status": "completed",
     "description": "Implement the minimum additive `crates/codex` API needed so `agent_api` can apply per-run environment overrides while still executing via `CodexClient::stream_exec` (production code only; no tests).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -46,14 +46,16 @@
     "depends_on": [],
     "concurrent_with": [
       "C0-test"
-    ]
+    ],
+    "started_at": "2026-02-20T22:28:20Z",
+    "completed_at": "2026-02-20T22:40:07Z"
   },
   {
     "id": "C0-test",
     "name": "C0: Codex wrapper per-run env override API (test)",
     "type": "test",
     "phase": "C0",
-    "status": "pending",
+    "status": "completed",
     "description": "Add tests/fixtures validating the C0 env override behavior without modifying production logic (tests only).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -93,14 +95,16 @@
     "depends_on": [],
     "concurrent_with": [
       "C0-code"
-    ]
+    ],
+    "started_at": "2026-02-20T22:28:20Z",
+    "completed_at": "2026-02-20T22:47:14Z"
   },
   {
     "id": "C0-integ",
     "name": "C0: Codex wrapper per-run env override API (integration)",
     "type": "integration",
     "phase": "C0",
-    "status": "pending",
+    "status": "completed",
     "description": "Merge C0 code/test, align behavior with the spec/contract, and gate with fmt/clippy/tests/preflight (Linux).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -141,14 +145,16 @@
       "C0-code",
       "C0-test"
     ],
-    "concurrent_with": []
+    "concurrent_with": [],
+    "started_at": "2026-02-20T22:47:14Z",
+    "completed_at": "2026-02-20T22:55:29Z"
   },
   {
     "id": "C1-code",
     "name": "C1: agent_api Codex backend stream_exec refactor (code)",
     "type": "code",
     "phase": "C1",
-    "status": "pending",
+    "status": "completed",
     "description": "Refactor the `agent_api` Codex backend to consume `codex::CodexClient::stream_exec` and map typed Codex events (`ThreadEvent`) to `AgentWrapperEvent` live (production code only; no tests).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -164,7 +170,7 @@
     ],
     "acceptance_criteria": [
       "C1 changes satisfy `C1-spec.md` and the user-facing semantics pinned in `contract.md`",
-      "Streaming “live” behavior and ordering rules match `codex-stream-exec-adapter-protocol-spec.md`",
+      "Streaming \u201clive\u201d behavior and ordering rules match `codex-stream-exec-adapter-protocol-spec.md`",
       "No tests added/modified",
       "Required commands executed and recorded in `session_log.md`"
     ],
@@ -191,14 +197,16 @@
     ],
     "concurrent_with": [
       "C1-test"
-    ]
+    ],
+    "started_at": "2026-02-20T23:18:51Z",
+    "completed_at": "2026-02-20T23:26:29Z"
   },
   {
     "id": "C1-test",
     "name": "C1: agent_api Codex backend stream_exec refactor (test)",
     "type": "test",
     "phase": "C1",
-    "status": "pending",
+    "status": "completed",
     "description": "Add fixture/sample-based tests validating Codex typed event mapping and live streaming behavior for the new stream_exec adapter (tests only).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -240,14 +248,16 @@
     ],
     "concurrent_with": [
       "C1-code"
-    ]
+    ],
+    "started_at": "2026-02-20T23:18:52Z",
+    "completed_at": "2026-02-20T23:27:30Z"
   },
   {
     "id": "C1-integ",
     "name": "C1: agent_api Codex backend stream_exec refactor (integration)",
     "type": "integration",
     "phase": "C1",
-    "status": "pending",
+    "status": "completed",
     "description": "Merge C1 code/test, align behavior with the specs, and gate with fmt/clippy/tests/preflight (Linux).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -288,14 +298,16 @@
       "C1-code",
       "C1-test"
     ],
-    "concurrent_with": []
+    "concurrent_with": [],
+    "started_at": "2026-02-20T23:27:30Z",
+    "completed_at": "2026-02-20T23:33:33Z"
   },
   {
     "id": "C2-code",
     "name": "C2: Validation hardening (fixtures + safety) (code)",
     "type": "code",
     "phase": "C2",
-    "status": "pending",
+    "status": "completed",
     "description": "Add production-code support needed for C2 validation hardening (fake-binary support, safety/redaction wiring, harness helpers as needed) per C2 spec (production code only; no tests).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -337,14 +349,16 @@
     ],
     "concurrent_with": [
       "C2-test"
-    ]
+    ],
+    "started_at": "2026-02-20T23:47:23Z",
+    "completed_at": "2026-02-20T23:56:04Z"
   },
   {
     "id": "C2-test",
     "name": "C2: Validation hardening (fixtures + safety) (test)",
     "type": "test",
     "phase": "C2",
-    "status": "pending",
+    "status": "completed",
     "description": "Add fake-binary fixtures and integration tests proving live emission before completion, env precedence, and redaction constraints (tests only).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -387,14 +401,16 @@
     ],
     "concurrent_with": [
       "C2-code"
-    ]
+    ],
+    "started_at": "2026-02-20T23:47:23Z",
+    "completed_at": "2026-02-20T23:55:08Z"
   },
   {
     "id": "C2-integ",
     "name": "C2: Validation hardening (fixtures + safety) (integration)",
     "type": "integration",
     "phase": "C2",
-    "status": "pending",
+    "status": "completed",
     "description": "Merge C2 code/test, align behavior with the specs, and gate with fmt/clippy/tests/preflight (Linux).",
     "references": [
       "docs/adr/0011-agent-api-codex-stream-exec.md",
@@ -435,6 +451,8 @@
       "C2-code",
       "C2-test"
     ],
-    "concurrent_with": []
+    "concurrent_with": [],
+    "started_at": "2026-02-20T23:56:04Z",
+    "completed_at": "2026-02-21T00:06:30Z"
   }
 ]

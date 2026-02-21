@@ -3,17 +3,13 @@ use std::{
     future::Future,
     path::PathBuf,
     pin::Pin,
-    process::Stdio,
     time::Duration,
 };
 
-use codex::{ExecStreamError, JsonlThreadEventParser, ThreadEvent};
+use codex::{CodexError, ExecStreamError, ExecStreamRequest, ThreadEvent};
+use futures_util::StreamExt;
 use serde_json::Value;
-use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-    process::Command,
-    sync::{mpsc, oneshot},
-};
+use tokio::sync::{mpsc, oneshot};
 
 use crate::{
     AgentWrapperBackend, AgentWrapperCapabilities, AgentWrapperCompletion, AgentWrapperError,
@@ -52,17 +48,6 @@ enum CodexApprovalPolicy {
     Never,
 }
 
-impl CodexApprovalPolicy {
-    fn as_cli_value(&self) -> &'static str {
-        match self {
-            Self::Untrusted => "untrusted",
-            Self::OnFailure => "on-failure",
-            Self::OnRequest => "on-request",
-            Self::Never => "never",
-        }
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum CodexSandboxMode {
     ReadOnly,
@@ -70,26 +55,20 @@ enum CodexSandboxMode {
     DangerFullAccess,
 }
 
-impl CodexSandboxMode {
-    fn as_cli_value(&self) -> &'static str {
-        match self {
-            Self::ReadOnly => "read-only",
-            Self::WorkspaceWrite => "workspace-write",
-            Self::DangerFullAccess => "danger-full-access",
-        }
-    }
-}
-
 fn parse_bool(value: &Value, key: &str) -> Result<bool, AgentWrapperError> {
-    value.as_bool().ok_or_else(|| AgentWrapperError::InvalidRequest {
-        message: format!("{key} must be a boolean"),
-    })
+    value
+        .as_bool()
+        .ok_or_else(|| AgentWrapperError::InvalidRequest {
+            message: format!("{key} must be a boolean"),
+        })
 }
 
 fn parse_string<'a>(value: &'a Value, key: &str) -> Result<&'a str, AgentWrapperError> {
-    value.as_str().ok_or_else(|| AgentWrapperError::InvalidRequest {
-        message: format!("{key} must be a string"),
-    })
+    value
+        .as_str()
+        .ok_or_else(|| AgentWrapperError::InvalidRequest {
+            message: format!("{key} must be a string"),
+        })
 }
 
 fn parse_codex_approval_policy(value: &Value) -> Result<CodexApprovalPolicy, AgentWrapperError> {
@@ -132,7 +111,9 @@ fn validate_and_extract_exec_policy(
     request: &AgentWrapperRunRequest,
 ) -> Result<CodexExecPolicy, AgentWrapperError> {
     for key in request.extensions.keys() {
-        if key != EXT_NON_INTERACTIVE && key != EXT_CODEX_APPROVAL_POLICY && key != EXT_CODEX_SANDBOX_MODE
+        if key != EXT_NON_INTERACTIVE
+            && key != EXT_CODEX_APPROVAL_POLICY
+            && key != EXT_CODEX_SANDBOX_MODE
         {
             return Err(AgentWrapperError::UnsupportedCapability {
                 agent_kind: "codex".to_string(),
@@ -161,14 +142,17 @@ fn validate_and_extract_exec_policy(
         .transpose()?
         .unwrap_or(CodexSandboxMode::WorkspaceWrite);
 
-    if non_interactive {
-        if matches!(approval_policy, Some(ref policy) if policy != &CodexApprovalPolicy::Never) {
-            return Err(AgentWrapperError::InvalidRequest {
-                message: format!(
-                    "{EXT_CODEX_APPROVAL_POLICY} must be \"never\" when {EXT_NON_INTERACTIVE} is true"
-                ),
-            });
-        }
+    if non_interactive
+        && matches!(
+            approval_policy,
+            Some(ref policy) if policy != &CodexApprovalPolicy::Never
+        )
+    {
+        return Err(AgentWrapperError::InvalidRequest {
+            message: format!(
+                "{EXT_CODEX_APPROVAL_POLICY} must be \"never\" when {EXT_NON_INTERACTIVE} is true"
+            ),
+        });
     }
 
     Ok(CodexExecPolicy {
@@ -270,14 +254,94 @@ fn map_item_delta(delta: &codex::ItemDeltaPayload) -> AgentWrapperEvent {
     }
 }
 
-fn redacted_exec_error(err: &ExecStreamError) -> String {
+fn codex_error_kind(err: &CodexError) -> &'static str {
     match err {
-        ExecStreamError::Codex(_) => "codex error".to_string(),
-        ExecStreamError::Parse { source, .. } => format!("parse error: {source}"),
-        ExecStreamError::Normalize { message, .. } => format!("normalize error: {message}"),
-        ExecStreamError::IdleTimeout { .. } => "idle timeout".to_string(),
-        ExecStreamError::ChannelClosed => "stream closed unexpectedly".to_string(),
+        CodexError::Spawn { .. } => "spawn",
+        CodexError::Wait { .. } => "wait",
+        CodexError::Timeout { .. } => "timeout",
+        CodexError::EmptyPrompt
+        | CodexError::EmptySandboxCommand
+        | CodexError::EmptyExecPolicyCommand
+        | CodexError::EmptyApiKey
+        | CodexError::EmptyTaskId
+        | CodexError::EmptyEnvId
+        | CodexError::EmptyMcpServerName
+        | CodexError::EmptyMcpCommand
+        | CodexError::EmptyMcpUrl
+        | CodexError::EmptySocketPath => "invalid_request",
+        CodexError::TempDir(_)
+        | CodexError::WorkingDirectory { .. }
+        | CodexError::PrepareOutputDirectory { .. }
+        | CodexError::PrepareCodexHome { .. }
+        | CodexError::StdoutUnavailable
+        | CodexError::StderrUnavailable
+        | CodexError::StdinUnavailable
+        | CodexError::CaptureIo(_)
+        | CodexError::StdinWrite(_)
+        | CodexError::ResponsesApiProxyInfoRead { .. }
+        | CodexError::Join(_) => "io",
+        CodexError::NonZeroExit { .. }
+        | CodexError::InvalidUtf8(_)
+        | CodexError::JsonParse { .. }
+        | CodexError::ExecPolicyParse { .. }
+        | CodexError::FeatureListParse { .. }
+        | CodexError::ResponsesApiProxyInfoParse { .. } => "other",
     }
+}
+
+fn redact_exec_stream_error(err: &ExecStreamError) -> String {
+    match err {
+        ExecStreamError::Parse { source, line } => format!(
+            "codex stream parse error (redacted): {source} (line_bytes={})",
+            line.len()
+        ),
+        ExecStreamError::Normalize { message, line } => format!(
+            "codex stream normalize error (redacted): {message} (line_bytes={})",
+            line.len()
+        ),
+        ExecStreamError::IdleTimeout { idle_for } => {
+            format!("codex stream idle timeout: {idle_for:?}")
+        }
+        ExecStreamError::ChannelClosed => "codex stream closed unexpectedly".to_string(),
+        ExecStreamError::Codex(CodexError::NonZeroExit { status, .. }) => {
+            format!("codex exited non-zero: {status:?} (stderr redacted)")
+        }
+        ExecStreamError::Codex(err) => format!(
+            "codex backend error: {} (details redacted when unsafe)",
+            codex_error_kind(err)
+        ),
+    }
+}
+
+fn enforce_final_text_bound(text: Option<String>) -> Option<String> {
+    fn utf8_truncate_to_bytes(s: &str, bound_bytes: usize) -> &str {
+        if s.len() <= bound_bytes {
+            return s;
+        }
+        let mut end = std::cmp::min(bound_bytes, s.len());
+        while end > 0 && !s.is_char_boundary(end) {
+            end -= 1;
+        }
+        &s[..end]
+    }
+
+    let text = text?;
+    if text.len() <= crate::bounds::TEXT_BOUND_BYTES {
+        return Some(text);
+    }
+
+    const SUFFIX: &str = "…(truncated)";
+    let suffix_bytes = SUFFIX.len();
+    let bound = crate::bounds::TEXT_BOUND_BYTES;
+    if bound <= suffix_bytes {
+        return Some(utf8_truncate_to_bytes("…", bound).to_string());
+    }
+
+    let prefix = utf8_truncate_to_bytes(&text, bound - suffix_bytes);
+    let mut out = String::with_capacity(bound);
+    out.push_str(prefix);
+    out.push_str(SUFFIX);
+    Some(out)
 }
 
 impl AgentWrapperBackend for CodexBackend {
@@ -318,13 +382,14 @@ async fn run_impl(
     }
 
     let policy = validate_and_extract_exec_policy(&request)?;
+    let run_start_cwd = std::env::current_dir().ok();
 
     let (tx, rx) = mpsc::channel::<AgentWrapperEvent>(32);
     let (completion_tx, completion_rx) =
         oneshot::channel::<Result<AgentWrapperCompletion, AgentWrapperError>>();
 
     tokio::spawn(async move {
-        let result = run_codex(config, request, policy, tx).await;
+        let result = run_codex_inner(config, request, policy, run_start_cwd, tx).await;
         let _ = completion_tx.send(result);
     });
 
@@ -334,172 +399,194 @@ async fn run_impl(
     ))
 }
 
-async fn run_codex(
-    config: CodexBackendConfig,
-    request: AgentWrapperRunRequest,
-    policy: CodexExecPolicy,
-    tx: mpsc::Sender<AgentWrapperEvent>,
-) -> Result<AgentWrapperCompletion, AgentWrapperError> {
-    let timeout = request.timeout.or(config.default_timeout);
-    if let Some(timeout) = timeout {
-        return tokio::time::timeout(timeout, run_codex_inner(config, request, policy, tx))
-            .await
-            .map_err(|_| AgentWrapperError::Backend {
-                message: format!("codex exceeded timeout of {timeout:?}"),
-            })?;
-    }
-
-    run_codex_inner(config, request, policy, tx).await
-}
-
 async fn run_codex_inner(
     config: CodexBackendConfig,
     request: AgentWrapperRunRequest,
     policy: CodexExecPolicy,
+    run_start_cwd: Option<PathBuf>,
     tx: mpsc::Sender<AgentWrapperEvent>,
 ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
-    let binary = config.binary.unwrap_or_else(|| PathBuf::from("codex"));
-    let mut command = Command::new(binary);
-    command
-        .arg("exec")
-        .arg("--color")
-        .arg("never")
-        .arg("--skip-git-repo-check")
-        .arg("--json")
-        .arg("--sandbox")
-        .arg(policy.sandbox_mode.as_cli_value())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .stdin(Stdio::piped())
-        .kill_on_drop(true);
+    fn map_approval_policy(policy: &CodexApprovalPolicy) -> codex::ApprovalPolicy {
+        match policy {
+            CodexApprovalPolicy::Untrusted => codex::ApprovalPolicy::Untrusted,
+            CodexApprovalPolicy::OnFailure => codex::ApprovalPolicy::OnFailure,
+            CodexApprovalPolicy::OnRequest => codex::ApprovalPolicy::OnRequest,
+            CodexApprovalPolicy::Never => codex::ApprovalPolicy::Never,
+        }
+    }
+
+    fn map_sandbox_mode(mode: &CodexSandboxMode) -> codex::SandboxMode {
+        match mode {
+            CodexSandboxMode::ReadOnly => codex::SandboxMode::ReadOnly,
+            CodexSandboxMode::WorkspaceWrite => codex::SandboxMode::WorkspaceWrite,
+            CodexSandboxMode::DangerFullAccess => codex::SandboxMode::DangerFullAccess,
+        }
+    }
+
+    let mut builder = codex::CodexClient::builder()
+        .json(true)
+        .mirror_stdout(false)
+        .quiet(true)
+        .color_mode(codex::ColorMode::Never)
+        .sandbox_mode(map_sandbox_mode(&policy.sandbox_mode));
 
     if policy.non_interactive {
-        command
-            .arg("--ask-for-approval")
-            .arg(CodexApprovalPolicy::Never.as_cli_value());
-    } else if let Some(policy) = policy.approval_policy.as_ref() {
-        command
-            .arg("--ask-for-approval")
-            .arg(policy.as_cli_value());
+        builder = builder.approval_policy(codex::ApprovalPolicy::Never);
+    } else if let Some(value) = policy.approval_policy.as_ref() {
+        builder = builder.approval_policy(map_approval_policy(value));
+    }
+
+    if let Some(binary) = config.binary.as_ref() {
+        builder = builder.binary(binary.clone());
+    }
+
+    if let Some(codex_home) = config.codex_home.as_ref() {
+        builder = builder.codex_home(codex_home.clone());
     }
 
     let working_dir = request
         .working_dir
         .clone()
-        .or_else(|| config.default_working_dir.clone());
-    if let Some(dir) = working_dir {
-        command.current_dir(dir);
-    }
-
-    if let Some(codex_home) = config.codex_home.clone() {
-        command.env("CODEX_HOME", codex_home);
-    }
-
-    for (k, v) in config.env.iter() {
-        command.env(k, v);
-    }
-    for (k, v) in request.env.iter() {
-        command.env(k, v);
-    }
-
-    let mut child = command.spawn().map_err(|err| AgentWrapperError::Backend {
-        message: format!("failed to spawn codex: {err}"),
+        .or_else(|| config.default_working_dir.clone())
+        .or(run_start_cwd);
+    let working_dir = working_dir.ok_or_else(|| AgentWrapperError::Backend {
+        message: "codex backend failed to resolve working directory".to_string(),
     })?;
+    builder = builder.working_dir(working_dir);
 
-    {
-        let mut stdin = child
-            .stdin
-            .take()
-            .ok_or_else(|| AgentWrapperError::Backend {
-                message: "stdin unavailable".to_string(),
-            })?;
-        if let Err(err) = stdin.write_all(request.prompt.as_bytes()).await {
-            if err.kind() != std::io::ErrorKind::BrokenPipe {
-                return Err(AgentWrapperError::Backend {
-                    message: format!("failed to write stdin: {err}"),
-                });
-            }
-        }
-        let _ = stdin.write_all(b"\n").await;
-        let _ = stdin.shutdown().await;
-    }
+    let timeout = request
+        .timeout
+        .or(config.default_timeout)
+        .unwrap_or(Duration::ZERO);
+    builder = builder.timeout(timeout);
 
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or_else(|| AgentWrapperError::Backend {
-            message: "stdout unavailable".to_string(),
-        })?;
+    let client = builder.build();
 
-    if let Err(err) = forward_codex_stdout_as_events(stdout, &tx).await {
-        let _ = child.kill().await;
-        let _ = tokio::time::timeout(Duration::from_secs(5), child.wait()).await;
-        drop(tx);
-        return Err(err);
-    }
+    let mut env_overrides = BTreeMap::new();
+    env_overrides.extend(config.env);
+    env_overrides.extend(request.env);
 
-    let status = child
-        .wait()
+    let handle = match client
+        .stream_exec_with_env_overrides(
+            ExecStreamRequest {
+                prompt: request.prompt,
+                idle_timeout: None,
+                output_last_message: None,
+                output_schema: None,
+                json_event_log: None,
+            },
+            &env_overrides,
+        )
         .await
-        .map_err(|err| AgentWrapperError::Backend {
-            message: format!("failed to wait for codex: {err}"),
-        })?;
+    {
+        Ok(handle) => handle,
+        Err(err) => {
+            let message = redact_exec_stream_error(&err);
+            for bounded in crate::bounds::enforce_event_bounds(error_event(message.clone())) {
+                if tx.send(bounded).await.is_err() {
+                    break;
+                }
+            }
+            drop(tx);
+            return Err(AgentWrapperError::Backend { message });
+        }
+    };
+
+    let completion_outcome =
+        drain_events_while_polling_completion(handle.events, handle.completion, &tx).await?;
+
+    let completion = match completion_outcome {
+        Ok(completion) => completion,
+        Err(ExecStreamError::Codex(CodexError::NonZeroExit { status, .. })) => {
+            for bounded in crate::bounds::enforce_event_bounds(error_event(format!(
+                "codex exited non-zero: {status:?} (stderr redacted)"
+            ))) {
+                let _ = tx.send(bounded).await;
+            }
+            drop(tx);
+            return Ok(crate::bounds::enforce_completion_bounds(
+                AgentWrapperCompletion {
+                    status,
+                    final_text: None,
+                    data: None,
+                },
+            ));
+        }
+        Err(err) => {
+            for bounded in
+                crate::bounds::enforce_event_bounds(error_event(redact_exec_stream_error(&err)))
+            {
+                let _ = tx.send(bounded).await;
+            }
+            drop(tx);
+            return Err(AgentWrapperError::Backend {
+                message: redact_exec_stream_error(&err),
+            });
+        }
+    };
 
     drop(tx);
 
     Ok(crate::bounds::enforce_completion_bounds(
         AgentWrapperCompletion {
-            status,
-            final_text: None,
+            status: completion.status,
+            final_text: enforce_final_text_bound(completion.last_message),
             data: None,
         },
     ))
 }
 
-async fn forward_codex_stdout_as_events<R>(
-    stdout: R,
+async fn drain_events_while_polling_completion(
+    mut events: impl futures_core::Stream<Item = Result<ThreadEvent, ExecStreamError>> + Unpin,
+    completion: impl Future<Output = Result<codex::ExecCompletion, ExecStreamError>> + Send + 'static,
     tx: &mpsc::Sender<AgentWrapperEvent>,
-) -> Result<(), AgentWrapperError>
-where
-    R: tokio::io::AsyncRead + Unpin,
-{
-    let mut parser = JsonlThreadEventParser::new();
-    let mut lines = BufReader::new(stdout).lines();
+) -> Result<Result<codex::ExecCompletion, ExecStreamError>, AgentWrapperError> {
+    let (completion_tx, completion_rx) = oneshot::channel();
+    tokio::spawn(async move {
+        let _ = completion_tx.send(completion.await);
+    });
 
-    loop {
-        let line = match lines.next_line().await {
-            Ok(Some(line)) => line,
-            Ok(None) => return Ok(()),
-            Err(err) => {
-                let message = format!("failed to read codex stdout: {err}");
-                for mapped in crate::bounds::enforce_event_bounds(error_event(message.clone())) {
-                    let _ = tx.send(mapped).await;
-                }
-                return Err(AgentWrapperError::Backend { message });
-            }
+    // If the caller drops the universal events stream, we MUST keep draining the backend stream so
+    // the underlying process isn't accidentally cancelled (and so we avoid deadlocks on bounded
+    // channels). We simply stop forwarding once the receiver is gone.
+    let mut forward = true;
+    while let Some(outcome) = events.next().await {
+        if !forward {
+            continue;
+        }
+
+        let mapped_events = match outcome {
+            Ok(event) => vec![map_thread_event(&event)],
+            Err(err) => vec![error_event(redact_exec_stream_error(&err))],
         };
 
-        match parser.parse_line(&line) {
-            Ok(None) => {}
-            Ok(Some(event)) => {
-                for mapped in crate::bounds::enforce_event_bounds(map_thread_event(&event)) {
-                    let _ = tx.send(mapped).await;
+        for event in mapped_events {
+            for bounded in crate::bounds::enforce_event_bounds(event) {
+                if tx.send(bounded).await.is_err() {
+                    forward = false;
+                    break;
                 }
             }
-            Err(err) => {
-                let message = redacted_exec_error(&err);
-                for mapped in crate::bounds::enforce_event_bounds(error_event(message)) {
-                    let _ = tx.send(mapped).await;
-                }
+            if !forward {
+                break;
             }
         }
     }
+
+    completion_rx.await.map_err(|_| AgentWrapperError::Backend {
+        message: "codex completion task dropped".to_string(),
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{AgentWrapperBackend, AgentWrapperEventKind};
+
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    };
 
     fn parse_thread_event(json: &str) -> ThreadEvent {
         serde_json::from_str(json).expect("valid codex::ThreadEvent JSON")
@@ -628,37 +715,55 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stdout_read_errors_surface_as_backend_error_and_event() {
-        let (mut writer, reader) = tokio::io::duplex(256);
-        writer
-            .write_all(br#"{"type":"thread.started","thread_id":"thread-1"}"#)
-            .await
-            .unwrap();
-        writer.write_all(b"\n").await.unwrap();
-        writer.write_all(&[0xff, b'\n']).await.unwrap();
-        drop(writer);
+    async fn codex_backend_enforces_timeout_while_draining_events() {
+        let stop = Arc::new(AtomicBool::new(false));
 
-        let (tx, mut rx) = mpsc::channel::<AgentWrapperEvent>(32);
-        let err = forward_codex_stdout_as_events(reader, &tx)
-            .await
-            .expect_err("expected stdout read to fail");
-        drop(tx);
-
-        let mut saw_error_event = false;
-        while let Some(ev) = rx.recv().await {
-            if ev.kind == AgentWrapperEventKind::Error {
-                let msg = ev.message.unwrap_or_default();
-                assert!(msg.starts_with("failed to read codex stdout:"));
-                saw_error_event = true;
+        let events_stop = Arc::clone(&stop);
+        let events = futures_util::stream::unfold((), move |_| {
+            let events_stop = Arc::clone(&events_stop);
+            async move {
+                if events_stop.load(Ordering::SeqCst) {
+                    None
+                } else {
+                    tokio::time::sleep(Duration::from_millis(5)).await;
+                    Some((
+                        Ok(parse_thread_event(
+                            r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+                        )),
+                        (),
+                    ))
+                }
             }
-        }
-        assert!(saw_error_event, "expected an Error event to be emitted");
+        });
+        let events = Box::pin(events);
 
-        match err {
-            AgentWrapperError::Backend { message } => {
-                assert!(message.starts_with("failed to read codex stdout:"));
-            }
-            other => panic!("unexpected error: {other:?}"),
+        let completion_stop = Arc::clone(&stop);
+        let completion = async move {
+            tokio::time::sleep(Duration::from_millis(30)).await;
+            completion_stop.store(true, Ordering::SeqCst);
+            Err(ExecStreamError::Codex(CodexError::Timeout {
+                timeout: Duration::from_millis(10),
+            }))
+        };
+
+        let (tx, mut rx) = mpsc::channel::<AgentWrapperEvent>(16);
+
+        let outcome = tokio::time::timeout(
+            Duration::from_millis(250),
+            drain_events_while_polling_completion(events, completion, &tx),
+        )
+        .await
+        .expect("should not hang")
+        .expect("helper should not fail");
+
+        match outcome {
+            Err(ExecStreamError::Codex(CodexError::Timeout { .. })) => {}
+            other => panic!("expected codex timeout, got {other:?}"),
         }
+
+        assert!(
+            rx.recv().await.is_some(),
+            "should forward at least one event while draining"
+        );
     }
 }

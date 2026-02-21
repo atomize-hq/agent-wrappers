@@ -53,7 +53,7 @@ Optional (bounded by operator choice; only run when you explicitly want broad si
 
 What to confirm (manual observation):
 - Streaming produces at least one event before completion resolves (“live” evidence).
-- `final_text` policy matches `decision_register.md` / `contract.md` (v1: always `None` for Codex runs).
+- `final_text` policy matches `decision_register.md` / `contract.md` (v1: `Some(s)` iff upstream `last_message` is present; otherwise `None`).
 - Error messages do not include raw JSONL lines or raw stderr/stdout content (redaction posture).
 
 ## Recording results

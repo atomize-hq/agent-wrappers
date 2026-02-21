@@ -17,6 +17,15 @@ pub(super) async fn stream_exec_with_overrides(
     request: ExecStreamRequest,
     overrides: CliOverridesPatch,
 ) -> Result<ExecStream, ExecStreamError> {
+    stream_exec_with_overrides_and_env_overrides(client, request, overrides, &[]).await
+}
+
+pub(super) async fn stream_exec_with_overrides_and_env_overrides(
+    client: &CodexClient,
+    request: ExecStreamRequest,
+    overrides: CliOverridesPatch,
+    env_overrides: &[(String, String)],
+) -> Result<ExecStream, ExecStreamError> {
     if request.prompt.trim().is_empty() {
         return Err(CodexError::EmptyPrompt.into());
     }
@@ -94,6 +103,9 @@ pub(super) async fn stream_exec_with_overrides(
     }
 
     client.command_env.apply(&mut command)?;
+    for (key, value) in env_overrides {
+        command.env(key, value);
+    }
 
     let mut child = spawn_with_retry(&mut command, client.command_env.binary_path())?;
 

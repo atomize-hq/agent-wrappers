@@ -34,3 +34,4 @@ mod cloud;
 mod jsonl;
 mod mcp;
 mod sandbox_execpolicy;
+mod stream_exec_env_overrides;

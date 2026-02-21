@@ -220,12 +220,12 @@ Integration dependency notes:
   - Env precedence test that proves request env overrides backend env keys for the spawned process.
 
 ### Manual validation
-- Manual playbook to be added under `docs/project_management/next/agent-api-codex-stream-exec/`
-  (required if this ADR is accepted and scheduled).
+- Manual playbook lives in the feature planning pack:
+  - `docs/project_management/packs/active/agent-api-codex-stream-exec/manual_testing_playbook.md`
 
 ### Smoke scripts
-- Smoke scripts to be added under `docs/project_management/next/agent-api-codex-stream-exec/smoke/`
-  (required if this ADR is accepted and scheduled).
+- Smoke scripts live in the feature planning pack:
+  - `docs/project_management/packs/active/agent-api-codex-stream-exec/smoke/`
 
 ## Rollout / Backwards Compatibility
 - Policy: greenfield breaking is allowed for implementation details, but `agent_api` public API
@@ -237,5 +237,6 @@ Integration dependency notes:
 - This ADR records a single mandated architectural direction: the universal Codex backend MUST
   consume the Codex wrapper crate’s streaming surface (`CodexClient::stream_exec`) rather than
   reimplement process + ingestion logic directly in `agent_api`.
-- No separate decision register is created for this ADR because the choice is a project-level
-  requirement (parity/orthogonality) rather than an open A/B decision.
+- Execution-readiness A/B decisions (exec policy, redaction mapping, env override strategy, and
+  `final_text` policy) are tracked in the feature pack’s decision register:
+  - `docs/project_management/packs/active/agent-api-codex-stream-exec/decision_register.md`
