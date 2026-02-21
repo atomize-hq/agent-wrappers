@@ -116,6 +116,32 @@ jobs:
             exit 1
           fi
 
+  capability-matrix:
+    name: Capability matrix (fresh + audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: xtask capability-matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run -p xtask -- capability-matrix
+
+      - name: "Guard: capability-matrix.md is committed"
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- docs/project_management/next/universal-agent-api/capability-matrix.md
+
+      - name: xtask capability-matrix-audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run -p xtask -- capability-matrix-audit
+
   codex-validate-artifacts:
     name: Validate Codex committed artifacts
     runs-on: ubuntu-latest

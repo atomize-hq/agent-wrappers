@@ -224,14 +224,21 @@ follows (stable v1 contract):
 - `TurnFailed` → `AgentWrapperEventKind::Status`
   - `channel = Some("status")`
   - `message = Some("turn failed")`
-- `Error`, `ItemFailed`, `item_type=error` → `AgentWrapperEventKind::Error`
+- `Error`, `item_type=error` → `AgentWrapperEventKind::Error`
   - `channel = Some("error")`
   - `message = Some(<safe, bounded>)`
+- `ItemFailed` → `AgentWrapperEventKind::Error` (default)
+  - `channel = Some("error")`
+  - `message = Some(<safe, bounded>)`
+  - Emit `ToolResult(phase="fail", status="failed")` for `ThreadEvent::ItemFailed` **only when** `item.extra["item_type"]` exists, **is a string**, and is in `{ "command_execution", "file_change", "mcp_tool_call", "web_search" }`. Otherwise, keep `ItemFailed → Error`.
 - `item_type=agent_message|reasoning` → `AgentWrapperEventKind::TextOutput`
   - `channel = Some("assistant")`
   - `text = Some(<chunk>)` (snapshot text for started/completed; delta text for deltas)
-- `item_type=command_execution|file_change|mcp_tool_call|web_search` → `AgentWrapperEventKind::ToolCall`
-  - `channel = Some("tool")`
+- `item_type=command_execution|file_change|mcp_tool_call|web_search`:
+  - `item.started`, `item.delta` → `AgentWrapperEventKind::ToolCall`
+    - `channel = Some("tool")`
+  - `item.completed` → `AgentWrapperEventKind::ToolResult`
+    - `channel = Some("tool")`
 - `item_type=todo_list` → `AgentWrapperEventKind::Status`
   - `channel = Some("status")`
 
