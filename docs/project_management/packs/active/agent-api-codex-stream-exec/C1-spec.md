@@ -32,8 +32,10 @@ Refactor the `agent_api` Codex backend to:
 
 - Changing the universal event envelope schema.
 - Adding any new `AgentWrapperRunRequest.extensions` keys beyond those pinned in DR-0010.
-- Improving event taxonomy beyond the pinned mapping in `contract.md` (e.g., emitting `ToolResult`
-  for Codex in v1).
+- Forcing payload schema parity across agents or emitting raw tool inputs/outputs in universal fields
+  (v1 remains metadata-only and redacted).
+- Emitting or retaining raw backend lines (including JSONL) anywhere in universal
+  events/completion/errors (baseline prohibition).
 
 ## Acceptance Criteria (observable)
 

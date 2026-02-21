@@ -37,6 +37,57 @@ Definition (v1):
 
 `serialized_json_bytes(value)` is defined as `serde_json::to_vec(value).len()`.
 
+## Tools facet (structured.v1) (v1, normative)
+
+When a backend advertises capability id `agent_api.tools.structured.v1`, it MUST attach a tools
+facet in `AgentWrapperEvent.data` for every event where `kind ∈ {ToolCall, ToolResult}`.
+
+This MUST apply even when the backend would otherwise omit `data`: for `ToolCall` and `ToolResult`
+events, the backend MUST set `data = Some({ "schema": "agent_api.tools.structured.v1", "tool": { ... } })`.
+
+This requirement is subject to the existing `data` size bound and enforcement behavior: if the tools
+facet would exceed the 64 KiB serialized `data` bound, the backend MUST apply the baseline oversize
+replacement (`{"dropped": {"reason": "oversize"}}`).
+
+### Schema
+
+```json
+{
+  "schema": "agent_api.tools.structured.v1",
+  "tool": {
+    "backend_item_id": "string|null",
+    "thread_id": "string|null",
+    "turn_id": "string|null",
+
+    "kind": "string",
+    "phase": "start|delta|complete|fail",
+    "status": "pending|running|completed|failed|unknown",
+    "exit_code": "integer|null",
+
+    "bytes": { "stdout": "integer", "stderr": "integer", "diff": "integer", "result": "integer" },
+
+    "tool_name": "string|null",
+    "tool_use_id": "string|null"
+  }
+}
+```
+
+### Field rules (v1, normative)
+
+- `tool.kind` is an open set.
+- `bytes.*` are integer counts; use `0` when absent/unknown.
+- `exit_code` is `integer|null`.
+
+Safety (v1, normative):
+- The tools facet is metadata-only.
+- `AgentWrapperEvent.data` MUST NOT include raw tool inputs/outputs, raw backend lines, diffs/patches,
+  or tool payload JSON.
+
+### Recommended `tool.kind` values (non-normative)
+
+- Codex built-ins: `command_execution`, `file_change`, `mcp_tool_call`, `web_search`
+- Claude built-ins: `tool_use`, `tool_result`
+
 ## Enforcement behavior (v1, normative)
 
 - If `channel` exceeds the bound, the backend MUST set `channel=None` for that event.
