@@ -65,7 +65,7 @@ The universal API MUST:
 ### Capability ids
 
 Rules are owned by:
-- `docs/project_management/next/universal-agent-api/capabilities-schema-spec.md`
+- `docs/specs/universal-agent-api/capabilities-schema-spec.md`
 
 ### Capability promotion rule
 
@@ -73,7 +73,7 @@ To keep the universal facade orthogonal, any new `agent_api.*` capability id (ex
 below) is only considered “promoted” once it is supported by **≥2 built-in backends**.
 
 This is CI-enforced by:
-- regenerating and diff-checking `docs/project_management/next/universal-agent-api/capability-matrix.md`
+- regenerating and diff-checking `docs/specs/universal-agent-api/capability-matrix.md`
   via `cargo run -p xtask -- capability-matrix`, and
 - running `cargo run -p xtask -- capability-matrix-audit`.
 
@@ -86,7 +86,7 @@ Allowlist (may be supported by fewer than 2 backends):
 ### Extension keys
 
 Core extension key registry + ownership rules are owned by:
-- `docs/project_management/next/universal-agent-api/extensions-spec.md`
+- `docs/specs/universal-agent-api/extensions-spec.md`
 
 Required invariants:
 - Every supported extension key MUST be advertised in `AgentWrapperCapabilities.ids`.

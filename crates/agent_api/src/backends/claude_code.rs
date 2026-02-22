@@ -241,9 +241,9 @@ async fn run_claude_code_inner(
                     continue;
                 }
 
-                for bounded in crate::bounds::enforce_event_bounds(error_event(redact_parse_error(
-                    &err,
-                ))) {
+                for bounded in
+                    crate::bounds::enforce_event_bounds(error_event(redact_parse_error(&err)))
+                {
                     if tx.send(bounded).await.is_err() {
                         forward = false;
                         break;

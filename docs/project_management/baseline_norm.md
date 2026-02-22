@@ -222,7 +222,7 @@ Rule:
 
 Add job:
 - `cargo run -p xtask -- capability-matrix`
-- `git diff --exit-code docs/project_management/next/universal-agent-api/capability-matrix.md`
+- `git diff --exit-code docs/specs/universal-agent-api/capability-matrix.md`
 - `cargo run -p xtask -- capability-matrix-audit`
 
 ### S4.T3 — Charter note
