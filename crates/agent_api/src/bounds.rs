@@ -41,6 +41,25 @@ pub(crate) fn enforce_completion_bounds(
     completion
 }
 
+pub(crate) fn enforce_final_text_bound(text: Option<String>) -> Option<String> {
+    let text = text?;
+    if text.len() <= TEXT_BOUND_BYTES {
+        return Some(text);
+    }
+
+    const SUFFIX: &str = "…(truncated)";
+    let suffix_bytes = SUFFIX.len();
+    if TEXT_BOUND_BYTES <= suffix_bytes {
+        return Some(utf8_truncate_to_bytes("…", TEXT_BOUND_BYTES).to_string());
+    }
+
+    let prefix = utf8_truncate_to_bytes(&text, TEXT_BOUND_BYTES - suffix_bytes);
+    let mut out = String::with_capacity(TEXT_BOUND_BYTES);
+    out.push_str(prefix);
+    out.push_str(SUFFIX);
+    Some(out)
+}
+
 fn enforce_channel_bound(channel: Option<String>) -> Option<String> {
     let channel = channel?;
     if channel.len() <= CHANNEL_BOUND_BYTES {
@@ -225,5 +244,15 @@ mod tests {
             bounded.data.as_ref().and_then(|v| v.get("dropped")),
             Some(&serde_json::json!({ "reason": "oversize" }))
         );
+    }
+
+    #[test]
+    fn final_text_over_bound_is_truncated_with_suffix_utf8_safely() {
+        let text = "💖".repeat((TEXT_BOUND_BYTES / 4) + 100);
+        assert!(text.len() > TEXT_BOUND_BYTES);
+
+        let out = enforce_final_text_bound(Some(text)).expect("final_text present");
+        assert!(out.len() <= TEXT_BOUND_BYTES);
+        assert!(out.ends_with("…(truncated)"));
     }
 }

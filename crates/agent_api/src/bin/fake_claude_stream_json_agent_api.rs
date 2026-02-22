@@ -9,6 +9,17 @@ const SYSTEM_INIT: &str =
     include_str!("../../../claude_code/tests/fixtures/stream_json/v1/system_init.jsonl");
 const USER_MESSAGE: &str =
     include_str!("../../../claude_code/tests/fixtures/stream_json/v1/user_message.jsonl");
+const STREAM_EVENT_TOOL_USE_START: &str = include_str!(
+    "../../../claude_code/tests/fixtures/stream_json/v1/stream_event_tool_use_start.jsonl"
+);
+const STREAM_EVENT_INPUT_JSON_DELTA: &str = include_str!(
+    "../../../claude_code/tests/fixtures/stream_json/v1/stream_event_input_json_delta.jsonl"
+);
+const STREAM_EVENT_TOOL_RESULT_START: &str = include_str!(
+    "../../../claude_code/tests/fixtures/stream_json/v1/stream_event_tool_result_start.jsonl"
+);
+const ASSISTANT_MESSAGE_TEXT: &str =
+    include_str!("../../../claude_code/tests/fixtures/stream_json/v1/assistant_message_text.jsonl");
 
 fn first_nonempty_line(text: &str) -> &str {
     text.lines()
@@ -22,11 +33,32 @@ fn write_line(out: &mut impl Write, line: &str) -> io::Result<()> {
     Ok(())
 }
 
+fn has_flag_value(args: &[String], flag: &str, expected: &str) -> bool {
+    args.iter()
+        .position(|arg| arg == flag)
+        .and_then(|idx| args.get(idx + 1))
+        .is_some_and(|value| value == expected)
+}
+
 fn main() -> io::Result<()> {
     // Cross-platform test binary used by `agent_api` tests.
     //
     // Emulates: `claude --print --output-format stream-json ...`
     // Scenario is selected via env var so tests can validate incrementality + gating.
+    //
+    // The universal agent wrapper contract defaults to non-interactive behavior; require that the
+    // wrapper passes `--permission-mode bypassPermissions` so tests fail loudly if we regress.
+    let args: Vec<String> = env::args().collect();
+    if !has_flag_value(&args, "--permission-mode", "bypassPermissions") {
+        let mut out = io::stdout().lock();
+        write_line(
+            &mut out,
+            r#"{"type":"result","subtype":"error","error":{"type":"invalid_request_error","message":"missing --permission-mode bypassPermissions"}}"#,
+        )?;
+        write_line(&mut out, "\n")?;
+        std::process::exit(1);
+    }
+
     let scenario = env::var("FAKE_CLAUDE_SCENARIO").unwrap_or_else(|_| "two_events_delayed".into());
 
     let init = first_nonempty_line(SYSTEM_INIT);
@@ -44,6 +76,18 @@ fn main() -> io::Result<()> {
             write_line(&mut out, &format!("{init}\n"))?;
             thread::sleep(Duration::from_millis(2000));
             write_line(&mut out, &format!("{user}\n"))?;
+        }
+        "final_text_and_tools" => {
+            let tool_use_start = first_nonempty_line(STREAM_EVENT_TOOL_USE_START);
+            let input_json_delta = first_nonempty_line(STREAM_EVENT_INPUT_JSON_DELTA);
+            let tool_result_start = first_nonempty_line(STREAM_EVENT_TOOL_RESULT_START);
+            let assistant_text = first_nonempty_line(ASSISTANT_MESSAGE_TEXT);
+
+            write_line(&mut out, &format!("{init}\n"))?;
+            write_line(&mut out, &format!("{tool_use_start}\n"))?;
+            write_line(&mut out, &format!("{input_json_delta}\n"))?;
+            write_line(&mut out, &format!("{tool_result_start}\n"))?;
+            write_line(&mut out, &format!("{assistant_text}\n"))?;
         }
         // Default: two events with a smaller delay (still long enough to demonstrate streaming).
         _ => {

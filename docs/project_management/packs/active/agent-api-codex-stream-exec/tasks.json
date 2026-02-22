@@ -1,0 +1,458 @@
+[
+  {
+    "id": "C0-code",
+    "name": "C0: Codex wrapper per-run env override API (code)",
+    "type": "code",
+    "phase": "C0",
+    "status": "completed",
+    "description": "Implement the minimum additive `crates/codex` API needed so `agent_api` can apply per-run environment overrides while still executing via `CodexClient::stream_exec` (production code only; no tests).",
+    "references": [
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/plan.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/spec_manifest.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/impact_map.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/decision_register.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/contract.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/codex-stream-exec-adapter-protocol-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/platform-parity-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/C0-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C0-code.md"
+    ],
+    "acceptance_criteria": [
+      "C0 changes satisfy `C0-spec.md` and the user-facing semantics pinned in `contract.md`",
+      "Per-run env override mechanism is additive (no breaking changes) and prevents cross-run leakage",
+      "Cross-platform considerations required by `platform-parity-spec.md` are respected for env/spawn behavior",
+      "No tests added/modified",
+      "Required commands executed and recorded in `session_log.md`"
+    ],
+    "start_checklist": [
+      "git checkout feat/agent-api-codex-stream-exec && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, decision_register.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-code'",
+      "Create the task branch and worktree: `git worktree add -b cse-c0-codex-env-code wt/cse-c0-codex-env-code feat/agent-api-codex-stream-exec`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings.",
+      "Inside wt/cse-c0-codex-env-code, commit C0-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/agent-api-codex-stream-exec.",
+      "Checkout feat/agent-api-codex-stream-exec; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-code'.",
+      "Remove worktree wt/cse-c0-codex-env-code."
+    ],
+    "worktree": "wt/cse-c0-codex-env-code",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C0-code.md",
+    "depends_on": [],
+    "concurrent_with": [
+      "C0-test"
+    ],
+    "started_at": "2026-02-20T22:28:20Z",
+    "completed_at": "2026-02-20T22:40:07Z"
+  },
+  {
+    "id": "C0-test",
+    "name": "C0: Codex wrapper per-run env override API (test)",
+    "type": "test",
+    "phase": "C0",
+    "status": "completed",
+    "description": "Add tests/fixtures validating the C0 env override behavior without modifying production logic (tests only).",
+    "references": [
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/plan.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/spec_manifest.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/impact_map.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/decision_register.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/contract.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/codex-stream-exec-adapter-protocol-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/platform-parity-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/C0-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C0-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests cover the C0 acceptance criteria from `C0-spec.md` using fixtures/fakes (no real Codex install required)",
+      "No production code changes",
+      "Required commands executed and recorded in `session_log.md`"
+    ],
+    "start_checklist": [
+      "git checkout feat/agent-api-codex-stream-exec && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-test'",
+      "Create the task branch and worktree: `git worktree add -b cse-c0-codex-env-test wt/cse-c0-codex-env-test feat/agent-api-codex-stream-exec`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; targeted cargo test commands for suites added/updated (for example: `cargo test -p codex --test <name>`).",
+      "Inside wt/cse-c0-codex-env-test, commit C0-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/agent-api-codex-stream-exec.",
+      "Checkout feat/agent-api-codex-stream-exec; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-test'.",
+      "Remove worktree wt/cse-c0-codex-env-test."
+    ],
+    "worktree": "wt/cse-c0-codex-env-test",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C0-test.md",
+    "depends_on": [],
+    "concurrent_with": [
+      "C0-code"
+    ],
+    "started_at": "2026-02-20T22:28:20Z",
+    "completed_at": "2026-02-20T22:47:14Z"
+  },
+  {
+    "id": "C0-integ",
+    "name": "C0: Codex wrapper per-run env override API (integration)",
+    "type": "integration",
+    "phase": "C0",
+    "status": "completed",
+    "description": "Merge C0 code/test, align behavior with the spec/contract, and gate with fmt/clippy/tests/preflight (Linux).",
+    "references": [
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/plan.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/spec_manifest.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/impact_map.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/decision_register.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/contract.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/codex-stream-exec-adapter-protocol-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/platform-parity-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/C0-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C0-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C0 code/test merged and match `C0-spec.md` + `contract.md`",
+      "cargo fmt + clippy + relevant tests executed and logged; make preflight executed on Linux (or explicitly skipped when not on Linux)",
+      "Merged fast-forward into feat/agent-api-codex-stream-exec; tasks/logs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/agent-api-codex-stream-exec && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C0-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C0-integ'",
+      "Create the integration branch and worktree: `git worktree add -b cse-c0-codex-env-integ wt/cse-c0-codex-env-integ feat/agent-api-codex-stream-exec`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream C0 code/test branches into the integration worktree and reconcile behavior to the spec/contract.",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
+      "Commit integration changes on branch cse-c0-codex-env-integ.",
+      "Fast-forward merge cse-c0-codex-env-integ into feat/agent-api-codex-stream-exec; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C0-integ'.",
+      "Remove worktree wt/cse-c0-codex-env-integ."
+    ],
+    "worktree": "wt/cse-c0-codex-env-integ",
+    "integration_task": "C0-integ",
+    "kickoff_prompt": "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C0-integ.md",
+    "depends_on": [
+      "C0-code",
+      "C0-test"
+    ],
+    "concurrent_with": [],
+    "started_at": "2026-02-20T22:47:14Z",
+    "completed_at": "2026-02-20T22:55:29Z"
+  },
+  {
+    "id": "C1-code",
+    "name": "C1: agent_api Codex backend stream_exec refactor (code)",
+    "type": "code",
+    "phase": "C1",
+    "status": "completed",
+    "description": "Refactor the `agent_api` Codex backend to consume `codex::CodexClient::stream_exec` and map typed Codex events (`ThreadEvent`) to `AgentWrapperEvent` live (production code only; no tests).",
+    "references": [
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/plan.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/spec_manifest.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/impact_map.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/decision_register.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/contract.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/codex-stream-exec-adapter-protocol-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/platform-parity-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/C1-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C1-code.md"
+    ],
+    "acceptance_criteria": [
+      "C1 changes satisfy `C1-spec.md` and the user-facing semantics pinned in `contract.md`",
+      "Streaming \u201clive\u201d behavior and ordering rules match `codex-stream-exec-adapter-protocol-spec.md`",
+      "No tests added/modified",
+      "Required commands executed and recorded in `session_log.md`"
+    ],
+    "start_checklist": [
+      "git checkout feat/agent-api-codex-stream-exec && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, decision_register.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C1-code'",
+      "Create the task branch and worktree: `git worktree add -b cse-c1-codex-stream-exec-code wt/cse-c1-codex-stream-exec-code feat/agent-api-codex-stream-exec`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings.",
+      "Inside wt/cse-c1-codex-stream-exec-code, commit C1-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/agent-api-codex-stream-exec.",
+      "Checkout feat/agent-api-codex-stream-exec; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-code'.",
+      "Remove worktree wt/cse-c1-codex-stream-exec-code."
+    ],
+    "worktree": "wt/cse-c1-codex-stream-exec-code",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C1-code.md",
+    "depends_on": [
+      "C0-integ"
+    ],
+    "concurrent_with": [
+      "C1-test"
+    ],
+    "started_at": "2026-02-20T23:18:51Z",
+    "completed_at": "2026-02-20T23:26:29Z"
+  },
+  {
+    "id": "C1-test",
+    "name": "C1: agent_api Codex backend stream_exec refactor (test)",
+    "type": "test",
+    "phase": "C1",
+    "status": "completed",
+    "description": "Add fixture/sample-based tests validating Codex typed event mapping and live streaming behavior for the new stream_exec adapter (tests only).",
+    "references": [
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/plan.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/spec_manifest.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/impact_map.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/decision_register.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/contract.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/codex-stream-exec-adapter-protocol-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/platform-parity-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/C1-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C1-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests cover the C1 acceptance criteria from `C1-spec.md` using fixtures/fakes (no real Codex install required)",
+      "No production code changes",
+      "Required commands executed and recorded in `session_log.md`"
+    ],
+    "start_checklist": [
+      "git checkout feat/agent-api-codex-stream-exec && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C1-test'",
+      "Create the task branch and worktree: `git worktree add -b cse-c1-codex-stream-exec-test wt/cse-c1-codex-stream-exec-test feat/agent-api-codex-stream-exec`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; targeted cargo test commands for suites added/updated (for example: `cargo test -p agent_api --test <name> --features codex`).",
+      "Inside wt/cse-c1-codex-stream-exec-test, commit C1-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/agent-api-codex-stream-exec.",
+      "Checkout feat/agent-api-codex-stream-exec; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-test'.",
+      "Remove worktree wt/cse-c1-codex-stream-exec-test."
+    ],
+    "worktree": "wt/cse-c1-codex-stream-exec-test",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C1-test.md",
+    "depends_on": [
+      "C0-integ"
+    ],
+    "concurrent_with": [
+      "C1-code"
+    ],
+    "started_at": "2026-02-20T23:18:52Z",
+    "completed_at": "2026-02-20T23:27:30Z"
+  },
+  {
+    "id": "C1-integ",
+    "name": "C1: agent_api Codex backend stream_exec refactor (integration)",
+    "type": "integration",
+    "phase": "C1",
+    "status": "completed",
+    "description": "Merge C1 code/test, align behavior with the specs, and gate with fmt/clippy/tests/preflight (Linux).",
+    "references": [
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/plan.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/spec_manifest.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/impact_map.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/decision_register.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/contract.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/codex-stream-exec-adapter-protocol-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/platform-parity-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/C1-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C1-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C1 code/test merged and match `C1-spec.md` + `contract.md` + `codex-stream-exec-adapter-protocol-spec.md`",
+      "cargo fmt + clippy + relevant tests executed and logged; make preflight executed on Linux (or explicitly skipped when not on Linux)",
+      "Merged fast-forward into feat/agent-api-codex-stream-exec; tasks/logs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/agent-api-codex-stream-exec && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C1-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C1-integ'",
+      "Create the integration branch and worktree: `git worktree add -b cse-c1-codex-stream-exec-integ wt/cse-c1-codex-stream-exec-integ feat/agent-api-codex-stream-exec`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream C1 code/test branches into the integration worktree and reconcile behavior to the spec/contract/protocol spec.",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
+      "Commit integration changes on branch cse-c1-codex-stream-exec-integ.",
+      "Fast-forward merge cse-c1-codex-stream-exec-integ into feat/agent-api-codex-stream-exec; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C1-integ'.",
+      "Remove worktree wt/cse-c1-codex-stream-exec-integ."
+    ],
+    "worktree": "wt/cse-c1-codex-stream-exec-integ",
+    "integration_task": "C1-integ",
+    "kickoff_prompt": "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C1-integ.md",
+    "depends_on": [
+      "C1-code",
+      "C1-test"
+    ],
+    "concurrent_with": [],
+    "started_at": "2026-02-20T23:27:30Z",
+    "completed_at": "2026-02-20T23:33:33Z"
+  },
+  {
+    "id": "C2-code",
+    "name": "C2: Validation hardening (fixtures + safety) (code)",
+    "type": "code",
+    "phase": "C2",
+    "status": "completed",
+    "description": "Add production-code support needed for C2 validation hardening (fake-binary support, safety/redaction wiring, harness helpers as needed) per C2 spec (production code only; no tests).",
+    "references": [
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/plan.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/spec_manifest.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/impact_map.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/decision_register.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/contract.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/codex-stream-exec-adapter-protocol-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/platform-parity-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/C2-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C2-code.md"
+    ],
+    "acceptance_criteria": [
+      "C2 production changes satisfy `C2-spec.md` and uphold the redaction constraints in `codex-stream-exec-adapter-protocol-spec.md`",
+      "No tests added/modified",
+      "Required commands executed and recorded in `session_log.md`"
+    ],
+    "start_checklist": [
+      "git checkout feat/agent-api-codex-stream-exec && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, decision_register.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C2-code'",
+      "Create the task branch and worktree: `git worktree add -b cse-c2-validation-hardening-code wt/cse-c2-validation-hardening-code feat/agent-api-codex-stream-exec`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings.",
+      "Inside wt/cse-c2-validation-hardening-code, commit C2-code changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/agent-api-codex-stream-exec.",
+      "Checkout feat/agent-api-codex-stream-exec; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-code'.",
+      "Remove worktree wt/cse-c2-validation-hardening-code."
+    ],
+    "worktree": "wt/cse-c2-validation-hardening-code",
+    "integration_task": "C2-integ",
+    "kickoff_prompt": "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C2-code.md",
+    "depends_on": [
+      "C1-integ"
+    ],
+    "concurrent_with": [
+      "C2-test"
+    ],
+    "started_at": "2026-02-20T23:47:23Z",
+    "completed_at": "2026-02-20T23:56:04Z"
+  },
+  {
+    "id": "C2-test",
+    "name": "C2: Validation hardening (fixtures + safety) (test)",
+    "type": "test",
+    "phase": "C2",
+    "status": "completed",
+    "description": "Add fake-binary fixtures and integration tests proving live emission before completion, env precedence, and redaction constraints (tests only).",
+    "references": [
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/plan.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/spec_manifest.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/impact_map.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/decision_register.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/contract.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/codex-stream-exec-adapter-protocol-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/platform-parity-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/C2-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C2-test.md"
+    ],
+    "acceptance_criteria": [
+      "Tests satisfy the C2 acceptance criteria from `C2-spec.md` using cross-platform fake-binary fixtures (no real Codex install required)",
+      "Evidence covers: live emission before completion resolves; env precedence; redaction (no raw JSONL line leakage)",
+      "No production code changes",
+      "Required commands executed and recorded in `session_log.md`"
+    ],
+    "start_checklist": [
+      "git checkout feat/agent-api-codex-stream-exec && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C2-test'",
+      "Create the task branch and worktree: `git worktree add -b cse-c2-validation-hardening-test wt/cse-c2-validation-hardening-test feat/agent-api-codex-stream-exec`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Run required commands (capture outputs): cargo fmt; targeted cargo test commands for suites added/updated (for example: `cargo test -p agent_api --test <name> --features codex`).",
+      "Inside wt/cse-c2-validation-hardening-test, commit C2-test changes (no docs/tasks/session_log edits).",
+      "Outside the worktree, ensure the task branch contains the new commit (fast-forward if needed); do not merge into feat/agent-api-codex-stream-exec.",
+      "Checkout feat/agent-api-codex-stream-exec; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-test'.",
+      "Remove worktree wt/cse-c2-validation-hardening-test."
+    ],
+    "worktree": "wt/cse-c2-validation-hardening-test",
+    "integration_task": "C2-integ",
+    "kickoff_prompt": "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C2-test.md",
+    "depends_on": [
+      "C1-integ"
+    ],
+    "concurrent_with": [
+      "C2-code"
+    ],
+    "started_at": "2026-02-20T23:47:23Z",
+    "completed_at": "2026-02-20T23:55:08Z"
+  },
+  {
+    "id": "C2-integ",
+    "name": "C2: Validation hardening (fixtures + safety) (integration)",
+    "type": "integration",
+    "phase": "C2",
+    "status": "completed",
+    "description": "Merge C2 code/test, align behavior with the specs, and gate with fmt/clippy/tests/preflight (Linux).",
+    "references": [
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/plan.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/spec_manifest.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/impact_map.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/decision_register.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/contract.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/codex-stream-exec-adapter-protocol-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/platform-parity-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/C2-spec.md",
+      "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C2-integ.md"
+    ],
+    "acceptance_criteria": [
+      "C2 code/test merged and match `C2-spec.md` + protocol + platform parity requirements",
+      "cargo fmt + clippy + relevant tests executed and logged; make preflight executed on Linux (or explicitly skipped when not on Linux)",
+      "Merged fast-forward into feat/agent-api-codex-stream-exec; tasks/logs updated"
+    ],
+    "start_checklist": [
+      "git checkout feat/agent-api-codex-stream-exec && git pull --ff-only",
+      "Read plan, tasks.json, session_log.md, C2-spec.md, kickoff prompt",
+      "Set task status to in_progress in tasks.json (orchestration branch)",
+      "Add START entry to session_log.md; commit docs with message 'docs: start C2-integ'",
+      "Create the integration branch and worktree: `git worktree add -b cse-c2-validation-hardening-integ wt/cse-c2-validation-hardening-integ feat/agent-api-codex-stream-exec`.",
+      "Do not edit docs/tasks/session_log.md from the worktree."
+    ],
+    "end_checklist": [
+      "Merge upstream C2 code/test branches into the integration worktree and reconcile behavior to the spec/contract/protocol spec/platform parity spec.",
+      "Run required commands (capture outputs): cargo fmt; cargo clippy --workspace --all-targets --all-features -- -D warnings; relevant tests; make preflight (Linux only).",
+      "Commit integration changes on branch cse-c2-validation-hardening-integ.",
+      "Fast-forward merge cse-c2-validation-hardening-integ into feat/agent-api-codex-stream-exec; update tasks.json to completed; add an END entry to session_log.md with commands/results/blockers; commit docs with 'docs: finish C2-integ'.",
+      "Remove worktree wt/cse-c2-validation-hardening-integ."
+    ],
+    "worktree": "wt/cse-c2-validation-hardening-integ",
+    "integration_task": "C2-integ",
+    "kickoff_prompt": "docs/project_management/packs/active/agent-api-codex-stream-exec/kickoff_prompts/C2-integ.md",
+    "depends_on": [
+      "C2-code",
+      "C2-test"
+    ],
+    "concurrent_with": [],
+    "started_at": "2026-02-20T23:56:04Z",
+    "completed_at": "2026-02-21T00:06:30Z"
+  }
+]

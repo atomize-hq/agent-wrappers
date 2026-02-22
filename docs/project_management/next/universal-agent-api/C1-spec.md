@@ -23,10 +23,16 @@ Implement a Codex backend for the universal API behind a feature flag.
 The Codex backend MUST map events to `AgentWrapperEventKind` using the following rules (best-effort):
 
 - `ThreadStarted`, `TurnStarted`, `TurnCompleted`, `TurnFailed` → `Status`
-- `Error`, `ItemFailed` → `Error`
+- `Error` → `Error`
+- `ItemFailed` → `Error` (default)
+  - Emit `ToolResult(phase="fail", status="failed")` for `ThreadEvent::ItemFailed` only when
+    `item.extra["item_type"]` exists, is a string, and is in
+    `{ "command_execution", "file_change", "mcp_tool_call", "web_search" }`.
 - Item payloads / deltas:
   - `agent_message`, `reasoning` → `TextOutput`
-  - `CommandExecution`, `FileChange`, `McpToolCall`, `WebSearch` → `ToolCall`
+  - `CommandExecution`, `FileChange`, `McpToolCall`, `WebSearch`:
+    - started/delta → `ToolCall`
+    - completed → `ToolResult`
   - `TodoList` → `Status`
   - `Error` → `Error`
 

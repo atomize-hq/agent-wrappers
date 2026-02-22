@@ -384,6 +384,8 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
+          mkdir -p _ci_tmp
+          WORK_QUEUE="_ci_tmp/codex_cli_work_queue.md"
 
           ROOT="cli_manifests/codex"
           REPORT_ANY="${ROOT}/reports/${VERSION}/coverage.any.json"
@@ -438,7 +440,7 @@ jobs:
             echo ""
             echo "### New/Removed Commands vs Baseline"
             echo ""
-          } > _codex_cli_work_queue.md
+          } > "$WORK_QUEUE"
 
           BASELINE_UNION="${ROOT}/snapshots/${BASELINE}/union.json"
           VERSION_UNION="${ROOT}/snapshots/${VERSION}/union.json"
@@ -454,12 +456,12 @@ jobs:
               echo "- Only in new (\`${VERSION}\`):"
               comm -13 /tmp/codex_cmds.baseline.txt /tmp/codex_cmds.new.txt | head -n 25 | sed -e 's/^[[:space:]]*//' -e 's/^/  - /'
               echo ""
-            } >> _codex_cli_work_queue.md
+            } >> "$WORK_QUEUE"
           else
             {
               echo "- Baseline union snapshot not available at \`${BASELINE_UNION}\`."
               echo ""
-            } >> _codex_cli_work_queue.md
+            } >> "$WORK_QUEUE"
           fi
 
           {
@@ -490,7 +492,7 @@ jobs:
             echo ""
             echo "Next: open \`${REPORT_REQUIRED}\` and work missing_commands → missing_flags → missing_args."
             echo ""
-          } >> _codex_cli_work_queue.md
+          } >> "$WORK_QUEUE"
 
       - name: Render PR body from template
         shell: bash
@@ -498,11 +500,23 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
+          mkdir -p _ci_tmp
+          PR_BODY="_ci_tmp/codex_cli_pr_body.md"
+          WORK_QUEUE="_ci_tmp/codex_cli_work_queue.md"
           TEMPLATE="cli_manifests/codex/PR_BODY_TEMPLATE.md"
           test -f "$TEMPLATE"
-          sed "s/{{VERSION}}/${VERSION}/g" "$TEMPLATE" > _codex_cli_pr_body.md
-          test -f _codex_cli_work_queue.md
-          cat _codex_cli_work_queue.md >> _codex_cli_pr_body.md
+          sed "s/{{VERSION}}/${VERSION}/g" "$TEMPLATE" > "$PR_BODY"
+          test -f "$WORK_QUEUE"
+          cat "$WORK_QUEUE" >> "$PR_BODY"
+
+      - name: Upload CI PR-body (debug)
+        uses: actions/upload-artifact@v4
+        with:
+          name: "codex-cli-pr-body-${{ inputs.version }}"
+          if-no-files-found: error
+          path: |
+            _ci_tmp/codex_cli_pr_body.md
+            _ci_tmp/codex_cli_work_queue.md
 
       - name: Upload committed artifact bundle (PR fallback)
         uses: actions/upload-artifact@v4
@@ -530,6 +544,6 @@ jobs:
           base: staging
           commit-message: "chore: codex cli artifacts for ${{ inputs.version }}"
           title: "chore: codex cli artifacts for ${{ inputs.version }}"
-          body-path: _codex_cli_pr_body.md
+          body-path: _ci_tmp/codex_cli_pr_body.md
           branch: "automation/codex-cli-${{ inputs.version }}"
           delete-branch: true

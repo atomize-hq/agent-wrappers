@@ -336,19 +336,6 @@ jobs:
           OUT="docs/project_management/next/claude-code-cli-parity-${VERSION}"
           cargo run -p xtask -- parity-triad-scaffold --root cli_manifests/claude_code --version "$VERSION" --out "$OUT"
 
-      - name: Render summary
-        shell: bash
-        env:
-          VERSION: ${{ inputs.version }}
-        run: |
-          set -euo pipefail
-          {
-            echo "## Claude Code snapshot update"
-            echo ""
-            echo "- version: \`${VERSION}\`"
-            echo "- parity root: \`cli_manifests/claude_code\`"
-          } > _claude_code_update_summary.md
-
       - name: Create update PR
         uses: peter-evans/create-pull-request@v6
         with:
@@ -356,6 +343,10 @@ jobs:
           base: staging
           commit-message: "chore: snapshot claude code ${VERSION}"
           title: "chore: snapshot claude code ${VERSION}"
-          body-path: _claude_code_update_summary.md
+          body: |
+            ## Claude Code snapshot update
+
+            - version: `${{ inputs.version }}`
+            - parity root: `cli_manifests/claude_code`
           branch: "automation/claude-code-${{ inputs.version }}"
           delete-branch: true

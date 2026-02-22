@@ -597,9 +597,15 @@ def main(argv: list[str] | None = None) -> int:
                         k, v = line.split("=", 1)
                         done_info[k.strip()] = v.strip()
 
+            payload = _read_json(queue_path)
+            tasks_all = _load_tasks(payload, repo_root)
+            this = next((t for t in tasks_all if t.id == task_id), None)
+            role = _role_label(this.type if this else "")
+            wt = task_to_worktree.get(task_id, this.worktree if this else "")
+            wt = wt if wt and wt.strip().upper() != "N/A" else ""
+
             status = (done_info.get("status") or "").strip().lower()
             if status != "success":
-                payload = _read_json(queue_path)
                 _update_task(
                     payload,
                     task_id,
@@ -611,18 +617,22 @@ def main(argv: list[str] | None = None) -> int:
                     },
                 )
                 _write_json(queue_path, payload)
+                if session_log.exists():
+                    _session_log_end(
+                        session_log=session_log,
+                        task_id=task_id,
+                        role=role,
+                        worktree=wt,
+                        last_message_path=last_message_path,
+                        extra=[f"- Orchestrator: marked task blocked (worker status={status or 'unknown'})"],
+                    )
+                _git_commit_paths(repo_root, track_paths, f"docs: finish {task_id} (blocked)")
                 continue
-
-            payload = _read_json(queue_path)
-            tasks_all = _load_tasks(payload, repo_root)
-            this = next((t for t in tasks_all if t.id == task_id), None)
-            role = _role_label(this.type if this else "")
-            wt = task_to_worktree.get(task_id, this.worktree if this else "")
 
             # Require a commit on the task branch when a worktree is involved. This prevents
             # "success" exits that still failed to commit due to sandboxed .git restrictions.
-            if this and wt and wt.strip().upper() != "N/A":
-                branch = Path(wt).name
+            if this and wt:
+                branch = Path(wt or this.worktree).name
                 base_sha = task_base_sha.get(task_id) or (run_dir / "base_sha.txt").read_text(encoding="utf-8").strip()
                 branch_sha = _run(["git", "rev-parse", branch], cwd=repo_root, check=False).stdout.strip()
                 if not branch_sha or branch_sha == base_sha:
@@ -646,18 +656,18 @@ def main(argv: list[str] | None = None) -> int:
                             session_log=session_log,
                             task_id=task_id,
                             role=role,
-                            worktree=wt if wt and wt.strip().upper() != "N/A" else "",
+                            worktree=wt,
                             last_message_path=last_message_path,
                             extra=["- Orchestrator: marked task blocked (no commit produced)"],
                         )
-                        _git_commit_paths(repo_root, track_paths, f"docs: finish {task_id} (blocked)")
+                    _git_commit_paths(repo_root, track_paths, f"docs: finish {task_id} (blocked)")
                     # Keep worktree for inspection.
                     continue
 
             # If this is an integration task, fast-forward merge integration branch to base branch.
             extra: list[str] = []
-            if this and this.type.strip().lower() == "integration" and wt and wt.strip().upper() != "N/A":
-                integration_branch = Path(wt).name
+            if this and this.type.strip().lower() == "integration" and wt:
+                integration_branch = Path(wt or this.worktree).name
                 try:
                     _fast_forward_merge(repo_root, base_branch=base_branch, integration_branch=integration_branch)
                     extra.append(f"- Orchestrator: fast-forward merged `{integration_branch}` → `{base_branch}`")
@@ -673,6 +683,16 @@ def main(argv: list[str] | None = None) -> int:
                         },
                     )
                     _write_json(queue_path, payload)
+                    if session_log.exists():
+                        _session_log_end(
+                            session_log=session_log,
+                            task_id=task_id,
+                            role=role,
+                            worktree=wt,
+                            last_message_path=last_message_path,
+                            extra=[f"- Orchestrator: marked task blocked (ff-merge failed: `{integration_branch}` → `{base_branch}`)"],
+                        )
+                    _git_commit_paths(repo_root, track_paths, f"docs: finish {task_id} (blocked)")
                     continue
 
             # Docs END (orchestration branch).
@@ -682,7 +702,7 @@ def main(argv: list[str] | None = None) -> int:
                     session_log=session_log,
                     task_id=task_id,
                     role=role,
-                    worktree=wt if wt and wt.strip().upper() != "N/A" else "",
+                    worktree=wt,
                     last_message_path=last_message_path,
                     extra=extra,
                 )
@@ -690,7 +710,7 @@ def main(argv: list[str] | None = None) -> int:
             _git_commit_paths(repo_root, track_paths, f"docs: finish {task_id}")
 
             # Remove worktree after docs commit (code/test/integration tasks expect cleanup).
-            if wt and wt.strip().upper() != "N/A":
+            if wt:
                 _remove_worktree(repo_root, wt)
 
 

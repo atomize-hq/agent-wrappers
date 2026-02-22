@@ -1,0 +1,74 @@
+name: Agent API Codex stream_exec parity smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/agent-api-codex-stream-exec
+
+permissions:
+  contents: read
+
+jobs:
+  public-api-guard:
+    name: Public API guard (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Guard: no backend types in pub API"
+        shell: bash
+        run: |
+          set -euo pipefail
+          if rg -n -U -P "pub\\s+(?:fn|struct|enum|trait|type|const|static)\\b[^{;]*\\b(?:codex|claude_code)::" crates/agent_api/src; then
+            echo "ERROR: backend crate types referenced in pub item signatures"
+            exit 1
+          fi
+
+          if rg -n "pub\\s+use\\s+.*\\b(?:codex|claude_code)::" crates/agent_api/src; then
+            echo "ERROR: backend crate items are re-exported publicly"
+            exit 1
+          fi
+
+  smoke:
+    name: Smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Linux smoke
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          docs/project_management/packs/active/agent-api-codex-stream-exec/smoke/linux-smoke.sh
+
+      - name: macOS smoke
+        if: ${{ matrix.os == 'macos-latest' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          docs/project_management/packs/active/agent-api-codex-stream-exec/smoke/macos-smoke.sh
+
+      - name: Windows smoke
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: docs/project_management/packs/active/agent-api-codex-stream-exec/smoke/windows-smoke.ps1
+
+  preflight-linux:
+    name: Preflight (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: make preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          make preflight
