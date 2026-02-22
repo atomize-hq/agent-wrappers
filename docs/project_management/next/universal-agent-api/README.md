@@ -3,6 +3,9 @@
 Source ADR:
 - `docs/adr/0009-universal-agent-api.md`
 
+Canonical specs (source of truth):
+- `docs/specs/universal-agent-api/`
+
 Key planning artifacts:
 - `docs/project_management/next/universal-agent-api/plan.md`
 - `docs/project_management/next/universal-agent-api/tasks.json`
@@ -18,4 +21,3 @@ Triads:
 
 Execution gate:
 - Do not start execution triads until `quality_gate_report.md` is reviewed and `RECOMMENDATION: ACCEPT`.
-
