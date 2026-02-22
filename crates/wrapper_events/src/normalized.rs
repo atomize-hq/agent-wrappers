@@ -1,9 +1,11 @@
 use crate::{CapturedRaw, ValidatedChannelString};
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum WrapperAgentKind {
     Codex,
     ClaudeCode,
+    /// Open-set escape hatch so new backends don't require enum edits.
+    Other(String),
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]

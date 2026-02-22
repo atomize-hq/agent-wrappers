@@ -195,7 +195,8 @@ No separate suppression error is emitted when capture is skipped due to budget.
 
 The crate MUST define a minimal normalized envelope:
 
-- `WrapperAgentKind` (at least `Codex`, `ClaudeCode`)
+- `WrapperAgentKind` (open set; at least `Codex`, `ClaudeCode`, and an escape hatch such as
+  `Other(String)`)
 - `NormalizedEventKind` (at least: `TextOutput`, `ToolCall`, `ToolResult`, `Status`, `Error`, `Unknown`)
 - `NormalizationContext` (consumer-supplied attribution)
 - `ValidatedChannelString` with:
@@ -223,4 +224,3 @@ pub struct NormalizedWrapperEvent {
   semantics.
 - With feature `claude_code`, the crate MUST provide a Claude Code adapter that is stateful and
   line-oriented (no batch parsing requirement for ingestion).
-
