@@ -10,6 +10,10 @@ target
 /x86_64-pc-windows-msvc.json
 /_download
 /_extract
+/_ci_tmp
+/_codex_cli_pr_body.md
+/_codex_cli_work_queue.md
+/_claude_code_update_summary.md
 /.codex-bins
 cli_manifests/codex/raw_help/
 *:Zone.Identifier
