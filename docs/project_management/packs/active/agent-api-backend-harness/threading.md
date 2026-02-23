@@ -23,7 +23,14 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, cr
   - **Consumers (seams)**: SEAM-5
   - **Definition**: Deterministic env + timeout normalization:
     - Env precedence: backend config env < request env.
-    - Timeout precedence: request timeout override < backend default timeout (with “absent” preserved explicitly).
+    - Timeout precedence: backend default timeout < request timeout override (with “absent” preserved explicitly).
+    - Effective timeout (normative):
+      - Let `request_timeout = request.timeout: Option<Duration>`.
+      - Let `default_timeout = backend_default_timeout: Option<Duration>`.
+      - Then `effective_timeout` MUST be:
+        - `Some(t)` when `request_timeout == Some(t)` (including `t == Duration::ZERO`, which is an explicit “no timeout” request), else
+        - `default_timeout` when `request_timeout == None`.
+      - Equivalently (Rust): `effective_timeout = request.timeout.or(default_timeout)`.
 
 - **Contract ID**: `BH-C04 stream forwarding + drain-on-drop`
   - **Type**: API/policy

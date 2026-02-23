@@ -46,6 +46,17 @@
 - **Implementation notes**:
   - Keep `validate_and_extract_exec_policy` (or rename) focused on parsing/validation of known keys only; do not duplicate allowlist behavior (`BH-C02` is harness-owned).
   - Preserve current redaction rules by exposing a Codex-specific error-to-event mapping hook (as supported by `BH-C01`).
+  - Codex allowlisted extension keys (v1; must be accepted by BH-C02 when `agent_kind == "codex"`):
+    - Core key:
+      - `agent_api.exec.non_interactive` (boolean; default `true` when absent per `extensions-spec.md`)
+    - Codex backend keys:
+      - `backend.codex.exec.approval_policy` (string enum: `untrusted | on-failure | on-request | never`)
+      - `backend.codex.exec.sandbox_mode` (string enum: `read-only | workspace-write | danger-full-access`)
+    - No other `request.extensions` keys are permitted for the Codex backend in v1.
+  - Single source of truth (v1):
+    - These extension keys MUST appear verbatim in `CodexBackend::capabilities().ids`.
+    - The harness allowlist MUST be provided via `BackendHarnessAdapter::supported_extension_keys()`
+      and MUST match the backend’s advertised capabilities for extension keys (exact string match).
 - **Acceptance criteria**:
   - Adapter declares:
     - `agent_kind == "codex"`,
@@ -59,6 +70,8 @@ Checklist:
 - Identify the minimal adapter surface required by `BH-C01` and implement it in Codex.
 - Ensure extension allowlist includes Codex-only keys (no behavior change).
 - Keep error redaction for Codex stream/exec errors intact.
+ - Keep/extend the existing Codex capability-reporting test in `crates/agent_api/src/backends/codex/tests.rs`
+   so a change to the allowlist is caught immediately.
 
 #### S1.T2 — Rewire `CodexBackend::run` to call the harness entrypoint (remove local run-loop)
 
@@ -95,4 +108,3 @@ Checklist:
 Checklist:
 - Remove/update tests that reference deleted pump helpers.
 - Run: `cargo test -p agent_api --features codex`.
-

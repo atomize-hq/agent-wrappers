@@ -35,7 +35,12 @@
   - Output: `crates/agent_api/src/backend_harness.rs`
 - **Implementation notes**:
   - Prefer a small, explicit signature over a generic framework; this is a risk seam and must stay auditable.
-  - Ensure the mapping hook can emit 0..N `AgentWrapperEvent`s per backend event (if needed by existing backends).
+  - Mapping hook semantics are pinned by BH-C01 (and MUST be implemented as such by the pump):
+    - `BackendHarnessAdapter::map_event(BackendEvent) -> Vec<AgentWrapperEvent>` (0..N)
+    - Mapping is infallible: parse failures MUST surface as `BackendError` at the stream boundary.
+    - Ordering:
+      - Within one backend event, the pump MUST forward events in the order returned by `Vec`.
+      - Across backend events, the pump MUST preserve backend stream order.
   - Keep ownership boundaries explicit: mapping stays backend-owned; bounds and forwarding are harness-owned.
 - **Acceptance criteria**:
   - The signature is compatible with both Codex and Claude adapters once they adopt the harness (SEAM-5).

@@ -24,7 +24,17 @@
 - **Key invariants / rules**:
   - “No behavior change” intent relative to ADR-0013’s user contract: only internal refactor.
     - Note: “prompt must not be empty” is already enforced in both built-in backends today (`crates/agent_api/src/backends/codex.rs`, `crates/agent_api/src/backends/claude_code.rs`); centralizing it in the harness is intended to be behavior-preserving.
-  - Every forwarded event MUST pass through bounds enforcement and redaction rules.
+  - Bounds + redaction enforcement (pinned):
+    - Payloads subject to bounds:
+      - all forwarded `AgentWrapperEvent`s (including harness-synthesized `Error` events)
+      - the published `AgentWrapperCompletion` (completion bounds for `data`)
+    - Ordering is fixed:
+      - mapping (`BackendHarnessAdapter::map_event`) → bounds (`crate::bounds::enforce_event_bounds`) → send (`mpsc::Sender::send`)
+      - completion mapping (`BackendHarnessAdapter::map_completion`) → bounds (`crate::bounds::enforce_completion_bounds`) → publish on completion oneshot
+    - Bounds enforcement MUST occur at exactly one layer after migration:
+      - harness-owned only (in `backend_harness.rs`)
+      - backend modules MUST NOT perform a second bounds pass once they delegate to the harness
+        (avoids double-splitting / double-truncation drift).
 - **Dependencies**
   - Blocks:
     - Future onboarding work: once these migrations land, new backends should be required to use the harness by convention.

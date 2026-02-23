@@ -29,6 +29,83 @@
 - **Rollout/safety**:
   - Treat S2 as the “semantics pin”: avoid changing semantics after S3 lands without updating tests and re-validating against both backends during SEAM-5 adoption.
 
+## Pinned pump semantics (BH-C04) (normative)
+
+This slice pins the exact backpressure + receiver-drop behavior so it is testable and stable.
+
+### Backpressure algorithm while receiver is alive (pinned)
+
+The pump MUST:
+
+- preserve event ordering,
+- drop **no** events while the receiver is alive (except as required by universal bounds enforcement),
+- apply per-event bounds enforcement before forwarding, and
+- apply backpressure by awaiting bounded sends.
+
+Pseudo-code (exact behavior):
+
+```rust
+let mut forward = true;
+while let Some(outcome) = backend_events.next().await {
+    if !forward {
+        // receiver is gone; drain without mapping/sending
+        continue;
+    }
+
+    let mapped: Vec<AgentWrapperEvent> = match outcome {
+        Ok(ev) => adapter.map_event(ev),
+        Err(err) => vec![error_event(adapter.redact_error(Stream, &err))],
+    };
+
+    for e in mapped {
+        for bounded in crate::bounds::enforce_event_bounds(e) {
+            // IMPORTANT: await send (bounded backpressure).
+            if tx.send(bounded).await.is_err() {
+                forward = false;
+                break;
+            }
+        }
+        if !forward {
+            break;
+        }
+    }
+}
+// Finality signal: drop tx only after backend stream ends.
+drop(tx);
+```
+
+Receiver-drop transition (pinned):
+
+- Receiver drop MUST be detected solely via `tx.send(...).await` returning `Err(_)`.
+- After the first send failure:
+  - set `forward=false`,
+  - do not attempt any further sends,
+  - continue draining the backend stream to end.
+
+### Bounds interaction (pinned)
+
+- Bounds are enforced only on forwarded events (`forward == true`).
+- Once `forward == false`, mapping/bounds work that exists only for forwarding MUST stop; the pump
+  drains the typed backend stream without producing any additional universal events.
+
+### Pinned regression tests required by this slice
+
+Add harness-level tests (co-located with the pump in `crates/agent_api/src/backend_harness.rs`):
+
+- `pump_blocks_under_backpressure_until_receiver_polls`:
+  - Use an events channel capacity of `1`.
+  - Feed a backend stream that produces two mapped events quickly.
+  - Assert the pump cannot complete while the receiver is alive but not polling.
+  - Then poll the receiver once and assert the pump completes and ordering is preserved.
+- `pump_stops_forwarding_after_receiver_drop_but_drains_to_end`:
+  - Drop the receiver mid-stream and assert the backend stream is still fully consumed
+    (using a counter inside the fake stream), even though no further sends occur.
+- `pump_enforces_bounds_before_forwarding`:
+  - Use a backend mapping that produces an `AgentWrapperEvent` with `message` larger than the
+    universal bound (4096 bytes).
+  - Assert the received forwarded event is truncated per `crate::bounds` (ends with `…(truncated)`),
+    proving `map_event → enforce_event_bounds → send` ordering.
+
 ## Atomic Tasks
 
 #### S2.T1 — Implement receiver-drop detection + forward-flag behavior

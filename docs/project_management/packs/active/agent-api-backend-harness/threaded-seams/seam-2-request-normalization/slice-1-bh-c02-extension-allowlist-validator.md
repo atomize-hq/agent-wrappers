@@ -31,7 +31,15 @@
   - Output: `crates/agent_api/src/backend_harness.rs` (new or updated internal module)
 - **Implementation notes**:
   - Treat the allowlist as authoritative for the backend, but enforce “unknown key” failure universally (fail closed).
-  - Prefer deterministic iteration for stable error selection (avoid “random first key” from hash iteration).
+  - Deterministic “first unknown key” selection (normative):
+    - Iterate keys in `AgentWrapperRunRequest.extensions.keys()`.
+    - Because `extensions` is a `BTreeMap`, iteration order is ascending `String` order (Rust `Ord`).
+    - The “first unknown key” is therefore the lexicographically-smallest unknown key.
+    - Validation MUST stop at the first unknown key (do not aggregate unknown keys in v1).
+  - Allowlist comparison is exact string match:
+    - case-sensitive
+    - no trimming / Unicode normalization
+    - no key aliases
   - Keep error formatting stable; include `agent_kind` + `key`, but not raw extension values.
 - **Acceptance criteria**:
   - Validation happens before any backend process spawn is attempted.
@@ -42,6 +50,7 @@
 Checklist:
 - Implement: `validate_extension_keys_fail_closed(...)` in the harness.
 - Test: unknown key yields `UnsupportedCapability` before spawn.
+- Test: if multiple unknown keys are present, the reported key is the lexicographically-smallest one.
 - Validate: `make clippy` (warnings are errors).
 - Cleanup: keep policy local and auditable (no per-backend copies).
 

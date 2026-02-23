@@ -29,6 +29,22 @@
   - MUST keep draining until the backend stream ends.
     - No early-stop (“give up”) escape hatch is permitted under `BH-C04`. If an escape hatch is needed in the future, introduce it as an explicit contract change with pinned tests.
   - MUST apply `crate::bounds` to every forwarded event.
+
+## Bounded channel sizing (BH-C04) (pinned)
+
+The harness-owned events channel created by the canonical handle builder (BH-C05) MUST be bounded.
+
+Default capacity (v1; pinned):
+
+- `DEFAULT_EVENT_CHANNEL_CAPACITY: usize = 32`
+
+Configuration (v1):
+
+- Not configurable in v1. Any change to this constant MUST be treated as a behavior change and must
+  update/pin the harness pump backpressure regression tests.
+
+Rationale (non-normative): this preserves current behavior in both built-in backends, which
+currently use `mpsc::channel::<AgentWrapperEvent>(32)`.
 - **Dependencies**
   - Blocks:
     - `SEAM-5` — backend adoption should reuse this pump rather than having per-backend draining loops.

@@ -5,7 +5,10 @@
 - **Goal / user value**: Provide a small, auditable internal interface so each backend adapter is “identity + spawn + map”, and shared invariants are applied consistently by construction.
 - **Scope**
   - In:
-    - Define the internal harness entrypoint(s) and the adapter-facing interface (trait or function bundle) that each backend must implement/provide.
+    - Define the internal harness entrypoint and adapter-facing interface that each backend must provide:
+      - `BackendHarnessAdapter` (`pub(crate)` trait)
+      - `backend_harness::run_harnessed_backend(...) -> Result<AgentWrapperRunHandle, AgentWrapperError>`
+      - All in `crates/agent_api/src/backend_harness.rs` (internal-only).
     - Define the harness-owned lifecycle: request validation hook(s), spawn hook(s), event mapping hook(s), and completion extraction.
     - Define how per-backend capabilities/extension allowlists are surfaced to the harness.
   - Out:
@@ -48,4 +51,3 @@
 ## Downstream decomposition prompt
 
 Decompose this seam into slices that (1) pin the internal interface, (2) implement a minimal harness skeleton, and (3) demonstrate viability by adapting one backend end-to-end without changing observable behavior.
-

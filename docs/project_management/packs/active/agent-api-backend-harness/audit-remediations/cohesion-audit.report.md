@@ -1,5 +1,18 @@
 # Cohesion Audit Report
 
+> Snapshot disclaimer (pinned):
+>
+> - This file is a **historical snapshot** of a cohesion audit run.
+> - It **may be stale** if any file under `docs/project_management/packs/active/agent-api-backend-harness/`
+>   has changed since the “Generated at” timestamp in the Meta section below.
+> - Do not treat this report as normative. The normative sources of truth are the current pack docs
+>   in this directory and the universal specs under `docs/specs/universal-agent-api/`.
+> - Sync rule (lightweight): when changing any file in this pack, regenerate and update **all**
+>   cohesion artifacts together:
+>   - `cohesion-audit.report.md`
+>   - `cohesion-audit.report.json`
+>   - `cohesion-audit.scan.json` (or a successor scan file, if tooling changes)
+
 ## Meta
 - Generated at: 2026-02-23T01:21:09Z
 - Files audited: 28

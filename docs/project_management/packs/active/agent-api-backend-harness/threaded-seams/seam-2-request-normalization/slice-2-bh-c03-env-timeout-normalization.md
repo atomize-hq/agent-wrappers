@@ -58,9 +58,24 @@ Checklist:
   - Output: derived timeout representation consumed by the harness run loop
   - Output: `crates/agent_api/src/backend_harness.rs`
 - **Implementation notes**:
-  - Keep “timeout absent” semantics explicit (avoid implicit “0 means none” conversions).
-  - If the existing model uses different units/types across backends, normalize to a single internal representation in the harness.
-  - The helper should be pure (no tokio timeouts here); wiring of enforcement happens where the harness awaits spawn/stream/completion.
+  - Internal timeout representation (exact):
+    - `NormalizedRequest.effective_timeout: Option<std::time::Duration>`
+    - `None` means “absent” (no request override and no backend default).
+    - `Some(Duration::ZERO)` is an explicit “no timeout” request override.
+  - The helper MUST be pure (no tokio timeouts here); enforcement is backend-owned:
+    - The harness passes `effective_timeout` into the adapter’s `spawn(...)` via `NormalizedRequest`.
+    - The adapter maps that timeout into its wrapper runtime:
+      - Codex wrapper (`codex::CodexClient`): map with `effective_timeout.unwrap_or(Duration::ZERO)`
+        because `Duration::ZERO` means “no timeout” in `crates/codex/src/client_core.rs`.
+      - Claude Code wrapper (`claude_code::ClaudeClient`): pass the `Option<Duration>` directly.
+  - Operations subject to timeout (v1):
+    - The harness does not add a second “overall run” timeout.
+    - Timeouts are enforced by the wrapper runtime (spawned CLI wait / stream/completion as implemented by that wrapper).
+  - Timeout failure behavior (v1):
+    - Any wrapper timeout MUST surface as `BackendError` at either the stream or completion boundary,
+      and MUST be mapped via `BackendHarnessAdapter::redact_error(...)` to:
+      - a safe `AgentWrapperEventKind::Error` event message, and
+      - `AgentWrapperError::Backend { message }` as the completion outcome.
 - **Acceptance criteria**:
   - Request timeout takes precedence when present.
   - Otherwise, the backend default timeout is used.
@@ -71,6 +86,9 @@ Checklist:
 Checklist:
 - Implement: `derive_effective_timeout(request_timeout, backend_default_timeout)` helper.
 - Test: all four presence/absence combinations.
+- Test (timeout enforcement shape): port the existing Codex regression `codex_backend_enforces_timeout_while_draining_events`
+  from `crates/agent_api/src/backends/codex/tests.rs` to a harness-level test once the pump is harness-owned (SEAM-3),
+  asserting that at least one event can be forwarded before a timeout completion error is observed.
 - Validate: no behavior changes intended; keep helper internal.
 - Cleanup: document semantics next to the helper to prevent drift.
 
