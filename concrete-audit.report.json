@@ -1,0 +1,497 @@
+{
+  "meta": {
+    "generated_at": "2026-02-22T20:59:03-05:00",
+    "repo_root": ".",
+    "git_commit": "f9536b189ca0b9c279c9cccebed9bcbe20bfa765",
+    "audited_files": [
+      "docs/project_management/packs/active/agent-api-backend-harness/README.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/cohesion-audit.report.json",
+      "docs/project_management/packs/active/agent-api-backend-harness/cohesion-audit.report.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/cohesion-audit.scan.after.json",
+      "docs/project_management/packs/active/agent-api-backend-harness/cohesion-audit.scan.json",
+      "docs/project_management/packs/active/agent-api-backend-harness/cohesion-remediator.log.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-1-harness-contract.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-4-completion-gating.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-5-backend-adoption-and-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam_map.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threading.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-1-bh-c01-contract-definition.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-2-viability-smoke.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-1-bh-c02-extension-allowlist-validator.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-2-bh-c03-env-timeout-normalization.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-3-normalization-unit-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-1-bh-c04-drain-while-polling-completion.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-3-streaming-pump-unit-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-1-bh-c05-gating-semantics.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-2-bh-c05-canonical-handle-builder.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-3-bh-c05-gating-regression-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-1-codex-backend-migration.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-2-adoption-conformance-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-3-claude-backend-migration.md"
+    ],
+    "definition_of_concrete": "Concrete means an implementer can write code+tests without assumptions: explicit contracts, schemas, defaults, error model, dependencies, and no TBD/maybe/should without conditions."
+  },
+  "issues": [
+    {
+      "id": "CA-0001",
+      "severity": "blocker",
+      "category": "contract",
+      "title": "BH-C01 harness adapter interface is described but not specified as an exact Rust API",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-1-harness-contract.md",
+      "location": { "start_line": 8, "end_line": 24 },
+      "excerpt": "Define the internal harness entrypoint(s) and the adapter-facing interface (trait or function bundle)...",
+      "problem": "The docs explain what BH-C01 must cover, but never pin an exact trait/struct name, method signatures, associated types, bounds, and the harness entrypoint signature. Downstream seams depend on this shape; without it, implementers must invent an API, risking drift and rework.",
+      "required_to_be_concrete": [
+        "Specify the canonical Rust interface name(s) for BH-C01 (trait/struct) and the harness entrypoint function signature",
+        "Define each required method signature, including inputs/outputs, associated types, bounds (Send/Sync/'static), and ownership/lifetime rules for stream and completion",
+        "Define the spawn return shape precisely (types, error types, and how the typed event stream and completion future are produced)",
+        "Define the mapping hook signature (inputs, output shape, and how multiple events are represented)",
+        "Define how the harness obtains `agent_kind`/identity from the adapter (type and formatting)"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-1-bh-c01-contract-definition.md",
+          "location": { "start_line": 31, "end_line": 43 }
+        },
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-2-bh-c05-canonical-handle-builder.md",
+          "location": { "start_line": 6, "end_line": 17 }
+        }
+      ],
+      "notes": "Several slices use placeholder phrases like “trait or closure bundle” and “(or equivalent)” which are fine for brainstorming, but not concrete enough to serve as an execution contract."
+    },
+    {
+      "id": "CA-0002",
+      "severity": "blocker",
+      "category": "schema",
+      "title": "NormalizedRequest is required, but its schema and adapter-policy flow are not defined",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+      "location": { "start_line": 18, "end_line": 28 },
+      "excerpt": "Outputs: A “normalized request” struct (internal) used by the harness to spawn.",
+      "problem": "Multiple seams require a normalized request shape, but the docs never list its fields, types, required/optional values, defaults, or how backend-specific extracted policy is carried from validation into spawn. This blocks writing deterministic tests and makes it easy for backends to continue re-deriving semantics.",
+      "required_to_be_concrete": [
+        "List the exact fields of the internal NormalizedRequest (and their Rust types), including env, timeout, and any other spawn inputs",
+        "Define which raw inputs are preserved vs discarded, and where redacted logging may read from",
+        "Define how backend-specific extracted policy is represented (type parameter/associated type/boxed trait object) and how it reaches spawn",
+        "Define defaults for all optional/absent values (including explicit representation of “absent timeout”)",
+        "Define the normalization function signature that returns NormalizedRequest (and error type)"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-2-bh-c03-env-timeout-normalization.md",
+          "location": { "start_line": 77, "end_line": 89 }
+        },
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-1-bh-c02-extension-allowlist-validator.md",
+          "location": { "start_line": 55, "end_line": 66 }
+        }
+      ],
+      "notes": "SEAM-2 also references “backend config defaults (env, timeout, working_dir, etc.)” but only env/timeout are concretely described elsewhere."
+    },
+    {
+      "id": "CA-0003",
+      "severity": "blocker",
+      "category": "behavior",
+      "title": "Backend stream/completion error propagation model is implied but not specified",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-1-bh-c01-contract-definition.md",
+      "location": { "start_line": 39, "end_line": 42 },
+      "excerpt": "Stream<Item = Result<TypedEvent, BackendErr>>, Future<Output = Result<TypedCompletion, BackendErr>>",
+      "problem": "The typed stream and completion future are modeled as Result-bearing, but the docs do not specify what the harness must do on `BackendErr` from the stream or completion: whether to emit an error event, terminate forwarding, continue draining, resolve completion with an error, or how to reconcile stream-error vs completion-error races.",
+      "required_to_be_concrete": [
+        "Specify the harness behavior when the typed event stream yields an error (terminate vs continue, whether an error is emitted as an event, and finality signaling)",
+        "Specify the harness behavior when the completion future yields an error (how it is mapped and when it becomes observable relative to finality)",
+        "Specify which error source wins if both stream and completion fail (and how that is tested deterministically)",
+        "Specify whether mapping/bounds are applied to error events (if any) and whether the backend process must still be drained after an error",
+        "Specify how these behaviors interact with DR-0012 gating and the consumer-drop escape hatch"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+          "location": { "start_line": 19, "end_line": 31 }
+        },
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-2-bh-c05-canonical-handle-builder.md",
+          "location": { "start_line": 33, "end_line": 39 }
+        }
+      ],
+      "notes": "Without a pinned model, implementations may accidentally diverge by treating stream errors as completion errors (or vice versa), or by exiting the pump early."
+    },
+    {
+      "id": "CA-0004",
+      "severity": "critical",
+      "category": "security",
+      "title": "Error mapping/redaction contract is described but missing concrete rules and payload limits",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-1-bh-c01-contract-definition.md",
+      "location": { "start_line": 76, "end_line": 93 },
+      "excerpt": "Define canonical error-mapping points (redaction boundary)... prevent leaking raw backend lines...",
+      "problem": "The docs mandate redaction and stable errors, but do not define concrete mapping rules: which `AgentWrapperError` variants are used per phase, what fields are included, what text is allowed, and how to bound message sizes/content. This is a correctness and security gap (leakage risk).",
+      "required_to_be_concrete": [
+        "Specify the exact mapping API (function/trait name and signature), including the phase representation",
+        "Define per-phase mapping rules (spawn/stream/completion): which error variant(s) are produced and which fields are populated",
+        "Define redaction requirements (what must never appear) and bounding rules (max sizes, truncation strategy, stable formatting expectations)",
+        "Define whether mapping may emit `AgentWrapperEvent` error events vs returning an error, and when each is used",
+        "Add at least one pinned test case per boundary that proves raw backend output is not surfaced"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-5-backend-adoption-and-tests.md",
+          "location": { "start_line": 24, "end_line": 27 }
+        }
+      ],
+      "notes": "The phrase “optional phase enum” should be replaced with a concrete type choice, because phase context affects testability and consistency."
+    },
+    {
+      "id": "CA-0005",
+      "severity": "critical",
+      "category": "consistency",
+      "title": "BH-C03 timeout precedence is stated inconsistently (cannot implement deterministically)",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threading.md",
+      "location": { "start_line": 20, "end_line": 26 },
+      "excerpt": "Timeout precedence: request timeout override < backend default timeout",
+      "problem": "The threading contract registry appears to invert precedence (\"request override < backend default\") while SEAM-2 repeatedly states “request timeout overrides backend default.” This is a concrete behavior decision; conflicting statements block implementers from writing correct code and tests.",
+      "required_to_be_concrete": [
+        "Restate timeout precedence unambiguously using an explicit effective-timeout expression (e.g., request overrides default, or the opposite)",
+        "Define what “override” means when the request explicitly specifies “no timeout” (and how that differs from absent)",
+        "Define the behavior for all four combinations: request present/absent × default present/absent",
+        "Ensure all mentions of timeout precedence across the pack match the chosen rule",
+        "Pin the chosen semantics with the SEAM-2 unit tests described in S3"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+          "location": { "start_line": 10, "end_line": 13 }
+        },
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-2-bh-c03-env-timeout-normalization.md",
+          "location": { "start_line": 65, "end_line": 67 }
+        }
+      ],
+      "notes": "If the registry line is merely a notation mistake, it still needs correction because it is treated as canonical."
+    },
+    {
+      "id": "CA-0006",
+      "severity": "critical",
+      "category": "behavior",
+      "title": "Timeout derivation is specified, but timeout representation and enforcement behavior are not",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-2-bh-c03-env-timeout-normalization.md",
+      "location": { "start_line": 53, "end_line": 67 },
+      "excerpt": "normalize to a single internal representation... wiring of enforcement happens where the harness awaits spawn/stream/completion",
+      "problem": "The docs defer key decisions: the internal timeout type/units, which phases are timed (spawn/stream/completion), and what happens on timeout (cancellation semantics and error variants). This is required to preserve “no behavior change” during SEAM-5 migration.",
+      "required_to_be_concrete": [
+        "Specify the internal timeout representation and units (exact Rust type)",
+        "Specify which operations are subject to timeout (spawn, stream drain, completion await, or overall run)",
+        "Specify the exact timeout failure behavior (error variant, message fields, and whether backend processes/streams are cancelled or drained)",
+        "Specify how “absent timeout” is represented and how it interacts with explicit “no timeout” requests (if supported)",
+        "Add at least one pinned test that proves the enforcement behavior and error mapping are stable"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+          "location": { "start_line": 25, "end_line": 25 }
+        }
+      ],
+      "notes": "“Pure helper” is a useful constraint, but it doesn’t replace pinning the observable behavior of enforcement."
+    },
+    {
+      "id": "CA-0007",
+      "severity": "critical",
+      "category": "behavior",
+      "title": "Pump backpressure behavior is required but left as “define what happens under backpressure”",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "location": { "start_line": 77, "end_line": 89 },
+      "excerpt": "Define what happens under backpressure (e.g., await send while receiver is alive; once dropped, stop forwarding and drain).",
+      "problem": "Backpressure is explicitly called out as a deadlock risk, but the pack does not choose an algorithm or a guaranteed behavior. This is especially problematic because “keep draining” and “await send” can be in tension while the receiver is alive.",
+      "required_to_be_concrete": [
+        "Specify the exact backpressure algorithm while the receiver is alive (block, drop, batch, or decouple) and justify it against the “keep draining” invariant",
+        "Specify whether event ordering is preserved under backpressure and whether any events may be dropped while the receiver is alive",
+        "Specify how the pump detects receiver drop and transitions behavior under backpressure",
+        "Specify how bounds enforcement interacts with the chosen algorithm (per-event vs pre-batch)",
+        "Add a pinned regression test that would fail if the chosen backpressure behavior changes"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+          "location": { "start_line": 8, "end_line": 15 }
+        }
+      ],
+      "notes": "Marking the backpressure test as “optional” leaves the highest-risk behavior unpinned."
+    },
+    {
+      "id": "CA-0008",
+      "severity": "critical",
+      "category": "contract",
+      "title": "Mapping hook semantics (0..N events, ordering, bounds, mapping failures) are not pinned",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-1-bh-c04-drain-while-polling-completion.md",
+      "location": { "start_line": 30, "end_line": 39 },
+      "excerpt": "Ensure the mapping hook can emit 0..N AgentWrapperEvents per backend event...",
+      "problem": "The pump contract allows mapping to emit multiple events per backend event, but does not specify ordering requirements, whether mapping may be fallible, how to handle mapping errors, or whether bounds/redaction apply before or after mapping. This blocks writing deterministic pump and migration tests.",
+      "required_to_be_concrete": [
+        "Specify whether mapping is infallible or may return an error, and define the harness behavior on mapping failure",
+        "Specify ordering guarantees for emitted events when mapping returns 0..N events (within a source event and across source events)",
+        "Specify whether bounds/redaction are applied per emitted event and whether mapping receives raw or already-bounded data",
+        "Specify whether mapping may emit “error events” and how those interact with completion errors and DR-0012 gating",
+        "Add at least one pinned test asserting the chosen ordering and mapping-error behavior"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+          "location": { "start_line": 20, "end_line": 23 }
+        },
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+          "location": { "start_line": 31, "end_line": 31 }
+        }
+      ],
+      "notes": "The test slice explicitly warns against asserting ordering “unless ordering is explicitly part of the invariant,” which is itself a sign the invariant isn’t pinned yet."
+    },
+    {
+      "id": "CA-0009",
+      "severity": "critical",
+      "category": "operational",
+      "title": "Harness driver task ownership/cancellation semantics are vague (risk of premature drop or leaks)",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-2-bh-c05-canonical-handle-builder.md",
+      "location": { "start_line": 33, "end_line": 40 },
+      "excerpt": "Ensure the driver task is not dropped early (store join handle if needed, or structure it so the pump + completion outlive the caller).",
+      "problem": "The pack requires correctness-sensitive background tasks (pump, completion sender), but does not define who owns them, what triggers cancellation, and what happens when `AgentWrapperRunHandle` is dropped. This can cause premature cancellation (breaking drain/gating semantics) or leaked tasks.",
+      "required_to_be_concrete": [
+        "Specify task ownership: where JoinHandles live and what object drops them (if ever)",
+        "Specify the cancellation policy when the run handle is dropped vs when the consumer drops only the events stream",
+        "Specify shutdown behavior for the pump and completion sender (normal completion, errors, timeouts)",
+        "Specify any resource cleanup requirements (backend process termination vs continued drain) consistent with ADR-0013",
+        "Pin the policy with at least one test that would fail if tasks are dropped prematurely"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-4-completion-gating.md",
+          "location": { "start_line": 19, "end_line": 21 }
+        }
+      ],
+      "notes": "This is distinct from the DR-0012 consumer-drop escape hatch; run-handle drop behavior is a separate lifecycle case that needs explicit policy."
+    },
+    {
+      "id": "CA-0010",
+      "severity": "major",
+      "category": "behavior",
+      "title": "Fail-closed extension allowlist validator requires deterministic “first unknown key” selection but does not define ordering",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-1-bh-c02-extension-allowlist-validator.md",
+      "location": { "start_line": 28, "end_line": 35 },
+      "excerpt": "returns UnsupportedCapability deterministically on the first unknown key... avoid “random first key” from hash iteration",
+      "problem": "The requirement for stable selection is explicit, but the ordering rule is not. If `extensions` is a map type with non-deterministic iteration, implementers must choose whether to sort keys, preserve insertion order, or use a stable iteration structure; tests cannot be written without this decision.",
+      "required_to_be_concrete": [
+        "Specify the ordering rule used to pick the “first unknown key” (e.g., lexicographic sort by key, or preserve request order)",
+        "Specify whether the validator stops at the first unknown key or reports all unknown keys (and the exact error payload shape)",
+        "Specify whether allowlist comparison is exact-match and whether keys are normalized (case sensitivity, trimming, Unicode normalization)",
+        "Add a unit test that would fail if key selection ordering changes"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-3-normalization-unit-tests.md",
+          "location": { "start_line": 30, "end_line": 41 }
+        }
+      ],
+      "notes": "This matters for stable user-facing error selection and for reproducible tests."
+    },
+    {
+      "id": "CA-0011",
+      "severity": "major",
+      "category": "schema",
+      "title": "Extension key matching rules are not defined (case sensitivity, duplicates, namespaces)",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+      "location": { "start_line": 8, "end_line": 9 },
+      "excerpt": "Centralize fail-closed extension key validation against a backend-provided allowlist.",
+      "problem": "The allowlist validator is central to fail-closed behavior, but the pack does not define key matching rules. Without explicit rules (case sensitivity, duplicate keys, allowed namespaces/prefixes), different adapters can interpret the same request differently.",
+      "required_to_be_concrete": [
+        "Specify the extension key string format and comparison rules (case sensitivity and allowed characters)",
+        "Specify behavior for duplicate keys and conflicting values (if representable by the request type)",
+        "Specify whether unknown-key validation is performed before or after any key normalization",
+        "Specify whether backends may accept “aliases” for keys (and if not, state explicitly)"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-1-bh-c02-extension-allowlist-validator.md",
+          "location": { "start_line": 26, "end_line": 40 }
+        }
+      ],
+      "notes": "If the request type is already a `BTreeMap` (or otherwise ordered), call that out explicitly so the ordering and matching rules are obvious."
+    },
+    {
+      "id": "CA-0012",
+      "severity": "major",
+      "category": "consistency",
+      "title": "`agent_kind` identity type is inconsistent (string vs AgentWrapperKind)",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+      "location": { "start_line": 20, "end_line": 25 },
+      "excerpt": "Backend-provided: `agent_kind` string (for error reporting)",
+      "problem": "SEAM-2 calls for an `agent_kind` string, while SEAM-1 slices prefer referencing `AgentWrapperKind`. This affects error payload shape (`UnsupportedCapability(agent_kind, key)`) and test fixtures; implementers must decide which is canonical.",
+      "required_to_be_concrete": [
+        "Choose the canonical identity type used across BH-C01/BH-C02 (string vs `AgentWrapperKind` or another type)",
+        "If a string is used, define its allowed values and formatting (e.g., `\"codex\"`, `\"claude_code\"`)",
+        "If `AgentWrapperKind` is used, define how it is rendered into error fields/messages (and ensure stable formatting)",
+        "Update all references in the pack so the same type is used consistently"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-1-bh-c01-contract-definition.md",
+          "location": { "start_line": 39, "end_line": 41 }
+        }
+      ],
+      "notes": "This is not just naming: it determines which types the adapter contract must expose and how stable errors are produced."
+    },
+    {
+      "id": "CA-0013",
+      "severity": "major",
+      "category": "operational",
+      "title": "Bounded channel sizing is required but no concrete default/cfg point is specified",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+      "location": { "start_line": 15, "end_line": 15 },
+      "excerpt": "Canonical bounded channel sizing guidance and behavior (at minimum: no unbounded buffering).",
+      "problem": "The pack requires bounded channels and mentions a “default and where it can be configured,” but does not specify an actual default capacity, configuration mechanism, or how it is tested. This affects backpressure behavior, memory usage, and correctness under load.",
+      "required_to_be_concrete": [
+        "Specify the default bounded channel capacity (a concrete integer) used by the harness builder",
+        "Specify where/how it can be configured (if it is configurable) and the default when unspecified",
+        "Specify how the chosen capacity interacts with bounds enforcement and backpressure policy",
+        "Add at least one test (or documented invariant) that prevents accidental introduction of unbounded buffering"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-1-bh-c04-drain-while-polling-completion.md",
+          "location": { "start_line": 72, "end_line": 81 }
+        }
+      ],
+      "notes": "If per-backend tuning is intentionally out-of-scope, the harness still needs a single canonical default."
+    },
+    {
+      "id": "CA-0014",
+      "severity": "major",
+      "category": "dependency",
+      "title": "Normalization scope references backend config defaults beyond env/timeout but does not define rules",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+      "location": { "start_line": 25, "end_line": 25 },
+      "excerpt": "Backend config defaults (env, timeout, working_dir, etc.) as currently modeled.",
+      "problem": "The pack implies more config defaults participate in normalization (e.g., working_dir), but only env and timeout have any precedence rules. This leaves implementers to guess which fields should be normalized, potentially causing behavior changes during SEAM-5 migration.",
+      "required_to_be_concrete": [
+        "Enumerate which backend config default fields are included in normalization (env, timeout, working_dir, ...)",
+        "For each included field, specify precedence rules (request vs backend defaults) and default/absent behavior",
+        "If some fields are explicitly excluded from normalization, state that and explain where they are handled instead"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [],
+      "notes": "The phrase “as currently modeled” is not stable enough to be a spec; it requires referencing concrete type names/fields."
+    },
+    {
+      "id": "CA-0015",
+      "severity": "major",
+      "category": "dependency",
+      "title": "Normative dependencies (ADR-0013, DR-0012, universal specs) are referenced without concrete anchors or copied invariants",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/scope_brief.md",
+      "location": { "start_line": 21, "end_line": 27 },
+      "excerpt": "MUST NOT change universal contract/spec semantics (see ADR-0013 “User Contract (Authoritative)”).",
+      "problem": "The pack repeatedly relies on external normative sources for semantics (ADR-0013, DR-0012, `docs/specs/universal-agent-api/*`), but does not pin exact sections/anchors or restate the required invariants in-place. This forces implementers to interpret external docs and increases the risk of implementing the wrong semantics while still “following the pack.”",
+      "required_to_be_concrete": [
+        "Add concrete references (file + section headings or anchors) for ADR-0013 and DR-0012 semantics that this pack must preserve",
+        "Restate (briefly) the specific invariants that are relied on by BH-C02/BH-C03/BH-C04/BH-C05 (not just “see ADR”)",
+        "Identify which document is the local source of truth when there is drift (and how to resolve conflicts)"
+      ],
+      "suggested_evidence_order": ["docs", "codebase", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-4-completion-gating.md",
+          "location": { "start_line": 18, "end_line": 20 }
+        }
+      ],
+      "notes": "The pack README correctly says it’s not normative, but execution still depends on concrete, pinned semantics to avoid accidental changes."
+    },
+    {
+      "id": "CA-0016",
+      "severity": "major",
+      "category": "testing",
+      "title": "Codex allowlisted extension keys are required for behavior-preserving migration but are not enumerated",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-1-codex-backend-migration.md",
+      "location": { "start_line": 49, "end_line": 54 },
+      "excerpt": "the allowlisted extension keys for Codex (including Codex-specific exec policy keys)",
+      "problem": "SEAM-5 claims “no behavior change,” but the Codex allowlist is not listed. That makes it easy to accidentally omit an extension key during migration, changing behavior while still “meeting” the doc’s acceptance criteria.",
+      "required_to_be_concrete": [
+        "Enumerate the full set of Codex allowlisted extension keys that BH-C02 must accept for `agent_kind == \"codex\"`",
+        "Define whether the allowlist is derived from a single source of truth (capabilities reporting) or duplicated across code paths",
+        "Add/point to a test that would fail if the allowlist changes unexpectedly during migration"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-3-claude-backend-migration.md",
+          "location": { "start_line": 41, "end_line": 45 }
+        }
+      ],
+      "notes": "Claude’s slice does enumerate at least one current key; Codex should be treated similarly for symmetry and auditability."
+    },
+    {
+      "id": "CA-0017",
+      "severity": "major",
+      "category": "behavior",
+      "title": "`crate::bounds` enforcement is required, but the scope (events vs completion vs errors) and ordering are not pinned",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-5-backend-adoption-and-tests.md",
+      "location": { "start_line": 24, "end_line": 27 },
+      "excerpt": "Every forwarded event MUST pass through bounds enforcement and redaction rules.",
+      "problem": "Bounds enforcement is mandated in multiple seams, but the pack does not specify whether bounds also apply to completion payloads, error events, or error messages, nor whether bounds are applied before/after mapping and redaction. This affects correctness and security guarantees during migration.",
+      "required_to_be_concrete": [
+        "Specify which payloads must be bounded/redacted (events, completion, error messages, and/or backend-specific payloads)",
+        "Specify the ordering: mapping → bounds → send, or bounds before mapping (and how to test it)",
+        "Specify whether bounds enforcement is applied at exactly one layer (harness) and how backends must avoid double-bounding",
+        "Add a pinned test that fails if a forwarded payload bypasses bounds enforcement"
+      ],
+      "suggested_evidence_order": ["codebase", "docs", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+          "location": { "start_line": 31, "end_line": 31 }
+        }
+      ],
+      "notes": "This issue is about pinning the contract for enforcement, not about changing the bounds implementation."
+    },
+    {
+      "id": "CA-0018",
+      "severity": "minor",
+      "category": "consistency",
+      "title": "Cohesion audit artifact is stale relative to current pack state (can mislead implementers)",
+      "file_path": "docs/project_management/packs/active/agent-api-backend-harness/cohesion-audit.report.md",
+      "location": { "start_line": 87, "end_line": 95 },
+      "excerpt": "CH-0004 — SEAM-5 still marks harness test location as TBD...",
+      "problem": "The pack includes generated cohesion-audit outputs that now contradict the updated seam docs (e.g., it claims SEAM-5 test placement is still TBD). Keeping stale artifacts in an “active” pack directory reduces trust and creates ambiguity about what is current.",
+      "required_to_be_concrete": [
+        "Label the cohesion audit outputs as historical snapshots with an explicit generated-at + “may be stale” disclaimer, or regenerate them after changes",
+        "Ensure generated audit outputs do not assert facts that are no longer true in the same directory",
+        "If audit artifacts are kept, define a lightweight rule for keeping them in sync with pack edits"
+      ],
+      "suggested_evidence_order": ["docs", "codebase", "external", "decision"],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-backend-harness/cohesion-remediator.log.md",
+          "location": { "start_line": 97, "end_line": 112 }
+        }
+      ],
+      "notes": "This is a docs-hygiene issue, but it directly impacts concreteness by introducing contradictory statements in the audited directory."
+    }
+  ]
+}

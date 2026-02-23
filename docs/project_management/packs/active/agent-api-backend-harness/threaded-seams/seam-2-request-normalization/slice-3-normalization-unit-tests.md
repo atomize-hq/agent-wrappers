@@ -77,16 +77,18 @@ Checklist:
   - Output: tests next to normalization entrypoint
 - **Implementation notes**:
   - Add at least one “universal invalid request” check that is backend-agnostic (empty prompt is a good first check per seam brief).
+  - Preserve the current built-in behavior (both backends return `InvalidRequest { message: \"prompt must not be empty\" }` today) unless a deliberate behavior change is explicitly recorded elsewhere.
   - Ensure error does not include raw prompt content.
 - **Acceptance criteria**:
   - The harness rejects invalid universal requests before any spawn attempt.
   - Error is stable and uses an appropriate universal variant (e.g., `InvalidRequest`).
 - **Test notes**: include one valid prompt control case.
 - **Risk/rollback notes**: ensure the rule matches ADR-0013 intent; avoid accidentally adding backend-specific policy here.
+- **Risk/rollback notes**: preserve current built-in backend behavior; avoid adding new universal policy in a “no behavior change” refactor.
+  - Evidence (current behavior): `crates/agent_api/src/backends/codex.rs` and `crates/agent_api/src/backends/claude_code.rs` already reject `request.prompt.trim().is_empty()`.
 
 Checklist:
 - Implement: invalid prompt test(s).
 - Test: run `cargo test -p agent_api` with relevant features.
 - Validate: no backend-specific policy leaks into the universal checks.
 - Cleanup: keep the universal check list short and explicit.
-

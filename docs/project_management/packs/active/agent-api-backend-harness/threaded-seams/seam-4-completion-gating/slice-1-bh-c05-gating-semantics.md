@@ -4,7 +4,7 @@
 - **Scope (in/out)**:
   - In:
     - Document the exact semantics enforced by the canonical gate builder in `run_handle_gate`.
-    - Pin terminology (“stream finality”, “consumer drop”, “completion eligibility”) so SEAM-3 and SEAM-4 talk about the same thing.
+    - Pin terminology (“stream finality”, “consumer drop”, “completion outcome readiness”) so SEAM-3 and SEAM-4 talk about the same thing.
     - Explicitly state the allowed early-completion escape hatch when the consumer drops the events stream.
   - Out:
     - Changing DR-0012 semantics.
@@ -51,7 +51,7 @@ Checklist:
 - **Inputs/outputs**:
   - Output: `crates/agent_api/src/run_handle_gate.rs` (or a short note in `crates/agent_api/src/backend_harness.rs` once it exists)
 - **Implementation notes**:
-  - SEAM-3 guarantee: sender finality happens only after draining is complete (or a pinned eligibility rule), and draining continues after consumer drop.
+  - SEAM-3 guarantee: sender finality (sender drop) happens only after the backend event stream ends, and draining continues after consumer drop.
   - SEAM-4 guarantee: completion cannot be observed before finality signal, except via consumer drop.
 - **Acceptance criteria**:
   - The note is discoverable and referenced by S2/S3 implementation tasks.
@@ -62,4 +62,3 @@ Checklist:
 - Implement: responsibility split note.
 - Validate: no duplication or contradiction with existing comments.
 - Cleanup: keep the note short; avoid re-stating full ADR text.
-

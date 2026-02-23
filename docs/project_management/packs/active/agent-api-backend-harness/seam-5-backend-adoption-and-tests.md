@@ -23,6 +23,7 @@
     - Harness test suite that prevents future drift.
 - **Key invariants / rules**:
   - “No behavior change” intent relative to ADR-0013’s user contract: only internal refactor.
+    - Note: “prompt must not be empty” is already enforced in both built-in backends today (`crates/agent_api/src/backends/codex.rs`, `crates/agent_api/src/backends/claude_code.rs`); centralizing it in the harness is intended to be behavior-preserving.
   - Every forwarded event MUST pass through bounds enforcement and redaction rules.
 - **Dependencies**
   - Blocks:
@@ -33,7 +34,8 @@
   - `crates/agent_api/src/backends/codex.rs`
   - `crates/agent_api/src/backends/claude_code.rs`
   - `crates/agent_api/src/backend_harness.rs` (new)
-  - Harness tests (location TBD; likely `crates/agent_api/src/backend_harness/tests.rs` or `crates/agent_api/tests/*`)
+  - Harness unit tests: co-located via `#[cfg(test)]` in `crates/agent_api/src/backend_harness.rs` (or sibling internal module).
+  - Harness integration/regression tests: `crates/agent_api/tests/*` (existing pattern includes `dr0012_completion_gating.rs`).
 - **Verification**:
   - Run existing backend tests and add new harness tests for:
     - env merge precedence
@@ -49,4 +51,3 @@
 ## Downstream decomposition prompt
 
 Decompose into slices that (1) migrate Codex backend to the harness with zero behavior change, (2) migrate Claude backend, and (3) add harness-wide tests that both backends implicitly rely on.
-

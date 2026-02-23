@@ -10,7 +10,7 @@
     - Ensure the adapter contract shape (`BH-C01`) cannot bypass the canonical gating path.
   - Out:
     - Migrating existing backends to the harness (SEAM-5), except for any minimal wiring needed to compile the harness entrypoint.
-    - Redefining the SEAM-3 completion eligibility rule (treated as upstream).
+    - Redefining the SEAM-3 finality signaling + drain-on-drop semantics (treated as upstream).
 - **Acceptance criteria**:
   - There is exactly one harness entrypoint that constructs `AgentWrapperRunHandle`, and it always uses `build_gated_run_handle`.
   - Backend adapters (per `BH-C01`) provide `(typed stream, completion future, mapping)` but do not construct `AgentWrapperRunHandle` directly.

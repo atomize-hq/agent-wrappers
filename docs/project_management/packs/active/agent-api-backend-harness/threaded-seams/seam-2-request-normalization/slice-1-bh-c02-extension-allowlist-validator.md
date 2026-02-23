@@ -40,7 +40,7 @@
 - **Risk/rollback notes**: internal-only; if ordering issues are discovered, adjust ordering determinism without changing public API.
 
 Checklist:
-- Implement: `validate_extension_keys_fail_closed(...)` (name TBD) in the harness.
+- Implement: `validate_extension_keys_fail_closed(...)` in the harness.
 - Test: unknown key yields `UnsupportedCapability` before spawn.
 - Validate: `make clippy` (warnings are errors).
 - Cleanup: keep policy local and auditable (no per-backend copies).
@@ -58,6 +58,7 @@ Checklist:
     3) backend-specific validation hook (optional),
     4) env/timeout derivation (S2),
     5) spawn.
+  - Traceability note: “prompt must not be empty” is already enforced in both built-in backends today (`crates/agent_api/src/backends/codex.rs`, `crates/agent_api/src/backends/claude_code.rs`). Centralizing it here is intended to preserve behavior, not introduce a new rule.
   - Keep the backend-specific validation hook separate from the unknown-key check to preserve the ownership split.
 - **Acceptance criteria**:
   - Unknown key rejection occurs even if the backend-specific hook is absent or permissive.
@@ -91,4 +92,3 @@ Checklist:
 - Test: minimal helper tests (happy + unhappy paths).
 - Validate: clippy-clean and no new public API.
 - Cleanup: document “shared vs backend-specific” boundary in the harness module docs.
-

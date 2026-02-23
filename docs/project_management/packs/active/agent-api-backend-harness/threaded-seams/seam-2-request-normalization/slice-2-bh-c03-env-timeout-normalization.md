@@ -3,7 +3,7 @@
 - **User/system value**: Ensures deterministic, consistent env and timeout semantics across backends by construction (no per-backend copies), reducing drift and onboarding cost.
 - **Scope (in/out)**:
   - In:
-    - Implement `BH-C03 env merge precedence`: backend config env < request env.
+    - Implement `BH-C03 env merge + timeout derivation`: deterministic env precedence + timeout selection.
     - Implement timeout derivation helpers (request timeout overrides backend default; preserve “absent” semantics consistently).
     - Integrate env + timeout derivation into the harness-owned normalized request shape.
   - Out:
@@ -45,7 +45,7 @@
 - **Risk/rollback notes**: internal-only; safe to tweak representation for determinism.
 
 Checklist:
-- Implement: `merge_env_backend_defaults_then_request(...)` (name TBD).
+- Implement: `merge_env_backend_defaults_then_request(...)`.
 - Test: overlap + non-overlap precedence.
 - Validate: clippy-clean and feature-flag build matrix.
 - Cleanup: keep helper private; expose only via the normalized request struct.
@@ -69,7 +69,7 @@ Checklist:
 - **Risk/rollback notes**: avoid changing observable behavior; if current backends disagree, pin desired behavior in tests before migration (SEAM-5).
 
 Checklist:
-- Implement: `derive_timeout(request_timeout, backend_default_timeout)` helper.
+- Implement: `derive_effective_timeout(request_timeout, backend_default_timeout)` helper.
 - Test: all four presence/absence combinations.
 - Validate: no behavior changes intended; keep helper internal.
 - Cleanup: document semantics next to the helper to prevent drift.
@@ -94,4 +94,3 @@ Checklist:
 - Test: normalization returns derived fields deterministically.
 - Validate: compile under both backend feature flags.
 - Cleanup: keep struct non-`pub`; scope it to the harness module.
-

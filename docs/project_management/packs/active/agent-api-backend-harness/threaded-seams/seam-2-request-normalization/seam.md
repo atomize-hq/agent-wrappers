@@ -25,7 +25,7 @@ Inputs:
 - **Primary interfaces (contracts)**
   - Produced (owned):
     - `BH-C02 extension key allowlist + fail-closed validator`
-    - `BH-C03 env merge precedence`
+    - `BH-C03 env merge + timeout derivation`
   - Consumed (required upstream):
     - `BH-C01 backend harness adapter interface` (SEAM-1)
 - **Key invariants / rules**
@@ -59,7 +59,7 @@ Inputs:
 
 - **Contracts produced (owned)**:
   - `BH-C02 extension key allowlist + fail-closed validator`: implemented in `crates/agent_api/src/backend_harness.rs` as a pre-spawn validator (produced by Slice S1).
-  - `BH-C03 env merge precedence`: implemented in `crates/agent_api/src/backend_harness.rs` as a deterministic env merge helper (produced by Slice S2).
+  - `BH-C03 env merge + timeout derivation`: implemented in `crates/agent_api/src/backend_harness.rs` as deterministic env merge + timeout selection helpers (produced by Slice S2).
 - **Contracts consumed**:
   - `BH-C01 backend harness adapter interface` (SEAM-1): provides `agent_kind` and the supported-extension-keys allowlist surface consumed by S1 and used to build normalized spawn inputs.
 - **Dependency edges honored**:
@@ -73,4 +73,3 @@ Inputs:
 
 - During SEAM-5 migration, delete per-backend copies of extension/env/timeout logic and route through the harness helpers to avoid drift.
 - If a backend currently accepts unknown extension keys, treat that as a bug-fix aligned to ADR-0013 (fail closed), not as a “compat” exception.
-

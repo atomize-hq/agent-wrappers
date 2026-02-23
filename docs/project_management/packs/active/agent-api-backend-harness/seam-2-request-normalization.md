@@ -11,6 +11,7 @@
       - backend config env (defaults) overridden by `AgentWrapperRunRequest.env`.
     - Centralize timeout derivation/wrapping rules (request timeout overrides backend default).
     - Centralize shared “invalid request” checks that are universal (e.g., prompt must be non-empty).
+      - Evidence (current behavior, both backends): `crates/agent_api/src/backends/codex.rs` and `crates/agent_api/src/backends/claude_code.rs` already reject `request.prompt.trim().is_empty()`.
   - Out:
     - Backend-specific validation logic that is truly backend-specific (e.g., Codex’s sandbox/approval enums, Claude’s `permission_mode` mapping) — those remain in the backend adapter but should plug into the harness hook(s).
     - Any change to the normative extension key set.
@@ -53,4 +54,3 @@
 ## Downstream decomposition prompt
 
 Decompose into slices that (1) implement an allowlist-based extension validator, (2) implement env merge + timeout derivation helpers, and (3) add focused unit tests proving deterministic precedence and fail-closed behavior.
-

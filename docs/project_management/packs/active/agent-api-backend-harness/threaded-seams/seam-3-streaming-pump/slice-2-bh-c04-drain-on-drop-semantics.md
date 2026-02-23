@@ -1,6 +1,6 @@
-# S2 — Pin drain-on-drop semantics (forward flag) + completion eligibility rule
+# S2 — Pin drain-on-drop semantics (forward flag) + finality signaling rule
 
-- **User/system value**: Pins the highest-risk semantics explicitly: “stop forwarding when receiver drops, but keep draining,” while ensuring completion readiness is not coupled to receiver liveness in a way that cancels backend work.
+- **User/system value**: Pins the highest-risk semantics explicitly: “stop forwarding when receiver drops, but keep draining,” and makes the finality signal (sender drop) deterministic so SEAM-4 gating has a reliable input.
 - **Scope (in/out)**:
   - In:
     - Fully implement `BH-C04 stream forwarding + drain-on-drop` semantics in the harness pump:
@@ -8,7 +8,7 @@
       - detect receiver drop deterministically,
       - disable forwarding after drop (forward-flag),
       - keep draining the backend stream until end regardless.
-    - Define the pump’s completion “eligibility” rule in one place and document it (how receiver drop and stream finality interact).
+    - Define the pump’s **finality signaling** rule in one place and document it (when the event `Sender` is dropped relative to stream end).
   - Out:
     - The canonical `run_handle_gate` wiring (SEAM-4).
     - Backend adoption/migration (SEAM-5).
@@ -16,8 +16,8 @@
   - Once the downstream `mpsc::Receiver<AgentWrapperEvent>` is dropped, the pump:
     - stops attempting to send,
     - continues draining the backend stream to completion (no cancellation),
-    - continues polling completion (no cancellation).
-  - The pump defines and implements a deterministic “completion eligibility” rule that is compatible with SEAM-4’s gating expectations (DR-0012), and this rule is pinned by S3 tests.
+    - does not treat receiver drop as stream finality (sender drop remains reserved for true finality).
+  - The pump defines and implements a deterministic **finality signaling** rule that is compatible with SEAM-4’s gating expectations (DR-0012), and this rule is pinned by S3 tests.
   - `crate::bounds` is applied to every forwarded event (and forwarding is never attempted without bounds).
   - The behavior is deterministic and does not depend on hash iteration order or timing races for correctness.
 - **Dependencies**:
@@ -42,7 +42,6 @@
   - Keep draining the backend stream even after forward is off; do not exit early.
 - **Acceptance criteria**:
   - Dropping the receiver never stops draining the backend stream.
-  - Dropping the receiver never cancels the completion future.
   - Forwarding attempts stop after receiver drop is detected (no repeated send failures in a tight loop).
 - **Test notes**: pinned by S3 receiver-drop regression test(s).
 - **Risk/rollback notes**: this is the behavior most likely to regress; keep it simple and test-driven.
@@ -53,26 +52,25 @@ Checklist:
 - Validate: `cargo test -p agent_api --features codex,claude_code`.
 - Cleanup: document the forward flag semantics next to the code.
 
-#### S2.T2 — Define and document the pump’s “completion eligibility” rule
+#### S2.T2 — Define and document the pump’s finality signaling rule
 
-- **Outcome**: A single, explicit rule for when the pump resolves its completion output relative to (a) backend stream finality and (b) receiver drop.
+- **Outcome**: A single, explicit rule for when the pump drops the event `Sender` (the finality signal consumed by `run_handle_gate`) relative to backend stream end and receiver drop.
 - **Inputs/outputs**:
   - Output: doc comment + implementation in `crates/agent_api/src/backend_harness.rs`
 - **Implementation notes**:
-  - The rule must be consistent with the seam briefs:
-    - SEAM-3: completion outcome resolves only after backend stream ended *or* after consumer-drop semantics are satisfied.
-    - SEAM-4: completion must not resolve “early” relative to stream finality, except as permitted when the consumer drops the events stream.
-  - Choose one deterministic rule and pin it with tests (S3) so SEAM-4 can treat it as an input contract.
-  - If the rule allows completion to resolve after receiver drop but before stream end, ensure draining still continues to completion (no hidden cancellation).
+  - The rule must be consistent with the canonical lifecycle handshake in `threading.md`:
+    - receiver drop stops forwarding, but is **not** stream finality,
+    - sender drop happens **only** when the backend event stream has ended.
+  - Choose one deterministic rule and pin it with tests (S3) so SEAM-4 can treat it as an upstream input contract (no re-definition in gating code).
 - **Acceptance criteria**:
   - The chosen rule is written down next to the pump implementation and referenced by S3 tests.
   - The rule does not rely on timing accidents (e.g., “usually the stream ends soon”).
-- **Test notes**: S3 must include at least one test that would fail if eligibility changes accidentally.
+- **Test notes**: S3 must include at least one test that would fail if the finality signaling rule changes accidentally.
 - **Risk/rollback notes**: if SEAM-4 requires a different rule, change this task first (definition), then update S3 tests, then update SEAM-4 wiring.
 
 Checklist:
-- Implement: explicit eligibility rule + code path.
-- Test: eligibility rule regression test(s) (S3).
+- Implement: explicit finality signal rule + code path.
+- Test: finality signal regression test(s) (S3).
 - Validate: `make clippy`.
 - Cleanup: keep the rule local and auditable (no distributed gating logic).
 
@@ -96,4 +94,3 @@ Checklist:
 - Test: optional backpressure regression test (S3).
 - Validate: `cargo test -p agent_api --features codex,claude_code`.
 - Cleanup: keep the behavior minimal; revisit tuning during SEAM-5 adoption if needed.
-

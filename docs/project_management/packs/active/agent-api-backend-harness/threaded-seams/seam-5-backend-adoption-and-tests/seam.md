@@ -28,7 +28,7 @@ Inputs:
   - Consumed (required upstream):
     - `BH-C01 backend harness adapter interface` (SEAM-1)
     - `BH-C02 extension key allowlist + fail-closed validator` (SEAM-2)
-    - `BH-C03 env merge precedence` (SEAM-2)
+    - `BH-C03 env merge + timeout derivation` (SEAM-2)
     - `BH-C04 stream forwarding + drain-on-drop` (SEAM-3)
     - `BH-C05 completion gating integration` (SEAM-4)
 - **Key invariants / rules**
@@ -68,7 +68,7 @@ Inputs:
 - **Contracts consumed**:
   - `BH-C01 backend harness adapter interface` (SEAM-1): both Codex and Claude must implement the adapter shape and call the harness entrypoint.
   - `BH-C02 extension key allowlist + fail-closed validator` (SEAM-2): backend modules provide allowlists; the harness rejects unknown keys pre-spawn.
-  - `BH-C03 env merge precedence` (SEAM-2): backend config env < request env, derived once in the harness.
+  - `BH-C03 env merge + timeout derivation` (SEAM-2): env and timeout are derived once in the harness (request overrides defaults; absence preserved explicitly).
   - `BH-C04 stream forwarding + drain-on-drop` (SEAM-3): backend modules must not ship their own drain loops; they route through the shared pump.
   - `BH-C05 completion gating integration` (SEAM-4): backend modules must not custom-gate completion; they use the canonical gate builder.
 - **Dependency edges honored**:
@@ -82,4 +82,3 @@ Inputs:
 
 - After both migrations land, treat “new backend must use the harness” as a convention gate (code review + lightweight conformance checks).
 - If adoption reveals mismatched semantics between Codex and Claude (timeouts, error mapping, ordering), pin the correct harness behavior in the harness-layer tests owned by SEAM-2/3/4 rather than adding per-backend exceptions.
-

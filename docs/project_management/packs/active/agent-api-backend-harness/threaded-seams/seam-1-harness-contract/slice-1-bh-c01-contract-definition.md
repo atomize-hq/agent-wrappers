@@ -68,7 +68,7 @@ Checklist:
 - **Risk/rollback notes**: keep hook minimal; avoid overfitting to current Codex/Claude extension sets.
 
 Checklist:
-- Implement: `supported_extension_keys()` + `validate_backend_request()` hook (names TBD).
+- Implement: `supported_extension_keys()` + `validate_and_extract_backend_policy()` hook.
 - Test: call ordering is possible (validate-before-spawn) in the harness lifecycle.
 - Validate: no policy logic creeps in (unknown-key rejection stays for SEAM-2).
 - Cleanup: document the ownership split (`BH-C02` vs backend-specific validation).
@@ -92,4 +92,3 @@ Checklist:
 - Test: a simulated spawn failure maps deterministically.
 - Validate: no `Debug` dumps of backend errors are surfaced by default.
 - Cleanup: keep the mapping API small and explicit.
-

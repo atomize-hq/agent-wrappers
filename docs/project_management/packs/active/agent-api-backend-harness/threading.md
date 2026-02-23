@@ -17,11 +17,13 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, cr
   - **Consumers (seams)**: SEAM-5
   - **Definition**: Unknown extension keys are rejected pre-spawn as `UnsupportedCapability(agent_kind, key)`.
 
-- **Contract ID**: `BH-C03 env merge precedence`
+- **Contract ID**: `BH-C03 env merge + timeout derivation`
   - **Type**: policy
   - **Owner seam**: SEAM-2
   - **Consumers (seams)**: SEAM-5
-  - **Definition**: Deterministic env precedence: backend config env < request env.
+  - **Definition**: Deterministic env + timeout normalization:
+    - Env precedence: backend config env < request env.
+    - Timeout precedence: request timeout override < backend default timeout (with “absent” preserved explicitly).
 
 - **Contract ID**: `BH-C04 stream forwarding + drain-on-drop`
   - **Type**: API/policy
@@ -34,6 +36,31 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, cr
   - **Owner seam**: SEAM-4
   - **Consumers (seams)**: SEAM-5
   - **Definition**: Run handle completion is gated per DR-0012 semantics via the canonical gate builder.
+
+## Canonical internal lifecycle handshake (SEAM-3 ↔ SEAM-4)
+
+This pack assumes a **split driver** so completion production is never double-driven and DR-0012’s
+consumer-drop escape hatch can resolve completion while draining continues:
+
+- **Pump/drainer** (SEAM-3 / `BH-C04`):
+  - Owns the bounded `mpsc::Sender<AgentWrapperEvent>`.
+  - Forwards bounded mapped events while the receiver is alive.
+  - If the receiver drops, stops forwarding (forward-flag) but **keeps draining** the backend event stream until end.
+  - Drops the `Sender` **only at stream finality** (sender drop is the finality signal consumed by `run_handle_gate`).
+- **Completion sender** (SEAM-4 / `BH-C05`):
+  - Owns and awaits the backend completion future.
+  - Sends the completion outcome on a `oneshot` as soon as it is ready (**independent of draining**).
+  - Does **not** decide stream finality and does **not** drop the event sender.
+- **Gate** (`run_handle_gate::build_gated_run_handle`):
+  - Completion observability is gated on (a) sender drop (“finality”) or (b) consumer drop of the events stream.
+  - This gating is the only “blessed” path for harness-driven backends.
+
+## Canonical test placement (harness-owned invariants)
+
+- **Unit tests** for pure harness helpers (normalization, env/timeout derivation, allowlist checks, pump semantics):
+  - Co-locate as `#[cfg(test)]` in `crates/agent_api/src/backend_harness.rs` (or a sibling internal module).
+- **Integration/regression tests** for DR/protocol behaviors that must not drift (e.g., DR-0012):
+  - Place in `crates/agent_api/tests/*` (see existing `dr0012_completion_gating.rs`).
 
 ## Dependency graph (text)
 
@@ -53,4 +80,3 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, cr
 - **WS-A (Harness primitives)**: SEAM-1..SEAM-4; touch surface: `crates/agent_api/src/backend_harness.rs` (+ any small shared helpers).
 - **WS-B (Backend adoption)**: SEAM-5; touch surface: `crates/agent_api/src/backends/codex.rs`, `.../claude_code.rs` plus backends’ mapping modules if needed.
 - **WS-INT (Integration)**: lands WS-A then WS-B; reconciles behavior to ADR-0013 invariants and runs full test suite.
-

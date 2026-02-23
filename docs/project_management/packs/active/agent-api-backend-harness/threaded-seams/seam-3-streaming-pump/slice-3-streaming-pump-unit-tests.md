@@ -5,9 +5,9 @@
   - In:
     - Add deterministic harness-level tests for:
       - receiver drop mid-stream still drains the backend stream fully,
-      - at least one event can be forwarded while completion is pending (live behavior),
-      - completion eligibility rule (as defined in S2) is enforced and stable.
-    - Use a fake backend stream + completion future fixture (no real backends).
+      - at least one event can be forwarded before stream finality (live behavior),
+      - finality signaling rule (as defined in S2) is enforced and stable.
+    - Use a fake backend stream fixture (no real backends).
   - Out:
     - End-to-end integration tests against real Codex/Claude backends (SEAM-5).
     - `run_handle_gate` gating tests (SEAM-4), except as they consume the pump output later.
@@ -15,9 +15,9 @@
   - Tests live with the harness pump (`crates/agent_api/src/backend_harness.rs` or a sibling internal test module).
   - Tests are deterministic (no flaky timing dependence); use controlled streams and explicit drop points.
   - At least one test fails if the pump stops draining on receiver drop.
-  - At least one test fails if the completion eligibility rule changes unintentionally.
+  - At least one test fails if the finality signaling rule changes unintentionally.
 - **Dependencies**:
-  - Slice S2: pinned semantics for drain-on-drop + completion eligibility rule.
+  - Slice S2: pinned semantics for drain-on-drop + finality signaling rule.
   - Upstream contract: `BH-C01 backend harness adapter interface` (SEAM-1) sufficient to build a minimal harness entrypoint or toy adapter if needed.
 - **Verification**:
   - `cargo test -p agent_api --features codex`
@@ -60,10 +60,8 @@ Checklist:
     - receive/forward a small number of events, then drop the receiver intentionally
   - Assert:
     - the backend stream is fully consumed (drained) even after receiver drop
-    - the pump does not cancel the completion future (it resolves as expected)
 - **Acceptance criteria**:
   - Test fails if the pump exits on receiver drop without draining the stream.
-  - Test fails if the completion future is canceled/dropped prematurely.
 - **Test notes**: keep it deterministic; avoid sleeps.
 - **Risk/rollback notes**: none (tests only).
 
@@ -73,25 +71,24 @@ Checklist:
 - Validate: ensure no timing flake (repeatable locally).
 - Cleanup: assert on structured outcomes, not stringified errors.
 
-#### S3.T3 — Regression test: “live forwarding” + completion eligibility rule
+#### S3.T3 — Regression test: “live forwarding” + finality signaling rule
 
 - **Outcome**: A test that pins:
-  - at least one forwarded event happens while completion is still pending (live behavior), and
-  - the completion output resolves only when the S2 eligibility rule is satisfied.
+  - at least one forwarded event happens before stream finality (“live” behavior), and
+  - the pump’s finality signal (sender drop) occurs only at stream end per S2.
 - **Inputs/outputs**:
   - Output: harness unit test(s) co-located with the pump
 - **Implementation notes**:
-  - Use a completion future that resolves “early” (before the stream ends) and verify the pump’s eligibility rule handles it correctly.
-  - If the eligibility rule involves receiver drop, include the drop path; otherwise include a stream-finality path.
+  - Include a receiver-drop path and verify the pump continues draining to stream end without dropping the sender early.
+  - Assert finality by observing that the receiver does not reach `None` until the backend stream has ended.
 - **Acceptance criteria**:
-  - Test fails if completion becomes eligible too early (relative to the pinned rule).
+  - Test fails if the sender is dropped before the backend stream ends.
   - Test fails if no events are forwarded on the happy path.
 - **Test notes**: keep mapping hook simple; assert on counts rather than exact ordering unless ordering is explicitly part of the invariant.
 - **Risk/rollback notes**: if ordering is discovered to be critical, add an explicit ordering test here before SEAM-5 migration.
 
 Checklist:
-- Implement: live-forwarding test + eligibility rule test.
+- Implement: live-forwarding test + finality signal rule test.
 - Test: run full harness test set under feature matrix.
 - Validate: deterministic assertions.
 - Cleanup: document what invariant each test pins.
-

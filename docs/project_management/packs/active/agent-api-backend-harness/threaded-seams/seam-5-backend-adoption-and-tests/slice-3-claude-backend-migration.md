@@ -55,7 +55,7 @@ Checklist:
   - Output: `crates/agent_api/src/backends/claude_code.rs`
 - **Implementation notes**:
   - Remove backend-local `mpsc` channel plumbing and drain-on-drop loop.
-  - Remove backend-local `tokio::time::timeout` wrapper if the harness owns timeout derivation/enforcement (per `BH-C03` and SEAM-3 pump semantics).
+  - Remove backend-local `tokio::time::timeout` wrapper if the harness owns timeout derivation/enforcement (per `BH-C03` and SEAM-2 normalization semantics).
   - Remove backend-local prompt-empty validation if the harness has a universal invalid request check (SEAM-2).
 - **Acceptance criteria**:
   - No drain loop exists in `claude_code.rs`.
@@ -81,4 +81,3 @@ Checklist:
 Checklist:
 - Keep mapping fixture tests intact.
 - Run: `cargo test -p agent_api --features claude_code`.
-
