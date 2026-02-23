@@ -15,6 +15,9 @@ mod bounds;
 #[cfg(any(feature = "codex", feature = "claude_code"))]
 mod run_handle_gate;
 
+#[cfg(any(feature = "codex", feature = "claude_code"))]
+mod backend_harness;
+
 pub mod backends;
 
 #[cfg(any(feature = "codex", feature = "claude_code"))]
