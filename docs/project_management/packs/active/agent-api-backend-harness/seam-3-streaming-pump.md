@@ -23,7 +23,8 @@
     - A completion outcome that only resolves after the backend stream has ended (or after the consumer drop semantics are satisfied), per DR-0012 wiring expectations.
 - **Key invariants / rules**:
   - MUST NOT cancel the backend process/stream just because the universal receiver is dropped.
-  - MUST keep draining until backend stream ends (or until a defined “give up” condition that is explicitly justified; ADR-0013 implies full drain).
+  - MUST keep draining until the backend stream ends.
+    - No early-stop (“give up”) escape hatch is permitted under `BH-C04`. If an escape hatch is needed in the future, introduce it as an explicit contract change with pinned tests.
   - MUST apply `crate::bounds` to every forwarded event.
 - **Dependencies**
   - Blocks:
@@ -48,4 +49,3 @@
 ## Downstream decomposition prompt
 
 Decompose into slices that (1) extract a shared “drain while polling completion” primitive, (2) pin drop semantics (forward flag), and (3) add a deterministic fake-stream test that fails if draining stops early.
-

@@ -27,7 +27,8 @@ Inputs:
   - Consumed (required upstream): `BH-C01 backend harness adapter interface` (SEAM-1)
 - **Key invariants / rules**
   - MUST NOT cancel the backend process/stream just because the universal receiver is dropped.
-  - MUST keep draining until the backend stream ends (or a justified explicit stop condition is defined; default expectation is full drain per ADR-0013).
+  - MUST keep draining until the backend stream ends.
+    - No early-stop (“give up”) escape hatch is permitted under `BH-C04`. If an escape hatch is needed in the future, introduce it as an explicit contract change with pinned tests.
   - MUST apply `crate::bounds` to every forwarded event.
   - MUST NOT introduce unbounded buffering (bounded channel + explicit backpressure behavior).
 - **Touch surface (code)**
@@ -70,4 +71,3 @@ Inputs:
 
 - In SEAM-5, delete backend-local drain loops and route through the harness pump (treat any semantic diffs as bugs, not “compat exceptions”).
 - In SEAM-4, treat the pump’s completion “eligibility” rule as an input contract and pin gating behavior with a harness regression test.
-

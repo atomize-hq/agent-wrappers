@@ -33,7 +33,9 @@
   - Create:
     - bounded `mpsc::Sender/Receiver<AgentWrapperEvent>`,
     - a `oneshot::Sender/Receiver<Result<AgentWrapperCompletion, AgentWrapperError>>` for the completion outcome,
-    - a harness driver task that runs the SEAM-3 pump and then sends completion.
+    - harness driver task(s) with an explicit lifecycle split:
+      - **Pump/drainer** (SEAM-3): owns the event `Sender`, forwards while the receiver is alive, and keeps draining the backend stream until end even after receiver drop; it drops the `Sender` only at stream finality.
+      - **Completion sender**: awaits the backend completion future and sends the completion outcome on the oneshot as soon as it is ready (independent of draining), so the DR-0012 consumer-drop escape hatch can resolve completion while draining continues in the background.
   - Return `build_gated_run_handle(rx, completion_rx)` as the only `AgentWrapperRunHandle` construction.
   - Ensure the driver task is not dropped early (store join handle if needed, or structure it so the pump + completion outlive the caller).
 - **Acceptance criteria**:
@@ -84,4 +86,3 @@ Checklist:
 - Test: S3 completion gating regression test(s).
 - Validate: no hidden `drop(tx)` scattered across modules.
 - Cleanup: keep lifecycle ordering straightforward.
-
