@@ -24,6 +24,13 @@
   - Calling `cancel()` causes the fake backend process to be terminated best-effort, observed via:
     - the consumer-visible `events` stream reaching `None` within `CANCEL_TERMINATION_TIMEOUT`, and
     - `completion` resolving within `CANCEL_TERMINATION_TIMEOUT`.
+  - Completion gating (DR-0012) is preserved under cancellation:
+    - the `"cancelled"` completion MUST NOT resolve before the underlying backend process exits
+      (this test uses a fake process that blocks until killed).
+  - Cancel-handle lifetime / orthogonality (pinned by `run-protocol-spec.md`):
+    - After obtaining `run_control(...)`, dropping `events` MUST NOT prevent cancellation; calling
+      `cancel()` still triggers best-effort termination and `completion` resolves to the pinned
+      cancellation error (this exercises the DR-0012 “consumer opt-out” path).
   - `completion` resolves to `Err(AgentWrapperError::Backend { message: "cancelled" })`.
   - No raw secret sentinel from backend stderr appears in:
     - any `AgentWrapperEvent.message`,
@@ -81,6 +88,10 @@ Checklist:
   - Call `cancel()` at least twice (idempotence).
   - Drain the `events` stream to `None` and assert it reaches `None` within `CANCEL_TERMINATION_TIMEOUT`.
   - Await `completion` and assert it resolves within `CANCEL_TERMINATION_TIMEOUT`.
+  - Add a second test case for cancel-handle lifetime/orthogonality:
+    - obtain `run_control(...)`,
+    - drop `events` (exercise DR-0012 consumer opt-out behavior),
+    - call `cancel()` and assert `completion` still resolves to `"cancelled"` within `CANCEL_TERMINATION_TIMEOUT`.
   - Leak assertion:
     - assert the sentinel `RAW-STDERR-SECRET-CANCEL` is absent from all event fields.
 - **Acceptance criteria**:

@@ -9,15 +9,16 @@
 - **Scope (in/out)**:
   - In:
     - A regression test that drops `events` early (without calling explicit `cancel()`):
-      - the harness continues draining backend event streams (BH-C04 posture),
-      - completion resolves (DR-0012/BH-C05 opt-out behavior) without deadlocking.
+      - the harness continues draining backend event streams ([BH-C04](../../seam-2-harness-cancel-propagation.md#bh-c04-drain-on-drop-posture) posture),
+      - completion resolves (DR-0012 / [BH-C05](../../seam-2-harness-cancel-propagation.md#bh-c05-completion-gating-consumer-opt-out-dr-0012) opt-out behavior) without deadlocking.
   - Out:
     - Explicit cancellation (covered by `S1`).
 - **Acceptance criteria**:
   - Dropping `events` does not deadlock the run.
   - `completion` resolves within `DROP_COMPLETION_TIMEOUT` after dropping `events`.
 - **Dependencies**:
-  - Existing BH-C04/BH-C05 semantics in `backend_harness/runtime.rs` and `run_handle_gate.rs`.
+  - Existing BH-C04/BH-C05 semantics (defined in the pack’s SEAM-2 doc) in `backend_harness/runtime.rs`
+    and `run_handle_gate.rs`.
 - **Verification**:
   - `cargo test -p agent_api --features codex` (or whichever backend is used for the fake process).
 - **Rollout/safety**:

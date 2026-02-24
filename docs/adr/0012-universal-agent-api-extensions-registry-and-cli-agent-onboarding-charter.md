@@ -9,7 +9,9 @@
 - Owner(s): spensermcconnell
 
 ## Scope
-- Universal spec set:
+- Universal spec set (canonical):
+  - `docs/specs/universal-agent-api/`
+- Planning pack (derived pointers + execution artifacts):
   - `docs/project_management/next/universal-agent-api/`
 - Onboarding charter doc:
   - `docs/project_management/next/cli-agent-onboarding-charter.md`
@@ -17,11 +19,11 @@
 ## Related Docs
 - Universal Agent API baselines:
   - `docs/adr/0009-universal-agent-api.md`
-  - `docs/project_management/next/universal-agent-api/contract.md`
-  - `docs/project_management/next/universal-agent-api/run-protocol-spec.md`
-  - `docs/project_management/next/universal-agent-api/capabilities-schema-spec.md`
+  - `docs/specs/universal-agent-api/contract.md`
+  - `docs/specs/universal-agent-api/run-protocol-spec.md`
+  - `docs/specs/universal-agent-api/capabilities-schema-spec.md`
 - New spec introduced by this ADR:
-  - `docs/project_management/next/universal-agent-api/extensions-spec.md`
+  - `docs/specs/universal-agent-api/extensions-spec.md`
 - Onboarding charter introduced by this ADR:
   - `docs/project_management/next/cli-agent-onboarding-charter.md`
 - Current exec-policy usage in a feature pack (context; not authoritative for core keys):
@@ -29,7 +31,7 @@
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: fc030dc1a8ef3f108a22096b616b11d8c411744da34add4f775f22893ea3c417
+ADR_BODY_SHA256: e335f45f122ecab4ca4ea18efa11bfdacc4df23a62edd389d70251b8bf066b8b
 
 ### Changes (operator-facing)
 
@@ -40,7 +42,7 @@ ADR_BODY_SHA256: fc030dc1a8ef3f108a22096b616b11d8c411744da34add4f775f22893ea3c41
     single authoritative spec (`extensions-spec.md`), and feature packs defer to it.
   - Why: prevents “implied” extension semantics and makes onboarding new CLIs mechanical.
   - Links:
-    - `docs/project_management/next/universal-agent-api/extensions-spec.md`
+    - `docs/specs/universal-agent-api/extensions-spec.md`
 
 - Add a repo-local charter for onboarding new CLI agent crates + universal backend adapters
   - Existing: onboarding rules are implicit (spread across prior packs/ADRs and local convention).
@@ -82,7 +84,7 @@ When this happens:
 
 - `AgentWrapperRunRequest.extensions` remains an open map of keys to JSON values.
 - Canonical semantics for core keys under `agent_api.*` are defined in:
-  - `docs/project_management/next/universal-agent-api/extensions-spec.md`
+  - `docs/specs/universal-agent-api/extensions-spec.md`
 
 Initial core key pinned by this ADR:
 - `agent_api.exec.non_interactive` (boolean; defaults to `true` when absent).
@@ -100,7 +102,7 @@ No new platform divergences are introduced by this ADR (documentation-only chang
 ## Architecture Shape
 
 - Add a new universal spec:
-  - `docs/project_management/next/universal-agent-api/extensions-spec.md`
+  - `docs/specs/universal-agent-api/extensions-spec.md`
     - core extension key registry (schema + defaults + validation)
     - ownership rules for backend keys
 - Add a new charter doc:
@@ -136,4 +138,3 @@ No new platform divergences are introduced by this ADR (documentation-only chang
 
 - No decision register is required: this ADR introduces a single, unambiguous documentation
   ownership policy and a deterministic core extensions registry.
-

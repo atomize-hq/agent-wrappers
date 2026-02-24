@@ -36,7 +36,7 @@
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: f77831dba37ac8c5bcfc5ffb6c10916984e3291aaf0ac8978a0ddf8525050cc4
+ADR_BODY_SHA256: dcbef68108e3c20f1b3b2f981bfe0a6e5513b6283b015d92e8d6a3b997c006a7
 
 ### Changes (operator-facing)
 - Enable live event streaming for Claude Code in the Universal Agent API
@@ -47,7 +47,7 @@ ADR_BODY_SHA256: f77831dba37ac8c5bcfc5ffb6c10916984e3291aaf0ac8978a0ddf8525050cc
     - Current buffered parsing (to be replaced in `agent_api`): `crates/agent_api/src/backends/claude_code.rs`
     - Current buffered stdout collection in Claude wrapper: `crates/claude_code/src/process.rs`
     - Claude wrapper print entrypoint (will gain streaming alternative): `crates/claude_code/src/client/mod.rs`
-    - Run protocol semantics reference (completion vs stream finality): `docs/project_management/next/universal-agent-api/run-protocol-spec.md`
+    - Run protocol semantics reference (completion vs stream finality): `docs/specs/universal-agent-api/run-protocol-spec.md`
 
 ## Problem / Context
 

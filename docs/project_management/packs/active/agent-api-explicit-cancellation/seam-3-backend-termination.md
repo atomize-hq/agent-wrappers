@@ -39,8 +39,10 @@ Failure handling:
   consumer-visible error strings.
 
 Time bounds:
-- “Good enough termination” is defined by SEAM-4 tests (pinned timeouts and pass/fail criteria).
-  Built-in backends MUST satisfy those tests on supported platforms.
+- “Good enough termination” is defined by SEAM-4’s pinned integration test bounds:
+  - `CANCEL_TERMINATION_TIMEOUT` in `threaded-seams/seam-4-tests/slice-1-explicit-cancel-integration.md`
+  - (regression safety) `DROP_COMPLETION_TIMEOUT` in `threaded-seams/seam-4-tests/slice-2-drop-regression.md`
+- Built-in backends MUST satisfy those tests on supported platforms.
 
 ## Backend notes (informative)
 

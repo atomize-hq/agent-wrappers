@@ -4,7 +4,7 @@
 
 - **Seam ID**: SEAM-2
 - **Name**: Harness cancellation propagation (CA-C02)
-- **Goal / value**: Wire explicit cancellation into the backend harness run driver so cancellation is orthogonal to receiver drop and does not regress drain-on-drop (BH-C04) or completion gating/finality (DR-0012 / BH-C05).
+- **Goal / value**: Wire explicit cancellation into the backend harness run driver so cancellation is orthogonal to receiver drop and does not regress drain-on-drop ([BH-C04](../../seam-2-harness-cancel-propagation.md#bh-c04-drain-on-drop-posture)) or completion gating/finality (DR-0012 / [BH-C05](../../seam-2-harness-cancel-propagation.md#bh-c05-completion-gating-consumer-opt-out-dr-0012)).
 - **Type**: risk / integration (runtime driver correctness + safety posture)
 - **Scope**
   - In:
@@ -13,9 +13,10 @@
       - the completion sender task.
     - On cancellation:
       - stop forwarding universal events to the consumer,
-      - continue draining the typed backend event stream to completion (BH-C04 posture),
+      - continue draining the typed backend event stream to completion (BH-C04 posture; see [BH-C04](../../seam-2-harness-cancel-propagation.md#bh-c04-drain-on-drop-posture)),
       - request backend termination best-effort (via a hook owned by SEAM-3 / CA-C03),
-      - resolve `completion` to the pinned cancellation error if the backend does not complete first.
+      - select the pinned cancellation error if cancellation is requested before backend completion,
+        while still obeying DR-0012 completion gating (completion timing is not accelerated by cancellation).
     - Provide a harness entrypoint that returns `AgentWrapperRunControl` for backends implementing `run_control(...)`.
   - Out:
     - Public API surface and normative semantics (SEAM-1 / CA-C01).
@@ -29,7 +30,7 @@
 - **Verification**:
   - Unit tests local to the harness driver (no external processes) that prove:
     - cancellation stops forwarding and closes the universal event stream,
-    - completion resolves to `Err(AgentWrapperError::Backend { message: "cancelled" })` when cancel wins,
+    - completion resolves to `Err(AgentWrapperError::Backend { message: "cancelled" })` when cancellation is requested before backend completion (value selection; timing still gated by DR-0012),
     - draining continues even after cancellation and even after consumer receiver drop.
   - `make check` + `make clippy` for compilation and lint.
 - **Threading constraints**
@@ -70,4 +71,3 @@
     - `S1` and `S2` can proceed immediately after SEAM-1 lands the required public types + crate-private constructors for cancellation wiring.
   - What must wait:
     - Built-in backend adoption of cancellation (SEAM-3) and the pack’s required integration tests (SEAM-4).
-

@@ -4,7 +4,7 @@
 # the ADR_BODY_SHA256 drift guard.
 
 ## Status
-- Status: Draft
+- Status: Draft (implementation plan; normative semantics are already pinned in the Universal Agent API specs)
 - Date (UTC): 2026-02-24
 - Owner(s): spensermcconnell
 
@@ -34,7 +34,7 @@
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 945ad2eb20694418a0c3f233e62c56d7a3645e7f9767ef8a7134382cc5d35eba
+ADR_BODY_SHA256: 2f21a08280b6a4d3bb36e31a099cfa78a880015ede03e7fa1b5a07f318144bd7
 
 ### Changes (operator-facing)
 
@@ -48,6 +48,7 @@ ADR_BODY_SHA256: 945ad2eb20694418a0c3f233e62c56d7a3645e7f9767ef8a7134382cc5d35eb
   - Links:
     - `docs/specs/universal-agent-api/run-protocol-spec.md`
     - `docs/specs/universal-agent-api/contract.md`
+    - `docs/specs/universal-agent-api/capability-matrix.md` (current backend support; generated)
     - `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-1-cancellation-contract.md`
 
 ## Problem / Context
@@ -121,7 +122,8 @@ the base run handle shape stable while enabling orchestrator-grade cancellation.
   - Add a new run entrypoint that returns a cancellation handle alongside the existing run handle.
   - Wire the cancellation signal into the backend harness driver tasks so cancellation can request:
     - backend process termination (best-effort), and
-    - early completion resolution (error) when the run has not already completed.
+    - the pinned cancellation completion *value* (error) when cancellation is requested before the
+      run completes, without relaxing DR-0012 completion gating.
 - Built-in backends (Codex + Claude Code):
   - Must support best-effort termination of spawned CLI processes under cancellation.
 
@@ -129,6 +131,8 @@ the base run handle shape stable while enabling orchestrator-grade cancellation.
 
 - This ADR is implemented via the execution pack:
   - `docs/project_management/packs/active/agent-api-explicit-cancellation/`
+- Current rollout/support status (and the plan-of-record for landing backend support) is tracked in:
+  - `docs/project_management/packs/active/agent-api-explicit-cancellation/README.md`
 - Dependencies:
   - Backend harness structure (ADR-0013) is assumed for wiring cancellation without duplicating
     driver logic per backend.
@@ -138,8 +142,10 @@ the base run handle shape stable while enabling orchestrator-grade cancellation.
 - Cancellation MUST NOT cause raw backend output to leak into events or errors.
 - Cancellation errors are pinned to a safe, bounded message (`"cancelled"`).
 
-## Semantics (to be pinned before implementation)
+## Semantics (pinned; canonical spec)
 
+- Canonical: `docs/specs/universal-agent-api/run-protocol-spec.md` (explicit cancellation semantics +
+  DR-0012 completion gating). This section is a restatement for implementers.
 - Explicit cancellation is invoked only via the explicit cancellation handle.
 - Drop semantics remain “best-effort cancellation” as currently specified by the run protocol, but
   are not required to be reliable.

@@ -22,11 +22,13 @@ Owner(s): spensermcconnell
 - Spec manifest (derived, authoritative for spec set): `docs/project_management/next/universal-agent-api/spec_manifest.md`
 - Impact map (derived, authoritative for touch set + conflicts): `docs/project_management/next/universal-agent-api/impact_map.md`
 - CI checkpoint plan (derived, authoritative for bounded multi-OS gates): `docs/project_management/next/universal-agent-api/ci_checkpoint_plan.md`
-- Contract/spec docs (authoritative):
-  - `docs/project_management/next/universal-agent-api/contract.md`
-  - `docs/project_management/next/universal-agent-api/run-protocol-spec.md`
-  - `docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md`
-  - `docs/project_management/next/universal-agent-api/capabilities-schema-spec.md`
+- Canonical spec docs (authoritative):
+  - `docs/specs/universal-agent-api/contract.md`
+  - `docs/specs/universal-agent-api/run-protocol-spec.md`
+  - `docs/specs/universal-agent-api/event-envelope-schema-spec.md`
+  - `docs/specs/universal-agent-api/capabilities-schema-spec.md`
+  - `docs/specs/universal-agent-api/extensions-spec.md`
+- Platform parity planning (derived, non-normative):
   - `docs/project_management/next/universal-agent-api/platform-parity-spec.md`
 - Manual/smoke validation:
   - `docs/project_management/next/universal-agent-api/manual_testing_playbook.md`
@@ -38,7 +40,7 @@ Owner(s): spensermcconnell
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 89e63c019bf7ebcd192043d60c7e5404127b100f91de1ef3331fd94f68c45bf1
+ADR_BODY_SHA256: 65e730cba10be32d51d978299331925930ede19bd694904fbe208c27e2a21616
 
 ### Changes (operator-facing)
 

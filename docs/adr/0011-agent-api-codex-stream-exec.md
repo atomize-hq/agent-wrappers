@@ -36,11 +36,11 @@
   - Quality gate report: `docs/project_management/packs/active/agent-api-codex-stream-exec/quality_gate_report.md`
 - Baseline universal contract:
   - `docs/adr/0009-universal-agent-api.md`
-  - `docs/project_management/next/universal-agent-api/contract.md`
-  - `docs/project_management/next/universal-agent-api/run-protocol-spec.md`
-  - `docs/project_management/next/universal-agent-api/event-envelope-schema-spec.md`
-  - `docs/project_management/next/universal-agent-api/capabilities-schema-spec.md`
-  - `docs/project_management/next/universal-agent-api/extensions-spec.md`
+  - `docs/specs/universal-agent-api/contract.md`
+  - `docs/specs/universal-agent-api/run-protocol-spec.md`
+  - `docs/specs/universal-agent-api/event-envelope-schema-spec.md`
+  - `docs/specs/universal-agent-api/capabilities-schema-spec.md`
+  - `docs/specs/universal-agent-api/extensions-spec.md`
 - Codex JSONL parsing contract (offline parsing; reused by streaming):
   - `docs/adr/0005-codex-jsonl-log-parser-api.md`
   - `docs/specs/codex-thread-event-jsonl-parser-contract.md`
@@ -56,7 +56,7 @@
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: ba95012b0762bc039fdb1dcd9cd1fe0830c7230c5abe1dc4c6dd8db0d59ab15f
+ADR_BODY_SHA256: 16d5a34efc82f12f49584da22bd4a8544afe795ac7cf5514fcfc922bcfb3f8cf
 
 ### Changes (operator-facing)
 - Codex backend streaming parity in `agent_api`
@@ -74,7 +74,7 @@ ADR_BODY_SHA256: ba95012b0762bc039fdb1dcd9cd1fe0830c7230c5abe1dc4c6dd8db0d59ab15
     - Current manual spawn + ingestion: `crates/agent_api/src/backends/codex.rs#L221`
     - Codex wrapper streaming API: `crates/codex/src/exec.rs#L63`
     - Claude wrapper streaming API (parity reference): `crates/claude_code/src/client/mod.rs#L156`
-    - Universal run/stream finality rule (DR-0012): `docs/project_management/next/universal-agent-api/run-protocol-spec.md`
+    - Universal run/stream finality rule (DR-0012): `docs/specs/universal-agent-api/run-protocol-spec.md`
 
 ## Problem / Context
 
@@ -149,7 +149,7 @@ This ADR changes implementation shape but preserves the public Rust contract of 
 
 ### Platform guarantees
 - Linux/macOS/Windows MUST be supported (GitHub-hosted runner parity is required; see ADR 0009’s
-  platform spec set under `docs/project_management/next/universal-agent-api/`).
+  platform parity planning under `docs/project_management/next/universal-agent-api/platform-parity-spec.md`).
 - Tests MUST NOT require a real Codex binary on CI runners (fixture/fake-binary strategy only).
 
 ## Architecture Shape

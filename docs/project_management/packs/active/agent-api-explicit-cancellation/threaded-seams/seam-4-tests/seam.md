@@ -11,6 +11,7 @@
     - Harness-level integration test using a fake backend process that blocks until killed:
       - calling `cancel()` triggers best-effort termination,
       - `completion` resolves to `Err(AgentWrapperError::Backend { message: "cancelled" })`,
+      - cancel-handle lifetime/orthogonality is exercised (drop `events`, then `cancel()`),
       - no raw backend output leaks into events/errors.
     - Regression test: drop events receiver without calling cancel:
       - draining continues,

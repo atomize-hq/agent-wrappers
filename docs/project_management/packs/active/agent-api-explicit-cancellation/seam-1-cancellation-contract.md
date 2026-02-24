@@ -74,6 +74,15 @@ The existing `AgentWrapperGateway::run(...) -> AgentWrapperRunHandle` remains un
   - If `completion` resolves before cancellation is requested, `cancel()` is a no-op and MUST NOT
     change the already-resolved completion value.
   - Tie-breaking (concurrent readiness): cancellation wins (the pinned `"cancelled"` error).
+- Completion timing / gating (DR-0012, pinned):
+  - Selecting the `"cancelled"` completion *value* does **not** relax DR-0012 completion *timing*.
+  - `completion` MUST NOT resolve until:
+    - the underlying backend process has exited, and
+    - the consumer-visible `events` stream has reached finality (unless the consumer opts out by
+      dropping `events`, in which case completion MAY resolve after process exit without waiting for
+      stream finality).
+  - Canonical: `docs/specs/universal-agent-api/run-protocol-spec.md` (DR-0012 + explicit cancellation
+    completion gating).
 
 ## Relationship to drop semantics
 

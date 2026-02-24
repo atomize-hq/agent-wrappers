@@ -9,8 +9,11 @@
     - Correct behavior on cancellation:
       - stop forwarding events immediately (no new consumer-visible events),
       - close the universal events stream (consumer sees stream end),
-      - keep draining the typed backend stream to completion (BH-C04),
-      - resolve completion to the pinned cancellation error when cancel wins the race.
+      - keep draining the typed backend stream to completion (BH-C04; see [BH-C04](../../seam-2-harness-cancel-propagation.md#bh-c04-drain-on-drop-posture)),
+      - select the pinned cancellation error when cancellation is requested before backend completion,
+        but still obey completion gating (DR-0012 / [BH-C05](../../seam-2-harness-cancel-propagation.md#bh-c05-completion-gating-consumer-opt-out-dr-0012)): completion MUST NOT resolve before the
+        underlying backend process exits, and MUST wait for consumer-visible stream finality unless
+        the consumer opts out by dropping `events`.
     - Keep receiver-drop semantics unchanged (drop is still best-effort cancellation; draining continues).
   - Out:
     - Backend-specific termination mechanics (SEAM-3), beyond invoking a provided “request termination” hook.
@@ -23,6 +26,9 @@
     - if cancellation happens first, `completion` resolves to `Err(AgentWrapperError::Backend { message: "cancelled" })`,
     - if backend completion happens first, cancellation does not change the already-resolved outcome.
   - No late consumer-visible events after cancellation completion is observed.
+  - Cancellation changes the completion *value*, not the completion *timing*:
+    - completion MUST still obey DR-0012 completion gating (wait for backend process exit; and wait
+      for stream finality unless the consumer opts out by dropping `events`).
 - **Dependencies**:
   - `CA-C01` (SEAM-1): pinned `"cancelled"` error string; cancel handle wiring.
   - `CA-C03` (SEAM-3): backend termination hook implementation (invoked here when available).
@@ -63,7 +69,7 @@ Checklist:
   - Input: `crates/agent_api/src/backend_harness/runtime.rs` (`pump_backend_events(...)`)
   - Output: cancellation-aware pump/drainer logic.
 - **Implementation notes**:
-  - Preserve BH-C04 semantics for receiver-drop:
+  - Preserve BH-C04 semantics for receiver-drop (see [BH-C04](../../seam-2-harness-cancel-propagation.md#bh-c04-drain-on-drop-posture)):
     - receiver drop still stops forwarding and keeps draining.
   - On explicit cancellation (distinct from receiver-drop), proactively close the universal stream:
     - drop the `mpsc::Sender` (or equivalent) so the consumer sees `None`.
@@ -84,7 +90,8 @@ Checklist:
 
 - **Outcome**: Completion sender resolves completion to:
   - backend completion when it wins, or
-  - pinned cancellation error when cancel wins.
+  - pinned cancellation error when cancellation is requested before backend completion (value
+    selection), while still obeying DR-0012 completion gating (timing).
 - **Inputs/outputs**:
   - Input: `crates/agent_api/src/backend_harness/runtime.rs` (completion sender task)
   - Output: select/race logic with pinned error and no outcome override after resolution.
@@ -129,4 +136,3 @@ Checklist:
 - Implement: add tests for cancel-wins and completion-wins.
 - Test: run targeted test command(s).
 - Cleanup: keep assertions pinned to exact strings/semantics from CA-C01.
-
