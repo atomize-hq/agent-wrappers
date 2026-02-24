@@ -1,6 +1,7 @@
 use std::{
     env,
     io::{self, Write},
+    time::Duration,
 };
 
 fn write_line(out: &mut impl Write, line: &str) -> io::Result<()> {
@@ -131,6 +132,40 @@ fn main() -> io::Result<()> {
 
     let scenario = env::var("FAKE_CODEX_SCENARIO").unwrap_or_else(|_| "ok".to_string());
     match scenario.as_str() {
+        // Stable scenario name used by SEAM-4 explicit cancellation integration tests.
+        "block_until_killed" => {
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+            {
+                let mut err = io::stderr().lock();
+                writeln!(err, "RAW-STDERR-SECRET-CANCEL")?;
+                err.flush()?;
+            }
+
+            loop {
+                std::thread::sleep(Duration::from_secs(1));
+            }
+        }
+        // Stable scenario name used by SEAM-4 drop receiver regression integration tests.
+        "many_events_then_exit" => {
+            const MANY_EVENTS_N: usize = 200;
+            let padding = "x".repeat(1024);
+
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+            for idx in 0..MANY_EVENTS_N {
+                emit_jsonl(
+                    &mut out,
+                    &format!(
+                        r#"{{"type":"turn.started","thread_id":"thread-1","turn_id":"turn-{idx}","padding":"{padding}"}}"#
+                    ),
+                )?;
+            }
+        }
         "env_assert" => {
             if !assert_env_overrides(&mut out)? {
                 std::process::exit(1);
