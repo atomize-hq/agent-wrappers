@@ -126,6 +126,11 @@ impl AgentWrapperCancelHandle {
     /// Requests best-effort cancellation of the underlying backend process.
     ///
     /// This method MUST be idempotent.
+    ///
+    /// If cancellation is requested before `AgentWrapperRunHandle.completion` resolves, the completion
+    /// MUST resolve to `Err(AgentWrapperError::Backend { message: "cancelled" })`.
+    ///
+    /// Canonical semantics: `run-protocol-spec.md` ("Explicit cancellation semantics").
     pub fn cancel(&self);
 }
 
@@ -217,7 +222,12 @@ impl AgentWrapperGateway {
     /// This MUST return `AgentWrapperError::UnknownBackend { agent_kind }` when no backend is registered
     /// for the requested `agent_kind`, where `agent_kind == <requested AgentWrapperKind>.as_str().to_string()`.
     ///
-    /// Cancellation is best-effort and is defined by `run-protocol-spec.md`.
+    /// If the resolved backend does not advertise `agent_api.control.cancel.v1`, this MUST return:
+    /// `AgentWrapperError::UnsupportedCapability { agent_kind, capability: "agent_api.control.cancel.v1" }`,
+    /// where `agent_kind == <requested AgentWrapperKind>.as_str().to_string()`.
+    ///
+    /// Cancellation is best-effort and is defined by `run-protocol-spec.md`, including the pinned
+    /// `"cancelled"` completion outcome.
     pub fn run_control(&self, agent_kind: &AgentWrapperKind, request: AgentWrapperRunRequest) -> Pin<Box<dyn Future<Output = Result<AgentWrapperRunControl, AgentWrapperError>> + Send + '_>>;
 }
 ```

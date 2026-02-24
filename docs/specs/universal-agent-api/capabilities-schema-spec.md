@@ -96,6 +96,10 @@ This section defines stable universal capability ids and their minimum semantics
   - A backend that advertises this capability MUST support explicit cancellation via
     `AgentWrapperGateway::run_control(...)` and `AgentWrapperCancelHandle::cancel()` per
     `run-protocol-spec.md`.
+  - `AgentWrapperCancelHandle::cancel()` MUST be idempotent and best-effort.
+  - If cancellation is requested before `AgentWrapperRunHandle.completion` resolves,
+    `AgentWrapperRunHandle.completion` MUST resolve to:
+    `Err(AgentWrapperError::Backend { message: "cancelled" })`.
   - A backend that does not support explicit cancellation MUST NOT advertise this capability.
 - `agent_api.tools.structured.v1`:
   - A backend that advertises this capability MUST attach `AgentWrapperEvent.data` with
