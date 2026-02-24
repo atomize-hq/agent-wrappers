@@ -178,7 +178,8 @@ pub trait AgentWrapperBackend: Send + Sync {
     /// Starts a run and returns a handle plus an explicit cancellation handle.
     ///
     /// Backends that do not advertise `agent_api.control.cancel.v1` MUST return:
-    /// `AgentWrapperError::UnsupportedCapability { capability: "agent_api.control.cancel.v1" }`.
+    /// `AgentWrapperError::UnsupportedCapability { agent_kind, capability: "agent_api.control.cancel.v1" }`,
+    /// where `agent_kind == self.kind().as_str().to_string()`.
     fn run_control(&self, _request: AgentWrapperRunRequest) -> Pin<Box<dyn Future<Output = Result<AgentWrapperRunControl, AgentWrapperError>> + Send + '_>> {
         let agent_kind = self.kind().as_str().to_string();
         Box::pin(async move {
@@ -212,6 +213,9 @@ impl AgentWrapperGateway {
     pub fn run(&self, agent_kind: &AgentWrapperKind, request: AgentWrapperRunRequest) -> Pin<Box<dyn Future<Output = Result<AgentWrapperRunHandle, AgentWrapperError>> + Send + '_>>;
 
     /// Starts a run and returns a control object including an explicit cancellation handle.
+    ///
+    /// This MUST return `AgentWrapperError::UnknownBackend { agent_kind }` when no backend is registered
+    /// for the requested `agent_kind`, where `agent_kind == <requested AgentWrapperKind>.as_str().to_string()`.
     ///
     /// Cancellation is best-effort and is defined by `run-protocol-spec.md`.
     pub fn run_control(&self, agent_kind: &AgentWrapperKind, request: AgentWrapperRunRequest) -> Pin<Box<dyn Future<Output = Result<AgentWrapperRunControl, AgentWrapperError>> + Send + '_>>;
@@ -337,7 +341,8 @@ pub mod backends {
 - Every supported `AgentWrapperRunRequest.extensions` key MUST correspond 1:1 to a capability id of the
   same string present in `AgentWrapperCapabilities.ids`.
 - If a request includes an extension key that is not present in `AgentWrapperCapabilities.ids`, the backend
-  MUST fail-closed with `AgentWrapperError::UnsupportedCapability { capability: <key> }`.
+  MUST fail-closed with `AgentWrapperError::UnsupportedCapability { agent_kind, capability: <key> }`,
+  where `agent_kind == <this backend's AgentWrapperKind>.as_str().to_string()`.
 - If an extension key is supported but its value is invalid, the backend MUST return
   `AgentWrapperError::InvalidRequest`.
 - Validation of extension keys and values MUST occur before spawning any backend process.

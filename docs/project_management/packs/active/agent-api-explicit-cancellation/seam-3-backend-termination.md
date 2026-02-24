@@ -2,11 +2,45 @@
 
 This seam pins what built-in backends must provide to support explicit cancellation.
 
-## Requirements
+## Definitions (v1, normative)
 
-- Built-in backends MUST support best-effort termination of the spawned CLI process.
-- Termination MUST preserve the redaction/safety posture:
-  - cancellation errors must not leak raw backend output.
+- **Termination hook**: the backend-owned action invoked by the harness when
+  `AgentWrapperCancelHandle::cancel()` is called.
+- **Best-effort termination**: the termination hook requests that the spawned CLI process stop
+  executing and reach process exit, without making any new consumer-visible outputs observable.
+
+## Requirements (v1, normative)
+
+Applicability:
+- A built-in backend MUST implement these requirements if it advertises `agent_api.control.cancel.v1`.
+
+Minimum termination behavior (testable):
+- The backend MUST provide a termination hook that attempts to terminate the spawned CLI process.
+- The termination hook MUST be:
+  - idempotent (safe to call multiple times), and
+  - non-blocking (it MUST return without awaiting process exit or stream draining).
+- The termination hook MUST NOT depend on consumer-side drop semantics (dropping `events` / dropping
+  the run handle).
+
+Observable behavior constraints:
+- Termination MUST NOT change the pinned cancellation completion outcome (`"cancelled"`) defined by:
+  - `docs/specs/universal-agent-api/run-protocol-spec.md`, and
+  - `SEAM-1` / `CA-C01` in this pack.
+- Termination MUST NOT cause raw backend stdout/stderr (or raw JSONL lines) to appear in:
+  - `AgentWrapperEvent.message`, `AgentWrapperEvent.text`, or `AgentWrapperEvent.data`, or
+  - `AgentWrapperError::Backend.message`.
+
+Failure handling:
+- If the termination hook fails to signal/kill the process (implementation-defined reasons), the
+  backend MUST:
+  - continue to obey the redaction constraints above, and
+  - continue to obey SEAM-2 driver semantics (no deadlocks; draining continues).
+- Termination failures MAY be logged internally, but MUST NOT be surfaced via non-pinned
+  consumer-visible error strings.
+
+Time bounds:
+- “Good enough termination” is defined by SEAM-4 tests (pinned timeouts and pass/fail criteria).
+  Built-in backends MUST satisfy those tests on supported platforms.
 
 ## Backend notes (informative)
 

@@ -1,0 +1,363 @@
+{
+  "meta": {
+    "paths": [
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/README.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/decision_register.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threading.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam_map.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam-1-cancellation-contract.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam-2-harness-cancel-propagation.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam-3-backend-termination.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam-4-tests.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams",
+      "docs/specs/universal-agent-api/README.md",
+      "docs/specs/universal-agent-api/contract.md",
+      "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "docs/specs/universal-agent-api/extensions-spec.md",
+      "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "docs/wi/wi-0002-explicit-cancellation-api.md"
+    ],
+    "extensions": [
+      ".md"
+    ],
+    "files_scanned": [
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0014-agent-api-explicit-cancellation.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/README.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/decision_register.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/scope_brief.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/seam-1-cancellation-contract.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/seam-2-harness-cancel-propagation.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/seam-3-backend-termination.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/seam-4-tests.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/seam_map.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/seam.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/slice-1-canonical-contracts.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/slice-2-agent-api-surface.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/seam.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/slice-1-driver-semantics.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/slice-2-harness-control-entrypoint.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-3-backend-termination/seam.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-3-backend-termination/slice-1-backend-adoption.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-3-backend-termination/slice-2-termination-hooks.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-4-tests/seam.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-4-tests/slice-1-explicit-cancel-integration.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-4-tests/slice-2-drop-regression.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threading.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/README.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/wi/wi-0002-explicit-cancellation-api.md"
+    ],
+    "match_count": 38
+  },
+  "matches": [
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/seam.md",
+      "line": 28,
+      "col": 5,
+      "kind": "vague_quantity",
+      "text": "Minimal",
+      "line_text": "- Minimal contract tests cover `run_control(...)` error behavior for unknown backend and unsupported capability."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/slice-1-canonical-contracts.md",
+      "line": 66,
+      "col": 47,
+      "kind": "unbounded",
+      "text": "as needed",
+      "line_text": "- Implement: update types/signatures/comments as needed."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/slice-1-canonical-contracts.md",
+      "line": 87,
+      "col": 51,
+      "kind": "unbounded",
+      "text": "as needed",
+      "line_text": "- Implement: update explicit cancellation section as needed."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/slice-2-agent-api-surface.md",
+      "line": 9,
+      "col": 11,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "- Add minimal core contract tests for `run_control(...)` error behavior (not harness-level cancellation behavior)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/slice-2-agent-api-surface.md",
+      "line": 37,
+      "col": 94,
+      "kind": "unbounded",
+      "text": "as needed",
+      "line_text": "- Output: new `AgentWrapperCancelHandle` type + internal representation and constructor(s) as needed."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/slice-2-agent-api-surface.md",
+      "line": 88,
+      "col": 22,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- The default impl should include `agent_kind` populated from `self.kind()`."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/slice-2-agent-api-surface.md",
+      "line": 120,
+      "col": 16,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- Core tests should cover unknown backend and missing capability."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/slice-1-driver-semantics.md",
+      "line": 44,
+      "col": 60,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- “late subscribers” (tasks created after cancellation should observe it)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/slice-1-driver-semantics.md",
+      "line": 54,
+      "col": 15,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "- Test: add a minimal unit test for idempotence/late subscriber behavior."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/slice-2-harness-control-entrypoint.md",
+      "line": 29,
+      "col": 92,
+      "kind": "unbounded",
+      "text": "as needed",
+      "line_text": "- Input: `crates/agent_api/src/backend_harness/runtime.rs` (and re-exports from `mod.rs` as needed)"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/slice-2-harness-control-entrypoint.md",
+      "line": 32,
+      "col": 18,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- The function should:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/slice-2-harness-control-entrypoint.md",
+      "line": 58,
+      "col": 12,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- SEAM-3 should:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-3-backend-termination/slice-2-termination-hooks.md",
+      "line": 46,
+      "col": 91,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "- Medium risk: incorrect handling can lead to stalled completion/draining; keep changes minimal and backed by SEAM-4 integration tests."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-3-backend-termination/slice-2-termination-hooks.md",
+      "line": 50,
+      "col": 39,
+      "kind": "vague_quantity",
+      "text": "around",
+      "line_text": "- Test: add a backend-local unit test around termination hook idempotence (if feasible)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-3-backend-termination/slice-2-termination-hooks.md",
+      "line": 87,
+      "col": 22,
+      "kind": "unbounded",
+      "text": "as needed",
+      "line_text": "- wrapper crates as needed"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-4-tests/slice-1-explicit-cancel-integration.md",
+      "line": 85,
+      "col": 73,
+      "kind": "unbounded",
+      "text": "as needed",
+      "line_text": "- Implement: add test + helpers (`any_event_contains`, `drain_to_none`) as needed."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-4-tests/slice-1-explicit-cancel-integration.md",
+      "line": 96,
+      "col": 67,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Use `FAKE_CLAUDE_SCENARIO` to select a long-running scenario (may require adding one)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-4-tests/slice-2-drop-regression.md",
+      "line": 65,
+      "col": 28,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "- Cleanup: keep assertions minimal (“resolves” + no deadlock) to avoid flake."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "line": 9,
+      "col": 61,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "This document is normative and uses RFC 2119 keywords (MUST/SHOULD/MUST NOT)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "line": 56,
+      "col": 25,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- New universal buckets SHOULD be introduced in this spec before shipping new `agent_api.*` ids."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "line": 63,
+      "col": 76,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Backend-specific capability ids are stable per backend once shipped, but may be added over time."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 10,
+      "col": 92,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "Normative language: this contract uses RFC 2119 requirement keywords (`MUST`, `MUST NOT`, `SHOULD`)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 141,
+      "col": 19,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "/// A backend may populate `final_text` when it can deterministically extract it."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 229,
+      "col": 15,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- `message` SHOULD be `Some`."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 236,
+      "col": 15,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- `message` MAY be `Some` (safe/redacted) for operator-facing summaries, but SHOULD be `None` by default."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 236,
+      "col": 80,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- `message` MAY be `Some` (safe/redacted) for operator-facing summaries, but SHOULD be `None` by default."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 239,
+      "col": 3,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- MAY be present for any kind."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 372,
+      "col": 97,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- If `AgentWrapperRunRequest.working_dir` is absent: backend-specific default applies (wrappers may use temp dirs)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 15,
+      "col": 73,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "Normative language: RFC 2119 requirement keywords (`MUST`, `MUST NOT`, `SHOULD`)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 63,
+      "col": 67,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Backend extension keys are stable per backend once shipped, but may be added over time."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 77,
+      "col": 8,
+      "kind": "hedge",
+      "text": "could",
+      "line_text": "that could hang automation (approvals/permissions prompts)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 78,
+      "col": 27,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- When `false`, a backend MAY allow interactive behavior, but MUST remain deterministic with"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 98,
+      "col": 38,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "3) Update any built-in backends that should support the key:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 9,
+      "col": 61,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "This document is normative and uses RFC 2119 keywords (MUST/SHOULD/MUST NOT)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 29,
+      "col": 72,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- If a backend does not include `agent_api.events.live`, the backend MAY buffer and emit events"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 32,
+      "col": 8,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- it may buffer events and emit them post-hoc (after the underlying process exits)"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 53,
+      "col": 25,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "signal; the backend MAY attempt to terminate the underlying process."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 90,
+      "col": 5,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- MAY be populated when the backend can deterministically extract a “final” text response."
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "tool": "workstream-orchestrator",
+    "generated_at": "",
+    "repo_root": "/Users/spensermcconnell/__Active_Code/codex-wrapper",
+    "docset": "explicit cancellation (agent_api)",
+    "outputs_dir": "docs/project_management/packs/active/agent-api-explicit-cancellation/audit-reports"
+  },
+  "workstreams": [
+    {
+      "id": "WS-CX",
+      "title": "Contradictions audit",
+      "touch_surface": "docs"
+    },
+    {
+      "id": "WS-CH",
+      "title": "Cohesion audit",
+      "touch_surface": "docs"
+    },
+    {
+      "id": "WS-CA",
+      "title": "Concrete audit",
+      "touch_surface": "docs"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "AUDIT-CX",
+      "order": 10,
+      "status": "done",
+      "depends_on": [],
+      "workstream_id": "WS-CX",
+      "kickoff_prompt": "$contradictions-audit: Audit the explicit cancellation docset for contradictions.\n\nHard rules:\n- Audit only. Do NOT edit existing files.\n- You MAY create/overwrite only these outputs:\n  - `docs/project_management/packs/active/agent-api-explicit-cancellation/audit-reports/contradictions-audit.report.json`\n  - `docs/project_management/packs/active/agent-api-explicit-cancellation/audit-reports/contradictions-audit.report.md`\n  - (optional) `docs/project_management/packs/active/agent-api-explicit-cancellation/audit-reports/contradictions-audit.scan.json`\n- Every issue MUST include exact citations: file + line_start/line_end + short excerpt.\n- Do not invent requirements; do not resolve contradictions; only report them.\n\nAuthoritative instructions:\n- Read and follow: `/Users/spensermcconnell/.codex/skills/contradictions-audit/SKILL.md`\n- Use report format: `/Users/spensermcconnell/.codex/skills/contradictions-audit/references/report-format.md`\n\nAudited file set (use these exact paths; include them in meta.files):\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/README.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/scope_brief.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/decision_register.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/threading.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam_map.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-1-cancellation-contract.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-2-harness-cancel-propagation.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-3-backend-termination.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-4-tests.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/`\n- `docs/specs/universal-agent-api/README.md`\n- `docs/specs/universal-agent-api/contract.md`\n- `docs/specs/universal-agent-api/run-protocol-spec.md`\n- `docs/specs/universal-agent-api/capabilities-schema-spec.md`\n- `docs/specs/universal-agent-api/extensions-spec.md`\n- `docs/adr/0014-agent-api-explicit-cancellation.md`\n- `docs/wi/wi-0002-explicit-cancellation-api.md`\n\nNotes:\n- Prefer high-confidence, scope-aware issues (scope_mismatch is valid if scope is missing).\n- For line numbers, use `nl -ba <file>` and cite the relevant range.\n\nVerification steps:\n- `python3 -m json.tool {audit_reports}/contradictions-audit.report.json > /dev/null`\n- `test -s {audit_reports}/contradictions-audit.report.md`\n",
+      "started_at": "2026-02-24T14:45:15Z",
+      "completed_at": "2026-02-24T14:56:50Z"
+    },
+    {
+      "id": "AUDIT-CH",
+      "order": 10,
+      "status": "done",
+      "depends_on": [],
+      "workstream_id": "WS-CH",
+      "kickoff_prompt": "$cohesion-audit: Audit the explicit cancellation docset for cohesion breaks.\n\nHard rules:\n- Audit only. Do NOT edit existing files.\n- You MAY create/overwrite only these outputs:\n  - `docs/project_management/packs/active/agent-api-explicit-cancellation/audit-reports/cohesion-audit.report.json`\n  - `docs/project_management/packs/active/agent-api-explicit-cancellation/audit-reports/cohesion-audit.report.md`\n  - (optional) `docs/project_management/packs/active/agent-api-explicit-cancellation/audit-reports/cohesion-audit.scan.json`\n- Every issue MUST include exact citations: file + line_start/line_end + short excerpt.\n- Focus on slice/seam/thread continuity, ordering validity, and traceability (goal\u2192req\u2192design\u2192plan\u2192verification).\n\nAuthoritative instructions:\n- Read and follow: `/Users/spensermcconnell/.codex/skills/cohesion-audit/SKILL.md`\n- Use report format: `/Users/spensermcconnell/.codex/skills/cohesion-audit/references/report-format.md`\n\nAudited file set (use these exact paths; include them in meta.files):\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/README.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/scope_brief.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/decision_register.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/threading.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam_map.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-1-cancellation-contract.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-2-harness-cancel-propagation.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-3-backend-termination.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-4-tests.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/`\n- `docs/specs/universal-agent-api/README.md`\n- `docs/specs/universal-agent-api/contract.md`\n- `docs/specs/universal-agent-api/run-protocol-spec.md`\n- `docs/specs/universal-agent-api/capabilities-schema-spec.md`\n- `docs/specs/universal-agent-api/extensions-spec.md`\n- `docs/adr/0014-agent-api-explicit-cancellation.md`\n- `docs/wi/wi-0002-explicit-cancellation-api.md`\n\nNotes:\n- Treat `docs/specs/**` as normative vs ADR/pack narrative when classifying gaps.\n- For line numbers, use `nl -ba <file>` and cite the relevant range.\n\nVerification steps:\n- `python3 -m json.tool {audit_reports}/cohesion-audit.report.json > /dev/null`\n- `test -s {audit_reports}/cohesion-audit.report.md`\n",
+      "started_at": "2026-02-24T14:45:15Z",
+      "completed_at": "2026-02-24T15:00:22Z"
+    },
+    {
+      "id": "AUDIT-CA",
+      "order": 10,
+      "status": "done",
+      "depends_on": [],
+      "workstream_id": "WS-CA",
+      "kickoff_prompt": "$concrete-audit: Audit the explicit cancellation docset for non-concrete (ambiguous/underspecified) details.\n\nHard rules:\n- Audit only. Do NOT edit existing files.\n- You MAY create/overwrite only these outputs:\n  - `docs/project_management/packs/active/agent-api-explicit-cancellation/audit-reports/concrete-audit.report.json`\n  - `docs/project_management/packs/active/agent-api-explicit-cancellation/audit-reports/concrete-audit.report.md`\n  - (optional) `docs/project_management/packs/active/agent-api-explicit-cancellation/audit-reports/concrete-audit.scan.json`\n- Every issue MUST include exact citations: file + line_start/line_end + short excerpt.\n- Report missing decisions/contracts/schemas/behaviors/dependencies; do not propose fixes.\n\nAuthoritative instructions:\n- Read and follow: `/Users/spensermcconnell/.codex/skills/concrete-audit/SKILL.md`\n- Use report format: `/Users/spensermcconnell/.codex/skills/concrete-audit/references/report-format.md`\n\nAudited file set (use these exact paths; include them in meta.files):\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/README.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/scope_brief.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/decision_register.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/threading.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam_map.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-1-cancellation-contract.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-2-harness-cancel-propagation.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-3-backend-termination.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/seam-4-tests.md`\n- `docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/`\n- `docs/specs/universal-agent-api/README.md`\n- `docs/specs/universal-agent-api/contract.md`\n- `docs/specs/universal-agent-api/run-protocol-spec.md`\n- `docs/specs/universal-agent-api/capabilities-schema-spec.md`\n- `docs/specs/universal-agent-api/extensions-spec.md`\n- `docs/adr/0014-agent-api-explicit-cancellation.md`\n- `docs/wi/wi-0002-explicit-cancellation-api.md`\n\nNotes:\n- Explicitly inventory contracts (API surface, capability id, error shapes, cancellation semantics, test requirements).\n- For line numbers, use `nl -ba <file>` and cite the relevant range.\n\nVerification steps:\n- `python3 -m json.tool {audit_reports}/concrete-audit.report.json > /dev/null`\n- `test -s {audit_reports}/concrete-audit.report.md`\n",
+      "started_at": "2026-02-24T14:45:15Z",
+      "completed_at": "2026-02-24T15:08:43Z"
+    }
+  ]
+}
