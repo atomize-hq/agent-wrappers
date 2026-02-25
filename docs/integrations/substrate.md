@@ -14,6 +14,7 @@ Substrate remains the source of truth for its own `AgentEvent` bus and correlati
 Normative contracts:
 
 - Shared ingestion contract (all wrappers): `docs/specs/wrapper-events-ingestion-contract.md`
+- Codex live streaming runtime contract: `docs/specs/codex-streaming-exec-contract.md`
 - Codex offline parsing contract: `docs/specs/codex-thread-event-jsonl-parser-contract.md`
 - Codex parsing scenarios: `docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md`
 - Codex normalization semantics: `crates/codex/JSONL_COMPAT.md`

@@ -1,3 +1,9 @@
+use std::{
+    future::Future,
+    pin::Pin,
+    task::{Context, Poll},
+};
+
 use tokio::{io::AsyncWriteExt, process::Command, sync::mpsc, time};
 
 use super::{
@@ -11,6 +17,28 @@ use crate::{
     process::{spawn_with_retry, tee_stream, ConsoleTarget},
     CliOverridesPatch, CodexClient, CodexError,
 };
+
+struct AbortOnDropCompletion {
+    handle: Pin<Box<tokio::task::JoinHandle<Result<ExecCompletion, ExecStreamError>>>>,
+}
+
+impl Drop for AbortOnDropCompletion {
+    fn drop(&mut self) {
+        self.handle.abort();
+    }
+}
+
+impl Future for AbortOnDropCompletion {
+    type Output = Result<ExecCompletion, ExecStreamError>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match self.handle.as_mut().poll(cx) {
+            Poll::Ready(Ok(result)) => Poll::Ready(result),
+            Poll::Ready(Err(source)) => Poll::Ready(Err(CodexError::Join(source).into())),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
 
 pub(super) async fn stream_exec_with_overrides(
     client: &CodexClient,
@@ -172,7 +200,7 @@ pub(super) async fn stream_exec_with_overrides_and_env_overrides_control(
     let events = jsonl::EventChannelStream::new(rx, idle_timeout);
     let timeout = client.timeout;
     let schema_path = output_schema.clone();
-    let completion = Box::pin(async move {
+    let completion_handle = tokio::spawn(async move {
         let _dir_ctx = dir_ctx;
         let wait_task = async move {
             let status = tokio::select! {
@@ -213,6 +241,9 @@ pub(super) async fn stream_exec_with_overrides_and_env_overrides_control(
                 Err(_) => Err(CodexError::Timeout { timeout }.into()),
             }
         }
+    });
+    let completion = Box::pin(AbortOnDropCompletion {
+        handle: Box::pin(completion_handle),
     });
 
     Ok(ExecStreamControl {
@@ -371,7 +402,7 @@ pub(super) async fn stream_resume(
     let events = jsonl::EventChannelStream::new(rx, idle_timeout);
     let timeout = client.timeout;
     let schema_path = output_schema.clone();
-    let completion = Box::pin(async move {
+    let completion_handle = tokio::spawn(async move {
         let _dir_ctx = dir_ctx;
         let wait_task = async move {
             let status = child
@@ -408,6 +439,9 @@ pub(super) async fn stream_resume(
                 Err(_) => Err(CodexError::Timeout { timeout }.into()),
             }
         }
+    });
+    let completion = Box::pin(AbortOnDropCompletion {
+        handle: Box::pin(completion_handle),
     });
 
     Ok(ExecStream {

@@ -67,6 +67,12 @@ fn main() -> io::Result<()> {
     let mut out = io::stdout().lock();
 
     match scenario.as_str() {
+        "block_until_killed" => {
+            write_line(&mut out, &format!("{init}\n"))?;
+            loop {
+                thread::sleep(Duration::from_secs(1));
+            }
+        }
         "single_event_then_exit" => {
             write_line(&mut out, &format!("{init}\n"))?;
         }

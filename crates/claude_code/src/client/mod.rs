@@ -672,66 +672,58 @@ async fn run_print_stream_json_child(
         }
     }
 
+    // Close the event channel as soon as we stop producing events so downstream consumers can
+    // observe stream finality independent of process-exit cleanup.
+    drop(events_tx);
+    drop(closed_tx);
+    drop(lines);
+
+    // `start_kill` may leave a zombie until `wait()` reaps the process (Tokio docs). For Agent API
+    // DR-0012 / CA-C02 invariants, completion must not resolve before backend process exit.
     if timed_out || cancelled || io_error.is_some() {
         let _ = child.start_kill();
     }
 
-    if let Some(err) = io_error {
-        let _ = child.wait().await;
-        return Err(err);
-    }
-
-    if cancelled {
-        let status = match time::timeout(Duration::from_secs(2), child.wait()).await {
-            Ok(res) => res.map_err(ClaudeCodeError::Wait)?,
-            Err(_) => {
-                return Err(ClaudeCodeError::Wait(std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timed out waiting for claude process after cancellation",
-                )));
-            }
-        };
-
-        if let Some(task) = stderr_task {
-            match task.await {
-                Ok(Ok(())) => {}
-                Ok(Err(err)) => {
-                    return Err(ClaudeCodeError::StderrRead(err));
-                }
-                Err(err) => {
-                    return Err(ClaudeCodeError::Join(err.to_string()));
-                }
+    let status: Result<std::process::ExitStatus, ClaudeCodeError> = match io_error {
+        Some(err) => {
+            let _ = child.wait().await;
+            Err(err)
+        }
+        None if cancelled => child.wait().await.map_err(ClaudeCodeError::Wait),
+        None if timed_out => {
+            let timeout = timeout.expect("timed_out implies timeout");
+            match child.wait().await.map_err(ClaudeCodeError::Wait) {
+                Ok(_status) => Err(ClaudeCodeError::Timeout { timeout }),
+                Err(err) => Err(err),
             }
         }
-
-        return Ok(status);
-    }
-
-    if timed_out {
-        if let Some(timeout) = timeout {
-            let _ = time::timeout(Duration::from_secs(2), child.wait()).await;
-            return Err(ClaudeCodeError::Timeout { timeout });
+        None => {
+            if let Some(deadline) = deadline {
+                let remaining = deadline.saturating_duration_since(time::Instant::now());
+                if remaining.is_zero() {
+                    let timeout = timeout.expect("deadline implies timeout");
+                    let _ = child.start_kill();
+                    match child.wait().await.map_err(ClaudeCodeError::Wait) {
+                        Ok(_status) => Err(ClaudeCodeError::Timeout { timeout }),
+                        Err(err) => Err(err),
+                    }
+                } else {
+                    match time::timeout(remaining, child.wait()).await {
+                        Ok(res) => res.map_err(ClaudeCodeError::Wait),
+                        Err(_) => {
+                            let timeout = timeout.expect("deadline implies timeout");
+                            let _ = child.start_kill();
+                            match child.wait().await.map_err(ClaudeCodeError::Wait) {
+                                Ok(_status) => Err(ClaudeCodeError::Timeout { timeout }),
+                                Err(err) => Err(err),
+                            }
+                        }
+                    }
+                }
+            } else {
+                child.wait().await.map_err(ClaudeCodeError::Wait)
+            }
         }
-    }
-
-    let status = if let Some(deadline) = deadline {
-        let remaining = deadline.saturating_duration_since(time::Instant::now());
-        if remaining.is_zero() {
-            let _ = child.start_kill();
-            let _ = time::timeout(Duration::from_secs(2), child.wait()).await;
-            Err(ClaudeCodeError::Timeout {
-                timeout: timeout.expect("deadline implies timeout"),
-            })
-        } else {
-            time::timeout(remaining, child.wait())
-                .await
-                .map_err(|_| ClaudeCodeError::Timeout {
-                    timeout: timeout.expect("deadline implies timeout"),
-                })?
-                .map_err(ClaudeCodeError::Wait)
-        }
-    } else {
-        child.wait().await.map_err(ClaudeCodeError::Wait)
     };
 
     if let Some(task) = stderr_task {
