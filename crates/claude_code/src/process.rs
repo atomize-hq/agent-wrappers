@@ -14,6 +14,25 @@ use tokio::{
 
 use crate::ClaudeCodeError;
 
+const CLEANUP_GRACE: Duration = Duration::from_secs(2);
+
+async fn join_or_abort<T>(mut handle: tokio::task::JoinHandle<T>, grace: Duration) -> Option<T> {
+    if grace.is_zero() {
+        handle.abort();
+        let _ = handle.await;
+        return None;
+    }
+
+    tokio::select! {
+        output = &mut handle => output.ok(),
+        _ = time::sleep(grace) => {
+            handle.abort();
+            let _ = handle.await;
+            None
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub(crate) enum ConsoleTarget {
     Stdout,
@@ -103,6 +122,7 @@ pub(crate) async fn run_command(
     });
     command.stdout(std::process::Stdio::piped());
     command.stderr(std::process::Stdio::piped());
+    command.kill_on_drop(true);
 
     let mut child = spawn_with_retry(&mut command, binary)?;
 
@@ -121,14 +141,47 @@ pub(crate) async fn run_command(
     let stdout_task = tokio::spawn(tee_stream(stdout, ConsoleTarget::Stdout, mirror_stdout));
     let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, mirror_stderr));
 
-    let wait_fut = child.wait();
     let status = if let Some(dur) = timeout {
-        time::timeout(dur, wait_fut)
-            .await
-            .map_err(|_| ClaudeCodeError::Timeout { timeout: dur })?
-            .map_err(ClaudeCodeError::Wait)?
+        match time::timeout(dur, child.wait()).await {
+            Ok(Ok(status)) => status,
+            Ok(Err(source)) => {
+                let _ = child.start_kill();
+                let deadline = time::Instant::now() + CLEANUP_GRACE;
+                let remaining = deadline.saturating_duration_since(time::Instant::now());
+                let _ = time::timeout(remaining, child.wait()).await;
+                let remaining = deadline.saturating_duration_since(time::Instant::now());
+                let _ = join_or_abort(stdout_task, remaining).await;
+                let remaining = deadline.saturating_duration_since(time::Instant::now());
+                let _ = join_or_abort(stderr_task, remaining).await;
+                return Err(ClaudeCodeError::Wait(source));
+            }
+            Err(_) => {
+                let _ = child.start_kill();
+                let deadline = time::Instant::now() + CLEANUP_GRACE;
+                let remaining = deadline.saturating_duration_since(time::Instant::now());
+                let _ = time::timeout(remaining, child.wait()).await;
+                let remaining = deadline.saturating_duration_since(time::Instant::now());
+                let _ = join_or_abort(stdout_task, remaining).await;
+                let remaining = deadline.saturating_duration_since(time::Instant::now());
+                let _ = join_or_abort(stderr_task, remaining).await;
+                return Err(ClaudeCodeError::Timeout { timeout: dur });
+            }
+        }
     } else {
-        wait_fut.await.map_err(ClaudeCodeError::Wait)?
+        match child.wait().await {
+            Ok(status) => status,
+            Err(source) => {
+                let _ = child.start_kill();
+                let deadline = time::Instant::now() + CLEANUP_GRACE;
+                let remaining = deadline.saturating_duration_since(time::Instant::now());
+                let _ = time::timeout(remaining, child.wait()).await;
+                let remaining = deadline.saturating_duration_since(time::Instant::now());
+                let _ = join_or_abort(stdout_task, remaining).await;
+                let remaining = deadline.saturating_duration_since(time::Instant::now());
+                let _ = join_or_abort(stderr_task, remaining).await;
+                return Err(ClaudeCodeError::Wait(source));
+            }
+        }
     };
 
     let stdout = stdout_task

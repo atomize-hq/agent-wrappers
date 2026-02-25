@@ -68,4 +68,3 @@ exec sleep 1000000
         "expected completion to fail with timeout, got: {result:?}"
     );
 }
-
