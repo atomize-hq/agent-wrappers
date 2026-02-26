@@ -127,6 +127,10 @@ fn bucket_for(capability_id: &str) -> String {
         return "agent_api.exec".to_string();
     }
 
+    if capability_id.starts_with("agent_api.session.") {
+        return "agent_api.session".to_string();
+    }
+
     for prefix in [
         "agent_api.tools.",
         "agent_api.artifacts.",
@@ -161,6 +165,7 @@ fn bucket_order(backend_ids: &[String]) -> Vec<String> {
         "agent_api.core".to_string(),
         "agent_api.events".to_string(),
         "agent_api.exec".to_string(),
+        "agent_api.session".to_string(),
         "agent_api.tools".to_string(),
         "agent_api.artifacts".to_string(),
         "agent_api.control".to_string(),

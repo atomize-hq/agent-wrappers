@@ -43,6 +43,7 @@ Bucket prefixes (v1 rubric):
 
 - `agent_api.events.*` — event stream shape/fidelity (live, delta fidelity, etc.)
 - `agent_api.exec.*` — execution policy (non-interactive, approval/sandbox bridging, etc.)
+- `agent_api.session.*` — conversation/thread semantics (resume/fork, session handles, etc.; orthogonal to execution policy)
 - `agent_api.tools.*` — tool visibility/fidelity (calls vs results vs structured metadata)
 - `agent_api.artifacts.*` — file/patch/change summaries (bounded, safe artifacts)
 - `agent_api.control.*` — cancel/pause semantics and best-effort levels
