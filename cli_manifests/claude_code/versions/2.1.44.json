@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "semantic_version": "2.1.44",
+  "status": "reported",
+  "updated_at": "2026-02-16T20:52:56Z",
+  "artifacts": {
+    "snapshots_dir": "snapshots/2.1.44",
+    "reports_dir": "reports/2.1.44",
+    "union_complete": true
+  },
+  "coverage": {
+    "supported_targets": [],
+    "supported_required_target": false
+  },
+  "promotion": {
+    "eligible_for_latest_validated": false
+  }
+}
