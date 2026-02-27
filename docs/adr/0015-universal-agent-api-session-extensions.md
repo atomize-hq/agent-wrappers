@@ -31,7 +31,7 @@
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 61ca223a3aef3b08e6567b9fd95e8155cb706adcaf744fee5b16affb45b178d4
+ADR_BODY_SHA256: 27be94425925c30494b2583db9681f3a549f649448874269f454402a9105e597
 
 ### Changes (operator-facing)
 
@@ -124,6 +124,30 @@ Surface switching nuance:
   in a store that `codex exec resume` can address by id, and the id formats are compatible.
 - To keep `agent_api` semantics deterministic and reduce cross-surface coupling, prefer staying on
   the app-server surface for the follow-up prompt when implementing fork.
+
+### Claude Code: session semantics in headless `--print` (implementation notes)
+
+Claude Code session semantics are available in headless mode via the `claude --print` surface.
+There is no separate “app-server” surface in this repo analogous to Codex; the backend mapping is
+flag-driven.
+
+Mapping guidance for `agent_api.session.*`:
+
+- `agent_api.session.resume.v1`:
+  - `selector == "last"`:
+    - map to `claude --print --continue <PROMPT>`
+  - `selector == "id"`:
+    - map to `claude --print --resume <SESSION_ID> <PROMPT>`
+- `agent_api.session.fork.v1`:
+  - `selector == "last"`:
+    - map to `claude --print --continue --fork-session <PROMPT>`
+  - `selector == "id"`:
+    - map to `claude --print --resume <SESSION_ID> --fork-session <PROMPT>`
+
+Notes:
+- Claude Code session ids are backend-defined strings (commonly UUIDs).
+- `agent_api.session.*` semantics remain “resume/fork + send follow-up prompt”; the universal run
+  contract still requires a non-empty prompt.
 
 ## User Contract (Authoritative)
 
