@@ -41,7 +41,7 @@
     {
       "id": "uaa-0014",
       "title": "Obs facet schema (events + completion)",
-      "status": "todo",
+      "status": "on_hold",
       "bucket": "agent_api.obs",
       "type": "spec",
       "proposed_capability_id": "agent_api.obs.v1",
@@ -75,7 +75,8 @@
         "Define a single bounded obs facet schema carried in AgentWrapperEvent.data and/or AgentWrapperCompletion.data (AgentWrapperEvent has no top-level run/session/trace fields).",
         "This facet should be the foundation for: agent_api.obs.run_id.v1, agent_api.obs.trace_context.v1, agent_api.obs.tags.v1.",
         "Decide emission model: always emit vs gated by explicit capabilities and/or an extension key; define precedence + merge rules when both backend and caller supply context.",
-        "Draft spec text (backlog-only): docs/backlog/uaa-0014-obs-facet-schema-v1.md"
+        "Draft spec text (backlog-only): docs/backlog/uaa-0014-obs-facet-schema-v1.md",
+        "On hold. This is not a priority right now."
       ]
     },
     {
@@ -123,6 +124,25 @@
         "Promote only backend-neutral semantics into agent_api.config.* (and/or other universal buckets); keep backend-specific knobs under backend.<agent_kind>.* even if they are 'config'.",
         "Produce a concrete list of bounded backend pass-through keys we want to support (e.g. backend.codex.cli_overrides.v1, backend.claude_code.settings.v1), including schema, defaults, bounds, and validation rules."
       ]
+    },
+    {
+      "id": "uaa-0016",
+      "title": "Claude: dangerous permission bypass (headless)",
+      "status": "todo",
+      "bucket": "agent_api.exec",
+      "type": "extension_key",
+      "proposed_capability_id": "backend.claude_code.exec.dangerously_skip_permissions",
+      "notes": [
+        "Expose an explicit backend-scoped knob for externally sandboxed hosts (e.g. Substrate) that need Claude Code to bypass permission checks in headless mode.",
+        "When true, the claude_code backend MUST pass `--dangerously-skip-permissions` while preserving agent_api stream-json invariants.",
+        "Value MUST be boolean and validated before spawn; unknown keys must continue to fail-closed."
+      ],
+      "backend_mapping": {
+        "claude_code": {
+          "cli": "claude --print --dangerously-skip-permissions ...",
+          "impl_hint": "crates/agent_api/src/backends/claude_code.rs: map to ClaudePrintRequest::dangerously_skip_permissions(true)"
+        }
+      }
     },
     {
       "id": "uaa-0015",
