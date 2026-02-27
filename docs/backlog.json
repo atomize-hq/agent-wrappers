@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at_utc": "2026-02-26T00:00:00Z",
+  "updated_at_utc": "2026-02-27T00:00:00Z",
   "items": [
     {
       "id": "uaa-0013",
@@ -64,7 +64,8 @@
           "crates/agent_api/src/bounds.rs",
           "crates/agent_api/src/backends/claude_code.rs",
           "crates/agent_api/src/backends/codex/mapping.rs",
-          "crates/agent_api/src/backends/codex.rs"
+          "crates/agent_api/src/backends/codex.rs",
+          "docs/backlog/uaa-0014-obs-facet-schema-v1.md"
         ],
         "deliverables": [
           "A concrete obs facet schema (v1) + placement rules + bounds, suitable to unblock run_id/trace_context/tags work"
@@ -73,7 +74,8 @@
       "notes": [
         "Define a single bounded obs facet schema carried in AgentWrapperEvent.data and/or AgentWrapperCompletion.data (AgentWrapperEvent has no top-level run/session/trace fields).",
         "This facet should be the foundation for: agent_api.obs.run_id.v1, agent_api.obs.trace_context.v1, agent_api.obs.tags.v1.",
-        "Decide emission model: always emit vs gated by explicit capabilities and/or an extension key; define precedence + merge rules when both backend and caller supply context."
+        "Decide emission model: always emit vs gated by explicit capabilities and/or an extension key; define precedence + merge rules when both backend and caller supply context.",
+        "Draft spec text (backlog-only): docs/backlog/uaa-0014-obs-facet-schema-v1.md"
       ]
     },
     {
