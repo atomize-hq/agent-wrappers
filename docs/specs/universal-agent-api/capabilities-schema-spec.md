@@ -114,6 +114,12 @@ This section defines stable universal capability ids and their minimum semantics
   - The backend can deterministically populate `AgentWrapperCompletion.final_text` when full
     assistant message text blocks are observed in the supported flow; `final_text=None` is valid
     otherwise.
+- `agent_api.obs.v1`:
+  - The backend may emit the bounded observability facet (`data.obs`) on `AgentWrapperEvent.data`
+    and/or `AgentWrapperCompletion.data` per `event-envelope-schema-spec.md` ("Obs facet (v1)").
+  - A backend that emits an obs facet MUST advertise this capability.
+  - If the backend emits an obs facet, it MUST be nested under `data.obs` (never as `data.schema="agent_api.obs.v1"`)
+    so that it can coexist with other facets such as `agent_api.tools.structured.v1`.
 
 ## Extension keys (v1, normative)
 
