@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at_utc": "2026-02-28T15:42:31Z",
+  "updated_at_utc": "2026-02-28T16:13:52Z",
   "items": [
     {
       "id": "uaa-0013",
@@ -151,6 +151,39 @@
       }
     },
     {
+      "id": "uaa-0017",
+      "title": "Add typed session/thread id accessors (codex + claude_code)",
+      "status": "todo",
+      "bucket": "agent_api.session",
+      "type": "task",
+      "kickoff": {
+        "prompt": [
+          "Work item: uaa-0017 — Add typed session/thread id accessors (codex + claude_code).",
+          "Goal: add small helper accessors on the typed backend event models so downstream crates can extract a stable session/thread identifier without duplicating match logic.",
+          "Steps:",
+          "1) Codex: add `codex::ThreadEvent::thread_id() -> Option<&str>` (or equivalent) to return the best-effort thread id when the variant contains one.",
+          "2) Claude Code: add `claude_code::ClaudeStreamJsonEvent::session_id() -> Option<&str>` to return the best-effort session id (including the Unknown variant when present).",
+          "3) Use these helpers in both `wrapper_events` and `agent_api` (uaa-0015) so session handle extraction is implemented once per backend type.",
+          "Output: ergonomic, test-covered accessors; no contract/spec changes."
+        ],
+        "files_to_read": [
+          "crates/codex/src/events.rs",
+          "crates/claude_code/src/stream_json.rs",
+          "crates/wrapper_events/src/codex_adapter.rs",
+          "crates/wrapper_events/src/claude_code_adapter.rs",
+          "crates/agent_api/src/backends/codex.rs",
+          "crates/agent_api/src/backends/claude_code.rs"
+        ],
+        "deliverables": [
+          "Typed accessor helpers for session/thread ids, reused by wrapper_events and agent_api"
+        ]
+      },
+      "notes": [
+        "This is a small reuse seam: avoid duplicating per-backend match logic in multiple crates.",
+        "Intended as a prerequisite for uaa-0015 (session handle facet emission)."
+      ]
+    },
+    {
       "id": "uaa-0015",
       "title": "Session/thread id surfacing (for resume-by-id UX)",
       "status": "todo",
@@ -168,8 +201,9 @@
           "2) Update canonical specs to register the capability + facet schema/emission rules:",
           "   - docs/specs/universal-agent-api/capabilities-schema-spec.md",
           "   - docs/specs/universal-agent-api/event-envelope-schema-spec.md",
-          "3) Implement extraction + run-local storage in both agent_api backends (Claude: capture session_id from stream-json; Codex: capture thread_id from JSONL ThreadStarted).",
-          "4) Advertise `agent_api.session.handle.v1` only once extraction + bounds/redaction posture is implemented + tested.",
+          "3) Prerequisite: land uaa-0017 typed accessors and use them for extraction (`codex::ThreadEvent::thread_id()`, `claude_code::ClaudeStreamJsonEvent::session_id()`).",
+          "4) Implement extraction + run-local storage in both agent_api backends (Claude: capture session_id from stream-json; Codex: capture thread_id from JSONL ThreadStarted).",
+          "5) Advertise `agent_api.session.handle.v1` only once extraction + bounds/redaction posture is implemented + tested.",
           "Output: cross-backend consistent session/thread id surfacing + tests (fake-binary where appropriate)."
         ],
         "files_to_read": [
@@ -190,7 +224,8 @@
       "notes": [
         "Make session/thread identifiers discoverable to callers as a stable, bounded payload (so resume-by-id can be ergonomic).",
         "Leverage existing streaming/log parsing: Codex exposes thread_id in thread.started/thread.resumed events; Claude exposes session_id in stream-json events.",
-        "Decision: when capability `agent_api.session.handle.v1` is advertised, emit the handle facet once in an early Status event `data` payload and attach it to `AgentWrapperCompletion.data` when a completion is produced and the id is known."
+        "Decision: when capability `agent_api.session.handle.v1` is advertised, emit the handle facet once in an early Status event `data` payload and attach it to `AgentWrapperCompletion.data` when a completion is produced and the id is known.",
+        "Prerequisite: uaa-0017 adds typed id accessors so extraction logic is not duplicated across crates."
       ],
       "backend_mapping": {
         "claude_code": {

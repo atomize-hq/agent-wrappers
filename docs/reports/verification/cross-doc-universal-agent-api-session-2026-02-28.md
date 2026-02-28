@@ -28,7 +28,7 @@ Recommendation: **PROCEED** (documentation/spec alignment is consistent; impleme
 ## Documents Checked
 
 - Backlog:
-  - `docs/backlog.json` (`uaa-0004`, `uaa-0005`, `uaa-0007`, `uaa-0011`, `uaa-0013`, `uaa-0015`)
+  - `docs/backlog.json` (`uaa-0004`, `uaa-0005`, `uaa-0007`, `uaa-0011`, `uaa-0013`, `uaa-0015`, `uaa-0017`)
 - ADRs:
   - `docs/adr/0015-universal-agent-api-session-extensions.md`
   - `docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md`
@@ -55,8 +55,8 @@ Recommendation: **PROCEED** (documentation/spec alignment is consistent; impleme
 
 - Marked `uaa-0013` (session bucket rubric + tooling) as **done** and marked `uaa-0011` as **done** (redundant design item; decision is separate keys).
 - Updated `uaa-0015` to reflect the ADR-0017 decision and to include required spec + implementation steps.
+- Added `uaa-0017` as an explicit prerequisite task to add typed id accessor helpers (`ThreadEvent::thread_id()`, `ClaudeStreamJsonEvent::session_id()`) for reuse by both `wrapper_events` and `agent_api`.
 - Registered `agent_api.session.handle.v1` in:
   - `docs/specs/universal-agent-api/capabilities-schema-spec.md` (capability semantics)
   - `docs/specs/universal-agent-api/event-envelope-schema-spec.md` (facet schema + emission rules)
   - `docs/specs/universal-agent-api/extensions-spec.md` (cross-reference for resume/fork-by-id flows)
-

@@ -1,0 +1,71 @@
+# SEAM-4 — Session fork extension key (`agent_api.session.fork.v1`) (uaa-0007)
+
+- **Name**: Universal fork semantics (“fork from last or by id”) via `AgentWrapperRunRequest.extensions`
+- **Type**: risk (capability seam with a high-risk Codex mapping)
+- **Goal / user value**: Allow callers to fork a new session/thread from an existing one in a backend-neutral way, enabling workflows like “branch the conversation and explore a new approach” while keeping a deterministic headless orchestration surface.
+- **Scope**
+  - In:
+    - Implement `agent_api.session.fork.v1` for built-in backends that can support it:
+      - Add to `supported_extension_keys()` allowlist (fail-closed gate).
+      - Add to `AgentWrapperCapabilities.ids` (runtime discovery).
+      - Validate the JSON value per `docs/specs/universal-agent-api/extensions-spec.md` (closed schema) and reject contradictory presence of `agent_api.session.resume.v1` as `InvalidRequest` when both keys are supported.
+    - Backend mappings (pinned intent):
+      - Claude Code:
+        - selector `"last"` → `claude --print --continue --fork-session <PROMPT>`
+        - selector `"id"` → `claude --print --resume <ID> --fork-session <PROMPT>`
+      - Codex (ADR-0015 recommended headless surface):
+        - Implement via `codex app-server` JSON-RPC:
+          - identify the fork source thread (for selector `"last"`, likely via a discovery/listing surface scoped to the effective working directory),
+          - fork via `thread/fork`,
+          - send the follow-up prompt via `turn/start`.
+        - Do not rely on `codex fork` if it is interactive/TUI or cannot provide safe bounded streaming semantics.
+    - Add tests:
+      - Claude: argv mapping + validation failures (fake-binary).
+      - Codex: protocol-level tests for app-server request/notification flows (fake JSON-RPC server) + `agent_api` integration tests proving bounded event mapping + cancellation/termination behavior.
+  - Out:
+    - A universal session listing API (any listing used for selector `"last"` remains backend-owned implementation detail).
+    - Guaranteeing the same fork semantics or id formats across backends beyond the spec’s “opaque id” posture.
+- **Primary interfaces (contracts)**
+  - Inputs:
+    - `AgentWrapperRunRequest.extensions["agent_api.session.fork.v1"]` (object value)
+    - Backend-specific fork capabilities (Codex app-server, Claude flags)
+  - Outputs:
+    - A forked session/thread is created and the universal prompt is executed as the first follow-up message.
+    - Capability advertisement (extension key string present in `AgentWrapperCapabilities.ids`).
+- **Key invariants / rules**:
+  - Must be headless and deterministic for orchestrators (no interactive prompts; respect `agent_api.exec.non_interactive` policy where applicable).
+  - Must keep Universal Agent API safety posture: bounded/redacted events; no raw backend line embedding in `data`.
+  - Mutual exclusivity with resume is enforced pre-spawn when both keys are supported.
+- **Dependencies**
+  - Blocks:
+    - None.
+  - Blocked by:
+    - Codex contract-definition spike: confirm/implement `codex app-server` protocol support for `thread/fork` (and any required discovery API such as `thread/list`) and expose typed wrappers in `crates/codex`.
+    - (Recommended) Implementing resume first for a backend so mutual-exclusivity errors can be pinned as `InvalidRequest` rather than “unsupported key” ordering artifacts.
+- **Touch surface**:
+  - `crates/agent_api/src/backends/claude_code.rs`
+  - `crates/agent_api/src/backends/codex.rs` (new fork path; likely additional adapter code)
+  - Codex app-server client/protocol (likely):
+    - `crates/codex/src/mcp/protocol.rs`
+    - `crates/codex/src/mcp/client.rs`
+    - `crates/codex/src/mcp/tests_core/**` (protocol flow tests)
+  - `crates/agent_api/tests/**` (new fork semantics tests)
+- **Verification**:
+  - For each backend that advertises `agent_api.session.fork.v1`:
+    - selector `"last"` and `"id"` both create a forked session and execute the prompt,
+    - invalid schemas fail before spawn with `InvalidRequest`,
+    - mutual exclusivity is enforced when both session keys are supported.
+- **Risks / unknowns**
+  - Risk: Codex app-server protocol drift or missing fork/list methods in the wrapper.
+  - De-risk plan: treat Codex fork as “contract-first”:
+    - add typed protocol wrappers + tests in `crates/codex` first,
+    - then integrate into `agent_api` with bounded mapping and cancellation/termination wiring.
+- **Rollout / safety**:
+  - Stage by backend:
+    - Claude can likely ship fork earlier.
+    - Codex fork ships once app-server protocol + bounded mapping + tests exist.
+
+## Downstream decomposition prompt
+
+Decompose into: (1) shared parser for the fork selector object (closed schema), (2) Claude fork mapping + tests, (3) Codex app-server contract-definition + typed client support, (4) Codex `agent_api` integration + bounded event mapping + tests, (5) capability advertisement gating.
+

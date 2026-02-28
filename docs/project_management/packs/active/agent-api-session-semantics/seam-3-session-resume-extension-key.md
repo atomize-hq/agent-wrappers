@@ -1,0 +1,72 @@
+# SEAM-3 — Session resume extension key (`agent_api.session.resume.v1`) (uaa-0004 + uaa-0005)
+
+- **Name**: Universal resume semantics (“last” or “by id”) via `AgentWrapperRunRequest.extensions`
+- **Type**: capability
+- **Goal / user value**: Allow callers to resume a prior session/thread in a backend-neutral way, using a single core extension key with deterministic validation and capability gating.
+- **Scope**
+  - In:
+    - Implement `agent_api.session.resume.v1` for built-in backends that can support it:
+      - Add to `supported_extension_keys()` allowlist (fail-closed gate).
+      - Add to `AgentWrapperCapabilities.ids` (runtime discovery).
+      - Validate the JSON value per `docs/specs/universal-agent-api/extensions-spec.md`:
+        - type object, closed schema,
+        - `selector` is `"last"` or `"id"`,
+        - `"id"` requires a non-empty string, `"last"` forbids `id`,
+        - reject contradictory presence of `agent_api.session.fork.v1` as `InvalidRequest` when both keys are supported.
+    - Backend mappings (pinned intent; exact shapes are backend-owned):
+      - Claude Code:
+        - selector `"last"` → `claude --print --continue <PROMPT>`
+        - selector `"id"` → `claude --print --resume <ID> <PROMPT>`
+      - Codex:
+        - selector `"last"` → `codex exec resume --last` + follow-up prompt
+        - selector `"id"` → `codex exec resume <ID>` + follow-up prompt
+    - Ensure Codex resume streaming supports `agent_api` invariants:
+      - per-run env overrides (merged `request.env`),
+      - best-effort termination handle for explicit cancellation flows (`run_control`), and
+      - consistent safety posture (no raw backend lines in errors/events).
+    - Add tests covering:
+      - invalid request shapes (type errors, missing/extra keys, invalid selectors, empty id),
+      - fail-closed unknown-key behavior,
+      - CLI mapping (fake-binary where appropriate),
+      - contradictory resume+fork behavior when both keys are supported.
+  - Out:
+    - Implementing `agent_api.session.fork.v1` (that is SEAM-4).
+    - Emitting the session handle facet (that is SEAM-2).
+- **Primary interfaces (contracts)**
+  - Inputs:
+    - `AgentWrapperRunRequest.extensions["agent_api.session.resume.v1"]` (object value)
+    - Backends’ session persistence stores keyed by effective working directory + id (backend-defined)
+  - Outputs:
+    - Deterministic spawn mapping to underlying CLIs (resume + follow-up prompt)
+    - Capability advertisement (extension key string present in `AgentWrapperCapabilities.ids`)
+- **Key invariants / rules**:
+  - Prompt remains non-empty and is always treated as the follow-up prompt for the resumed session.
+  - Unknown extension keys still fail-closed pre-spawn as `UnsupportedCapability`.
+  - Validation errors use `AgentWrapperError::InvalidRequest` and occur pre-spawn.
+- **Dependencies**
+  - Blocks:
+    - None.
+  - Blocked by:
+    - Codex wrapper capability gap (if `crates/codex` needs a control/override-capable streaming resume API to preserve cancellation + env semantics parity with `exec`).
+- **Touch surface**:
+  - `crates/agent_api/src/backends/claude_code.rs`
+  - `crates/agent_api/src/backends/codex.rs`
+  - Codex wrapper (likely):
+    - `crates/codex/src/exec.rs` (public streaming API surface)
+    - `crates/codex/src/exec/streaming.rs` (spawn wiring for `codex exec resume`)
+  - `crates/agent_api/tests/**` (new tests for resume semantics)
+- **Verification**:
+  - For each backend that advertises `agent_api.session.resume.v1`:
+    - a request with selector `"last"` resumes and produces a live event stream + completion,
+    - a request with selector `"id"` resumes by id and produces a live event stream + completion,
+    - invalid schemas fail before spawn with `InvalidRequest`.
+- **Risks / unknowns**
+  - Risk: Codex resume streaming currently lacks per-run env overrides and a termination handle, which may cause behavior drift vs `exec`.
+  - De-risk plan: add/extend a control/override-capable streaming resume entrypoint in `crates/codex` and use it from `agent_api`.
+- **Rollout / safety**:
+  - Capability-gated rollout: only advertise the extension key once validated spawn mapping + tests are in place.
+
+## Downstream decomposition prompt
+
+Decompose into: (1) shared parser for the resume selector object (closed schema), (2) Claude mapping + tests, (3) Codex mapping + required `crates/codex` API additions + tests, (4) capability advertisement gating.
+
