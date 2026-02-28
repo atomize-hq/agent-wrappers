@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at_utc": "2026-02-27T00:00:00Z",
+  "updated_at_utc": "2026-02-28T00:00:00Z",
   "items": [
     {
       "id": "uaa-0013",
@@ -127,20 +127,26 @@
     },
     {
       "id": "uaa-0016",
-      "title": "Claude: dangerous permission bypass (headless)",
+      "title": "Universal: external sandbox execution policy (dangerous)",
       "status": "todo",
       "bucket": "agent_api.exec",
       "type": "extension_key",
-      "proposed_capability_id": "backend.claude_code.exec.dangerously_skip_permissions",
+      "proposed_capability_id": "agent_api.exec.external_sandbox.v1",
       "notes": [
-        "Expose an explicit backend-scoped knob for externally sandboxed hosts (e.g. Substrate) that need Claude Code to bypass permission checks in headless mode.",
-        "When true, the claude_code backend MUST pass `--dangerously-skip-permissions` while preserving agent_api stream-json invariants.",
+        "Expose an explicit, capability-gated core key for hosts (e.g. Substrate) that provide isolation externally and need the CLI backend to relax internal guardrails.",
+        "Owned by docs/specs/universal-agent-api/extensions-spec.md (core key); implement + capability-gate in both codex and claude_code backends.",
+        "When true, the backend MUST remain non-interactive (MUST NOT hang on prompts); if agent_api.exec.non_interactive is explicitly false, the backend SHOULD fail closed as contradictory intent.",
+        "This key is explicitly dangerous and SHOULD NOT be advertised by default in built-in backends (only enabled for externally sandboxed hosts).",
         "Value MUST be boolean and validated before spawn; unknown keys must continue to fail-closed."
       ],
       "backend_mapping": {
+        "codex": {
+          "cli": "codex --dangerously-bypass-approvals-and-sandbox exec ...",
+          "impl_hint": "crates/agent_api/src/backends/codex.rs: when true, configure CodexClientBuilder::dangerously_bypass_approvals_and_sandbox(true) (or equivalent never-prompt + danger-full-access policy)."
+        },
         "claude_code": {
-          "cli": "claude --print --dangerously-skip-permissions ...",
-          "impl_hint": "crates/agent_api/src/backends/claude_code.rs: map to ClaudePrintRequest::dangerously_skip_permissions(true)"
+          "cli": "claude --print --dangerously-skip-permissions [--allow-dangerously-skip-permissions] ...",
+          "impl_hint": "crates/agent_api/src/backends/claude_code.rs: when true, map to ClaudePrintRequest::dangerously_skip_permissions(true) (and enable allow_dangerously_skip_permissions when required by the CLI version)."
         }
       }
     },

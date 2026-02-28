@@ -39,7 +39,7 @@ This is the “final sweep before implementation” for backlog work item `uaa-0
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 3caeade6ee1cd4decaef6cc78c263bd340f1caeaa4270bfaaceb91505b9afae0
+ADR_BODY_SHA256: 351052fdbbfc0143648cfe9a5af5016e73b4ca4dbd3865530871c87e5f93aa39
 
 ### Decision (draft)
 
@@ -334,7 +334,7 @@ Cons:
 - Define + implement:
   - `agent_api.config.model.v1` (uaa-0002)
   - `agent_api.exec.add_dirs.v1` (uaa-0003)
-  - `agent_api.exec.external_sandbox.v1` (new; needs backlog item + owner-doc spec entry)
+  - `agent_api.exec.external_sandbox.v1` (uaa-0016; needs owner-doc spec entry)
 - Define backend-owned docs for the new backend keys and implement them in `agent_api`:
   - `backend.codex.exec.cli_overrides.v1`
   - `backend.claude_code.settings.v1`
