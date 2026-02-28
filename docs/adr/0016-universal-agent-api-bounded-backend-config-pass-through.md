@@ -197,6 +197,7 @@ Schema (closed):
   - each entry: trimmed, non-empty, length 1..=1024 bytes
 
 Path validation (proposed):
+- `effective working directory` is defined in `docs/specs/universal-agent-api/contract.md` ("Working directory resolution (effective working directory)").
 - Each entry MAY be absolute or relative.
 - If relative, resolve against the run’s effective working directory.
 - Backends SHOULD reject paths that normalize outside the effective working directory (containment

@@ -33,6 +33,8 @@ Normative language: RFC 2119 requirement keywords (`MUST`, `MUST NOT`, `SHOULD`)
   - defaults and absence semantics,
   - validation rules and contradiction rules, and
   - mapping to any underlying CLI flags/config.
+- **Effective working directory**: the run’s resolved working directory, as defined in
+  `docs/specs/universal-agent-api/contract.md` ("Working directory resolution (effective working directory)").
 
 ## Global rules (normative)
 
@@ -119,7 +121,7 @@ Meaning:
   “resume + send prompt”, not “resume with no new prompt”).
 - `selector == "last"`:
   - Resume the backend’s most recent session/thread in the run’s effective working directory
-    (backend-defined persistence store).
+    (see `contract.md`; backend-defined persistence store).
 - `selector == "id"`:
   - Resume the session/thread identified by `id` (identifier format is backend-defined).
 
@@ -127,6 +129,9 @@ Note:
 - Callers that need to discover a usable backend-defined session/thread id SHOULD observe the
   session handle facet when capability id `agent_api.session.handle.v1` is advertised (see
   `event-envelope-schema-spec.md`).
+- Callers that use `selector == "last"` SHOULD provide a stable `AgentWrapperRunRequest.working_dir`.
+  If `working_dir` is absent, `"last"` is scoped to the backend’s default effective working directory
+  (which may be ephemeral, e.g. a temp dir).
 
 Validation rules:
 - Value MUST be an object; otherwise the backend MUST fail before spawn with
@@ -162,7 +167,7 @@ Meaning:
   and treat `AgentWrapperRunRequest.prompt` as a follow-up prompt for the forked session.
 - `selector == "last"`:
   - Fork from the backend’s most recent session/thread in the run’s effective working directory
-    (backend-defined persistence store).
+    (see `contract.md`; backend-defined persistence store).
 - `selector == "id"`:
   - Fork from the session/thread identified by `id` (identifier format is backend-defined).
 
@@ -170,6 +175,9 @@ Note:
 - Callers that need to discover a usable backend-defined session/thread id SHOULD observe the
   session handle facet when capability id `agent_api.session.handle.v1` is advertised (see
   `event-envelope-schema-spec.md`).
+- Callers that use `selector == "last"` SHOULD provide a stable `AgentWrapperRunRequest.working_dir`.
+  If `working_dir` is absent, `"last"` is scoped to the backend’s default effective working directory
+  (which may be ephemeral, e.g. a temp dir).
 
 Validation rules:
 - Value MUST be an object; otherwise the backend MUST fail before spawn with
@@ -184,7 +192,7 @@ Backend mapping requirements:
   contract/spec docs (examples):
   - Codex: map to the `codex app-server` JSON-RPC surface:
     - resolve the fork source thread (for `selector == "last"`, via `thread/list` filtered by the
-      effective working directory),
+      effective working directory; see `contract.md`),
     - fork via `thread/fork`, and
     - send the follow-up prompt via `turn/start` on the forked thread.
   - Claude Code: map to `--fork-session` (or equivalent) together with `--continue` / `--resume <id>`

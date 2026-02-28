@@ -28,14 +28,16 @@
       - invalid request shapes (type errors, missing/extra keys, invalid selectors, empty id),
       - fail-closed unknown-key behavior,
       - CLI mapping (fake-binary where appropriate),
-      - contradictory resume+fork behavior when both keys are supported.
+      - extension-validation precedence during staged rollout (per `docs/specs/universal-agent-api/extensions-spec.md` R0):
+        - only resume supported + both keys present → `UnsupportedCapability` (unsupported fork key),
+        - both supported + both present → `InvalidRequest` (mutual exclusivity).
   - Out:
     - Implementing `agent_api.session.fork.v1` (that is SEAM-4).
     - Emitting the session handle facet (that is SEAM-2).
 - **Primary interfaces (contracts)**
   - Inputs:
     - `AgentWrapperRunRequest.extensions["agent_api.session.resume.v1"]` (object value)
-    - Backends’ session persistence stores keyed by effective working directory + id (backend-defined)
+    - Backends’ session persistence stores keyed by effective working directory + id (backend-defined; see `docs/specs/universal-agent-api/contract.md`)
   - Outputs:
     - Deterministic spawn mapping to underlying CLIs (resume + follow-up prompt)
     - Capability advertisement (extension key string present in `AgentWrapperCapabilities.ids`)
@@ -60,6 +62,9 @@
     - a request with selector `"last"` resumes and produces a live event stream + completion,
     - a request with selector `"id"` resumes by id and produces a live event stream + completion,
     - invalid schemas fail before spawn with `InvalidRequest`.
+    - staged-rollout precedence is pinned (per `extensions-spec.md` R0):
+      - only resume supported + both keys present → `UnsupportedCapability`,
+      - both supported + both present → `InvalidRequest`.
 - **Risks / unknowns**
   - Risk: Codex resume streaming currently lacks per-run env overrides and a termination handle, which may cause behavior drift vs `exec`.
   - De-risk plan: add/extend a control/override-capable streaming resume entrypoint in `crates/codex` and use it from `agent_api`.
@@ -69,4 +74,3 @@
 ## Downstream decomposition prompt
 
 Decompose into: (1) shared parser for the resume selector object (closed schema), (2) Claude mapping + tests, (3) Codex mapping + required `crates/codex` API additions + tests, (4) capability advertisement gating.
-

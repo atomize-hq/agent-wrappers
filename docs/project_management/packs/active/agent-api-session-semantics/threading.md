@@ -7,7 +7,7 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, cr
 - **Contract ID**: `SA-C01 typed id accessor helpers`
   - **Type**: API (library helpers)
   - **Owner seam**: SEAM-1
-  - **Consumers (seams)**: SEAM-2 (and any future session-id consumers)
+  - **Consumers (seams)**: SEAM-2, `crates/wrapper_events` (and any future session-id consumers)
   - **Definition**:
     - `codex::ThreadEvent::thread_id() -> Option<&str>`
     - `claude_code::ClaudeStreamJsonEvent::session_id() -> Option<&str>`
@@ -76,9 +76,11 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, cr
 
 Because SEAM-2/3/4 all touch `crates/agent_api/src/backends/{codex,claude_code}.rs`, the safest parallelization is by **backend + crate** rather than by seam alone.
 
-- **WS-A (Wrapper accessors)**: SEAM-1; touch surface:
+- **WS-A (Wrapper accessors + wrapper_events adoption)**: SEAM-1; touch surface:
   - `crates/codex/src/events.rs`
   - `crates/claude_code/src/stream_json.rs`
+  - `crates/wrapper_events/src/codex_adapter.rs`
+  - `crates/wrapper_events/src/claude_code_adapter.rs`
 - **WS-B (Claude session semantics)**: Claude portions of SEAM-2/3/4; touch surface:
   - `crates/agent_api/src/backends/claude_code.rs`
   - `crates/agent_api/tests/**`
@@ -94,5 +96,4 @@ Because SEAM-2/3/4 all touch `crates/agent_api/src/backends/{codex,claude_code}.
   - `crates/codex/src/mcp/tests_core/**`
   - `crates/agent_api/src/backends/codex.rs` (minimal wiring preferred; isolate logic in a new module if possible)
   - `crates/agent_api/tests/**`
-- **WS-INT (Integration)**: lands WS-A, then merges WS-B/WS-C, then WS-D; runs the full suite and verifies behavior matches the canonical specs.
-
+- **WS-INT (Integration)**: lands WS-A, then merges WS-B/WS-C, then WS-D; runs the full suite and verifies behavior matches the canonical specs. After advertising new session capability ids, regenerate and commit the capability matrix (`cargo run -p xtask -- capability-matrix` → `docs/specs/universal-agent-api/capability-matrix.md`).

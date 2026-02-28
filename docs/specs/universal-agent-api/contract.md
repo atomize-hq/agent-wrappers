@@ -346,6 +346,25 @@ pub mod backends {
 - `AgentWrapperRunRequest` fields MUST override backend config defaults for that run.
 - The backend MUST apply `AgentWrapperRunRequest.env` on top of backend config env (request keys win).
 
+## Working directory resolution (effective working directory) (v1, normative)
+
+For each run, the backend MUST determine an **effective working directory** before spawning any backend process.
+
+Definition:
+- The **effective working directory** is the resolved directory the backend uses as the run’s working directory (e.g., process `cwd`) after applying config/request precedence.
+
+Resolution order (pinned):
+1) If `AgentWrapperRunRequest.working_dir` is present, it MUST be used.
+2) Else, if the backend config provides `default_working_dir`, it MUST be used.
+3) Else, the backend MAY use an internal default (including inheriting the parent process working directory or using a temporary directory).
+
+Relative path handling (pinned):
+- If the selected working directory path is relative, it MUST be interpreted as relative to the backend wrapper process’ current working directory at run start.
+
+This definition is referenced by:
+- session selection semantics for `selector == "last"` in `docs/specs/universal-agent-api/extensions-spec.md`, and
+- containment/normalization rules in ADR-0016 and any future path-validating extension keys.
+
 ## Extensions and capability gating (v1, normative)
 
 - Every supported `AgentWrapperRunRequest.extensions` key MUST correspond 1:1 to a capability id of the
@@ -384,6 +403,6 @@ All error messages MUST be safe-by-default and MUST NOT include raw backend outp
 ## Absence semantics (normative)
 
 - If `AgentWrapperRunRequest.timeout` is absent: backend-specific default applies (the universal API MUST NOT invent a global default).
-- If `AgentWrapperRunRequest.working_dir` is absent: backend-specific default applies (wrappers may use temp dirs).
+- If `AgentWrapperRunRequest.working_dir` is absent: backend-specific default applies (wrappers may use temp dirs). See "Working directory resolution (effective working directory)" for how the effective working directory is derived.
 - The universal API MUST NOT mutate the parent process environment; `AgentWrapperRunRequest.env` applies only to spawned backend processes.
 - If `AgentWrapperRunRequest.extensions` contains any key that the backend does not recognize, the backend MUST fail-closed with `AgentWrapperError::UnsupportedCapability` per the 1:1 mapping rule above.

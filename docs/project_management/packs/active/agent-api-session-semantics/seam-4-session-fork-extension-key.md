@@ -15,13 +15,16 @@
         - selector `"id"` → `claude --print --resume <ID> --fork-session <PROMPT>`
       - Codex (ADR-0015 recommended headless surface):
         - Implement via `codex app-server` JSON-RPC:
-          - identify the fork source thread (for selector `"last"`, likely via a discovery/listing surface scoped to the effective working directory),
+          - identify the fork source thread (for selector `"last"`, likely via a discovery/listing surface scoped to the effective working directory; see `docs/specs/universal-agent-api/contract.md`),
           - fork via `thread/fork`,
           - send the follow-up prompt via `turn/start`.
         - Do not rely on `codex fork` if it is interactive/TUI or cannot provide safe bounded streaming semantics.
     - Add tests:
       - Claude: argv mapping + validation failures (fake-binary).
       - Codex: protocol-level tests for app-server request/notification flows (fake JSON-RPC server) + `agent_api` integration tests proving bounded event mapping + cancellation/termination behavior.
+      - extension-validation precedence during staged rollout (per `docs/specs/universal-agent-api/extensions-spec.md` R0):
+        - only fork supported + both keys present → `UnsupportedCapability` (unsupported resume key),
+        - both supported + both present → `InvalidRequest` (mutual exclusivity).
   - Out:
     - A universal session listing API (any listing used for selector `"last"` remains backend-owned implementation detail).
     - Guaranteeing the same fork semantics or id formats across backends beyond the spec’s “opaque id” posture.
@@ -55,6 +58,9 @@
     - selector `"last"` and `"id"` both create a forked session and execute the prompt,
     - invalid schemas fail before spawn with `InvalidRequest`,
     - mutual exclusivity is enforced when both session keys are supported.
+    - staged-rollout precedence is pinned (per `extensions-spec.md` R0):
+      - only fork supported + both keys present → `UnsupportedCapability`,
+      - both supported + both present → `InvalidRequest`.
 - **Risks / unknowns**
   - Risk: Codex app-server protocol drift or missing fork/list methods in the wrapper.
   - De-risk plan: treat Codex fork as “contract-first”:
@@ -68,4 +74,3 @@
 ## Downstream decomposition prompt
 
 Decompose into: (1) shared parser for the fork selector object (closed schema), (2) Claude fork mapping + tests, (3) Codex app-server contract-definition + typed client support, (4) Codex `agent_api` integration + bounded event mapping + tests, (5) capability advertisement gating.
-

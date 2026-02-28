@@ -10,7 +10,7 @@
     - `agent_api.session.resume.v1` (selectors: `"last"` and `"id"`)
     - `agent_api.session.fork.v1` (selectors: `"last"` and `"id"`)
   - Implement session handle facet emission (`agent_api.session.handle.v1`) in `AgentWrapperEvent.data` (early `Status`) and `AgentWrapperCompletion.data` (when known).
-  - Add typed accessor helpers on wrapper event models so session/thread id extraction is implemented once per backend type and reused (per `docs/backlog.json`: uaa-0017).
+  - Add typed accessor helpers on wrapper event models so session/thread id extraction is implemented once per backend type and reused by both `crates/wrapper_events` and `agent_api` (per `docs/backlog.json`: uaa-0017).
   - Add test coverage pinning: validation timing, mutual exclusivity, “exactly one” handle emission, completion attachment, and bounds/redaction posture.
 - **Out-of-scope**:
   - A universal session listing/inspection API.
@@ -71,6 +71,7 @@ From `docs/backlog.json` (in dependency/order-to-ship sequence, with current sta
   - Claude session id (`ClaudeStreamJsonEvent::SystemInit.session_id` and friends).
 - Session handle facet emission (event + completion) behind capability id `agent_api.session.handle.v1`.
 - Capability advertisement updates (only advertise once implemented and tested).
+- Capability matrix documentation handoff: after advertising new session capability ids, regenerate and commit `docs/specs/universal-agent-api/capability-matrix.md` via `cargo run -p xtask -- capability-matrix`.
 - Tests:
   - request validation failures (type errors, unknown keys, selector/id rules, mutual exclusivity),
   - per-backend spawn mapping (argv / command shape),
@@ -90,4 +91,3 @@ From `docs/backlog.json` (in dependency/order-to-ship sequence, with current sta
 Conflict resolution rule (pinned):
 - If this pack drifts from a document under `docs/specs/universal-agent-api/`, the spec wins.
 - This pack MUST be updated to match the spec before implementation proceeds.
-
