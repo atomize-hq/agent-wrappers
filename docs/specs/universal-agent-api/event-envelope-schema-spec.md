@@ -97,8 +97,10 @@ When a backend advertises capability id `agent_api.session.handle.v1`, it MUST s
 run’s backend-defined session/thread identifier as a small JSON facet.
 
 This facet is emitted:
-- once as an early `AgentWrapperEventKind::Status` event `data` payload as soon as the id is known, and
-- attached to `AgentWrapperCompletion.data` whenever a completion is produced and the id is known.
+- once as an early `AgentWrapperEventKind::Status` event `data` payload as soon as the id is known
+  and satisfies the field rules below (including the facet-level bound), and
+- attached to `AgentWrapperCompletion.data` whenever a completion is produced and the id is known
+  and satisfies the field rules below (including the facet-level bound).
 
 ### Schema
 
@@ -117,6 +119,8 @@ This facet is emitted:
   - `len(session.id) <= 1024` bytes (UTF-8).
   - If violated, the backend MUST omit the facet (MUST NOT truncate, since truncation breaks
     round-tripping for resume-by-id) and SHOULD emit a safe `Status` warning.
+- An id that violates the facet-level bound MUST be treated as “not known” for purposes of the
+  emission points below (event stream + completion).
 - The id MUST come from typed parsed backend events and MUST NOT be derived by parsing raw
   stdout/stderr lines.
 - The facet is metadata-only and MUST NOT include raw backend lines.
@@ -125,12 +129,14 @@ Emission points:
 
 - Event stream:
   - The backend MUST emit exactly one `AgentWrapperEventKind::Status` event carrying the facet in
-    `AgentWrapperEvent.data` once the id is known.
+    `AgentWrapperEvent.data` once the id is known and satisfies the field rules above (including
+    the facet-level bound).
   - If a backend cannot reliably attach the facet to an existing `Status` event, it MUST emit a
     synthetic `Status` event immediately after capturing the id.
 - Completion:
-  - If the backend produces an `AgentWrapperCompletion` and the id is known, it MUST attach the
-    facet to `AgentWrapperCompletion.data`.
+  - If the backend produces an `AgentWrapperCompletion` and the id is known and satisfies the field
+    rules above (including the facet-level bound), it MUST attach the facet to
+    `AgentWrapperCompletion.data`.
 
 ## Enforcement behavior (v1, normative)
 

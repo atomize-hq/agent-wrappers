@@ -38,15 +38,17 @@
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 8aec1c30e97650a3a4208ccf95b3bce90efb96eff8ec55ff1ca3afa77e4a8cca
+ADR_BODY_SHA256: 6b4c9723a55d8b29586b59a5f59af7ccfe8613aeb9cbe90a2e0ea3e17d0406bb
 
 ### Decision (draft)
 
 - Introduce capability id: `agent_api.session.handle.v1`.
 - When a backend advertises `agent_api.session.handle.v1`, it MUST surface the current run’s
   backend-defined session/thread identifier as a small, bounded JSON facet:
-  - emitted once as an early `AgentWrapperEventKind::Status` event `data` payload, and
-  - attached to `AgentWrapperCompletion.data` whenever a completion is produced.
+  - emitted once as an early `AgentWrapperEventKind::Status` event `data` payload (as soon as the
+    id is known and within bounds), and
+  - attached to `AgentWrapperCompletion.data` whenever a completion is produced and the id is known
+    and within bounds.
 - Stable schema (closed, versioned):
 
 ```json
@@ -137,7 +139,7 @@ When `agent_api.session.handle.v1` is advertised:
 
 1) **Event stream (early)**
    - The backend MUST emit exactly one `AgentWrapperEventKind::Status` event carrying the facet in
-     `AgentWrapperEvent.data` as soon as the session/thread id is known.
+     `AgentWrapperEvent.data` as soon as the session/thread id is known and within bounds.
    - Preferred attachment points:
      - Codex: on the mapped `ThreadEvent::ThreadStarted` event.
      - Claude Code: on the mapped `ClaudeStreamJsonEvent::SystemInit` event.
@@ -146,7 +148,8 @@ When `agent_api.session.handle.v1` is advertised:
 
 2) **Completion**
    - If the backend produces an `AgentWrapperCompletion` (including non-zero exit completions), and
-     the session/thread id is known, it MUST attach the facet to `AgentWrapperCompletion.data`.
+     the session/thread id is known and within bounds, it MUST attach the facet to
+     `AgentWrapperCompletion.data`.
    - This supports consumers that drop the event stream and only await completion.
 
 ### Bounds + safety
@@ -160,6 +163,8 @@ When `agent_api.session.handle.v1` is advertised:
   - `len(session.id) <= 1024` bytes (UTF-8).
   - If the bound is violated, the backend MUST omit the facet (do not truncate, since truncation
     breaks round-tripping for resume-by-id) and SHOULD emit a safe/redacted `Status` warning.
+  - In this oversize case, the id MUST be treated as “not known” for purposes of the emission
+    points above (event stream + completion).
 
 ### Storage / run-local state
 

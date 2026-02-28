@@ -7,11 +7,11 @@
   - In:
     - Implement capability id `agent_api.session.handle.v1` in built-in `agent_api` backends:
       - Capture the id from typed parsed backend events (Codex `thread_id`, Claude `session_id`).
-      - Emit **exactly one** early `AgentWrapperEventKind::Status` event carrying:
+      - Emit **exactly one** early `AgentWrapperEventKind::Status` event carrying (once the id is known and within bounds):
         - `data = { "schema": "agent_api.session.handle.v1", "session": { "id": "<opaque>" } }`
-      - Attach the same facet to `AgentWrapperCompletion.data` whenever a completion is produced and the id is known.
+      - Attach the same facet to `AgentWrapperCompletion.data` whenever a completion is produced and the id is known and within bounds.
     - Enforce facet-level bounds:
-      - `len(session.id) <= 1024` bytes (UTF-8) or else omit (MUST NOT truncate) and emit a safe warning `Status`.
+      - `len(session.id) <= 1024` bytes (UTF-8) or else omit (MUST NOT truncate) and SHOULD emit a safe warning `Status`.
     - Advertise `agent_api.session.handle.v1` in `AgentWrapperCapabilities.ids` only once the above is implemented and tested.
     - Add tests pinning placement rules and bounds behavior for both backends.
   - Out:
@@ -22,8 +22,8 @@
     - Typed backend events and their id fields (via SEAM-1 accessors).
     - Universal event/completion bounds enforcement (`crates/agent_api/src/bounds.rs`).
   - Outputs:
-    - Event stream: one early `Status` event containing the handle facet in `data`.
-    - Completion: `AgentWrapperCompletion.data = Some(handle_facet)` when id known.
+    - Event stream: one early `Status` event containing the handle facet in `data` (when the id is within bounds).
+    - Completion: `AgentWrapperCompletion.data = Some(handle_facet)` when the id is known and within bounds.
     - Capability advertisement: `agent_api.session.handle.v1` present in capabilities only when behavior is implemented.
 - **Key invariants / rules**:
   - Emit the facet only for backends that advertise `agent_api.session.handle.v1`.
@@ -54,4 +54,3 @@
 ## Downstream decomposition prompt
 
 Decompose into: (1) per-backend id capture + run-local storage, (2) event emission “exactly once” implementation, (3) completion attachment, (4) bounds + oversize behavior, (5) regression tests for both backends.
-

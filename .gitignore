@@ -29,3 +29,4 @@ universal-agent-api-planning-pack_*.zip
 __pycache__/
 *.pyc
 *.pyo
+**/logs/

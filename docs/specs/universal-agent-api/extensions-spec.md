@@ -50,6 +50,18 @@ For every run, backends MUST validate `request.extensions` before spawning any b
 This rule is the universal mechanism that makes extension onboarding scalable: extension keys are
 declared in capabilities and validated deterministically per backend.
 
+Extension validation precedence (normative):
+
+- When validating `request.extensions` (after prompt non-empty validation per
+  `run-protocol-spec.md`), the backend MUST apply the R0 key gate before extension value validation
+  or cross-key extension contradiction rules.
+- If any extension key in `request.extensions` is unsupported, the backend MUST fail the run with
+  `AgentWrapperError::UnsupportedCapability` (per R0) and MUST NOT attempt to return
+  `AgentWrapperError::InvalidRequest` for extension value validation or cross-key extension
+  contradiction rules for that request.
+- Cross-key extension contradiction rules (e.g., mutual exclusivity) apply only after all extension
+  keys in the request have passed R0 (i.e., are supported).
+
 ### R1 — Ownership (single source of truth)
 
 - Every extension key MUST have exactly one owner doc.
@@ -119,8 +131,9 @@ Note:
 Validation rules:
 - Value MUST be an object; otherwise the backend MUST fail before spawn with
   `AgentWrapperError::InvalidRequest`.
-- The request MUST NOT also include `agent_api.session.fork.v1`; if both are present, the backend
-  MUST fail before spawn with `AgentWrapperError::InvalidRequest`.
+- The request MUST NOT also include `agent_api.session.fork.v1`; if both are present and both keys
+  are supported by the backend (per R0), the backend MUST fail before spawn with
+  `AgentWrapperError::InvalidRequest`.
 - Unknown object keys MUST cause `AgentWrapperError::InvalidRequest` (closed schema for `.v1`).
 
 Backend mapping requirements:
@@ -161,8 +174,9 @@ Note:
 Validation rules:
 - Value MUST be an object; otherwise the backend MUST fail before spawn with
   `AgentWrapperError::InvalidRequest`.
-- The request MUST NOT also include `agent_api.session.resume.v1`; if both are present, the backend
-  MUST fail before spawn with `AgentWrapperError::InvalidRequest`.
+- The request MUST NOT also include `agent_api.session.resume.v1`; if both are present and both keys
+  are supported by the backend (per R0), the backend MUST fail before spawn with
+  `AgentWrapperError::InvalidRequest`.
 - Unknown object keys MUST cause `AgentWrapperError::InvalidRequest` (closed schema for `.v1`).
 
 Backend mapping requirements:
