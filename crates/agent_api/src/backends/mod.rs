@@ -1,3 +1,5 @@
+#[allow(dead_code)]
+mod session_selectors;
 mod termination;
 
 #[cfg(feature = "codex")]
