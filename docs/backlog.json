@@ -425,7 +425,7 @@
     {
       "id": "uaa-0009",
       "title": "Obs: trace context propagation",
-      "status": "todo",
+      "status": "on_hold",
       "bucket": "agent_api.obs",
       "type": "extension_key",
       "proposed_capability_id": "agent_api.obs.trace_context.v1",
@@ -449,7 +449,7 @@
     {
       "id": "uaa-0010",
       "title": "Obs: tags / key-value annotations",
-      "status": "todo",
+      "status": "on_hold",
       "bucket": "agent_api.obs",
       "type": "extension_key",
       "proposed_capability_id": "agent_api.obs.tags.v1",
