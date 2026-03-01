@@ -198,6 +198,24 @@ impl CodexClient {
         streaming::stream_resume(self, request).await
     }
 
+    /// Streams JSONL events from `codex exec --json resume ...` and returns a termination handle
+    /// alongside the stream and completion future.
+    ///
+    /// Env overrides are applied to the spawned `Command` for this invocation only and do not
+    /// mutate the parent process environment.
+    pub async fn stream_resume_with_env_overrides_control(
+        &self,
+        request: ResumeRequest,
+        env_overrides: &BTreeMap<String, String>,
+    ) -> Result<ExecStreamControl, ExecStreamError> {
+        let env_overrides: Vec<(String, String)> = env_overrides
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect();
+
+        streaming::stream_resume_with_env_overrides_control(self, request, &env_overrides).await
+    }
+
     /// Runs `codex resume [OPTIONS] [SESSION_ID] [PROMPT]` and returns captured output.
     pub async fn resume_session(
         &self,

@@ -257,6 +257,19 @@ pub(super) async fn stream_resume(
     client: &CodexClient,
     request: ResumeRequest,
 ) -> Result<ExecStream, ExecStreamError> {
+    let control = stream_resume_with_env_overrides_control(client, request, &[]).await?;
+
+    Ok(ExecStream {
+        events: control.events,
+        completion: control.completion,
+    })
+}
+
+pub(super) async fn stream_resume_with_env_overrides_control(
+    client: &CodexClient,
+    request: ResumeRequest,
+    env_overrides: &[(String, String)],
+) -> Result<ExecStreamControl, ExecStreamError> {
     if let Some(prompt) = &request.prompt {
         if prompt.trim().is_empty() {
             return Err(CodexError::EmptyPrompt.into());
@@ -357,6 +370,9 @@ pub(super) async fn stream_resume(
     }
 
     client.command_env.apply(&mut command)?;
+    for (key, value) in env_overrides {
+        command.env(key, value);
+    }
 
     let mut child = spawn_with_retry(&mut command, client.command_env.binary_path())?;
 
@@ -399,16 +415,23 @@ pub(super) async fn stream_resume(
     ));
     let stderr_task = tokio::spawn(tee_stream(stderr, ConsoleTarget::Stderr, !client.quiet));
 
+    let termination = ExecTerminationHandle::new();
+    let termination_for_completion = termination.clone();
+
     let events = jsonl::EventChannelStream::new(rx, idle_timeout);
     let timeout = client.timeout;
     let schema_path = output_schema.clone();
     let completion_handle = tokio::spawn(async move {
         let _dir_ctx = dir_ctx;
         let wait_task = async move {
-            let status = child
-                .wait()
-                .await
-                .map_err(|source| CodexError::Wait { source })?;
+            let status = tokio::select! {
+                status = child.wait() => status,
+                _ = termination_for_completion.requested() => {
+                    let _ = child.start_kill();
+                    child.wait().await
+                }
+            }
+            .map_err(|source| CodexError::Wait { source })?;
             let stdout_result = stdout_task.await.map_err(CodexError::Join)?;
             stdout_result?;
             let stderr_bytes = stderr_task
@@ -444,8 +467,9 @@ pub(super) async fn stream_resume(
         handle: Box::pin(completion_handle),
     });
 
-    Ok(ExecStream {
+    Ok(ExecStreamControl {
         events: Box::pin(events),
         completion,
+        termination,
     })
 }
