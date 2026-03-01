@@ -328,12 +328,11 @@ fn handle_facet_emitted_once_on_thread_started_and_attached_to_completion() {
     );
 
     let completion = adapter
-        .map_completion(CodexBackendCompletion::Ok(codex::ExecCompletion {
+        .map_completion(CodexBackendCompletion {
             status: success_exit_status(),
-            last_message_path: None,
-            last_message: None,
-            schema_path: None,
-        }))
+            final_text: None,
+            selection_failure_message: None,
+        })
         .expect("completion maps");
     assert_eq!(
         completion
@@ -369,12 +368,11 @@ fn whitespace_thread_id_is_treated_as_unknown() {
     );
 
     let completion = adapter
-        .map_completion(CodexBackendCompletion::Ok(codex::ExecCompletion {
+        .map_completion(CodexBackendCompletion {
             status: success_exit_status(),
-            last_message_path: None,
-            last_message: None,
-            schema_path: None,
-        }))
+            final_text: None,
+            selection_failure_message: None,
+        })
         .expect("completion maps");
     assert_eq!(completion.data, None);
 }
@@ -414,12 +412,11 @@ fn oversize_thread_id_is_omitted_and_warns_once() {
     assert_eq!(warnings.len(), 1);
 
     let completion = adapter
-        .map_completion(CodexBackendCompletion::Ok(codex::ExecCompletion {
+        .map_completion(CodexBackendCompletion {
             status: success_exit_status(),
-            last_message_path: None,
-            last_message: None,
-            schema_path: None,
-        }))
+            final_text: None,
+            selection_failure_message: None,
+        })
         .expect("completion maps");
     assert_eq!(completion.data, None);
 }
