@@ -37,4 +37,6 @@ mod sandbox_execpolicy;
 mod stream_exec_env_overrides;
 mod stream_exec_termination;
 mod stream_exec_timeout;
+mod stream_resume_env_overrides;
+mod stream_resume_termination;
 mod stream_resume_timeout;
