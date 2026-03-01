@@ -924,6 +924,7 @@ impl AgentWrapperBackend for CodexBackend {
         ids.insert(EXT_CODEX_APPROVAL_POLICY.to_string());
         ids.insert(EXT_CODEX_SANDBOX_MODE.to_string());
         ids.insert(EXT_SESSION_RESUME_V1.to_string());
+        ids.insert(EXT_SESSION_FORK_V1.to_string());
         AgentWrapperCapabilities { ids }
     }
 

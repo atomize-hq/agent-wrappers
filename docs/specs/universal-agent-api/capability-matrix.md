@@ -25,6 +25,14 @@ Do not edit by hand.
 |---|---|---|
 | `agent_api.exec.non_interactive` | ✅ | ✅ |
 
+## `agent_api.session`
+
+| capability id | `claude_code` | `codex` |
+|---|---|---|
+| `agent_api.session.fork.v1` | ✅ | ✅ |
+| `agent_api.session.handle.v1` | ✅ | ✅ |
+| `agent_api.session.resume.v1` | ✅ | ✅ |
+
 ## `agent_api.tools`
 
 | capability id | `claude_code` | `codex` |
