@@ -26,6 +26,10 @@ pub const METHOD_CODEX_APPROVAL: &str = "codex/approval";
 pub const METHOD_THREAD_START: &str = "thread/start";
 /// Resume an existing thread.
 pub const METHOD_THREAD_RESUME: &str = "thread/resume";
+/// List threads (paged).
+pub const METHOD_THREAD_LIST: &str = "thread/list";
+/// Fork an existing thread.
+pub const METHOD_THREAD_FORK: &str = "thread/fork";
 /// Start a new turn on a thread.
 pub const METHOD_TURN_START: &str = "turn/start";
 /// Interrupt an active turn.
@@ -184,6 +188,82 @@ pub struct ThreadResumeParams {
     pub thread_id: String,
 }
 
+/// Sorting key for `thread/list`.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ThreadListSortKey {
+    CreatedAt,
+    UpdatedAt,
+}
+
+/// Parameters for `thread/list`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadListParams {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<PathBuf>,
+    /// Opaque pagination cursor; MUST be explicitly `null` on the first request.
+    pub cursor: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort_key: Option<ThreadListSortKey>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub archived: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_providers: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_kinds: Option<Vec<String>>,
+}
+
+/// Response payload for `thread/list`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadListResponse {
+    pub data: Vec<ThreadSummary>,
+    pub next_cursor: Option<String>,
+}
+
+/// Thread metadata summary returned by `thread/list`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadSummary {
+    pub id: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<PathBuf>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty", flatten)]
+    pub extra: BTreeMap<String, Value>,
+}
+
+/// Parameters for `thread/fork`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadForkParams {
+    pub thread_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<PathBuf>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub approval_policy: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sandbox: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub persist_extended_history: Option<bool>,
+}
+
+/// Response payload for `thread/fork`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ThreadForkResponse {
+    pub thread: ForkedThread,
+}
+
+/// Forked thread metadata returned by `thread/fork`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ForkedThread {
+    pub id: String,
+}
+
 /// Parameters for `turn/start`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -202,6 +282,38 @@ pub struct TurnInput {
     pub kind: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
+}
+
+/// Parameters for `turn/start` (fork-focused pinned v2 subset).
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnStartParamsV2 {
+    pub thread_id: String,
+    pub input: Vec<UserInputV2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub approval_policy: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<PathBuf>,
+}
+
+/// User input shape pinned for fork flows.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum UserInputV2 {
+    Text {
+        text: String,
+        #[serde(default)]
+        text_elements: Vec<Value>,
+    },
+}
+
+impl UserInputV2 {
+    pub fn text(text: impl Into<String>) -> Self {
+        Self::Text {
+            text: text.into(),
+            text_elements: Vec::new(),
+        }
+    }
 }
 
 /// Parameters for `turn/interrupt`.

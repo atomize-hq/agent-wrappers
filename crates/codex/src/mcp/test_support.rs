@@ -238,6 +238,109 @@ for line in sys.stdin:
     (dir, script_path)
 }
 
+pub(super) fn write_fake_app_server_fork_v1() -> (tempfile::TempDir, PathBuf, PathBuf) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let script_path = dir.path().join("fake-codex-app-fork-v1");
+    let rpc_log_path = dir.path().join("rpc-log.jsonl");
+
+    fs::write(&rpc_log_path, "").expect("write rpc log");
+
+    let script = r#"#!/usr/bin/env python3
+import json
+import os
+import sys
+import threading
+import time
+
+pending = {}
+
+rpc_log_path = os.environ.get("RPC_LOG")
+rpc_log_fh = None
+if rpc_log_path:
+    rpc_log_fh = open(rpc_log_path, "a", encoding="utf-8")
+
+def log(payload):
+    if rpc_log_fh is None:
+        return
+    rpc_log_fh.write(json.dumps(payload) + "\n")
+    rpc_log_fh.flush()
+
+def send(payload):
+    sys.stdout.write(json.dumps(payload) + "\n")
+    sys.stdout.flush()
+
+def send_cancelled(req_id, reason="cancelled"):
+    if req_id is None:
+        return
+    send({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32800, "message": reason}})
+
+def handle_turn_start(req_id, params):
+    pending[str(req_id)] = {"status": "pending"}
+    def worker():
+        time.sleep(0.2)
+        state = pending.get(str(req_id))
+        if not state or state.get("status") == "cancelled":
+            return
+        send({"jsonrpc": "2.0", "id": req_id, "result": {"accepted": True}})
+        pending.pop(str(req_id), None)
+    threading.Thread(target=worker, daemon=True).start()
+
+for line in sys.stdin:
+    if not line.strip():
+        continue
+    msg = json.loads(line)
+    log(msg)
+    method = msg.get("method")
+
+    if method == "initialize":
+        send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"ready": True}})
+    elif method == "thread/list":
+        params = msg.get("params") or {}
+        cursor = params.get("cursor")
+        cwd = params.get("cwd")
+        if cursor is None:
+            data = [
+                {"id": "t-a", "createdAt": 100, "updatedAt": 200, "cwd": cwd},
+                {"id": "t-b", "createdAt": 101, "updatedAt": 200, "cwd": cwd},
+            ]
+            send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"data": data, "nextCursor": "cursor-1"}})
+        elif cursor == "cursor-1":
+            data = [
+                {"id": "t-c", "createdAt": 101, "updatedAt": 200, "cwd": cwd},
+                {"id": "t-x", "createdAt": 99, "updatedAt": 199, "cwd": cwd},
+            ]
+            send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"data": data, "nextCursor": None}})
+        else:
+            send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"data": [], "nextCursor": None}})
+    elif method == "thread/fork":
+        params = msg.get("params") or {}
+        thread_id = params.get("threadId") or ""
+        send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"thread": {"id": "forked-" + thread_id}}})
+    elif method == "turn/start":
+        handle_turn_start(msg.get("id"), msg.get("params") or {})
+    elif method == "$/cancelRequest":
+        target = (msg.get("params") or {}).get("id")
+        if target is not None:
+            pending[str(target)] = {"status": "cancelled"}
+        send_cancelled(target, reason="cancelled")
+    elif method == "shutdown":
+        send({"jsonrpc": "2.0", "id": msg.get("id"), "result": {"ok": True}})
+        break
+    elif method == "exit":
+        break
+"#;
+
+    fs::write(&script_path, script).expect("write script");
+    #[cfg(unix)]
+    {
+        let mut perms = fs::metadata(&script_path).expect("metadata").permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).expect("chmod");
+    }
+
+    (dir, script_path, rpc_log_path)
+}
+
 pub(super) fn write_env_probe_server(var: &str) -> (tempfile::TempDir, PathBuf) {
     let dir = tempfile::tempdir().expect("tempdir");
     let script_path = dir.path().join("env-probe-server");
@@ -300,4 +403,19 @@ pub(super) async fn start_fake_app_server() -> (tempfile::TempDir, CodexAppServe
         .await
         .expect("spawn app server");
     (dir, server)
+}
+
+pub(super) async fn start_fake_app_server_fork_v1() -> (tempfile::TempDir, CodexAppServer, PathBuf)
+{
+    let (dir, script, rpc_log) = write_fake_app_server_fork_v1();
+    let mut config = test_config(script);
+    config.env.push((
+        OsString::from("RPC_LOG"),
+        OsString::from(rpc_log.as_os_str()),
+    ));
+    let client = test_client();
+    let server = CodexAppServer::start_experimental(config, client)
+        .await
+        .expect("spawn app server");
+    (dir, server, rpc_log)
 }
