@@ -13,6 +13,11 @@ use futures_util::StreamExt;
 use serde_json::Value;
 use tokio::sync::oneshot;
 
+use super::session_selectors::{
+    parse_session_resume_v1, validate_resume_fork_mutual_exclusion, SessionSelectorV1,
+    EXT_SESSION_RESUME_V1,
+};
+
 use crate::{
     backend_harness::{
         BackendDefaults, BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn,
@@ -81,12 +86,27 @@ struct ClaudeHarnessAdapter {
 #[derive(Clone, Debug)]
 struct ClaudeExecPolicy {
     non_interactive: bool,
+    resume: Option<SessionSelectorV1>,
 }
 
 #[derive(Clone, Debug)]
 struct ClaudeBackendCompletion {
     status: std::process::ExitStatus,
     final_text: Option<String>,
+    selection_failure_message: Option<String>,
+}
+
+#[derive(Debug, Default)]
+struct ClaudeStreamState {
+    last_assistant_text: Option<String>,
+    saw_assistant_message: bool,
+    saw_stream_error: bool,
+}
+
+#[derive(Debug)]
+enum ClaudeBackendEvent {
+    Stream(claude_code::ClaudeStreamJsonEvent),
+    TerminalError { message: String },
 }
 
 #[derive(Debug, Default)]
@@ -109,7 +129,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
     }
 
     fn supported_extension_keys(&self) -> &'static [&'static str] {
-        const SUPPORTED: [&str; 1] = [EXT_NON_INTERACTIVE];
+        const SUPPORTED: [&str; 2] = [EXT_NON_INTERACTIVE, EXT_SESSION_RESUME_V1];
         &SUPPORTED
     }
 
@@ -126,10 +146,21 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
             .transpose()?
             .unwrap_or(true);
 
-        Ok(ClaudeExecPolicy { non_interactive })
+        let resume = request
+            .extensions
+            .get(EXT_SESSION_RESUME_V1)
+            .map(parse_session_resume_v1)
+            .transpose()?;
+
+        validate_resume_fork_mutual_exclusion(&request.extensions)?;
+
+        Ok(ClaudeExecPolicy {
+            non_interactive,
+            resume,
+        })
     }
 
-    type BackendEvent = claude_code::ClaudeStreamJsonEvent;
+    type BackendEvent = ClaudeBackendEvent;
     type BackendCompletion = ClaudeBackendCompletion;
     type BackendError = ClaudeBackendError;
 
@@ -186,6 +217,17 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                 print_req = print_req.permission_mode("bypassPermissions");
             }
 
+            if let Some(resume) = req.policy.resume.as_ref() {
+                match resume {
+                    SessionSelectorV1::Last => {
+                        print_req = print_req.continue_session(true);
+                    }
+                    SessionSelectorV1::Id { id } => {
+                        print_req = print_req.resume_value(id.clone());
+                    }
+                }
+            }
+
             let handle = client
                 .print_stream_json_control(print_req)
                 .await
@@ -195,41 +237,121 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                 state.set_handle(handle.termination.clone());
             }
 
-            let last_assistant_text: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+            let resume_selector = req.policy.resume.clone();
+            let stream_state: Arc<Mutex<ClaudeStreamState>> =
+                Arc::new(Mutex::new(ClaudeStreamState::default()));
             let (events_done_tx, events_done_rx) = oneshot::channel::<()>();
+
+            let (tail_tx, tail_rx) = if resume_selector.is_some() {
+                let (tx, rx) = oneshot::channel::<Option<String>>();
+                (Some(tx), Some(rx))
+            } else {
+                (None, None)
+            };
 
             let events = Box::pin(stream::unfold(
                 (
                     handle.events,
-                    last_assistant_text.clone(),
+                    stream_state.clone(),
                     Some(events_done_tx),
+                    tail_rx,
+                    resume_selector.clone(),
+                    false,
                 ),
-                |(mut events, last_assistant_text, mut events_done_tx)| async move {
-                    match events.next().await {
-                        Some(Ok(ev)) => {
-                            if let claude_code::ClaudeStreamJsonEvent::AssistantMessage {
-                                raw,
-                                ..
-                            } = &ev
-                            {
-                                if let Some(text) = extract_assistant_message_final_text(raw) {
-                                    if let Ok(mut guard) = last_assistant_text.lock() {
-                                        *guard = Some(text);
+                |(
+                    mut events,
+                    stream_state,
+                    mut events_done_tx,
+                    mut tail_rx,
+                    resume_selector,
+                    tail_emitted,
+                )| async move {
+                    loop {
+                        match events.next().await {
+                            Some(Ok(ev)) => {
+                                if let claude_code::ClaudeStreamJsonEvent::AssistantMessage {
+                                    raw,
+                                    ..
+                                } = &ev
+                                {
+                                    if let Ok(mut state) = stream_state.lock() {
+                                        state.saw_assistant_message = true;
+                                        if let Some(text) =
+                                            extract_assistant_message_final_text(raw)
+                                        {
+                                            state.last_assistant_text = Some(text);
+                                        }
                                     }
                                 }
-                            }
 
-                            Some((Ok(ev), (events, last_assistant_text, events_done_tx)))
-                        }
-                        Some(Err(err)) => Some((
-                            Err(ClaudeBackendError::StreamParse(err)),
-                            (events, last_assistant_text, events_done_tx),
-                        )),
-                        None => {
-                            if let Some(tx) = events_done_tx.take() {
-                                let _ = tx.send(());
+                                if resume_selector.is_some()
+                                    && matches!(
+                                        ev,
+                                        claude_code::ClaudeStreamJsonEvent::ResultError { .. }
+                                    )
+                                {
+                                    continue;
+                                }
+
+                                return Some((
+                                    Ok(ClaudeBackendEvent::Stream(ev)),
+                                    (
+                                        events,
+                                        stream_state,
+                                        events_done_tx,
+                                        tail_rx,
+                                        resume_selector,
+                                        tail_emitted,
+                                    ),
+                                ));
                             }
-                            None
+                            Some(Err(err)) => {
+                                if let Ok(mut state) = stream_state.lock() {
+                                    state.saw_stream_error = true;
+                                }
+
+                                return Some((
+                                    Err(ClaudeBackendError::StreamParse(err)),
+                                    (
+                                        events,
+                                        stream_state,
+                                        events_done_tx,
+                                        tail_rx,
+                                        resume_selector,
+                                        tail_emitted,
+                                    ),
+                                ));
+                            }
+                            None => {
+                                if let Some(tx) = events_done_tx.take() {
+                                    let _ = tx.send(());
+                                }
+
+                                if tail_emitted {
+                                    return None;
+                                }
+
+                                let Some(rx) = tail_rx.take() else {
+                                    return None;
+                                };
+
+                                let message = rx.await.ok().flatten();
+                                let Some(message) = message else {
+                                    return None;
+                                };
+
+                                return Some((
+                                    Ok(ClaudeBackendEvent::TerminalError { message }),
+                                    (
+                                        events,
+                                        stream_state,
+                                        events_done_tx,
+                                        tail_rx,
+                                        resume_selector,
+                                        true,
+                                    ),
+                                ));
+                            }
                         }
                     }
                 },
@@ -243,12 +365,50 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                     .await
                     .map_err(ClaudeBackendError::Completion)?;
 
-                let final_text = last_assistant_text
+                let final_text = stream_state
                     .lock()
                     .ok()
-                    .and_then(|guard| guard.clone());
+                    .and_then(|guard| guard.last_assistant_text.clone());
 
-                Ok(ClaudeBackendCompletion { status, final_text })
+                let selection_failure_message = match resume_selector {
+                    Some(SessionSelectorV1::Last) => {
+                        let state = stream_state.lock().ok();
+                        if !status.success()
+                            && state
+                                .as_ref()
+                                .is_some_and(|state| !state.saw_assistant_message)
+                            && state.as_ref().is_some_and(|state| !state.saw_stream_error)
+                        {
+                            Some("no session found".to_string())
+                        } else {
+                            None
+                        }
+                    }
+                    Some(SessionSelectorV1::Id { .. }) => {
+                        let state = stream_state.lock().ok();
+                        if !status.success()
+                            && state
+                                .as_ref()
+                                .is_some_and(|state| !state.saw_assistant_message)
+                            && state.as_ref().is_some_and(|state| !state.saw_stream_error)
+                        {
+                            Some("session not found".to_string())
+                        } else {
+                            None
+                        }
+                    }
+                    None => None,
+                };
+
+                if let Some(tx) = tail_tx {
+                    let _ = tx.send(selection_failure_message.clone());
+                }
+
+                Ok(ClaudeBackendCompletion {
+                    status,
+                    final_text,
+                    selection_failure_message,
+                })
             });
 
             Ok(BackendSpawn { events, completion })
@@ -256,6 +416,13 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
     }
 
     fn map_event(&self, event: Self::BackendEvent) -> Vec<AgentWrapperEvent> {
+        let event = match event {
+            ClaudeBackendEvent::Stream(event) => event,
+            ClaudeBackendEvent::TerminalError { message } => {
+                return vec![error_event(message)];
+            }
+        };
+
         let mut emit_oversize_warning = false;
 
         if let Ok(mut state) = self.handle_state.lock() {
@@ -316,6 +483,10 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
         &self,
         completion: Self::BackendCompletion,
     ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
+        if let Some(message) = completion.selection_failure_message {
+            return Err(AgentWrapperError::Backend { message });
+        }
+
         let handle_facet = self
             .handle_state
             .lock()
@@ -360,6 +531,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
         ids.insert(CAP_SESSION_HANDLE_V1.to_string());
         ids.insert("backend.claude_code.print_stream_json".to_string());
         ids.insert(EXT_NON_INTERACTIVE.to_string());
+        ids.insert(EXT_SESSION_RESUME_V1.to_string());
         AgentWrapperCapabilities { ids }
     }
 

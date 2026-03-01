@@ -107,6 +107,7 @@ fn claude_backend_reports_required_capabilities() {
     assert!(capabilities.contains(CAP_TOOLS_RESULTS_V1));
     assert!(capabilities.contains(CAP_ARTIFACTS_FINAL_TEXT_V1));
     assert!(capabilities.contains(CAP_SESSION_HANDLE_V1));
+    assert!(capabilities.contains(EXT_SESSION_RESUME_V1));
 }
 
 #[test]
@@ -455,7 +456,9 @@ fn unknown_outer_type_maps_to_unknown() {
 fn claude_emits_handle_facet_once_when_first_event_is_status() {
     let adapter = new_adapter();
 
-    let out1 = adapter.map_event(parse_stream_json_fixture(SYSTEM_INIT));
+    let out1 = adapter.map_event(ClaudeBackendEvent::Stream(parse_stream_json_fixture(
+        SYSTEM_INIT,
+    )));
     let facet_events_1: Vec<_> = out1
         .iter()
         .filter(|event| handle_facet_schema(event) == Some(CAP_SESSION_HANDLE_V1))
@@ -471,7 +474,9 @@ fn claude_emits_handle_facet_once_when_first_event_is_status() {
         Some("sess-1")
     );
 
-    let out2 = adapter.map_event(parse_stream_json_fixture(SYSTEM_OTHER));
+    let out2 = adapter.map_event(ClaudeBackendEvent::Stream(parse_stream_json_fixture(
+        SYSTEM_OTHER,
+    )));
     assert!(
         out2.iter()
             .all(|event| handle_facet_schema(event) != Some(CAP_SESSION_HANDLE_V1)),
@@ -483,7 +488,9 @@ fn claude_emits_handle_facet_once_when_first_event_is_status() {
 fn claude_emits_synthetic_status_handle_facet_when_first_event_is_not_status() {
     let adapter = new_adapter();
 
-    let out = adapter.map_event(parse_stream_json_fixture(ASSISTANT_MESSAGE_TEXT));
+    let out = adapter.map_event(ClaudeBackendEvent::Stream(parse_stream_json_fixture(
+        ASSISTANT_MESSAGE_TEXT,
+    )));
     assert_eq!(out.len(), 2);
     assert_eq!(out[0].kind, AgentWrapperEventKind::TextOutput);
     assert_eq!(out[0].text.as_deref(), Some("hello"));
@@ -504,12 +511,15 @@ fn claude_emits_synthetic_status_handle_facet_when_first_event_is_not_status() {
 fn claude_completion_attaches_handle_facet_when_id_is_known() {
     let adapter = new_adapter();
 
-    let _events = adapter.map_event(parse_stream_json_fixture(SYSTEM_INIT));
+    let _events = adapter.map_event(ClaudeBackendEvent::Stream(parse_stream_json_fixture(
+        SYSTEM_INIT,
+    )));
 
     let completion = adapter
         .map_completion(ClaudeBackendCompletion {
             status: success_exit_status(),
             final_text: None,
+            selection_failure_message: None,
         })
         .expect("completion maps");
 
@@ -535,9 +545,9 @@ fn claude_completion_attaches_handle_facet_when_id_is_known() {
 fn claude_whitespace_session_id_is_treated_as_unknown() {
     let adapter = new_adapter();
 
-    let out = adapter.map_event(parse_single_line(
+    let out = adapter.map_event(ClaudeBackendEvent::Stream(parse_single_line(
         r#"{"type":"system","subtype":"init","session_id":"   "}"#,
-    ));
+    )));
     assert!(
         out.iter()
             .all(|event| handle_facet_schema(event) != Some(CAP_SESSION_HANDLE_V1)),
@@ -548,6 +558,7 @@ fn claude_whitespace_session_id_is_treated_as_unknown() {
         .map_completion(ClaudeBackendCompletion {
             status: success_exit_status(),
             final_text: None,
+            selection_failure_message: None,
         })
         .expect("completion maps");
     assert!(completion.data.is_none());
@@ -559,7 +570,7 @@ fn claude_oversize_session_id_is_omitted_and_warns_once() {
 
     let oversize = "a".repeat(SESSION_HANDLE_ID_BOUND_BYTES + 1);
     let line = format!(r#"{{"type":"system","subtype":"init","session_id":"{oversize}"}}"#);
-    let out1 = adapter.map_event(parse_single_line(&line));
+    let out1 = adapter.map_event(ClaudeBackendEvent::Stream(parse_single_line(&line)));
 
     assert!(
         out1.iter()
@@ -575,7 +586,7 @@ fn claude_oversize_session_id_is_omitted_and_warns_once() {
     assert_eq!(warnings_1[0].kind, AgentWrapperEventKind::Status);
     assert!(warnings_1[0].data.is_none());
 
-    let out2 = adapter.map_event(parse_single_line(&line));
+    let out2 = adapter.map_event(ClaudeBackendEvent::Stream(parse_single_line(&line)));
     assert!(
         out2.iter()
             .all(|event| event.message.as_deref() != Some(SESSION_HANDLE_OVERSIZE_WARNING)),
@@ -586,6 +597,7 @@ fn claude_oversize_session_id_is_omitted_and_warns_once() {
         .map_completion(ClaudeBackendCompletion {
             status: success_exit_status(),
             final_text: None,
+            selection_failure_message: None,
         })
         .expect("completion maps");
     assert!(completion.data.is_none());
