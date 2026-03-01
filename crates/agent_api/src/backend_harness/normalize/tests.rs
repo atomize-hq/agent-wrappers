@@ -206,6 +206,104 @@ fn bh_r0_unsupported_capability_beats_contradiction_rules_for_resume_fork_via_no
 }
 
 #[test]
+fn bh_r0_unsupported_capability_beats_contradiction_rules_for_fork_resume_via_normalize_request() {
+    struct PanicOnPolicyAdapter;
+
+    impl BackendHarnessAdapter for PanicOnPolicyAdapter {
+        fn kind(&self) -> crate::AgentWrapperKind {
+            toy_kind()
+        }
+
+        fn supported_extension_keys(&self) -> &'static [&'static str] {
+            const SUPPORTED: [&str; 1] = ["agent_api.session.fork.v1"];
+            &SUPPORTED
+        }
+
+        type Policy = ToyPolicy;
+
+        fn validate_and_extract_policy(
+            &self,
+            _request: &AgentWrapperRunRequest,
+        ) -> Result<Self::Policy, crate::AgentWrapperError> {
+            panic!("validate_and_extract_policy must not be called when any key is unsupported");
+        }
+
+        type BackendEvent = ToyEvent;
+        type BackendCompletion = ToyCompletion;
+        type BackendError = ToyBackendError;
+
+        fn spawn(
+            &self,
+            _req: NormalizedRequest<Self::Policy>,
+        ) -> std::pin::Pin<
+            Box<
+                dyn std::future::Future<
+                        Output = Result<
+                            super::super::contract::BackendSpawn<
+                                Self::BackendEvent,
+                                Self::BackendCompletion,
+                                Self::BackendError,
+                            >,
+                            Self::BackendError,
+                        >,
+                    > + Send
+                    + 'static,
+            >,
+        > {
+            panic!("spawn must not be called from normalize_request");
+        }
+
+        fn map_event(&self, _event: Self::BackendEvent) -> Vec<crate::AgentWrapperEvent> {
+            panic!("map_event must not be called from normalize_request");
+        }
+
+        fn map_completion(
+            &self,
+            _completion: Self::BackendCompletion,
+        ) -> Result<AgentWrapperCompletion, crate::AgentWrapperError> {
+            panic!("map_completion must not be called from normalize_request");
+        }
+
+        fn redact_error(
+            &self,
+            _phase: BackendHarnessErrorPhase,
+            _err: &Self::BackendError,
+        ) -> String {
+            panic!("redact_error must not be called from normalize_request");
+        }
+    }
+
+    let adapter = PanicOnPolicyAdapter;
+    let defaults = BackendDefaults::default();
+    let secret = "SECRET_SHOULD_NOT_LEAK";
+
+    let mut request = AgentWrapperRunRequest {
+        prompt: "hello".to_string(),
+        ..Default::default()
+    };
+    request.extensions.insert(
+        "agent_api.session.fork.v1".to_string(),
+        json!({"selector": "last"}),
+    );
+    request.extensions.insert(
+        "agent_api.session.resume.v1".to_string(),
+        Value::String(secret.to_string()),
+    );
+
+    let err = match normalize_request(&adapter, &defaults, request) {
+        Ok(_) => panic!("unsupported resume key must fail closed before contradiction rules"),
+        Err(err) => err,
+    };
+    match &err {
+        AgentWrapperError::UnsupportedCapability { capability, .. } => {
+            assert_eq!(capability, "agent_api.session.resume.v1");
+        }
+        other => panic!("expected UnsupportedCapability, got: {other:?}"),
+    }
+    assert!(!err.to_string().contains(secret));
+}
+
+#[test]
 fn bh_r0_resume_fork_contradiction_applies_only_after_all_keys_are_supported_via_normalize_request()
 {
     struct ResumeForkContradictionAdapter;
