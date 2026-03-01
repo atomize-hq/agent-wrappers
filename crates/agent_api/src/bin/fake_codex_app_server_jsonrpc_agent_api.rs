@@ -19,7 +19,13 @@ fn write_result(out: &mut impl Write, id: &Value, result: Value) -> io::Result<(
     write_json(out, &json!({"jsonrpc":"2.0","id":id,"result":result}))
 }
 
-fn write_error(out: &mut impl Write, id: &Value, code: i64, message: &str, data: Option<Value>) -> io::Result<()> {
+fn write_error(
+    out: &mut impl Write,
+    id: &Value,
+    code: i64,
+    message: &str,
+    data: Option<Value>,
+) -> io::Result<()> {
     let mut err = json!({"code": code, "message": message});
     if let Some(data) = data {
         err["data"] = data;
@@ -76,9 +82,8 @@ fn main() -> io::Result<()> {
         if line.trim().is_empty() {
             continue;
         }
-        let msg: Value = serde_json::from_str(&line).unwrap_or_else(|err| {
-            panic!("failed to parse stdin as json: {err} (line={line:?})")
-        });
+        let msg: Value = serde_json::from_str(&line)
+            .unwrap_or_else(|err| panic!("failed to parse stdin as json: {err} (line={line:?})"));
 
         let method = msg
             .get("method")
@@ -220,10 +225,12 @@ fn main() -> io::Result<()> {
                 }
 
                 match scenario.as_str() {
-                    "fork_id_success" | "approval_required_during_turn_start" | "block_until_cancel" => {
-                        let expected = expect_source_thread_id
-                            .as_deref()
-                            .unwrap_or_else(|| panic!("missing FAKE_CODEX_APP_SERVER_EXPECT_SOURCE_THREAD_ID"));
+                    "fork_id_success"
+                    | "approval_required_during_turn_start"
+                    | "block_until_cancel" => {
+                        let expected = expect_source_thread_id.as_deref().unwrap_or_else(|| {
+                            panic!("missing FAKE_CODEX_APP_SERVER_EXPECT_SOURCE_THREAD_ID")
+                        });
                         if thread_id != expected {
                             eprintln!("thread/fork threadId mismatch: got {thread_id:?} expected {expected:?}");
                             std::process::exit(2);
@@ -231,7 +238,9 @@ fn main() -> io::Result<()> {
                     }
                     "fork_last_success_paged" => {
                         if thread_id != "t-b" {
-                            eprintln!("thread/fork expected selected threadId \"t-b\", got {thread_id:?}");
+                            eprintln!(
+                                "thread/fork expected selected threadId \"t-b\", got {thread_id:?}"
+                            );
                             std::process::exit(2);
                         }
                     }
@@ -261,9 +270,7 @@ fn main() -> io::Result<()> {
                     .get("threadId")
                     .and_then(Value::as_str)
                     .unwrap_or_default();
-                let expected_thread = forked_thread_id
-                    .as_deref()
-                    .unwrap_or("forked-1");
+                let expected_thread = forked_thread_id.as_deref().unwrap_or("forked-1");
                 if thread_id != expected_thread {
                     eprintln!("turn/start threadId mismatch: got {thread_id:?} expected {expected_thread:?}");
                     std::process::exit(2);
@@ -291,7 +298,10 @@ fn main() -> io::Result<()> {
                     .get("text_elements")
                     .and_then(Value::as_array)
                     .is_some_and(|arr| arr.is_empty());
-                if input_type != Some("text") || input_text != Some(expected_prompt) || !text_elements_ok {
+                if input_type != Some("text")
+                    || input_text != Some(expected_prompt)
+                    || !text_elements_ok
+                {
                     eprintln!("turn/start input mapping mismatch");
                     std::process::exit(2);
                 }

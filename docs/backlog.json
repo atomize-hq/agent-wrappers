@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at_utc": "2026-02-28T16:13:52Z",
+  "updated_at_utc": "2026-03-01T20:08:44Z",
   "items": [
     {
       "id": "uaa-0013",
@@ -153,7 +153,7 @@
     {
       "id": "uaa-0017",
       "title": "Add typed session/thread id accessors (codex + claude_code)",
-      "status": "todo",
+      "status": "done",
       "bucket": "agent_api.session",
       "type": "task",
       "kickoff": {
@@ -186,7 +186,7 @@
     {
       "id": "uaa-0015",
       "title": "Session/thread id surfacing (for resume-by-id UX)",
-      "status": "todo",
+      "status": "done",
       "bucket": "agent_api.session",
       "type": "task",
       "kickoff": {
@@ -309,7 +309,7 @@
     {
       "id": "uaa-0004",
       "title": "Universal resume: selector=last",
-      "status": "todo",
+      "status": "done",
       "bucket": "agent_api.session",
       "type": "extension_key",
       "proposed_capability_id": "agent_api.session.resume.v1",
@@ -331,7 +331,7 @@
     {
       "id": "uaa-0005",
       "title": "Universal resume: selector=id",
-      "status": "todo",
+      "status": "done",
       "bucket": "agent_api.session",
       "type": "extension_key",
       "proposed_capability_id": "agent_api.session.resume.v1",
@@ -378,7 +378,7 @@
     {
       "id": "uaa-0007",
       "title": "Universal fork session",
-      "status": "todo",
+      "status": "done",
       "bucket": "agent_api.session",
       "type": "extension_key",
       "proposed_capability_id": "agent_api.session.fork.v1",

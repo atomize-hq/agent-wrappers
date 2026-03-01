@@ -145,7 +145,10 @@ fn tools_facet_data(
     })
 }
 
-pub(super) fn map_app_server_notification(method: &str, params: &Value) -> Option<AgentWrapperEvent> {
+pub(super) fn map_app_server_notification(
+    method: &str,
+    params: &Value,
+) -> Option<AgentWrapperEvent> {
     match method {
         "agentMessage/delta" => {
             let delta = params.as_str()?;
@@ -191,12 +194,7 @@ pub(super) fn map_app_server_notification(method: &str, params: &Value) -> Optio
                 text: None,
                 message: None,
                 data: Some(tools_facet_data(
-                    item_id,
-                    thread_id,
-                    turn_id,
-                    kind,
-                    "start",
-                    "running",
+                    item_id, thread_id, turn_id, kind, "start", "running",
                 )),
             })
         }
@@ -358,10 +356,12 @@ pub(super) async fn spawn_fork_v1_flow(
         .map_err(CodexBackendError::AppServer)?;
 
     if let Some(state) = termination.as_ref() {
-        state.set_handle(CodexTerminationHandle::AppServerTurn(AppServerTurnCancelHandle {
-            server: Arc::clone(&server),
-            request_id: turn.request_id,
-        }));
+        state.set_handle(CodexTerminationHandle::AppServerTurn(
+            AppServerTurnCancelHandle {
+                server: Arc::clone(&server),
+                request_id: turn.request_id,
+            },
+        ));
     }
 
     let approval_required = Arc::new(AtomicBool::new(false));
@@ -447,10 +447,11 @@ pub(super) async fn spawn_fork_v1_flow(
         }
     });
 
-    let events: DynBackendEventStream<CodexBackendEvent, CodexBackendError> =
-        Box::pin(futures_util::stream::unfold(event_rx, |mut rx| async move {
+    let events: DynBackendEventStream<CodexBackendEvent, CodexBackendError> = Box::pin(
+        futures_util::stream::unfold(event_rx, |mut rx| async move {
             rx.recv().await.map(|event| (Ok(event), rx))
-        }));
+        }),
+    );
 
     let completion: DynBackendCompletionFuture<CodexBackendCompletion, CodexBackendError> =
         Box::pin(async move {

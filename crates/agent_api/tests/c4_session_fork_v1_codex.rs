@@ -466,7 +466,10 @@ async fn explicit_cancel_sends_cancel_request_and_completion_is_cancelled() {
     cancel.cancel();
 
     let (rest, completion_outcome) = tokio::time::timeout(Duration::from_secs(3), async {
-        tokio::join!(drain_to_none(events.as_mut(), Duration::from_secs(2)), completion)
+        tokio::join!(
+            drain_to_none(events.as_mut(), Duration::from_secs(2)),
+            completion
+        )
     })
     .await
     .expect("cancellation should terminate the backend and close the event stream");
@@ -478,4 +481,3 @@ async fn explicit_cancel_sends_cancel_request_and_completion_is_cancelled() {
         other => panic!("expected cancelled completion error, got {other:?}"),
     }
 }
-
