@@ -145,6 +145,7 @@ struct CodexExecPolicy {
     approval_policy: Option<CodexApprovalPolicy>,
     sandbox_mode: CodexSandboxMode,
     resume: Option<SessionSelectorV1>,
+    fork: Option<SessionSelectorV1>,
 }
 
 fn validate_and_extract_exec_policy(
@@ -188,6 +189,7 @@ fn validate_and_extract_exec_policy(
         approval_policy,
         sandbox_mode,
         resume: None,
+        fork: None,
     })
 }
 
@@ -203,6 +205,9 @@ const SESSION_HANDLE_OVERSIZE_WARNING_MARKER: &str = "session handle id oversize
 
 #[path = "codex/mapping.rs"]
 mod mapping;
+
+#[path = "codex/fork.rs"]
+mod fork;
 
 use mapping::{error_event, map_thread_event};
 
@@ -351,10 +356,13 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
             .map(parse_session_resume_v1)
             .transpose()?;
 
+        let fork = fork::extract_fork_selector_v1(request)?;
+
         validate_resume_fork_mutual_exclusion(&request.extensions)?;
 
         Ok(CodexExecPolicy {
             resume,
+            fork,
             ..exec_policy
         })
     }
@@ -389,6 +397,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
             approval_policy,
             sandbox_mode,
             resume,
+            fork: _fork,
         } = req.policy;
         let prompt = req.prompt;
         let working_dir = req.working_dir;

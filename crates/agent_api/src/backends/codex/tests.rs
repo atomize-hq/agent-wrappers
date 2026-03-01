@@ -1,7 +1,9 @@
 use super::*;
 use crate::{AgentWrapperBackend, AgentWrapperEventKind};
 use codex::ThreadEvent;
-use serde_json::Value;
+use serde_json::{json, Value};
+
+use super::super::session_selectors::EXT_SESSION_FORK_V1;
 
 fn success_exit_status() -> std::process::ExitStatus {
     #[cfg(unix)]
@@ -296,6 +298,49 @@ fn test_adapter() -> CodexHarnessAdapter {
         run_start_cwd: None,
         termination: None,
         handle_state: std::sync::Arc::new(std::sync::Mutex::new(CodexHandleFacetState::default())),
+    }
+}
+
+#[test]
+fn fork_selector_is_extracted_into_policy_when_validate_and_extract_policy_is_called_directly() {
+    let adapter = test_adapter();
+    let mut request = AgentWrapperRunRequest {
+        prompt: "hello".to_string(),
+        ..Default::default()
+    };
+    request.extensions.insert(
+        EXT_SESSION_FORK_V1.to_string(),
+        json!({"selector": "last"}),
+    );
+
+    let policy = adapter
+        .validate_and_extract_policy(&request)
+        .expect("expected policy extraction to succeed");
+    assert_eq!(policy.fork, Some(SessionSelectorV1::Last));
+}
+
+#[test]
+fn fork_key_is_still_unsupported_via_backend_harness_normalize_request() {
+    let adapter = test_adapter();
+    let defaults = BackendDefaults::default();
+    let mut request = AgentWrapperRunRequest {
+        prompt: "hello".to_string(),
+        ..Default::default()
+    };
+    request.extensions.insert(
+        EXT_SESSION_FORK_V1.to_string(),
+        json!({"selector": "last"}),
+    );
+
+    let err = match crate::backend_harness::normalize_request(&adapter, &defaults, request) {
+        Ok(_) => panic!("expected fork extension key to remain unsupported in S4a"),
+        Err(err) => err,
+    };
+    match err {
+        AgentWrapperError::UnsupportedCapability { capability, .. } => {
+            assert_eq!(capability, EXT_SESSION_FORK_V1);
+        }
+        other => panic!("expected UnsupportedCapability, got: {other:?}"),
     }
 }
 
