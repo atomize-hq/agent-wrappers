@@ -124,4 +124,3 @@ exit 0
     );
     assert_eq!(env::var_os("RUST_LOG"), None);
 }
-

@@ -65,6 +65,7 @@ fn codex_backend_reports_required_capabilities() {
     assert!(capabilities.contains(EXT_NON_INTERACTIVE));
     assert!(capabilities.contains(EXT_CODEX_APPROVAL_POLICY));
     assert!(capabilities.contains(EXT_CODEX_SANDBOX_MODE));
+    assert!(capabilities.contains(EXT_SESSION_RESUME_V1));
 }
 
 #[test]

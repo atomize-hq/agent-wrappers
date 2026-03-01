@@ -333,6 +333,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
             EXT_NON_INTERACTIVE,
             EXT_CODEX_APPROVAL_POLICY,
             EXT_CODEX_SANDBOX_MODE,
+            EXT_SESSION_RESUME_V1,
         ]
     }
 
@@ -352,7 +353,10 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
 
         validate_resume_fork_mutual_exclusion(&request.extensions)?;
 
-        Ok(CodexExecPolicy { resume, ..exec_policy })
+        Ok(CodexExecPolicy {
+            resume,
+            ..exec_policy
+        })
     }
 
     type BackendEvent = CodexBackendEvent;
@@ -534,7 +538,10 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                                     || transport_message_not_found
                                     || transport_code_not_found
                                 {
-                                    Some(pinned_selection_failure_message(resume_selector).to_string())
+                                    Some(
+                                        pinned_selection_failure_message(resume_selector)
+                                            .to_string(),
+                                    )
                                 } else {
                                     None
                                 }
@@ -591,8 +598,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                                         && matches!(thread_ev, ThreadEvent::Error(_))
                                     {
                                         if let ThreadEvent::Error(err) = &thread_ev {
-                                            snapshot.last_transport_error_code =
-                                                err.code.clone();
+                                            snapshot.last_transport_error_code = err.code.clone();
                                             snapshot.last_transport_error_message =
                                                 Some(err.message.clone());
                                         }
@@ -807,6 +813,7 @@ impl AgentWrapperBackend for CodexBackend {
         ids.insert(EXT_NON_INTERACTIVE.to_string());
         ids.insert(EXT_CODEX_APPROVAL_POLICY.to_string());
         ids.insert(EXT_CODEX_SANDBOX_MODE.to_string());
+        ids.insert(EXT_SESSION_RESUME_V1.to_string());
         AgentWrapperCapabilities { ids }
     }
 

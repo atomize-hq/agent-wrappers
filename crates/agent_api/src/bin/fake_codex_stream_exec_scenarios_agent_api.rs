@@ -1,6 +1,7 @@
 use std::{
     env,
-    io::{self, Write},
+    io::{self, Read, Write},
+    sync::mpsc,
     time::Duration,
 };
 
@@ -19,6 +20,23 @@ fn flag_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
         .position(|arg| arg == flag)
         .and_then(|idx| args.get(idx + 1))
         .map(String::as_str)
+}
+
+fn contains_ordered_subsequence(args: &[String], subseq: &[&str]) -> bool {
+    if subseq.is_empty() {
+        return true;
+    }
+
+    let mut idx = 0usize;
+    for arg in args {
+        if arg == subseq[idx] {
+            idx += 1;
+            if idx == subseq.len() {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 fn require_eq(
@@ -66,6 +84,74 @@ fn assert_env_overrides(out: &mut impl Write) -> io::Result<bool> {
         }
     }
     Ok(true)
+}
+
+fn require_env_var(out: &mut impl Write, key: &str) -> io::Result<String> {
+    match env::var(key) {
+        Ok(value) if !value.trim().is_empty() => Ok(value),
+        _ => {
+            emit_jsonl(
+                out,
+                &format!(r#"{{"type":"error","message":"missing required env var: {key}"}}"#),
+            )?;
+            std::process::exit(2);
+        }
+    }
+}
+
+fn read_stdin_to_end_with_timeout(timeout: Duration) -> io::Result<Vec<u8>> {
+    let (tx, rx) = mpsc::channel::<io::Result<Vec<u8>>>();
+    std::thread::spawn(move || {
+        let mut buf = Vec::new();
+        let result = io::stdin().read_to_end(&mut buf).map(|_| buf);
+        let _ = tx.send(result);
+    });
+
+    match rx.recv_timeout(timeout) {
+        Ok(result) => result,
+        Err(mpsc::RecvTimeoutError::Timeout) => Err(io::Error::new(
+            io::ErrorKind::TimedOut,
+            "stdin read timed out (stdin may not have been closed)",
+        )),
+        Err(mpsc::RecvTimeoutError::Disconnected) => Err(io::Error::new(
+            io::ErrorKind::Other,
+            "stdin reader thread disconnected",
+        )),
+    }
+}
+
+fn assert_stdin_prompt(
+    out: &mut impl Write,
+    expected_prompt: &str,
+    timeout: Duration,
+) -> io::Result<bool> {
+    let stdin = match read_stdin_to_end_with_timeout(timeout) {
+        Ok(stdin) => stdin,
+        Err(err) => {
+            emit_jsonl(
+                out,
+                &format!(r#"{{"type":"error","message":"failed to read stdin: {err}"}}"#),
+            )?;
+            return Ok(false);
+        }
+    };
+
+    let mut expected = expected_prompt.as_bytes().to_vec();
+    expected.push(b'\n');
+
+    if stdin == expected {
+        return Ok(true);
+    }
+
+    emit_jsonl(
+        out,
+        &format!(
+            r#"{{"type":"error","message":"stdin prompt mismatch: expected {} bytes, got {} bytes"}}"#,
+            expected.len(),
+            stdin.len()
+        ),
+    )?;
+    Ok(false)
 }
 
 fn main() -> io::Result<()> {
@@ -132,6 +218,96 @@ fn main() -> io::Result<()> {
 
     let scenario = env::var("FAKE_CODEX_SCENARIO").unwrap_or_else(|_| "ok".to_string());
     match scenario.as_str() {
+        "resume_last_assert" => {
+            let expected_prompt = require_env_var(&mut out, "FAKE_CODEX_EXPECT_PROMPT")?;
+
+            let ok =
+                contains_ordered_subsequence(&args, &["exec", "--json", "resume", "--last", "-"]);
+            if !ok {
+                emit_jsonl(
+                    &mut out,
+                    r#"{"type":"error","message":"missing argv subsequence: exec --json resume --last -"}"#,
+                )?;
+                std::process::exit(1);
+            }
+
+            if !assert_stdin_prompt(&mut out, &expected_prompt, Duration::from_secs(1))? {
+                std::process::exit(1);
+            }
+
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.resumed","thread_id":"thread-1"}"#,
+            )?;
+        }
+        "resume_id_assert" => {
+            let expected_prompt = require_env_var(&mut out, "FAKE_CODEX_EXPECT_PROMPT")?;
+            let expected_id = require_env_var(&mut out, "FAKE_CODEX_EXPECT_RESUME_ID")?;
+
+            let ok = contains_ordered_subsequence(
+                &args,
+                &["exec", "--json", "resume", expected_id.as_str(), "-"],
+            );
+            if !ok {
+                emit_jsonl(
+                    &mut out,
+                    r#"{"type":"error","message":"missing argv subsequence: exec --json resume <ID> -"}"#,
+                )?;
+                std::process::exit(1);
+            }
+
+            if !assert_stdin_prompt(&mut out, &expected_prompt, Duration::from_secs(1))? {
+                std::process::exit(1);
+            }
+
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.resumed","thread_id":"thread-1"}"#,
+            )?;
+        }
+        "resume_last_not_found" => {
+            let expected_prompt = require_env_var(&mut out, "FAKE_CODEX_EXPECT_PROMPT")?;
+
+            let ok =
+                contains_ordered_subsequence(&args, &["exec", "--json", "resume", "--last", "-"]);
+            if !ok {
+                emit_jsonl(
+                    &mut out,
+                    r#"{"type":"error","message":"missing argv subsequence: exec --json resume --last -"}"#,
+                )?;
+                std::process::exit(1);
+            }
+
+            if !assert_stdin_prompt(&mut out, &expected_prompt, Duration::from_secs(1))? {
+                std::process::exit(1);
+            }
+
+            eprintln!("no session found");
+            std::process::exit(1);
+        }
+        "resume_id_not_found" => {
+            let expected_prompt = require_env_var(&mut out, "FAKE_CODEX_EXPECT_PROMPT")?;
+            let expected_id = require_env_var(&mut out, "FAKE_CODEX_EXPECT_RESUME_ID")?;
+
+            let ok = contains_ordered_subsequence(
+                &args,
+                &["exec", "--json", "resume", expected_id.as_str(), "-"],
+            );
+            if !ok {
+                emit_jsonl(
+                    &mut out,
+                    r#"{"type":"error","message":"missing argv subsequence: exec --json resume <ID> -"}"#,
+                )?;
+                std::process::exit(1);
+            }
+
+            if !assert_stdin_prompt(&mut out, &expected_prompt, Duration::from_secs(1))? {
+                std::process::exit(1);
+            }
+
+            eprintln!("session not found");
+            std::process::exit(1);
+        }
         // Stable scenario name used by SEAM-4 explicit cancellation integration tests.
         "block_until_killed" => {
             emit_jsonl(
