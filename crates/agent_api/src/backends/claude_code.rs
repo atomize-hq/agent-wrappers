@@ -38,6 +38,10 @@ const EXT_NON_INTERACTIVE: &str = "agent_api.exec.non_interactive";
 const CAP_TOOLS_STRUCTURED_V1: &str = "agent_api.tools.structured.v1";
 const CAP_TOOLS_RESULTS_V1: &str = "agent_api.tools.results.v1";
 const CAP_ARTIFACTS_FINAL_TEXT_V1: &str = "agent_api.artifacts.final_text.v1";
+const CAP_SESSION_HANDLE_V1: &str = "agent_api.session.handle.v1";
+
+const SESSION_HANDLE_ID_BOUND_BYTES: usize = 1024;
+const SESSION_HANDLE_OVERSIZE_WARNING: &str = "session handle omitted: id exceeds 1024 bytes";
 
 fn parse_bool(value: &Value, key: &str) -> Result<bool, AgentWrapperError> {
     value
@@ -71,6 +75,7 @@ struct ClaudeHarnessAdapter {
     termination: Option<
         std::sync::Arc<super::termination::TerminationState<claude_code::ClaudeTerminationHandle>>,
     >,
+    handle_state: Arc<Mutex<ClaudeHandleFacetState>>,
 }
 
 #[derive(Clone, Debug)]
@@ -82,6 +87,13 @@ struct ClaudeExecPolicy {
 struct ClaudeBackendCompletion {
     status: std::process::ExitStatus,
     final_text: Option<String>,
+}
+
+#[derive(Debug, Default)]
+struct ClaudeHandleFacetState {
+    session_id: Option<String>,
+    handle_facet_emitted: bool,
+    oversize_warning_emitted: bool,
 }
 
 #[derive(Debug)]
@@ -244,17 +256,77 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
     }
 
     fn map_event(&self, event: Self::BackendEvent) -> Vec<AgentWrapperEvent> {
-        map_stream_json_event(event)
+        let mut emit_oversize_warning = false;
+
+        if let Ok(mut state) = self.handle_state.lock() {
+            if state.session_id.is_none() {
+                if let Some(session_id) = event.session_id() {
+                    let session_id = session_id.trim();
+                    if !session_id.is_empty() {
+                        if session_id.as_bytes().len() <= SESSION_HANDLE_ID_BOUND_BYTES {
+                            state.session_id = Some(session_id.to_string());
+                        } else if !state.oversize_warning_emitted {
+                            state.oversize_warning_emitted = true;
+                            emit_oversize_warning = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut mapped = map_stream_json_event(event);
+
+        let emit_handle_facet: Option<String> =
+            self.handle_state.lock().ok().and_then(|mut state| {
+                if state.handle_facet_emitted {
+                    return None;
+                }
+                let session_id = state.session_id.clone()?;
+                state.handle_facet_emitted = true;
+                Some(session_id)
+            });
+
+        if let Some(session_id) = emit_handle_facet.as_deref() {
+            let mut attached = false;
+            for event in mapped.iter_mut() {
+                if event.kind == AgentWrapperEventKind::Status && event.data.is_none() {
+                    event.data = Some(session_handle_facet(session_id));
+                    attached = true;
+                    break;
+                }
+            }
+
+            if !attached {
+                let mut event = status_event(None);
+                event.data = Some(session_handle_facet(session_id));
+                mapped.push(event);
+            }
+        }
+
+        if emit_oversize_warning {
+            mapped.push(status_event(Some(
+                SESSION_HANDLE_OVERSIZE_WARNING.to_string(),
+            )));
+        }
+
+        mapped
     }
 
     fn map_completion(
         &self,
         completion: Self::BackendCompletion,
     ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
+        let handle_facet = self
+            .handle_state
+            .lock()
+            .ok()
+            .and_then(|state| state.session_id.clone())
+            .map(|session_id| session_handle_facet(&session_id));
+
         Ok(AgentWrapperCompletion {
             status: completion.status,
             final_text: crate::bounds::enforce_final_text_bound(completion.final_text),
-            data: None,
+            data: handle_facet,
         })
     }
 
@@ -285,6 +357,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
         ids.insert(CAP_TOOLS_STRUCTURED_V1.to_string());
         ids.insert(CAP_TOOLS_RESULTS_V1.to_string());
         ids.insert(CAP_ARTIFACTS_FINAL_TEXT_V1.to_string());
+        ids.insert(CAP_SESSION_HANDLE_V1.to_string());
         ids.insert("backend.claude_code.print_stream_json".to_string());
         ids.insert(EXT_NON_INTERACTIVE.to_string());
         AgentWrapperCapabilities { ids }
@@ -300,6 +373,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
             let adapter = Arc::new(ClaudeHarnessAdapter {
                 config: config.clone(),
                 termination: None,
+                handle_state: Arc::new(Mutex::new(ClaudeHandleFacetState::default())),
             });
             let defaults = BackendDefaults {
                 env: config.env,
@@ -339,6 +413,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
             let adapter = Arc::new(ClaudeHarnessAdapter {
                 config: config.clone(),
                 termination: Some(termination_state),
+                handle_state: Arc::new(Mutex::new(ClaudeHandleFacetState::default())),
             });
             let defaults = BackendDefaults {
                 env: config.env,
@@ -580,6 +655,13 @@ fn tool_facet(
             "tool_name": tool_name,
             "tool_use_id": tool_use_id,
         },
+    })
+}
+
+fn session_handle_facet(session_id: &str) -> serde_json::Value {
+    serde_json::json!({
+        "schema": CAP_SESSION_HANDLE_V1,
+        "session": { "id": session_id },
     })
 }
 
