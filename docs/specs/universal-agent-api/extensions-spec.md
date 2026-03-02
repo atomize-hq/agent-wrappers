@@ -154,6 +154,11 @@ Selection failure behavior (v1, normative):
     - `"no session found"` for `selector == "last"` (empty scope),
     - `"session not found"` for `selector == "id"` (unknown/unresumable id).
 - The error `message` MUST be safe-by-default and MUST NOT embed raw backend output.
+- Translation guardrails:
+  - The pinned messages above MUST be used only when the backend indicates an actual “not found”
+    outcome for the requested selector.
+  - Backends MUST NOT infer selection failure solely from non-success exit status and/or absence of
+    assistant output.
 - Timing:
   - Backends SHOULD validate selection before spawning any long-lived backend process when the
     backend can check cheaply/deterministically (e.g., local store lookup).

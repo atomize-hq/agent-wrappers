@@ -31,7 +31,7 @@
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 7fe4428bd2105685fe04447ce6374b1d9102405b363002d3c736a6a0ca88b24f
+ADR_BODY_SHA256: 4a68939d08f9a6cc385cdc890e5c0052f6c880cff8632c35032552608bfafb11
 
 ### Changes (operator-facing)
 
@@ -186,3 +186,27 @@ Pinned invariants (restated here):
 
 This ADR introduces `agent_api.session.*` as a first-class bucket and pins a minimal set of
 universal session semantics as two core, versioned extension keys (`resume.v1` and `fork.v1`).
+
+## Appendix A — Selection-failure translation guardrails
+
+Implementations MUST NOT treat “resume/fork failed with no assistant output” as equivalent to
+“session not found”.
+
+Rationale:
+- Generic backend/runtime failures can also produce no assistant output.
+- Misclassifying these as selection failures returns a misleading pinned error to callers and can
+  mask the true failure cause (especially if the backend suppresses raw error events for safety).
+
+Per `docs/specs/universal-agent-api/extensions-spec.md`, the pinned selection-failure messages
+(`"no session found"` / `"session not found"`) are reserved for *actual* not-found outcomes.
+
+Implementation guidance (non-normative; see the specs for requirements):
+- Prefer explicit backend “not found” signals (typed/structured error payloads or stable not-found
+  tokens) over negative inference from missing assistant output.
+- If raw backend error events are suppressed for safety, still retain enough typed/raw context
+  internally to classify not-found vs other failures.
+- For non-not-found failures, surface a generic safe/redacted `AgentWrapperError::Backend` message
+  (and emit a single terminal `AgentWrapperEventKind::Error` event when an events stream exists).
+
+Tracking:
+- `docs/backlog.json` (`uaa-0018`)

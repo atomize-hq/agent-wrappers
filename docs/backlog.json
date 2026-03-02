@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at_utc": "2026-03-01T20:08:44Z",
+  "updated_at_utc": "2026-03-02T00:49:01Z",
   "items": [
     {
       "id": "uaa-0013",
@@ -239,6 +239,41 @@
           ]
         }
       }
+    },
+    {
+      "id": "uaa-0018",
+      "title": "P1: Restrict selection-failure translation to actual not-found errors",
+      "status": "todo",
+      "bucket": "agent_api.session",
+      "type": "task",
+      "kickoff": {
+        "prompt": [
+          "Work item: uaa-0018 — P1: Restrict selection-failure translation to actual not-found errors.",
+          "Goal: ensure resume/fork selection failures map to pinned safe messages only when the backend truly indicates a not-found condition; do not mislabel unrelated backend failures as \"no session found\" / \"session not found\".",
+          "Primary impact: Claude Code backend (agent_api) currently infers selection failure from non-success exit + no assistant output and suppresses ResultError events, masking real failure causes.",
+          "Steps:",
+          "1) Adjust Claude backend selection-failure detection to rely on explicit not-found signals (e.g., structured ResultError payload or stable not-found indicator), not absence-of-output.",
+          "2) Ensure non-not-found failures surface as AgentWrapperError::Backend with a safe/redacted message and emit a single terminal Error event when events are available.",
+          "3) Add regression tests: generic resume/fork failure with no assistant output must NOT translate to the pinned selection-failure messages.",
+          "Output: correct error classification + pinned selection failures + tests; no backend secrets leak."
+        ],
+        "files_to_read": [
+          "docs/specs/universal-agent-api/extensions-spec.md",
+          "docs/specs/claude-code-session-mapping-contract.md",
+          "crates/agent_api/src/backends/claude_code.rs",
+          "crates/agent_api/src/bin/fake_claude_stream_json_agent_api.rs",
+          "crates/agent_api/tests/c2_claude_session_resume_v1.rs",
+          "crates/agent_api/tests/c4_claude_session_fork_v1.rs"
+        ],
+        "deliverables": [
+          "Selection-failure translation restricted to actual not-found signals (Claude Code)",
+          "Regression tests preventing false-positive \"session not found\" translations"
+        ]
+      },
+      "notes": [
+        "Do not infer selection failure solely from non-zero exit + no assistant output (false positives).",
+        "If ResultError events are suppressed for safety, still use their typed/raw payload for classification, and surface a generic safe error for non-not-found failures."
+      ]
     },
     {
       "id": "uaa-0001",

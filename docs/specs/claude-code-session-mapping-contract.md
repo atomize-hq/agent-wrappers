@@ -109,6 +109,8 @@ The Claude backend MUST:
   equal to the pinned strings from `extensions-spec.md`:
   - `"no session found"` for `selector == "last"`
   - `"session not found"` for `selector == "id"`
+- MUST NOT translate a generic resume/fork failure into the pinned selection-failure messages just
+  because the run produced no assistant message.
 - MUST NOT embed raw Claude output (stdout/stderr) in error messages or in
   `AgentWrapperEvent.data` / `AgentWrapperCompletion.data`.
 
@@ -117,4 +119,3 @@ The Claude backend MUST:
 All other Claude backend failures (spawn failures, parse failures, non-zero exit unrelated to
 selection) MUST be surfaced as `AgentWrapperError::Backend { message }` with a safe/redacted
 message (MUST NOT embed raw Claude output).
-
