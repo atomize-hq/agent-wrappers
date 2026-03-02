@@ -226,6 +226,8 @@ fn main() -> io::Result<()> {
 
                 match scenario.as_str() {
                     "fork_id_success"
+                    | "fork_id_success_oversize_thread_id"
+                    | "fork_id_success_thread_id_len_1024"
                     | "approval_required_during_turn_start"
                     | "block_until_cancel" => {
                         let expected = expect_source_thread_id.as_deref().unwrap_or_else(|| {
@@ -258,8 +260,17 @@ fn main() -> io::Result<()> {
                     }
                 }
 
-                forked_thread_id = Some("forked-1".to_string());
-                write_result(&mut out, &id, json!({"thread": {"id": "forked-1"}}))?;
+                let new_thread_id = match scenario.as_str() {
+                    "fork_id_success_oversize_thread_id" => "a".repeat(1025),
+                    "fork_id_success_thread_id_len_1024" => "a".repeat(1024),
+                    _ => "forked-1".to_string(),
+                };
+                forked_thread_id = Some(new_thread_id.clone());
+                write_result(
+                    &mut out,
+                    &id,
+                    json!({"thread": {"id": new_thread_id}}),
+                )?;
             }
             "turn/start" => {
                 let expected_prompt = expect_prompt
@@ -307,7 +318,10 @@ fn main() -> io::Result<()> {
                 }
 
                 match scenario.as_str() {
-                    "fork_id_success" | "fork_last_success_paged" => {
+                    "fork_id_success"
+                    | "fork_id_success_oversize_thread_id"
+                    | "fork_id_success_thread_id_len_1024"
+                    | "fork_last_success_paged" => {
                         write_json(
                             &mut out,
                             &json!({"jsonrpc":"2.0","method":"turn/started","params": {}}),

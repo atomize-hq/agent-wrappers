@@ -315,6 +315,7 @@ struct CodexHandleFacetState {
     thread_id: Option<String>,
     handle_facet_emitted: bool,
     oversize_warning_emitted: bool,
+    oversize_warning_len_bytes: Option<usize>,
 }
 
 #[derive(Debug)]
@@ -560,12 +561,51 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                     }
                 }
 
+                let emit_oversize_warning_len: Option<usize> =
+                    self.handle_state.lock().ok().and_then(|mut state| {
+                        state.oversize_warning_len_bytes.take()
+                    });
+
+                if let Some(len) = emit_oversize_warning_len {
+                    mapped.push(mapping::status_event(Some(format!(
+                        "{SESSION_HANDLE_OVERSIZE_WARNING_MARKER}: len_bytes={len}"
+                    ))));
+                }
+
                 mapped
             }
-            CodexBackendEvent::NonZeroExit { status } => vec![error_event(format!(
-                "codex exited non-zero: {status:?} (stderr redacted)"
-            ))],
-            CodexBackendEvent::TerminalError { message } => vec![error_event(message)],
+            CodexBackendEvent::NonZeroExit { status } => {
+                let mut mapped = Vec::new();
+                if let Some(len) = self
+                    .handle_state
+                    .lock()
+                    .ok()
+                    .and_then(|mut state| state.oversize_warning_len_bytes.take())
+                {
+                    mapped.push(mapping::status_event(Some(format!(
+                        "{SESSION_HANDLE_OVERSIZE_WARNING_MARKER}: len_bytes={len}"
+                    ))));
+                }
+                mapped.push(error_event(format!(
+                    "codex exited non-zero: {status:?} (stderr redacted)"
+                )));
+                mapped
+            }
+            CodexBackendEvent::TerminalError { message } => {
+                let mut mapped = Vec::new();
+                if let Some(len) = self
+                    .handle_state
+                    .lock()
+                    .ok()
+                    .and_then(|mut state| state.oversize_warning_len_bytes.take())
+                {
+                    mapped.push(mapping::status_event(Some(format!(
+                        "{SESSION_HANDLE_OVERSIZE_WARNING_MARKER}: len_bytes={len}"
+                    ))));
+                }
+                mapped.push(error_event(message));
+                mapped
+            }
         }
     }
 

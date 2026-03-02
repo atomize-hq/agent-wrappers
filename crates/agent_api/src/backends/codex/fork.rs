@@ -116,7 +116,13 @@ fn install_thread_id(handle_state: &Arc<std::sync::Mutex<CodexHandleFacetState>>
         return;
     };
     if state.thread_id.is_none() {
-        state.thread_id = Some(thread_id.to_string());
+        let len = thread_id.len();
+        if len <= super::SESSION_HANDLE_ID_BOUND_BYTES {
+            state.thread_id = Some(thread_id.to_string());
+        } else if !state.oversize_warning_emitted {
+            state.oversize_warning_emitted = true;
+            state.oversize_warning_len_bytes = Some(len);
+        }
     }
 }
 
