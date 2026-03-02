@@ -28,6 +28,30 @@
       "download_url": "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/2.1.29/win32-x64/claude.exe",
       "sha256": "0e2264dc07290ca66d7143a967eb5734406671b3e5608b004b893c8e092f51bd",
       "size_bytes": 231411872
+    },
+    {
+      "claude_code_version": "2.1.50",
+      "target_triple": "darwin-arm64",
+      "asset_name": "claude",
+      "download_url": "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/2.1.50/darwin-arm64/claude",
+      "sha256": "4b6c1cb5e02428dbf600d08f88c28f9ea06619001c3efebf8890365e5b79d1b7",
+      "size_bytes": 185138720
+    },
+    {
+      "claude_code_version": "2.1.50",
+      "target_triple": "linux-x64",
+      "asset_name": "claude",
+      "download_url": "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/2.1.50/linux-x64/claude",
+      "sha256": "74042739197c58a4791c1f67414c0d8956639ec2f2e935280872b83d4317be78",
+      "size_bytes": 225124924
+    },
+    {
+      "claude_code_version": "2.1.50",
+      "target_triple": "win32-x64",
+      "asset_name": "claude.exe",
+      "download_url": "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/2.1.50/win32-x64/claude.exe",
+      "sha256": "d42d0254c652b7cd6031635ed56d9cba87df205e159051af28e75f9e20ff389a",
+      "size_bytes": 234163872
     }
   ]
 }
