@@ -278,3 +278,198 @@ async fn resume_id_selection_failure_is_translated_and_emits_one_terminal_error_
         other => panic!("expected Backend error, got: {other:?}"),
     }
 }
+
+#[tokio::test]
+async fn resume_last_generic_failure_emits_tail_terminal_error_and_completion_is_ok_non_success() {
+    let prompt = "hello world";
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
+        binary: Some(fake_claude_binary()),
+        env: [
+            (
+                "FAKE_CLAUDE_SCENARIO".to_string(),
+                "resume_last_generic_error".to_string(),
+            ),
+            ("FAKE_CLAUDE_EXPECT_PROMPT".to_string(), prompt.to_string()),
+        ]
+        .into_iter()
+        .collect(),
+        ..Default::default()
+    });
+
+    let handle = backend
+        .run(AgentWrapperRunRequest {
+            prompt: prompt.to_string(),
+            extensions: [(
+                "agent_api.session.resume.v1".to_string(),
+                json!({"selector": "last"}),
+            )]
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    let mut events = handle.events;
+    let completion = handle.completion;
+
+    let seen = drain_to_none(events.as_mut(), Duration::from_secs(2)).await;
+    let error_events: Vec<_> = seen
+        .iter()
+        .filter(|ev| ev.kind == AgentWrapperEventKind::Error)
+        .collect();
+    assert_eq!(error_events.len(), 1, "expected exactly one Error event");
+    assert_eq!(
+        seen.last().map(|ev| ev.kind.clone()),
+        Some(AgentWrapperEventKind::Error),
+        "expected Error event to be terminal"
+    );
+    assert_eq!(
+        seen.last().and_then(|ev| ev.message.as_deref()),
+        Some("claude_code exited non-zero: code=1 (output redacted)")
+    );
+    assert_ne!(
+        seen.last().and_then(|ev| ev.message.as_deref()),
+        Some("no session found")
+    );
+
+    let completion = tokio::time::timeout(Duration::from_secs(2), completion)
+        .await
+        .expect("completion resolves")
+        .unwrap();
+    assert!(!completion.status.success());
+}
+
+#[tokio::test]
+async fn resume_id_generic_failure_emits_tail_terminal_error_and_completion_is_ok_non_success() {
+    let prompt = "hello world";
+    let resume_id = "sess-123";
+
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
+        binary: Some(fake_claude_binary()),
+        env: [
+            (
+                "FAKE_CLAUDE_SCENARIO".to_string(),
+                "resume_id_generic_error".to_string(),
+            ),
+            ("FAKE_CLAUDE_EXPECT_PROMPT".to_string(), prompt.to_string()),
+            (
+                "FAKE_CLAUDE_EXPECT_RESUME_ID".to_string(),
+                resume_id.to_string(),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+        ..Default::default()
+    });
+
+    let handle = backend
+        .run(AgentWrapperRunRequest {
+            prompt: prompt.to_string(),
+            extensions: [(
+                "agent_api.session.resume.v1".to_string(),
+                json!({"selector": "id", "id": resume_id}),
+            )]
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    let mut events = handle.events;
+    let completion = handle.completion;
+
+    let seen = drain_to_none(events.as_mut(), Duration::from_secs(2)).await;
+    let error_events: Vec<_> = seen
+        .iter()
+        .filter(|ev| ev.kind == AgentWrapperEventKind::Error)
+        .collect();
+    assert_eq!(error_events.len(), 1, "expected exactly one Error event");
+    assert_eq!(
+        seen.last().map(|ev| ev.kind.clone()),
+        Some(AgentWrapperEventKind::Error),
+        "expected Error event to be terminal"
+    );
+    assert_eq!(
+        seen.last().and_then(|ev| ev.message.as_deref()),
+        Some("claude_code exited non-zero: code=1 (output redacted)")
+    );
+    assert_ne!(
+        seen.last().and_then(|ev| ev.message.as_deref()),
+        Some("session not found")
+    );
+
+    let completion = tokio::time::timeout(Duration::from_secs(2), completion)
+        .await
+        .expect("completion resolves")
+        .unwrap();
+    assert!(!completion.status.success());
+}
+
+#[tokio::test]
+async fn resume_id_file_not_found_does_not_translate_to_session_not_found() {
+    let prompt = "hello world";
+    let resume_id = "sess-123";
+
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
+        binary: Some(fake_claude_binary()),
+        env: [
+            (
+                "FAKE_CLAUDE_SCENARIO".to_string(),
+                "resume_id_file_not_found_trap".to_string(),
+            ),
+            ("FAKE_CLAUDE_EXPECT_PROMPT".to_string(), prompt.to_string()),
+            (
+                "FAKE_CLAUDE_EXPECT_RESUME_ID".to_string(),
+                resume_id.to_string(),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+        ..Default::default()
+    });
+
+    let handle = backend
+        .run(AgentWrapperRunRequest {
+            prompt: prompt.to_string(),
+            extensions: [(
+                "agent_api.session.resume.v1".to_string(),
+                json!({"selector": "id", "id": resume_id}),
+            )]
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    let mut events = handle.events;
+    let completion = handle.completion;
+
+    let seen = drain_to_none(events.as_mut(), Duration::from_secs(2)).await;
+    let error_events: Vec<_> = seen
+        .iter()
+        .filter(|ev| ev.kind == AgentWrapperEventKind::Error)
+        .collect();
+    assert_eq!(error_events.len(), 1, "expected exactly one Error event");
+    assert_eq!(
+        seen.last().map(|ev| ev.kind.clone()),
+        Some(AgentWrapperEventKind::Error),
+        "expected Error event to be terminal"
+    );
+    assert_eq!(
+        seen.last().and_then(|ev| ev.message.as_deref()),
+        Some("claude_code exited non-zero: code=1 (output redacted)")
+    );
+    assert_ne!(
+        seen.last().and_then(|ev| ev.message.as_deref()),
+        Some("session not found")
+    );
+
+    let completion = tokio::time::timeout(Duration::from_secs(2), completion)
+        .await
+        .expect("completion resolves")
+        .unwrap();
+    assert!(!completion.status.success());
+}

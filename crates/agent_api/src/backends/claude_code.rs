@@ -48,6 +48,54 @@ const CAP_SESSION_HANDLE_V1: &str = "agent_api.session.handle.v1";
 const SESSION_HANDLE_ID_BOUND_BYTES: usize = 1024;
 const SESSION_HANDLE_OVERSIZE_WARNING: &str = "session handle omitted: id exceeds 1024 bytes";
 
+fn is_session_not_found_signal(text: &str) -> bool {
+    let text = text.to_ascii_lowercase();
+
+    (text.contains("not found")
+        && (text.contains("session") || text.contains("thread") || text.contains("conversation")))
+        || text.contains("no session")
+        || text.contains("unknown session")
+        || text.contains("no thread")
+        || text.contains("unknown thread")
+        || text.contains("no conversation")
+        || text.contains("unknown conversation")
+}
+
+fn json_contains_not_found_signal(raw: &serde_json::Value) -> bool {
+    const MAX_DEPTH: usize = 6;
+    const MAX_STRING_LEAVES: usize = 64;
+
+    fn visit(raw: &serde_json::Value, depth: usize, strings_seen: &mut usize) -> bool {
+        if depth > MAX_DEPTH || *strings_seen >= MAX_STRING_LEAVES {
+            return false;
+        }
+
+        match raw {
+            serde_json::Value::String(s) => {
+                *strings_seen += 1;
+                is_session_not_found_signal(s)
+            }
+            serde_json::Value::Array(arr) => arr
+                .iter()
+                .any(|child| visit(child, depth + 1, strings_seen)),
+            serde_json::Value::Object(obj) => obj
+                .values()
+                .any(|child| visit(child, depth + 1, strings_seen)),
+            _ => false,
+        }
+    }
+
+    let mut strings_seen = 0usize;
+    visit(raw, 0, &mut strings_seen)
+}
+
+fn generic_non_zero_exit_message(status: &std::process::ExitStatus) -> String {
+    match status.code() {
+        Some(code) => format!("claude_code exited non-zero: code={code} (output redacted)"),
+        None => "claude_code exited non-zero (output redacted)".to_string(),
+    }
+}
+
 #[path = "claude_code/mapping.rs"]
 mod mapping;
 
@@ -113,6 +161,7 @@ struct ClaudeStreamState {
     last_assistant_text: Option<String>,
     saw_assistant_message: bool,
     saw_stream_error: bool,
+    saw_not_found_signal: bool,
 }
 
 #[derive(Debug)]
@@ -325,6 +374,17 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                                         claude_code::ClaudeStreamJsonEvent::ResultError { .. }
                                     )
                                 {
+                                    if let claude_code::ClaudeStreamJsonEvent::ResultError {
+                                        raw,
+                                        ..
+                                    } = &ev
+                                    {
+                                        if json_contains_not_found_signal(raw) {
+                                            if let Ok(mut state) = stream_state.lock() {
+                                                state.saw_not_found_signal = true;
+                                            }
+                                        }
+                                    }
                                     continue;
                                 }
 
@@ -394,43 +454,44 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                     .await
                     .map_err(ClaudeBackendError::Completion)?;
 
-                let final_text = stream_state
+                let (final_text, saw_stream_error, saw_not_found_signal) = stream_state
                     .lock()
-                    .ok()
-                    .and_then(|guard| guard.last_assistant_text.clone());
+                    .map(|guard| {
+                        (
+                            guard.last_assistant_text.clone(),
+                            guard.saw_stream_error,
+                            guard.saw_not_found_signal,
+                        )
+                    })
+                    .unwrap_or((None, true, false));
 
-                let selection_failure_message = match selection_selector {
-                    Some(SessionSelectorV1::Last) => {
-                        let state = stream_state.lock().ok();
-                        if !status.success()
-                            && state
-                                .as_ref()
-                                .is_some_and(|state| !state.saw_assistant_message)
-                            && state.as_ref().is_some_and(|state| !state.saw_stream_error)
-                        {
-                            Some("no session found".to_string())
-                        } else {
-                            None
-                        }
+                let selection_failure_message = if selection_selector.is_some()
+                    && !status.success()
+                    && !saw_stream_error
+                    && saw_not_found_signal
+                {
+                    match selection_selector {
+                        Some(SessionSelectorV1::Last) => Some("no session found".to_string()),
+                        Some(SessionSelectorV1::Id { .. }) => Some("session not found".to_string()),
+                        None => None,
                     }
-                    Some(SessionSelectorV1::Id { .. }) => {
-                        let state = stream_state.lock().ok();
-                        if !status.success()
-                            && state
-                                .as_ref()
-                                .is_some_and(|state| !state.saw_assistant_message)
-                            && state.as_ref().is_some_and(|state| !state.saw_stream_error)
-                        {
-                            Some("session not found".to_string())
-                        } else {
-                            None
-                        }
-                    }
-                    None => None,
+                } else {
+                    None
                 };
 
+                let terminal_error_event_message =
+                    if selection_selector.is_some() && !status.success() && !saw_stream_error {
+                        Some(
+                            selection_failure_message
+                                .clone()
+                                .unwrap_or_else(|| generic_non_zero_exit_message(&status)),
+                        )
+                    } else {
+                        None
+                    };
+
                 if let Some(tx) = tail_tx {
-                    let _ = tx.send(selection_failure_message.clone());
+                    let _ = tx.send(terminal_error_event_message.clone());
                 }
 
                 Ok(ClaudeBackendCompletion {

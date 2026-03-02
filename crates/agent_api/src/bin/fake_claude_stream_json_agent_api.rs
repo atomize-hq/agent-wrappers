@@ -11,8 +11,6 @@ const SYSTEM_INIT: &str =
     include_str!("../../../claude_code/tests/fixtures/stream_json/v1/system_init.jsonl");
 const USER_MESSAGE: &str =
     include_str!("../../../claude_code/tests/fixtures/stream_json/v1/user_message.jsonl");
-const RESULT_ERROR: &str =
-    include_str!("../../../claude_code/tests/fixtures/stream_json/v1/result_error.jsonl");
 const STREAM_EVENT_TOOL_USE_START: &str = include_str!(
     "../../../claude_code/tests/fixtures/stream_json/v1/stream_event_tool_use_start.jsonl"
 );
@@ -47,6 +45,19 @@ fn write_assistant_text(out: &mut impl Write, text: &str) -> io::Result<()> {
                 "text": text,
             }],
         },
+    });
+    write_line(out, &payload.to_string())?;
+    write_line(out, "\n")?;
+    Ok(())
+}
+
+fn write_result_error_with_message(out: &mut impl Write, message: &str) -> io::Result<()> {
+    let payload = json!({
+        "type": "result",
+        "subtype": "error",
+        "session_id": "sess-1",
+        "is_error": true,
+        "message": message,
     });
     write_line(out, &payload.to_string())?;
     write_line(out, "\n")?;
@@ -111,7 +122,6 @@ fn main() -> io::Result<()> {
 
     let init = first_nonempty_line(SYSTEM_INIT);
     let user = first_nonempty_line(USER_MESSAGE);
-    let result_error = first_nonempty_line(RESULT_ERROR);
 
     match scenario.as_str() {
         "fork_last_assert" => {
@@ -275,7 +285,7 @@ fn main() -> io::Result<()> {
             }
 
             write_line(&mut out, &format!("{init}\n"))?;
-            write_line(&mut out, &format!("{result_error}\n"))?;
+            write_result_error_with_message(&mut out, "no session found")?;
             std::process::exit(1);
         }
         "fork_id_not_found" => {
@@ -298,7 +308,52 @@ fn main() -> io::Result<()> {
             }
 
             write_line(&mut out, &format!("{init}\n"))?;
-            write_line(&mut out, &format!("{result_error}\n"))?;
+            write_result_error_with_message(&mut out, "session not found")?;
+            std::process::exit(1);
+        }
+        "fork_last_generic_error" => {
+            let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
+            if args.last() != Some(&expected_prompt) {
+                fail(
+                    &mut out,
+                    "assertion failed: prompt must be final argv token",
+                );
+            }
+            if !has_flag(&args, "--verbose") {
+                fail(&mut out, "assertion failed: missing --verbose");
+            }
+            if !contains_ordered_subsequence(&args, &["--continue", "--fork-session"]) {
+                fail(
+                    &mut out,
+                    "assertion failed: missing --continue --fork-session",
+                );
+            }
+
+            write_line(&mut out, &format!("{init}\n"))?;
+            write_result_error_with_message(&mut out, "permission denied")?;
+            std::process::exit(1);
+        }
+        "fork_id_generic_error" => {
+            let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
+            let expected_id = require("FAKE_CLAUDE_EXPECT_RESUME_ID");
+            if args.last() != Some(&expected_prompt) {
+                fail(
+                    &mut out,
+                    "assertion failed: prompt must be final argv token",
+                );
+            }
+            if !has_flag(&args, "--verbose") {
+                fail(&mut out, "assertion failed: missing --verbose");
+            }
+            if !contains_ordered_subsequence(&args, &["--fork-session", "--resume", &expected_id]) {
+                fail(
+                    &mut out,
+                    "assertion failed: missing --fork-session --resume <ID>",
+                );
+            }
+
+            write_line(&mut out, &format!("{init}\n"))?;
+            write_result_error_with_message(&mut out, "permission denied")?;
             std::process::exit(1);
         }
         "resume_last_not_found" => {
@@ -317,7 +372,7 @@ fn main() -> io::Result<()> {
             }
 
             write_line(&mut out, &format!("{init}\n"))?;
-            write_line(&mut out, &format!("{result_error}\n"))?;
+            write_result_error_with_message(&mut out, "no session found")?;
             std::process::exit(1);
         }
         "resume_id_not_found" => {
@@ -337,7 +392,66 @@ fn main() -> io::Result<()> {
             }
 
             write_line(&mut out, &format!("{init}\n"))?;
-            write_line(&mut out, &format!("{result_error}\n"))?;
+            write_result_error_with_message(&mut out, "session not found")?;
+            std::process::exit(1);
+        }
+        "resume_last_generic_error" => {
+            let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
+            if args.last() != Some(&expected_prompt) {
+                fail(
+                    &mut out,
+                    "assertion failed: prompt must be final argv token",
+                );
+            }
+            if !has_flag(&args, "--verbose") {
+                fail(&mut out, "assertion failed: missing --verbose");
+            }
+            if !contains_ordered_subsequence(&args, &["--continue"]) {
+                fail(&mut out, "assertion failed: missing --continue");
+            }
+
+            write_line(&mut out, &format!("{init}\n"))?;
+            write_result_error_with_message(&mut out, "permission denied")?;
+            std::process::exit(1);
+        }
+        "resume_id_generic_error" => {
+            let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
+            let expected_id = require("FAKE_CLAUDE_EXPECT_RESUME_ID");
+            if args.last() != Some(&expected_prompt) {
+                fail(
+                    &mut out,
+                    "assertion failed: prompt must be final argv token",
+                );
+            }
+            if !has_flag(&args, "--verbose") {
+                fail(&mut out, "assertion failed: missing --verbose");
+            }
+            if !contains_ordered_subsequence(&args, &["--resume", &expected_id]) {
+                fail(&mut out, "assertion failed: missing --resume <ID>");
+            }
+
+            write_line(&mut out, &format!("{init}\n"))?;
+            write_result_error_with_message(&mut out, "permission denied")?;
+            std::process::exit(1);
+        }
+        "resume_id_file_not_found_trap" => {
+            let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
+            let expected_id = require("FAKE_CLAUDE_EXPECT_RESUME_ID");
+            if args.last() != Some(&expected_prompt) {
+                fail(
+                    &mut out,
+                    "assertion failed: prompt must be final argv token",
+                );
+            }
+            if !has_flag(&args, "--verbose") {
+                fail(&mut out, "assertion failed: missing --verbose");
+            }
+            if !contains_ordered_subsequence(&args, &["--resume", &expected_id]) {
+                fail(&mut out, "assertion failed: missing --resume <ID>");
+            }
+
+            write_line(&mut out, &format!("{init}\n"))?;
+            write_result_error_with_message(&mut out, "file not found")?;
             std::process::exit(1);
         }
         "block_until_killed" => {
