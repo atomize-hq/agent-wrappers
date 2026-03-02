@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at_utc": "2026-03-02T03:05:23Z",
+  "updated_at_utc": "2026-03-02T03:16:29Z",
   "items": [
     {
       "id": "uaa-0013",
@@ -308,6 +308,40 @@
       "notes": [
         "Avoid validating against an arbitrary local `claude` on PATH; use the binary under promotion and compare to cli_manifests pointers.",
         "If new result subtypes appear, treat it as a promotion gate: update parser contract + fixtures before bumping latest_validated/min_supported."
+      ]
+    },
+    {
+      "id": "uaa-0020",
+      "title": "P2: Enforce 1024-byte handle id bound for Codex fork thread IDs",
+      "status": "todo",
+      "bucket": "agent_api.session",
+      "type": "task",
+      "kickoff": {
+        "prompt": [
+          "Work item: uaa-0020 — P2: Enforce 1024-byte handle id bound for Codex fork thread IDs.",
+          "Goal: ensure the Codex fork path treats oversize thread ids (>1024 bytes) as unknown (omit session handle facet; SHOULD warn) per the session handle facet contract.",
+          "Context: Codex exec/resume path enforces the bound before storing thread_id, but the fork path stores any non-empty id, allowing oversize ids to leak into handle facets via app-server notifications and completion data.",
+          "Steps:",
+          "1) Update `crates/agent_api/src/backends/codex/fork.rs` to enforce the 1024-byte bound before storing the forked thread id (and treat oversize as unknown).",
+          "2) Emit a safe `Status` warning once per run when an oversize id is observed (align with the exec/resume warning marker in `crates/agent_api/src/backends/codex.rs`).",
+          "3) Add regression tests by extending the fake codex app-server test binary to return an oversize forked thread id, and assert the handle facet is omitted in both events and completion (and warning emitted if implemented).",
+          "Output: consistent bound enforcement across Codex exec + fork paths; no contract violations."
+        ],
+        "files_to_read": [
+          "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+          "crates/agent_api/src/backends/codex.rs",
+          "crates/agent_api/src/backends/codex/fork.rs",
+          "crates/agent_api/src/bin/fake_codex_app_server_jsonrpc_agent_api.rs",
+          "crates/agent_api/tests/c4_session_fork_v1_codex.rs"
+        ],
+        "deliverables": [
+          "Bound enforcement for forked thread ids (<=1024 bytes)",
+          "Regression tests for oversize forked thread ids"
+        ]
+      },
+      "notes": [
+        "Contract: ids over 1024 bytes must be treated as unknown (omit facet; MUST NOT truncate); SHOULD warn.",
+        "Keep behavior consistent across Codex exec/resume and Codex fork flows."
       ]
     },
     {
