@@ -1,0 +1,315 @@
+{
+  "meta": {
+    "tool": "cohesion-audit",
+    "generated_at": "2026-02-23T01:21:09Z",
+    "files": [
+      "docs/project_management/packs/active/agent-api-backend-harness/README.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-1-harness-contract.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-4-completion-gating.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-5-backend-adoption-and-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam_map.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-1-bh-c01-contract-definition.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-2-viability-smoke.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-1-bh-c02-extension-allowlist-validator.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-2-bh-c03-env-timeout-normalization.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-3-normalization-unit-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-1-bh-c04-drain-while-polling-completion.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-3-streaming-pump-unit-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-1-bh-c05-gating-semantics.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-2-bh-c05-canonical-handle-builder.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-3-bh-c05-gating-regression-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-1-codex-backend-migration.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-2-adoption-conformance-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-3-claude-backend-migration.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threading.md"
+    ],
+    "scan": {
+      "used": true,
+      "output": "docs/project_management/packs/active/agent-api-backend-harness/cohesion-audit.scan.json"
+    },
+    "notes": [
+      "Audit scope is limited to the agent-api-backend-harness pack directory (including threaded seam decompositions).",
+      "Cohesion issues focus on execution continuity (contract registry completeness, seam handoffs/ownership, and traceability for behavior-changing checks)."
+    ]
+  },
+  "issues": [
+    {
+      "id": "CH-0001",
+      "severity": "major",
+      "confidence": "high",
+      "type": "terminology_drift",
+      "subject": "BH-C03 contract name/definition drifts (env-only in registry, env+timeout in slices/tasks)",
+      "locations": [
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threading.md",
+          "line_start": 20,
+          "line_end": 25,
+          "excerpt": "**Contract ID**: `BH-C03 env merge precedence` ... **Definition**: Deterministic env precedence: backend config env < request env.",
+          "role": "definition"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+          "line_start": 10,
+          "line_end": 13,
+          "excerpt": "Centralize env merge precedence rules ... Centralize timeout derivation/wrapping rules ...",
+          "role": "primary"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-2-bh-c03-env-timeout-normalization.md",
+          "line_start": 6,
+          "line_end": 8,
+          "excerpt": "Implement `BH-C03 env merge precedence` ... Implement timeout derivation helpers ...",
+          "role": "dependent"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-2-bh-c03-env-timeout-normalization.md",
+          "line_start": 41,
+          "line_end": 44,
+          "excerpt": "Behavior matches the `BH-C03` definition in `threading.md`.",
+          "role": "reference"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-1-codex-backend-migration.md",
+          "line_start": 6,
+          "line_end": 9,
+          "excerpt": "delegate request validation (`BH-C02`), env/timeout derivation (`BH-C03`) ... to the harness.",
+          "role": "dependent"
+        }
+      ],
+      "analysis": {
+        "what_breaks": "The pack’s contract registry is presented as the canonical threading backbone, but `BH-C03` is defined there as env precedence only while downstream slices/tasks treat `BH-C03` as covering env + timeout semantics. This breaks traceability from registry → tasks and makes it unclear whether timeout semantics are an owned contract, and if so, where its canonical definition and tests live.",
+        "missing_links": [
+          "A single canonical contract identifier and definition for timeout derivation semantics (either expand BH-C03 to include timeout, or introduce a new BH-C0x contract).",
+          "A consistent reference in all slices/tasks to that canonical contract definition (so verification/tests can be located unambiguously)."
+        ],
+        "required_to_be_cohesive": [
+          "Update the contract registry in `threading.md` so timeout derivation is either explicitly part of `BH-C03` or captured as its own contract (with owner seam, definition, and consumers).",
+          "Update all references in SEAM-2 and SEAM-5 slice docs to match the canonical contract name/ID and definition.",
+          "Ensure the SEAM-2 test slice explicitly lists coverage for the chosen canonical timeout contract (not implied by drift)."
+        ]
+      },
+      "suggested_evidence_order": [
+        "docs",
+        "codebase",
+        "git-history",
+        "external",
+        "decision"
+      ],
+      "related_issues": []
+    },
+    {
+      "id": "CH-0002",
+      "severity": "critical",
+      "confidence": "high",
+      "type": "seam_handshake_gap",
+      "subject": "SEAM-3/SEAM-4 handoff is ambiguous about completion-future ownership (single driver vs split drainer+completion tasks)",
+      "locations": [
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+          "line_start": 8,
+          "line_end": 12,
+          "excerpt": "shared pattern for polling completion concurrently with draining events ... completion futures must not be canceled accidentally.",
+          "role": "primary"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-1-bh-c04-drain-while-polling-completion.md",
+          "line_start": 6,
+          "line_end": 10,
+          "excerpt": "pump function ... consumes a typed backend event stream, polls a backend completion future concurrently ...",
+          "role": "primary"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-2-bh-c05-canonical-handle-builder.md",
+          "line_start": 33,
+          "line_end": 40,
+          "excerpt": "explicit lifecycle split: Pump/drainer (SEAM-3) ... Completion sender awaits the backend completion future ...",
+          "role": "dependent"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+          "line_start": 11,
+          "line_end": 12,
+          "excerpt": "Define the pump’s completion “eligibility” rule ... (how receiver drop and stream finality interact).",
+          "role": "reference"
+        }
+      ],
+      "analysis": {
+        "what_breaks": "SEAM-3 and its slices describe a single pump that both drains events and polls the backend completion future, while SEAM-4’s canonical handle builder slice describes a split design with a distinct “Completion sender” task that awaits the backend completion future independently of the pump/drainer. Without an explicit seam handshake, implementers can build incompatible designs (double-polling a completion future, or mismatching where eligibility/finality is enforced), which risks DR-0012 violations or subtle cancellation bugs.",
+        "missing_links": [
+          "A single canonical description (and terminology) for the harness driver structure: whether the completion future is owned by the pump, or by a separate task (and what the pump owns instead).",
+          "A clear definition of how the SEAM-3 “eligibility rule” relates to SEAM-4 gating (what it gates, what it does not gate).",
+          "Explicit responsibility split text that is consistent across SEAM-3 and SEAM-4 slices (and referenced by both)."
+        ],
+        "required_to_be_cohesive": [
+          "Choose and document one driver structure (single task vs split drainer + completion task) in a canonical location (e.g., `threading.md` contract notes, or a dedicated section in SEAM-3/SEAM-4 seam.md).",
+          "Align SEAM-3 slice wording so it matches the chosen structure (e.g., if split tasks are chosen, SEAM-3 should describe the drainer responsibilities and how it coordinates with the completion task without double-driving futures).",
+          "Align SEAM-4 canonical builder slice to reference the chosen SEAM-3 contract semantics explicitly (including what “eligibility” means operationally).",
+          "Add a short checklist in SEAM-4 S2 tasks clarifying which task drops the event sender (finality signal) and who owns polling the completion future."
+        ]
+      },
+      "suggested_evidence_order": [
+        "docs",
+        "codebase",
+        "git-history",
+        "external",
+        "decision"
+      ],
+      "related_issues": []
+    },
+    {
+      "id": "CH-0003",
+      "severity": "major",
+      "confidence": "high",
+      "type": "traceability_gap",
+      "subject": "Universal invalid-request checks (e.g., empty prompt) are planned without a trace to ADR/spec/current behavior, despite “no behavior change” intent",
+      "locations": [
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-5-backend-adoption-and-tests.md",
+          "line_start": 25,
+          "line_end": 26,
+          "excerpt": "“No behavior change” intent ... only internal refactor.",
+          "role": "primary"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+          "line_start": 12,
+          "line_end": 13,
+          "excerpt": "Centralize shared “invalid request” checks that are universal (e.g., prompt must be non-empty).",
+          "role": "dependent"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-1-bh-c02-extension-allowlist-validator.md",
+          "line_start": 55,
+          "line_end": 60,
+          "excerpt": "Call order ... 1) universal invalid request checks (e.g., empty prompt) ...",
+          "role": "dependent"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-3-normalization-unit-tests.md",
+          "line_start": 73,
+          "line_end": 85,
+          "excerpt": "Test universal invalid request checks (e.g., empty prompt) ... ensure the rule matches ADR-0013 intent ...",
+          "role": "dependent"
+        }
+      ],
+      "analysis": {
+        "what_breaks": "The plan introduces (and plans to unit-test) at least one universal invalid-request rule (empty prompt), but the pack does not provide a traceable source of truth showing this rule is already required by the universal spec/ADR or already enforced by both existing backends. Without that trace, implementers cannot tell whether they are preserving behavior or introducing a behavior change during a refactor-only seam set.",
+        "missing_links": [
+          "A cited normative source (ADR/spec) or codebase evidence that empty prompts are already invalid across backends (or an explicit statement that this is a behavior change/bugfix and is intentionally in-scope).",
+          "If the behavior differs today, an explicit bridging step describing how to preserve compatibility (or how to roll out the behavior change safely)."
+        ],
+        "required_to_be_cohesive": [
+          "Either (a) cite the exact normative location requiring the invalid-request rule, or (b) explicitly scope it as a behavior change/bugfix with acceptance/rollout notes.",
+          "Add an explicit pre-implementation verification step (before enforcing the rule) to compare Codex and Claude current behavior for empty prompt handling; record the expected outcome for harness tests.",
+          "If behavior differs between backends today, specify which behavior the harness must preserve (and where that decision is recorded) before writing harness unit tests that would force convergence."
+        ]
+      },
+      "suggested_evidence_order": [
+        "docs",
+        "codebase",
+        "git-history",
+        "external",
+        "decision"
+      ],
+      "related_issues": []
+    },
+    {
+      "id": "CH-0004",
+      "severity": "minor",
+      "confidence": "high",
+      "type": "canonicalization_needed",
+      "subject": "SEAM-5 still marks harness test location as TBD, despite upstream slices treating harness tests as a concrete ownership surface",
+      "locations": [
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-5-backend-adoption-and-tests.md",
+          "line_start": 35,
+          "line_end": 37,
+          "excerpt": "Harness tests (location TBD; likely `crates/agent_api/src/backend_harness/tests.rs` or `crates/agent_api/tests/*`)",
+          "role": "primary"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-3-streaming-pump-unit-tests.md",
+          "line_start": 14,
+          "line_end": 16,
+          "excerpt": "Tests live with the harness pump (`crates/agent_api/src/backend_harness.rs` or a sibling internal test module).",
+          "role": "dependent"
+        }
+      ],
+      "analysis": {
+        "what_breaks": "The adoption seam is part of the reader’s “where does this live?” map, but it leaves harness test placement as TBD while upstream seams treat harness tests as a concrete ownership surface. This creates minor friction when executing SEAM-5 because it is not clear which location is canonical for harness-owned invariants and regression tests.",
+        "missing_links": [
+          "A single canonical harness test location guideline referenced consistently by SEAM-2/3/4/5."
+        ],
+        "required_to_be_cohesive": [
+          "Pick one canonical harness test placement (co-located `#[cfg(test)]` modules vs `crates/agent_api/tests/*`, etc.) and reference it consistently in SEAM-5 and the upstream test slices.",
+          "If multiple placements are acceptable, state the rule for what belongs where (unit vs integration) and which seams own each layer."
+        ]
+      },
+      "suggested_evidence_order": [
+        "docs",
+        "codebase",
+        "git-history",
+        "external",
+        "decision"
+      ],
+      "related_issues": []
+    },
+    {
+      "id": "CH-0005",
+      "severity": "minor",
+      "confidence": "high",
+      "type": "definition_missing",
+      "subject": "Multiple atomic tasks leave key symbol names as TBD, reducing searchability and making cross-slice traceability weaker",
+      "locations": [
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-1-bh-c01-contract-definition.md",
+          "line_start": 70,
+          "line_end": 72,
+          "excerpt": "Implement: `supported_extension_keys()` + `validate_backend_request()` hook (names TBD).",
+          "role": "primary"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-1-bh-c02-extension-allowlist-validator.md",
+          "line_start": 42,
+          "line_end": 44,
+          "excerpt": "Implement: `validate_extension_keys_fail_closed(...)` (name TBD) in the harness.",
+          "role": "primary"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-2-bh-c03-env-timeout-normalization.md",
+          "line_start": 47,
+          "line_end": 49,
+          "excerpt": "Implement: `merge_env_backend_defaults_then_request(...)` (name TBD).",
+          "role": "primary"
+        }
+      ],
+      "analysis": {
+        "what_breaks": "The pack is otherwise very execution-oriented (specific files, symbols, and acceptance criteria). Leaving several key names as TBD makes it harder to trace tasks to code during implementation and review (and harder to cross-reference across slices), especially when these names also appear in checklists that people will use verbatim.",
+        "missing_links": [
+          "A canonical naming decision (or a canonical “naming is flexible; search by behavior/contract ID” note) applied consistently across atomic task checklists."
+        ],
+        "required_to_be_cohesive": [
+          "Either choose canonical symbol names for the listed hooks/helpers in the docs, or replace the TBD names with contract-ID-based descriptions that remain stable even if identifiers differ.",
+          "If choosing names is deferred intentionally, add a single explicit naming-conventions rule (where the decision is made, and how reviewers verify the behavior matches the contract without relying on symbol names)."
+        ]
+      },
+      "suggested_evidence_order": [
+        "docs",
+        "codebase",
+        "git-history",
+        "external",
+        "decision"
+      ],
+      "related_issues": []
+    }
+  ]
+}

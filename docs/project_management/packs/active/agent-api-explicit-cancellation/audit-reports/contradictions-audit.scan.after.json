@@ -1,0 +1,71 @@
+{
+  "meta": {
+    "tool": "contradictions-scan",
+    "generated_at": "2026-02-24T18:29:35Z",
+    "scanned_files": [
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/README.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/decision_register.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threading.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam_map.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam-1-cancellation-contract.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam-2-harness-cancel-propagation.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam-3-backend-termination.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam-4-tests.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-3-backend-termination/slice-2-termination-hooks.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-3-backend-termination/slice-1-backend-adoption.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-3-backend-termination/seam.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/slice-2-harness-control-entrypoint.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/seam.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/slice-1-driver-semantics.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-4-tests/slice-2-drop-regression.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-4-tests/seam.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-4-tests/slice-1-explicit-cancel-integration.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/slice-1-canonical-contracts.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/seam.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/slice-2-agent-api-surface.md",
+      "docs/specs/universal-agent-api/README.md",
+      "docs/specs/universal-agent-api/contract.md",
+      "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "docs/specs/universal-agent-api/extensions-spec.md",
+      "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "docs/wi/wi-0002-explicit-cancellation-api.md"
+    ],
+    "total_claim_keys": 11,
+    "candidate_keys": 1,
+    "note": "Candidates are heuristic leads; audit must confirm contradictions with scope/context."
+  },
+  "candidates": [
+    {
+      "key": "KV::Selection",
+      "values": [
+        {
+          "value": "**A**",
+          "occurrences": [
+            {
+              "file": "docs/project_management/packs/active/agent-api-explicit-cancellation/decision_register.md",
+              "line": 17,
+              "excerpt": "Selection: **A**"
+            },
+            {
+              "file": "docs/project_management/packs/active/agent-api-explicit-cancellation/decision_register.md",
+              "line": 41,
+              "excerpt": "Selection: **A**"
+            }
+          ]
+        },
+        {
+          "value": "**A** (v1)",
+          "occurrences": [
+            {
+              "file": "docs/project_management/packs/active/agent-api-explicit-cancellation/decision_register.md",
+              "line": 28,
+              "excerpt": "Selection: **A** (v1)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

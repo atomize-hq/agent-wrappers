@@ -1,0 +1,540 @@
+{
+  "meta": {
+    "tool": "cohesion-scan",
+    "generated_at": "2026-02-23T01:16:51Z",
+    "scanned_files": [
+      "docs/project_management/packs/active/agent-api-backend-harness/seam_map.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threading.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-1-harness-contract.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/README.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-4-completion-gating.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/seam-5-backend-adoption-and-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-2-viability-smoke.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-1-bh-c01-contract-definition.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-3-claude-backend-migration.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-1-codex-backend-migration.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-2-adoption-conformance-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-2-bh-c05-canonical-handle-builder.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-3-bh-c05-gating-regression-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-1-bh-c05-gating-semantics.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-3-normalization-unit-tests.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-2-bh-c03-env-timeout-normalization.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-1-bh-c02-extension-allowlist-validator.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-1-bh-c04-drain-while-polling-completion.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/seam.md",
+      "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-3-streaming-pump-unit-tests.md"
+    ],
+    "counts": {
+      "broken_links": 0,
+      "missing_anchors": 0,
+      "sequence_markers": 0,
+      "sequence_anomalies": 0,
+      "dependency_lines": 98
+    },
+    "note": "Candidates are heuristic leads; audit must confirm cohesion breaks with context and plan reasoning."
+  },
+  "broken_links": [],
+  "missing_anchors": [],
+  "sequence_markers": [],
+  "sequence_anomalies": [],
+  "dependency_lines": [
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threading.md",
+      "line": 3,
+      "excerpt": "This section makes coupling explicit: contracts/interfaces, dependency edges, critical path, and workstreams that avoid conflicts."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threading.md",
+      "line": 38,
+      "excerpt": "## Dependency graph (text)"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threading.md",
+      "line": 41,
+      "excerpt": "- `SEAM-1 blocks SEAM-4` because: completion gating wiring depends on where the harness constructs the run handle."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threading.md",
+      "line": 42,
+      "excerpt": "- `SEAM-1 blocks SEAM-5` because: backend adoption requires the harness interface to exist."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threading.md",
+      "line": 55,
+      "excerpt": "- **WS-INT (Integration)**: lands WS-A then WS-B; reconciles behavior to ADR-0013 invariants and runs full test suite."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-1-harness-contract.md",
+      "line": 27,
+      "excerpt": "- Unknown extension keys MUST be rejected before spawn (per ADR-0013)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-1-harness-contract.md",
+      "line": 33,
+      "excerpt": "- Blocked by:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-1-harness-contract.md",
+      "line": 44,
+      "excerpt": "- De-risk plan: define the thinnest possible contract first (“contract-definition item”), then spike a Codex port in a branch to confirm the interface fits."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+      "line": 29,
+      "excerpt": "- Unknown extension keys MUST error before spawn as `UnsupportedCapability` (fail closed)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+      "line": 35,
+      "excerpt": "- Blocked by:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-2-request-normalization.md",
+      "line": 49,
+      "excerpt": "- De-risk plan: for each normalized field, pin a comparison test against current backend behavior before/after migration (SEAM-5)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+      "line": 10,
+      "excerpt": "- continues draining backend events after receiver drop without forwarding."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+      "line": 23,
+      "excerpt": "- A completion outcome that only resolves after the backend stream has ended (or after the consumer drop semantics are satisfied), per DR-0012 wiring expectations."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+      "line": 32,
+      "excerpt": "- Blocked by:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+      "line": 42,
+      "excerpt": "- asserts at least one event can be forwarded before completion resolves (live behavior)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-3-streaming-pump.md",
+      "line": 45,
+      "excerpt": "- De-risk plan: start by extracting Codex’s existing helper into the harness verbatim, then adapt Claude to it, keeping tests at each step."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-4-completion-gating.md",
+      "line": 15,
+      "excerpt": "- A completion oneshot/future that resolves after backend finality conditions are satisfied"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-4-completion-gating.md",
+      "line": 24,
+      "excerpt": "- Blocked by:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-5-backend-adoption-and-tests.md",
+      "line": 29,
+      "excerpt": "- Future onboarding work: once these migrations land, new backends should be required to use the harness by convention."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-5-backend-adoption-and-tests.md",
+      "line": 30,
+      "excerpt": "- Blocked by:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/seam-5-backend-adoption-and-tests.md",
+      "line": 45,
+      "excerpt": "- De-risk plan: migrate one backend first (Codex has an explicit helper), lock in behavior with tests, then migrate the second backend."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-2-viability-smoke.md",
+      "line": 42,
+      "excerpt": "- Test: success path (events then completion) + one failure path."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-1-bh-c01-contract-definition.md",
+      "line": 3,
+      "excerpt": "- **User/system value**: Unblocks downstream seams by freezing the internal “identity + supported extension keys + spawn + typed mapping + completion extraction” contract shape."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/slice-1-bh-c01-contract-definition.md",
+      "line": 72,
+      "excerpt": "- Test: call ordering is possible (validate-before-spawn) in the harness lifecycle."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/seam.md",
+      "line": 39,
+      "excerpt": "**Contract-first / dependency-first**: SEAM-1 blocks SEAM-3, SEAM-4, and SEAM-5, so the first deliverable is a pinned internal interface with smoke-proof that it is implementable."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/seam.md",
+      "line": 53,
+      "excerpt": "- None for SEAM-1 (must remain unblocked by SEAM-2/3/4)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/seam.md",
+      "line": 54,
+      "excerpt": "- **Dependency edges honored**:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-1-harness-contract/seam.md",
+      "line": 60,
+      "excerpt": "- What must wait: SEAM-2/3/4/5 implementation should start after `BH-C01` lands, per `threading.md` critical path."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-3-claude-backend-migration.md",
+      "line": 11,
+      "excerpt": "- extraction of final assistant text from stream-json, if the harness requires a backend-provided completion payload."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/seam.md",
+      "line": 53,
+      "excerpt": "**Risk-first / dependency-first within WS-B**: migrate one backend (Codex) onto the upstream harness contracts, then add adoption-focused regression coverage (without duplicating harness-owned invaria"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/seam.md",
+      "line": 71,
+      "excerpt": "- `BH-C03 env merge precedence` (SEAM-2): backend config env < request env, derived once in the harness."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/seam.md",
+      "line": 74,
+      "excerpt": "- **Dependency edges honored**:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/seam.md",
+      "line": 78,
+      "excerpt": "- Safe to do in WS-B after WS-A merges: Codex and Claude migrations touch primarily `crates/agent_api/src/backends/*` and their mapping helpers."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/seam.md",
+      "line": 83,
+      "excerpt": "- After both migrations land, treat “new backend must use the harness” as a convention gate (code review + lightweight conformance checks)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-5-backend-adoption-and-tests/slice-2-adoption-conformance-tests.md",
+      "line": 50,
+      "excerpt": "- Pump/gating semantics are tested once (harness-layer), not per backend."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-2-bh-c05-canonical-handle-builder.md",
+      "line": 37,
+      "excerpt": "- **Pump/drainer** (SEAM-3): owns the event `Sender`, forwards while the receiver is alive, and keeps draining the backend stream until end even after receiver drop; it drops the `Sender` only at stre"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-2-bh-c05-canonical-handle-builder.md",
+      "line": 49,
+      "excerpt": "- Test: run S3 regression tests (once landed)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-2-bh-c05-canonical-handle-builder.md",
+      "line": 78,
+      "excerpt": "- Ensure that consumer drop does not stop draining (SEAM-3), even though gating will permit completion to resolve after consumer drop."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-3-bh-c05-gating-regression-tests.md",
+      "line": 3,
+      "excerpt": "- **User/system value**: Prevents regressions where completion resolves before stream finality (except when the consumer drops the events stream), which would violate DR-0012 finality semantics and cr"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-3-bh-c05-gating-regression-tests.md",
+      "line": 8,
+      "excerpt": "- **Consumer-drop path**: if the consumer drops the events stream, completion may resolve once the backend completion is ready (while draining continues in the background)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-3-bh-c05-gating-regression-tests.md",
+      "line": 48,
+      "excerpt": "- **Outcome**: A test that fails if completion resolves before the events stream reaches finality."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-3-bh-c05-gating-regression-tests.md",
+      "line": 66,
+      "excerpt": "#### S3.T3 — Test: consumer drop permits completion once backend completion is ready"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-3-bh-c05-gating-regression-tests.md",
+      "line": 68,
+      "excerpt": "- **Outcome**: A test that fails if completion is permanently blocked after the consumer drops the events stream."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-3-bh-c05-gating-regression-tests.md",
+      "line": 75,
+      "excerpt": "- Keep the sender alive during the assertion to prove the escape hatch works (completion should not depend on sender drop once the consumer has dropped the stream)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-3-bh-c05-gating-regression-tests.md",
+      "line": 82,
+      "excerpt": "- Implement: consumer-drop completion unblocks test."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/seam.md",
+      "line": 41,
+      "excerpt": "**Contract-first / dependency-first**: SEAM-4 is an integration seam that blocks SEAM-5, but is blocked by SEAM-1 (where the harness constructs the run handle) and SEAM-3 (which pins completion eligib"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/seam.md",
+      "line": 59,
+      "excerpt": "- **Dependency edges honored**:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/seam.md",
+      "line": 65,
+      "excerpt": "- What must wait: S2/S3 should land after SEAM-1 has created `backend_harness.rs` and SEAM-3 has pinned completion eligibility semantics (so tests match reality)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-1-bh-c05-gating-semantics.md",
+      "line": 14,
+      "excerpt": "- `BH-C05` semantics are written down next to the canonical implementation (`crates/agent_api/src/run_handle_gate.rs`), including:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-1-bh-c05-gating-semantics.md",
+      "line": 19,
+      "excerpt": "- SEAM-3 owns when the sender is dropped (stream finality) and how draining continues after consumer drop."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-1-bh-c05-gating-semantics.md",
+      "line": 37,
+      "excerpt": "- Call out the invariant that the harness must continue draining backend streams even after consumer drop (SEAM-3), even though those events are no longer observable."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-1-bh-c05-gating-semantics.md",
+      "line": 41,
+      "excerpt": "- **Risk/rollback notes**: documentation-only; if the semantics are wrong, fix the doc first before changing implementation."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-1-bh-c05-gating-semantics.md",
+      "line": 52,
+      "excerpt": "- Output: `crates/agent_api/src/run_handle_gate.rs` (or a short note in `crates/agent_api/src/backend_harness.rs` once it exists)"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-1-bh-c05-gating-semantics.md",
+      "line": 54,
+      "excerpt": "- SEAM-3 guarantee: sender finality happens only after draining is complete (or a pinned eligibility rule), and draining continues after consumer drop."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-4-completion-gating/slice-1-bh-c05-gating-semantics.md",
+      "line": 55,
+      "excerpt": "- SEAM-4 guarantee: completion cannot be observed before finality signal, except via consumer drop."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-3-normalization-unit-tests.md",
+      "line": 77,
+      "excerpt": "- Output: tests next to normalization entrypoint"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-3-normalization-unit-tests.md",
+      "line": 82,
+      "excerpt": "- The harness rejects invalid universal requests before any spawn attempt."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-2-bh-c03-env-timeout-normalization.md",
+      "line": 48,
+      "excerpt": "- Implement: `merge_env_backend_defaults_then_request(...)` (name TBD)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-2-bh-c03-env-timeout-normalization.md",
+      "line": 69,
+      "excerpt": "- **Risk/rollback notes**: avoid changing observable behavior; if current backends disagree, pin desired behavior in tests before migration (SEAM-5)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-2-bh-c03-env-timeout-normalization.md",
+      "line": 75,
+      "excerpt": "- Cleanup: document semantics next to the helper to prevent drift."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/seam.md",
+      "line": 32,
+      "excerpt": "- Unknown extension keys MUST error before spawn as `UnsupportedCapability` (fail closed)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/seam.md",
+      "line": 47,
+      "excerpt": "**Dependency-first / contract-first**: SEAM-2 blocks SEAM-5 and owns the invariant contracts that prevent drift. Ship `BH-C02` and `BH-C03` as small, harness-local utilities that plug into the SEAM-1 "
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/seam.md",
+      "line": 65,
+      "excerpt": "- **Dependency edges honored**:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/seam.md",
+      "line": 69,
+      "excerpt": "- What can proceed now: planning + implementation in WS-A after SEAM-1 lands."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-1-bh-c02-extension-allowlist-validator.md",
+      "line": 6,
+      "excerpt": "- Implement `BH-C02 extension key allowlist + fail-closed validator` as a harness-local, reusable function that runs before spawn."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-1-bh-c02-extension-allowlist-validator.md",
+      "line": 16,
+      "excerpt": "- Backends can still run backend-specific validation/policy extraction after the allowlist check, via the SEAM-1 hook surface."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-1-bh-c02-extension-allowlist-validator.md",
+      "line": 37,
+      "excerpt": "- Validation happens before any backend process spawn is attempted."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-2-request-normalization/slice-1-bh-c02-extension-allowlist-validator.md",
+      "line": 44,
+      "excerpt": "- Test: unknown key yields `UnsupportedCapability` before spawn."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 9,
+      "excerpt": "- disable forwarding after drop (forward-flag),"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 16,
+      "excerpt": "- Once the downstream `mpsc::Receiver<AgentWrapperEvent>` is dropped, the pump:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 30,
+      "excerpt": "- Treat S2 as the “semantics pin”: avoid changing semantics after S3 lands without updating tests and re-validating against both backends during SEAM-5 adoption."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 41,
+      "excerpt": "- Once the forward flag flips to “off,” avoid doing extra work that only exists for forwarding (e.g., mapping/bounds) unless required for drain correctness."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 42,
+      "excerpt": "- Keep draining the backend stream even after forward is off; do not exit early."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 46,
+      "excerpt": "- Forwarding attempts stop after receiver drop is detected (no repeated send failures in a tight loop)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 54,
+      "excerpt": "- Cleanup: document the forward flag semantics next to the code."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 63,
+      "excerpt": "- SEAM-3: completion outcome resolves only after backend stream ended *or* after consumer-drop semantics are satisfied."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 66,
+      "excerpt": "- If the rule allows completion to resolve after receiver drop but before stream end, ensure draining still continues to completion (no hidden cancellation)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 68,
+      "excerpt": "- The chosen rule is written down next to the pump implementation and referenced by S3 tests."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 71,
+      "excerpt": "- **Risk/rollback notes**: if SEAM-4 requires a different rule, change this task first (definition), then update S3 tests, then update SEAM-4 wiring."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 81,
+      "excerpt": "- **Outcome**: Backpressure on the bounded event channel does not prevent the pump from continuing to drain and complete (including after receiver drop)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 86,
+      "excerpt": "- Define what happens under backpressure (e.g., await send while receiver is alive; once dropped, stop forwarding and drain)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-2-bh-c04-drain-on-drop-semantics.md",
+      "line": 92,
+      "excerpt": "- **Risk/rollback notes**: if this becomes complex, capture the intended behavior in a comment and a targeted test before optimizing."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-1-bh-c04-drain-while-polling-completion.md",
+      "line": 42,
+      "excerpt": "- The signature is compatible with both Codex and Claude adapters once they adopt the harness (SEAM-5)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-1-bh-c04-drain-while-polling-completion.md",
+      "line": 45,
+      "excerpt": "- **Risk/rollback notes**: if the signature is too “wide,” shrink it before it is used by migrated backends."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-1-bh-c04-drain-while-polling-completion.md",
+      "line": 60,
+      "excerpt": "- Store the completion result once it becomes ready; do not drop/cancel the completion future accidentally."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-1-bh-c04-drain-while-polling-completion.md",
+      "line": 64,
+      "excerpt": "- With an alive receiver, at least one event is forwarded (bounded) before completion resolves (live behavior)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-1-bh-c04-drain-while-polling-completion.md",
+      "line": 85,
+      "excerpt": "- Guidance exists and is discoverable next to the pump implementation."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/seam.md",
+      "line": 19,
+      "excerpt": "- continues draining backend events after receiver drop without forwarding."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/seam.md",
+      "line": 42,
+      "excerpt": "- asserts at least one event can be forwarded before completion resolves (“live” behavior)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/seam.md",
+      "line": 46,
+      "excerpt": "**Risk-first / dependency-first**: SEAM-3 is the highest-risk behavioral seam in WS-A. Deliver a harness-owned pump in small increments, pin the receiver-drop semantics explicitly, and require harness"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/seam.md",
+      "line": 63,
+      "excerpt": "- **Dependency edges honored**:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/seam.md",
+      "line": 67,
+      "excerpt": "- What can proceed now: SEAM-3 work in WS-A after SEAM-1 is landed (and preferably after SEAM-2 to avoid merge conflicts per `threading.md` critical path)."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/seam.md",
+      "line": 68,
+      "excerpt": "- What must wait: SEAM-5 backend adoption should wait for S2 + S3 to land, so semantics are pinned and tested before migration."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-3-streaming-pump-unit-tests.md",
+      "line": 39,
+      "excerpt": "- Provide a shared counter/flag (e.g., `AtomicUsize`) to assert the stream was fully consumed even after receiver drop."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-3-streaming-pump-unit-tests.md",
+      "line": 60,
+      "excerpt": "- receive/forward a small number of events, then drop the receiver intentionally"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-3-streaming-pump-unit-tests.md",
+      "line": 62,
+      "excerpt": "- the backend stream is fully consumed (drained) even after receiver drop"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-3-streaming-pump-unit-tests.md",
+      "line": 84,
+      "excerpt": "- Use a completion future that resolves “early” (before the stream ends) and verify the pump’s eligibility rule handles it correctly."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-backend-harness/threaded-seams/seam-3-streaming-pump/slice-3-streaming-pump-unit-tests.md",
+      "line": 90,
+      "excerpt": "- **Risk/rollback notes**: if ordering is discovered to be critical, add an explicit ordering test here before SEAM-5 migration."
+    }
+  ]
+}

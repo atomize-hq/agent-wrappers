@@ -1,0 +1,52 @@
+# Scope Brief — `agent_api` backend harness (ADR-0013)
+
+- **Goal (1 sentence)**: Add an internal `agent_api` “backend harness” that centralizes cross-backend glue/invariants so onboarding new CLI backends becomes mostly “spawn + parse + map”, without changing the public `agent_api` surface.
+- **Why now**: Current `crates/agent_api/src/backends/*.rs` re-implement shared glue (validation/env/timeout/bounds/drain/gating), raising onboarding cost and creating behavior drift risk.
+- **Primary user(s) + JTBD**:
+  - Maintainers onboarding new CLI backends: “Add a new backend adapter with minimal repeated logic.”
+  - Consumers of `agent_api` backends: “Get consistent semantics across backends by construction.”
+- **In-scope**:
+  - New internal harness module in `crates/agent_api/src/` to implement the shared run loop and universal invariants described in ADR-0013.
+  - Refactor existing built-in backends (`codex`, `claude_code`) to use the harness (no behavior changes intended).
+  - Add unit tests covering invariants: env precedence, fail-closed extension keys, drain-on-drop behavior, and DR-0012 completion gating wiring.
+- **Out-of-scope**:
+  - Any public Rust API changes in `agent_api`.
+  - Any change to capability IDs, extension keys, or normative universal spec semantics.
+  - Removing per-backend adapter modules or merging wrapper crates into `agent_api`.
+- **Success criteria**:
+  - New backend onboarding in `agent_api` is “thin adapter”: backend identity + allowlisted extensions + spawn + mapping.
+  - Cross-backend behavior for shared invariants is consistent and covered by harness unit tests.
+  - Existing Codex/Claude backends preserve observable behavior and pass existing tests.
+- **Constraints**:
+  - MUST NOT change universal contract/spec semantics (see ADR-0013 “User Contract (Authoritative)”).
+  - Must preserve DR-0012 finality semantics (completion gated on stream finality or consumer drop).
+  - Must keep safety posture: fail-closed unknown extension keys; bounds enforcement; avoid raw backend line leakage in errors/events.
+- **Canonical dependencies (authoritative anchors)**:
+  - Universal contract (public API + core type shapes):
+    - `docs/specs/universal-agent-api/contract.md` (“Public API (v1, normative)”)
+  - DR-0012 completion finality:
+    - `docs/specs/universal-agent-api/run-protocol-spec.md` (“Relationship between `completion` and the event stream (v1, normative)”)
+    - Implementation anchor (existing): `crates/agent_api/src/run_handle_gate.rs`
+  - Fail-closed extension key validation timing + error shape:
+    - `docs/specs/universal-agent-api/extensions-spec.md` (“R0 — Fail-closed capability gating”)
+  - Event envelope bounds + raw-line prohibition:
+    - `docs/specs/universal-agent-api/event-envelope-schema-spec.md` (“Constraints” + “Enforcement behavior (v1, normative)”)
+    - Implementation anchor (existing): `crates/agent_api/src/bounds.rs`
+  - Agent kind naming rules (lower_snake_case ids):
+    - `docs/specs/universal-agent-api/capabilities-schema-spec.md` (“Agent kind naming (normative)”)
+  - Harness intent / “no behavior change” guardrail:
+    - `docs/adr/0013-agent-api-backend-harness.md` (“User Contract (Authoritative)” + “Validation Plan (Authoritative)”)
+
+- **Conflict resolution rule (pinned)**:
+  - If this pack drifts from a document under `docs/specs/universal-agent-api/`, the spec wins.
+  - This pack MUST be updated to match the spec before implementation proceeds.
+- **External systems / dependencies**:
+  - Wrapper crates: `crates/codex`, `crates/claude_code`.
+  - Runtime: Tokio + async stream plumbing already used in backends.
+  - Normative docs: `docs/specs/universal-agent-api/*`.
+- **Known unknowns / risks**:
+  - The exact internal harness interface that best fits both Codex and Claude adapters (trait vs struct + closures; ownership/lifetimes).
+  - The safest generic shape for “drain backend stream while forwarding bounded events” without accidentally changing cancellation semantics.
+- **Assumptions**:
+  - The harness remains internal-only (non-`pub`) under `crates/agent_api/src/` (e.g. `backend_harness.rs`) and is only consumed by `crates/agent_api/src/backends/*.rs`.
+  - Existing per-backend parsing/mapping modules stay backend-owned; the harness only owns the orchestration + invariant enforcement.

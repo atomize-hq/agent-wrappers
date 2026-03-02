@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "tool": "contradictions-audit",
+    "generated_at": "2026-02-24T17:16:17Z",
+    "files": [
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/README.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/decision_register.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam-1-cancellation-contract.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam-2-harness-cancel-propagation.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam-3-backend-termination.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam-4-tests.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/seam_map.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/seam.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/slice-1-canonical-contracts.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-1-cancellation-contract/slice-2-agent-api-surface.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/seam.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/slice-1-driver-semantics.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-2-harness-cancel-propagation/slice-2-harness-control-entrypoint.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-3-backend-termination/seam.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-3-backend-termination/slice-1-backend-adoption.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-3-backend-termination/slice-2-termination-hooks.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-4-tests/seam.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-4-tests/slice-1-explicit-cancel-integration.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threaded-seams/seam-4-tests/slice-2-drop-regression.md",
+      "docs/project_management/packs/active/agent-api-explicit-cancellation/threading.md",
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "docs/adr/0006-agent-wrappers-workspace.md",
+      "docs/adr/0007-wrapper-events-ingestion-contract.md",
+      "docs/adr/0008-claude-stream-json-parser-api.md",
+      "docs/adr/0009-universal-agent-api.md",
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "docs/adr/0013-agent-api-backend-harness.md",
+      "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "docs/specs/claude-stream-json-parser-contract.md",
+      "docs/specs/claude-stream-json-parser-scenarios-v1.md",
+      "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+      "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "docs/specs/universal-agent-api/README.md",
+      "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "docs/specs/universal-agent-api/capability-matrix.md",
+      "docs/specs/universal-agent-api/contract.md",
+      "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/specs/universal-agent-api/extensions-spec.md",
+      "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "docs/specs/wrapper-events-ingestion-contract.md"
+    ],
+    "scan": {
+      "used": true,
+      "output": "docs/project_management/packs/active/agent-api-explicit-cancellation/audit-reports/contradictions-audit.scan.json"
+    },
+    "notes": [
+      "Updated to reflect `.runs/AUDIT-CX` findings (previous on-disk report was stale after concurrent workstreams restored earlier versions)."
+    ]
+  },
+  "issues": [
+    {
+      "id": "CX-0001",
+      "severity": "major",
+      "confidence": "medium",
+      "type": "scope_mismatch",
+      "subject": "ADR-0014: drop semantics vs cancellation meaning",
+      "scope": {
+        "environment": "all",
+        "version": "unknown",
+        "feature_flag": "none",
+        "timeline": "planned"
+      },
+      "statement_a": {
+        "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+        "line_start": 66,
+        "line_end": 69,
+        "excerpt": "dropping must not imply cancel, but consumers still need a supported way to cancel intentionally."
+      },
+      "statement_b": {
+        "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+        "line_start": 142,
+        "line_end": 144,
+        "excerpt": "Drop semantics remain “best-effort cancellation” as currently specified by the run protocol, but are not required to be reliable."
+      },
+      "analysis": {
+        "why_conflict": "Within the same ADR, one statement reads as “dropping must not imply cancel”, while a later section states that drop semantics remain “best-effort cancellation” per the run protocol. These can both be true only if the earlier “cancel” refers specifically to explicit/intentional cancellation (not drop-based best-effort cancellation), but that scope qualifier is not stated, leading to incompatible reader interpretations.",
+        "possible_reconciliations": [
+          "If statement A intends “cancel” to mean explicit cancellation, restate it explicitly (e.g., “dropping must not imply explicit cancellation”).",
+          "If drop is intended to be purely a consumer opt-out (not a cancellation signal), update statement B and the referenced run protocol language accordingly.",
+          "If drop is intended to be a best-effort cancellation signal but not reliable, reword statement A to clarify that drop MUST NOT be relied upon as an intentional/deterministic cancellation mechanism."
+        ],
+        "what_must_be_true": [
+          "Whether dropping `events` / the run handle is specified as a cancellation signal (even best-effort) or only as a consumer opt-out, and how the term “cancel” is scoped in ADR-0014."
+        ]
+      },
+      "suggested_evidence_order": [
+        "codebase",
+        "tests",
+        "runtime-config",
+        "git-history",
+        "other-docs",
+        "external",
+        "decision"
+      ],
+      "related_issues": []
+    }
+  ]
+}
