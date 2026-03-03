@@ -82,7 +82,7 @@
     {
       "id": "uaa-0012",
       "title": "Research/plan: backend config pass-through (bounded)",
-      "status": "todo",
+      "status": "done",
       "bucket": "agent_api.config",
       "type": "research",
       "kickoff": {
@@ -243,7 +243,7 @@
     {
       "id": "uaa-0018",
       "title": "P1: Restrict selection-failure translation to actual not-found errors",
-      "status": "todo",
+      "status": "done",
       "bucket": "agent_api.session",
       "type": "task",
       "kickoff": {
@@ -313,7 +313,7 @@
     {
       "id": "uaa-0020",
       "title": "P2: Enforce 1024-byte handle id bound for Codex fork thread IDs",
-      "status": "todo",
+      "status": "done",
       "bucket": "agent_api.session",
       "type": "task",
       "kickoff": {
