@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "tool": "contradictions-audit",
+    "generated_at": "2026-03-03T02:22:28Z",
+    "files": [
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "docs/adr/0006-agent-wrappers-workspace.md",
+      "docs/adr/0007-wrapper-events-ingestion-contract.md",
+      "docs/adr/0008-claude-stream-json-parser-api.md",
+      "docs/adr/0009-universal-agent-api.md",
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "docs/adr/0013-agent-api-backend-harness.md",
+      "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "docs/project_management/packs/active/agent-api-external-sandbox-exec-policy/README.md",
+      "docs/project_management/packs/active/agent-api-external-sandbox-exec-policy/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-external-sandbox-exec-policy/seam-1-external-sandbox-extension-key.md",
+      "docs/project_management/packs/active/agent-api-external-sandbox-exec-policy/seam-2-backend-enablement.md",
+      "docs/project_management/packs/active/agent-api-external-sandbox-exec-policy/seam-3-codex-mapping.md",
+      "docs/project_management/packs/active/agent-api-external-sandbox-exec-policy/seam-4-claude-code-mapping.md",
+      "docs/project_management/packs/active/agent-api-external-sandbox-exec-policy/seam-5-tests.md",
+      "docs/project_management/packs/active/agent-api-external-sandbox-exec-policy/seam_map.md",
+      "docs/project_management/packs/active/agent-api-external-sandbox-exec-policy/threading.md",
+      "docs/specs/claude-code-session-mapping-contract.md",
+      "docs/specs/claude-stream-json-parser-contract.md",
+      "docs/specs/claude-stream-json-parser-scenarios-v1.md",
+      "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "docs/specs/codex-streaming-exec-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+      "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "docs/specs/universal-agent-api/README.md",
+      "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "docs/specs/universal-agent-api/capability-matrix.md",
+      "docs/specs/universal-agent-api/contract.md",
+      "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/specs/universal-agent-api/extensions-spec.md",
+      "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "docs/specs/wrapper-events-ingestion-contract.md"
+    ],
+    "scan": {
+      "used": true,
+      "output": "/tmp/contradictions-audit.scan.json"
+    },
+    "notes": [
+      "Audit target set: planning pack docs/project_management/packs/active/agent-api-external-sandbox-exec-policy plus canonical docs/specs/** and docs/adr/**.",
+      "Planning-pack docs are explicitly non-normative, but contradictions with canonical specs/ADRs are still flagged because they can mislead implementation."
+    ]
+  },
+  "issues": [
+    {
+      "id": "CX-0001",
+      "severity": "major",
+      "confidence": "high",
+      "type": "terminology",
+      "subject": "`agent_api.exec.external_sandbox.v1` intended host isolation boundary (internal vs external sandboxing)",
+      "scope": {
+        "environment": "all",
+        "version": "v1",
+        "feature_flag": "unknown",
+        "timeline": "planned"
+      },
+      "statement_a": {
+        "file": "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+        "line_start": 100,
+        "line_end": 102,
+        "excerpt": "…allowing internally sandboxed hosts (e.g. Substrate) to opt into explicitly dangerous exec policy via `agent_api.exec.external_sandbox.v1`."
+      },
+      "statement_b": {
+        "file": "docs/project_management/packs/active/agent-api-external-sandbox-exec-policy/scope_brief.md",
+        "line_start": 9,
+        "line_end": 10,
+        "excerpt": "…to let externally sandboxed hosts (e.g., Substrate) explicitly request that a built-in backend relax internal approvals/sandbox/permissions guardrails…"
+      },
+      "analysis": {
+        "why_conflict": "The docs describe the same dangerous key as being intended for both “internally sandboxed” and “externally sandboxed” hosts. These phrases imply opposite trust boundaries (where the isolation lives), which affects when it is safe to relax internal guardrails. Without a single consistent term/definition, implementers and integrators can infer incompatible safety assumptions.",
+        "possible_reconciliations": [
+          "If “internally sandboxed hosts” was meant to describe a host-provided sandbox that is external to the backend process, replace it with “externally sandboxed hosts” and/or add a short definition of “external sandbox” in the owner-doc spec entry.",
+          "If “internally sandboxed hosts” is actually intended (i.e., the backend itself provides the isolation), then the key name/description should not be `external_sandbox`, and the planning pack should be updated to match the intended trust boundary."
+        ],
+        "what_must_be_true": [
+          "Define the single intended trust boundary for `agent_api.exec.external_sandbox.v1`: the sandbox/isolation is provided by the host environment external to the backend process (or explicitly state a different boundary and align naming/wording across docs)."
+        ]
+      },
+      "suggested_evidence_order": [
+        "codebase",
+        "tests",
+        "runtime-config",
+        "git-history",
+        "other-docs",
+        "external",
+        "decision"
+      ],
+      "related_issues": []
+    }
+  ]
+}
