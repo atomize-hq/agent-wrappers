@@ -332,7 +332,7 @@
           "crates/agent_api/src/backends/codex.rs",
           "crates/agent_api/src/backends/codex/fork.rs",
           "crates/agent_api/src/bin/fake_codex_app_server_jsonrpc_agent_api.rs",
-          "crates/agent_api/tests/c4_session_fork_v1_codex.rs"
+          "crates/agent_api/tests/session_fork_v1_codex.rs"
         ],
         "deliverables": [
           "Bound enforcement for forked thread ids (<=1024 bytes)",

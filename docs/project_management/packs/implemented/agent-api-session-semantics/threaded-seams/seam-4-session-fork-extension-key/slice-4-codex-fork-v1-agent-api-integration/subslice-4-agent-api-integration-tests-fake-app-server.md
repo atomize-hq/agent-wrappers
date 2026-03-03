@@ -32,7 +32,7 @@
   - Outputs: new integration tests covering success + failure + safety paths.
   - Files (prefer new test file for conflict avoidance):
     - `crates/agent_api/src/bin/fake_codex_app_server_jsonrpc_agent_api.rs` (new)
-    - `crates/agent_api/tests/c4_session_fork_v1_codex.rs` (new)
+    - `crates/agent_api/tests/session_fork_v1_codex.rs` (new)
 - **Pinned test cases**:
   - selector `"id"`:
     - does not call `thread/list`,
