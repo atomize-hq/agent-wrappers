@@ -65,8 +65,8 @@ internal prompting/guardrails that conflict with unattended automation.
   - succeeds when the host explicitly enables the capability on the backend instance.
 - When enabled and requested:
   - Codex backend maps to `--dangerously-bypass-approvals-and-sandbox` (pinned; via
-    `CodexClientBuilder::dangerously_bypass_approvals_and_sandbox(true)` for exec/resume; see SEAM-3
-    for fork/app-server details).
+    `CodexClientBuilder::dangerously_bypass_approvals_and_sandbox(true)` for exec/resume; see
+    `docs/specs/codex-external-sandbox-mapping-contract.md` for fork/app-server details).
   - Claude Code backend maps to `claude --print --dangerously-skip-permissions ...` (plus any
     required opt-in flag depending on CLI version).
 - Contradiction with `agent_api.exec.non_interactive=false` fails before spawn.

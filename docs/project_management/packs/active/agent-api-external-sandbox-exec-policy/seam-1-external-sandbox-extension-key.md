@@ -43,15 +43,9 @@
   - built-in backends MUST NOT advertise it by default,
   - it MUST remain capability-gated,
   - and it MUST remain non-interactive (no hangs on prompts).
-- Observability / audit signal (v1, pinned):
-  - When `extensions["agent_api.exec.external_sandbox.v1"] == true` is accepted (capability is
-    advertised and the request passes validation), the backend MUST emit exactly one safe
-    `AgentWrapperEventKind::Status` warning event with:
-    - `channel="status"`
-    - `message="DANGEROUS: external sandbox exec policy enabled (agent_api.exec.external_sandbox.v1=true)"`
-    - `data=None`
-  - Emission timing: the warning MUST be emitted before any `TextOutput` / `ToolCall` / `ToolResult`
-    events for that run.
+- Observability / audit signal (v1, pinned; canonical):
+  - See `docs/specs/universal-agent-api/extensions-spec.md` under
+    `agent_api.exec.external_sandbox.v1` for the required `Status` warning event and emission timing.
 
 ## Dependencies
 

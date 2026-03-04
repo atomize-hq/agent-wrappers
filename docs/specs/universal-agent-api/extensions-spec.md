@@ -131,18 +131,27 @@ Validation rules:
   - Example backend exec-policy keys: `backend.codex.exec.approval_policy`,
     `backend.codex.exec.sandbox_mode`.
 
+Observability / audit signal (v1, pinned):
+- When `extensions["agent_api.exec.external_sandbox.v1"] == true` is accepted (capability is
+  advertised and the request passes validation), the backend MUST emit exactly one safe
+  `AgentWrapperEventKind::Status` warning event with:
+  - `channel="status"`
+  - `message="DANGEROUS: external sandbox exec policy enabled (agent_api.exec.external_sandbox.v1=true)"`
+  - `data=None`
+- Emission timing: the warning MUST be emitted before any `TextOutput` / `ToolCall` / `ToolResult`
+  events for that run.
+
 Backend mapping requirements:
 - Backends that advertise this key MUST:
   - ensure the underlying CLI/wrapper will not prompt (approvals/permissions prompts),
   - ensure any “internal sandbox required” checks are bypassed/disabled as required by that backend,
   - and remain deterministic (no “spawn then retry with different flags”).
-- Built-in backends SHOULD NOT advertise this capability by default; it is intended for explicitly
-  externally sandboxed hosts.
-- Example mappings (non-normative):
-  - Codex: map to `--dangerously-bypass-approvals-and-sandbox` (or an equivalent non-interactive
-    combination of overrides).
-  - Claude Code: map to `--dangerously-skip-permissions` (and, if required by the installed CLI
-    version, also pass `--allow-dangerously-skip-permissions`).
+- Built-in backends MUST NOT advertise this capability by default; it is intended for explicitly
+  externally sandboxed hosts, and requires explicit opt-in via backend configuration (see
+  `docs/specs/universal-agent-api/contract.md`, "Dangerous capability opt-in (external sandbox exec policy)").
+- Concrete backend mapping contracts:
+  - Codex: `docs/specs/codex-external-sandbox-mapping-contract.md`
+  - Claude Code: `docs/specs/claude-code-session-mapping-contract.md`
 
 ### `agent_api.session.resume.v1` (object)
 

@@ -355,7 +355,9 @@ and, if so, pinning its minimal schema/fields and emission point.
 **Chosen spec**
 
 Pinned in:
-- `docs/project_management/packs/active/agent-api-external-sandbox-exec-policy/seam-1-external-sandbox-extension-key.md`
+- `docs/specs/universal-agent-api/extensions-spec.md` under:
+  - `agent_api.exec.external_sandbox.v1` → “Observability / audit signal (v1, pinned)”
+- (Planning summary copy): `docs/project_management/packs/active/agent-api-external-sandbox-exec-policy/seam-1-external-sandbox-extension-key.md`
 
 **Rationale**
 

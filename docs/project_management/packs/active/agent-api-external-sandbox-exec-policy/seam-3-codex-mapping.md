@@ -4,6 +4,8 @@
 - **Type**: capability (backend mapping)
 - **Goal / user value**: when enabled + requested, run Codex in a mode compatible with external
   sandboxing by relaxing internal approvals/sandbox guardrails without prompting.
+- **Canonical mapping contract**: `docs/specs/codex-external-sandbox-mapping-contract.md` (this seam
+  file is a non-normative planning summary).
 
 ## Scope
 
@@ -15,8 +17,10 @@
     mechanism (pinned):
     - Codex exec/resume flows: call
       `codex::CodexClientBuilder::dangerously_bypass_approvals_and_sandbox(true)`.
-    - Codex fork flow (app-server JSON-RPC): set `approval_policy="never"` and
-      `sandbox="danger-full-access"` on all applicable RPC surfaces (no spawn+retry loop).
+    - Codex fork flow (app-server JSON-RPC): set:
+      - `thread/fork`: `approvalPolicy="never"` + `sandbox="danger-full-access"`
+      - `turn/start`: `approvalPolicy="never"`
+      (no spawn+retry loop).
   - Ensure mapping applies consistently across every Codex run entrypoint:
     - exec (`spawn_exec_or_resume_flow` with `resume=None`)
     - resume (`spawn_exec_or_resume_flow` with `resume=Some(...)`)
@@ -42,8 +46,8 @@
 - Equivalent mapping definition (pinned; used by tests):
   - Exec/resume: argv MUST contain exactly one `--dangerously-bypass-approvals-and-sandbox`, and
     MUST NOT contain any of: `--full-auto`, `--ask-for-approval`, `--sandbox`.
-  - Fork (app-server): `approval_policy` MUST resolve to `"never"` and `sandbox` MUST resolve to
-    `"danger-full-access"` for the fork + turn-start surfaces.
+  - Fork (app-server): `approvalPolicy` MUST resolve to `"never"` for the fork + turn-start
+    surfaces, and `sandbox` MUST resolve to `"danger-full-access"` for the fork surface.
 - Unavailable mapping primitive behavior (pinned):
   - The backend MUST NOT attempt a fallback mapping (no spawn then retry with different flags).
   - If the installed Codex binary rejects the pinned flag or the app-server rejects the pinned
@@ -75,7 +79,8 @@
     - argv includes `--dangerously-bypass-approvals-and-sandbox`
     - argv excludes `--full-auto`, `--ask-for-approval`, `--sandbox`
   - fork mapping:
-    - app-server RPC uses `approval_policy="never"` + `sandbox="danger-full-access"`.
+    - app-server RPC uses `approvalPolicy="never"` and `sandbox="danger-full-access"` (per
+      `docs/specs/codex-external-sandbox-mapping-contract.md`).
 
 ## Risks / unknowns
 

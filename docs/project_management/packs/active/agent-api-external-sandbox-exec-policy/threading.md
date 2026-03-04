@@ -31,10 +31,13 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 
 - **ES-C04 — Codex mapping contract**
   - **Type**: config
-  - **Definition**: When enabled + requested, Codex backend mapping is pinned (SEAM-3):
+  - **Definition**: When enabled + requested, Codex backend mapping is pinned (canonical:
+    `docs/specs/codex-external-sandbox-mapping-contract.md`; planning summary: SEAM-3):
     - exec/resume: apply `CodexClientBuilder::dangerously_bypass_approvals_and_sandbox(true)`
       (argv includes `--dangerously-bypass-approvals-and-sandbox` and excludes other safety flags).
-    - fork/app-server: RPC uses `approval_policy="never"` + `sandbox="danger-full-access"`.
+    - fork/app-server: RPC uses:
+      - `approvalPolicy="never"` (thread/fork + turn/start)
+      - `sandbox="danger-full-access"` (thread/fork)
   - **Owner seam**: SEAM-3
 
 - **ES-C05 — Claude mapping contract**
@@ -48,8 +51,12 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 - **ES-C06 — Exec-policy combination rule (external sandbox mode)**
   - **Type**: policy
   - **Definition**: When `agent_api.exec.external_sandbox.v1 == true`, the request MUST NOT include
-    any `backend.<agent_kind>.exec.*` keys; otherwise the backend MUST fail before spawn with
-    `AgentWrapperError::InvalidRequest` (ambiguous precedence). (Canonical: `extensions-spec.md`.)
+    any backend-scoped exec-policy keys under `backend.<agent_kind>.exec.*` (ambiguous precedence).
+    If such a key is present (and supported per the extensions registry R0 gate), the backend MUST
+    fail before spawn with `AgentWrapperError::InvalidRequest`. If such a key is present but is not
+    supported, the backend MUST fail-closed as `AgentWrapperError::UnsupportedCapability` per R0
+    and MUST NOT evaluate this contradiction rule. (Canonical:
+    `docs/specs/universal-agent-api/extensions-spec.md`.)
   - **Owner seam**: SEAM-1
   - **Consumers**: SEAM-3/4/5
 
@@ -86,5 +93,6 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 
 - **Claude allow-flag handling**: pinned to a deterministic `claude --help` preflight (cached), with
   failure before spawn when preflight cannot be performed. See ES-C07.
-- **Exec-policy combination / precedence**: pinned to “reject `backend.<agent_kind>.exec.*` keys when
-  `external_sandbox=true`” to avoid ambiguous precedence in a dangerous surface. See ES-C06.
+- **Exec-policy combination / precedence**: pinned to “reject `backend.<agent_kind>.exec.*` keys
+  when `external_sandbox=true`” (after R0 support gating) to avoid ambiguous precedence in a
+  dangerous surface. See ES-C06.
