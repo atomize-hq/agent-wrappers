@@ -14,6 +14,7 @@
   - Backend validation tests:
     - boolean type validation for the key,
     - contradiction handling with `agent_api.exec.non_interactive`,
+    - exec-policy combination rule: `external_sandbox=true` rejects any `backend.*.exec.*` keys,
     - no spawn when invalid / contradictory.
   - Mapping tests (best-effort, unit-level):
     - Codex argv/builder contains dangerous bypass override when enabled + requested.
@@ -47,6 +48,4 @@
 
 ## Risks / unknowns
 
-- Claude allow-flag detection is difficult to unit-test without a stable preflight abstraction;
-  treat the detection mechanism as a unit-testable seam (pure function + cached result).
-
+- None (pinned: help-preflight is a unit-testable seam; see `docs/specs/claude-code-session-mapping-contract.md`).

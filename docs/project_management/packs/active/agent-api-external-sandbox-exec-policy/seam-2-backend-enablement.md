@@ -20,8 +20,11 @@
 ## Primary interfaces (contracts)
 
 - **Backend config** (host-controlled, not a per-run extension key):
-  - A new boolean toggle such as `allow_external_sandbox_exec` (exact name TBD) that defaults to
-    `false`.
+  - `allow_external_sandbox_exec: bool` (default: `false`) on:
+    - `agent_api::backends::codex::CodexBackendConfig`
+    - `agent_api::backends::claude_code::ClaudeCodeBackendConfig`
+  - Canonical contract location for the host-facing config surface:
+    - `docs/specs/universal-agent-api/contract.md`
   - When `false`:
     - capability id `agent_api.exec.external_sandbox.v1` is absent from `capabilities()`, and
     - attempts to send the extension key fail closed as `UnsupportedCapability`.
@@ -50,17 +53,15 @@
 - Unit tests:
   - default backend instances do **not** contain `agent_api.exec.external_sandbox.v1` in
     `capabilities()`.
-  - when the opt-in toggle is enabled, the capability appears and the key is accepted for further
-    validation.
+  - when `config.allow_external_sandbox_exec = true`, the capability appears and the key is accepted
+    for further validation/mapping.
 
 ## Risks / unknowns
 
-- Choosing the most ergonomic and least footgun-prone configuration surface for hosts (config field
-  vs feature flag vs constructor variant).
+- None (pinned: `allow_external_sandbox_exec` config field; default `false`).
 
 ## Rollout / safety
 
 - This is a "double opt-in" design:
   1) host enables the backend capability explicitly, and
   2) host sets the per-run extension key explicitly.
-

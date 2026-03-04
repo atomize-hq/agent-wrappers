@@ -50,6 +50,35 @@ If the CLI exits non-zero due to rejecting the pinned non-interactive flag/value
 fail the run as `AgentWrapperError::Backend { message }` with a safe/redacted `message` (MUST NOT
 embed raw backend output).
 
+## `agent_api.exec.external_sandbox.v1` mapping (dangerous; pinned)
+
+The external sandbox extension key (`agent_api.exec.external_sandbox.v1`) is owned by the universal
+extensions registry (`docs/specs/universal-agent-api/extensions-spec.md`). This section pins the
+Claude Code backend-owned CLI mapping when the Claude backend advertises and accepts the key.
+
+When `extensions["agent_api.exec.external_sandbox.v1"] == true`, the Claude backend MUST:
+
+- remain non-interactive (so the `agent_api.exec.non_interactive` mapping still applies), and
+- include `--dangerously-skip-permissions` in argv.
+
+Additionally, the backend MUST include `--allow-dangerously-skip-permissions` **iff** the installed
+Claude CLI supports that flag.
+
+Deterministic allow-flag preflight requirement (pinned):
+
+- The backend MUST determine allow-flag support pre-spawn and MUST NOT spawn a session and then
+  retry with a different argv.
+- Pinned strategy:
+  - run `claude --help` once per backend instance,
+  - parse stdout for the literal token `--allow-dangerously-skip-permissions`, and
+  - cache the resulting boolean for subsequent runs.
+- If the preflight cannot be performed deterministically (non-zero exit, timeout, missing binary,
+  etc.) and the key is requested, the backend MUST fail the run **before spawning** as
+  `AgentWrapperError::Backend { message }` with a safe/redacted `message`.
+
+Implementation note (non-normative): keep the `--help` parser a pure function so unit tests can pin
+both the allow-flag-supported and allow-flag-not-supported cases without spawning Claude.
+
 ## `agent_api.session.resume.v1` mapping (pinned)
 
 The resume extension key is owned by `docs/specs/universal-agent-api/extensions-spec.md`. This

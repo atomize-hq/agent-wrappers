@@ -176,6 +176,7 @@ async fn main() {
             default_timeout: None,
             default_working_dir: None,
             env: Default::default(),
+            allow_external_sandbox_exec: false,
         },
     );
     let backend = Arc::new(backend);

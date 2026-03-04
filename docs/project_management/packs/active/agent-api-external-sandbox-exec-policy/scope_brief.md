@@ -83,17 +83,19 @@ internal prompting/guardrails that conflict with unattended automation.
 
 ## Known unknowns / risks
 
-- **Claude CLI gating**: some versions may require an additional "allow" flag; we need a deterministic
-  pre-spawn capability check (no retries / no double-spawn).
-- **Policy interactions**: interaction with existing exec-policy keys (e.g., Codex sandbox/approval
-  backend keys) when external sandbox mode is requested.
+- **Claude CLI allow-flag handling**: pinned to a deterministic `claude --help` preflight (cached),
+  with failure before spawn when preflight cannot be performed. (Canonical:
+  `docs/specs/claude-code-session-mapping-contract.md`.)
+- **Exec-policy interactions / precedence**: pinned to “reject `backend.<agent_kind>.exec.*` keys
+  when `agent_api.exec.external_sandbox.v1 == true`” to avoid ambiguous precedence in a dangerous
+  surface. (Canonical: `docs/specs/universal-agent-api/extensions-spec.md`.)
 - **Footgun risk**: ensuring the opt-in path is explicit enough that this does not become a default
   escape hatch for non-sandboxed hosts.
 
 ## Assumptions (explicit)
 
-- Built-in backends will gate support via an explicit backend config toggle (default `false`) so
-  capability advertising remains off by default.
+- Built-in backends will gate support via `allow_external_sandbox_exec: bool` (default `false`) on
+  each backend config so capability advertising remains off by default.
 - Hosts that need this behavior will:
   1) enable the backend capability explicitly, then
   2) set the per-run extension key explicitly.

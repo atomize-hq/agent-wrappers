@@ -29,6 +29,10 @@
 - MUST be validated before spawn.
 - MUST fail before spawn with `AgentWrapperError::InvalidRequest` on explicit contradiction with
   `agent_api.exec.non_interactive == false`.
+- MUST reject ambiguous exec-policy combinations:
+  - when `agent_api.exec.external_sandbox.v1 == true`, the request MUST NOT include any
+    `backend.*.exec.*` keys (including `backend.codex.exec.approval_policy` and
+    `backend.codex.exec.sandbox_mode`) per `docs/specs/universal-agent-api/extensions-spec.md`.
 
 ## Dependencies
 
@@ -48,12 +52,14 @@
 - Unit tests that pin:
   - default capabilities do not advertise the key,
   - contradiction behavior (`external_sandbox=true` + `non_interactive=false`) fails pre-spawn, and
+  - forbidden combinations fail pre-spawn as `InvalidRequest`:
+    - `external_sandbox=true` + `backend.codex.exec.approval_policy=*`
+    - `external_sandbox=true` + `backend.codex.exec.sandbox_mode=*`
   - the generated argv/builder config includes the dangerous bypass override when requested.
 
 ## Risks / unknowns
 
-- Interaction with existing Codex exec-policy keys (`backend.codex.exec.approval_policy`,
-  `backend.codex.exec.sandbox_mode`) when external sandbox mode is requested.
+- None (pinned: `external_sandbox=true` rejects `backend.*.exec.*` combinations).
 
 ## Rollout / safety
 

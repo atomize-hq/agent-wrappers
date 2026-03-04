@@ -292,6 +292,7 @@ pub mod backends {
             pub default_timeout: Option<Duration>,
             pub default_working_dir: Option<PathBuf>,
             pub env: BTreeMap<String, String>,
+            pub allow_external_sandbox_exec: bool,
         }
 
         pub struct CodexBackend { /* private */ }
@@ -323,6 +324,7 @@ pub mod backends {
             pub default_timeout: Option<Duration>,
             pub default_working_dir: Option<PathBuf>,
             pub env: BTreeMap<String, String>,
+            pub allow_external_sandbox_exec: bool,
         }
 
         pub struct ClaudeCodeBackend { /* private */ }
@@ -339,6 +341,24 @@ pub mod backends {
     }
 }
 ```
+
+### Dangerous capability opt-in (external sandbox exec policy) (v1, normative)
+
+`agent_api.exec.external_sandbox.v1` is explicitly dangerous and MUST remain safe-by-default for
+built-in backends. Concretely:
+
+- `agent_api::backends::codex::CodexBackendConfig.allow_external_sandbox_exec` MUST default to `false`.
+- `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_external_sandbox_exec` MUST default to `false`.
+
+When `allow_external_sandbox_exec == false` for a backend instance:
+- `capabilities().ids` MUST NOT include `agent_api.exec.external_sandbox.v1`, and
+- a request that includes `extensions["agent_api.exec.external_sandbox.v1"]` MUST fail closed as
+  `AgentWrapperError::UnsupportedCapability` per the extensions registry R0.
+
+When `allow_external_sandbox_exec == true` for a backend instance:
+- `capabilities().ids` MUST include `agent_api.exec.external_sandbox.v1`, and
+- the backend MUST accept the key for further validation/mapping (still validated before spawn; type
+  errors and contradiction errors are `AgentWrapperError::InvalidRequest` per `extensions-spec.md`).
 
 ### Config and request precedence (v1, normative)
 

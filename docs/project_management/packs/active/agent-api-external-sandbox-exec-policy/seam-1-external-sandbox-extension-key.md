@@ -23,6 +23,7 @@
 
 - **Extension key**: `agent_api.exec.external_sandbox.v1`
   - **Type**: boolean
+  - **Default when absent**: `false` (per `docs/specs/universal-agent-api/extensions-spec.md`)
   - **Meaning**: when `true`, the host asserts it provides isolation externally and requests the
     backend relax internal guardrails accordingly.
   - **Validation**: MUST be validated before spawn; non-boolean values fail with
@@ -59,7 +60,7 @@
 
 ## Risks / unknowns
 
-- Deciding whether this key overrides or rejects other exec-policy keys (footgun risk).
+- None (pinned: `external_sandbox=true` rejects `backend.<agent_kind>.exec.*` keys; see `extensions-spec.md`).
 
 ## Rollout / safety
 

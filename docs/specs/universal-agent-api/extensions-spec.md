@@ -125,6 +125,11 @@ Validation rules:
 - If this key is `true` and `agent_api.exec.non_interactive` is explicitly set to `false` in the
   same request (and both keys are supported per R0), the backend MUST fail before spawn with
   `AgentWrapperError::InvalidRequest` (contradictory intent).
+- If this key is `true`, the request MUST NOT include any backend-scoped exec-policy keys under
+  `backend.<agent_kind>.exec.*` (ambiguous precedence). If such a key is present (and supported per
+  R0), the backend MUST fail before spawn with `AgentWrapperError::InvalidRequest`.
+  - Example backend exec-policy keys: `backend.codex.exec.approval_policy`,
+    `backend.codex.exec.sandbox_mode`.
 
 Backend mapping requirements:
 - Backends that advertise this key MUST:
