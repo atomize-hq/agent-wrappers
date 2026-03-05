@@ -62,9 +62,7 @@ fn is_unknown_bypass_flag_stderr(stderr: &str) -> bool {
         "invalid flag",
     ];
 
-    UNKNOWN_SIGNALS
-        .iter()
-        .any(|signal| stderr.contains(signal))
+    UNKNOWN_SIGNALS.iter().any(|signal| stderr.contains(signal))
 }
 
 fn map_approval_policy(policy: &super::CodexApprovalPolicy) -> codex::ApprovalPolicy {
@@ -220,8 +218,8 @@ pub(super) async fn spawn_exec_or_resume_flow(
                         None
                     };
 
-                let selection_failure_message =
-                    bypass_flag_unsupported_message.or_else(|| resume_selector.as_ref().and_then(|selector| {
+                let selection_failure_message = bypass_flag_unsupported_message.or_else(|| {
+                    resume_selector.as_ref().and_then(|selector| {
                         let snapshot = stream_state_for_completion.lock().ok()?;
                         if snapshot.saw_thread_id || snapshot.saw_stream_error {
                             return None;
@@ -237,12 +235,16 @@ pub(super) async fn spawn_exec_or_resume_flow(
                             .as_deref()
                             .is_some_and(super::is_not_found_signal);
 
-                        if stderr_not_found || transport_message_not_found || transport_code_not_found {
+                        if stderr_not_found
+                            || transport_message_not_found
+                            || transport_code_not_found
+                        {
                             Some(super::pinned_selection_failure_message(selector).to_string())
                         } else {
                             None
                         }
-                    }));
+                    })
+                });
 
                 let tail = if let Some(message) = selection_failure_message.clone() {
                     CodexTailEvent::TerminalError { message }

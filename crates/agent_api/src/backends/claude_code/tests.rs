@@ -128,8 +128,10 @@ fn claude_backend_does_not_advertise_external_sandbox_exec_by_default() {
 
 #[test]
 fn claude_backend_opt_in_advertises_external_sandbox_exec_and_allowlist_accepts_key() {
-    let mut config = ClaudeCodeBackendConfig::default();
-    config.allow_external_sandbox_exec = true;
+    let config = ClaudeCodeBackendConfig {
+        allow_external_sandbox_exec: true,
+        ..Default::default()
+    };
 
     let backend = ClaudeCodeBackend::new(config.clone());
     let capabilities = backend.capabilities();

@@ -518,8 +518,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                     env,
                 })
                 .await
-            }
-            ?;
+            }?;
 
             let BackendSpawn { events, completion } = spawned;
             let events = if external_sandbox {

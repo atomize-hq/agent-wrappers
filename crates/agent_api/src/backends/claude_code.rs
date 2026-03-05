@@ -41,8 +41,11 @@ const CHANNEL_TOOL: &str = "tool";
 const EXT_NON_INTERACTIVE: &str = "agent_api.exec.non_interactive";
 const EXT_EXTERNAL_SANDBOX_V1: &str = "agent_api.exec.external_sandbox.v1";
 
-const SUPPORTED_EXTENSION_KEYS_DEFAULT: &[&str] =
-    &[EXT_NON_INTERACTIVE, EXT_SESSION_RESUME_V1, EXT_SESSION_FORK_V1];
+const SUPPORTED_EXTENSION_KEYS_DEFAULT: &[&str] = &[
+    EXT_NON_INTERACTIVE,
+    EXT_SESSION_RESUME_V1,
+    EXT_SESSION_FORK_V1,
+];
 
 const SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN: &[&str] = &[
     EXT_NON_INTERACTIVE,

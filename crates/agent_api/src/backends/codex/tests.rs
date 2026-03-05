@@ -80,7 +80,9 @@ fn codex_backend_does_not_advertise_external_sandbox_exec_by_default() {
     assert!(!capabilities.contains(EXT_EXTERNAL_SANDBOX_V1));
 
     let adapter = test_adapter();
-    assert!(!adapter.supported_extension_keys().contains(&EXT_EXTERNAL_SANDBOX_V1));
+    assert!(!adapter
+        .supported_extension_keys()
+        .contains(&EXT_EXTERNAL_SANDBOX_V1));
 }
 
 #[test]
@@ -95,7 +97,9 @@ fn codex_backend_advertises_external_sandbox_exec_when_opted_in_and_normalize_al
     assert!(capabilities.contains(EXT_EXTERNAL_SANDBOX_V1));
 
     let adapter = test_adapter_with_config(config);
-    assert!(adapter.supported_extension_keys().contains(&EXT_EXTERNAL_SANDBOX_V1));
+    assert!(adapter
+        .supported_extension_keys()
+        .contains(&EXT_EXTERNAL_SANDBOX_V1));
 
     let defaults = BackendDefaults::default();
     let mut request = AgentWrapperRunRequest {
