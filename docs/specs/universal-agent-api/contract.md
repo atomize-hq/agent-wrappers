@@ -292,6 +292,7 @@ pub mod backends {
             pub default_timeout: Option<Duration>,
             pub default_working_dir: Option<PathBuf>,
             pub env: BTreeMap<String, String>,
+            pub allow_mcp_write: bool,
             pub allow_external_sandbox_exec: bool,
         }
 
@@ -321,9 +322,11 @@ pub mod backends {
         #[derive(Clone, Debug, Default)]
         pub struct ClaudeCodeBackendConfig {
             pub binary: Option<PathBuf>,
+            pub claude_home: Option<PathBuf>,
             pub default_timeout: Option<Duration>,
             pub default_working_dir: Option<PathBuf>,
             pub env: BTreeMap<String, String>,
+            pub allow_mcp_write: bool,
             pub allow_external_sandbox_exec: bool,
         }
 
@@ -359,6 +362,22 @@ When `allow_external_sandbox_exec == true` for a backend instance:
 - `capabilities().ids` MUST include `agent_api.exec.external_sandbox.v1`, and
 - the backend MUST accept the key for further validation/mapping (still validated before spawn; type
   errors and contradiction errors are `AgentWrapperError::InvalidRequest` per `extensions-spec.md`).
+
+### MCP management write enablement (v1, normative)
+
+MCP management `add/remove` operations are write operations and MUST remain safe-by-default.
+
+- `agent_api::backends::codex::CodexBackendConfig.allow_mcp_write` MUST default to `false`.
+- `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write` MUST default to `false`.
+
+When `allow_mcp_write == false` for a backend instance:
+- `capabilities().ids` MUST NOT include:
+  - `agent_api.tools.mcp.add.v1`
+  - `agent_api.tools.mcp.remove.v1`
+
+When `allow_mcp_write == true` for a backend instance:
+- the backend MAY advertise `agent_api.tools.mcp.{add,remove}.v1` only when it implements the corresponding operations per
+  `docs/specs/universal-agent-api/mcp-management-spec.md` (including target availability).
 
 ### Config and request precedence (v1, normative)
 

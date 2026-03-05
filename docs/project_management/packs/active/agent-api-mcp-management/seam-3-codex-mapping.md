@@ -11,8 +11,8 @@
 
 - Implement `AgentWrapperBackend::{mcp_list,mcp_get,mcp_add,mcp_remove}` for the Codex backend.
 - Map universal requests to Codex CLI semantics (pinned by CLI manifest snapshot):
-  - `list` → `codex mcp list [--json]`
-  - `get` → `codex mcp get [--json] <name>`
+  - `list` → `codex mcp list --json`
+  - `get` → `codex mcp get --json <name>`
   - `remove` → `codex mcp remove <name>`
   - `add`:
     - `Stdio` → `codex mcp add <name> [--env KEY=VALUE]* -- <command...>`
@@ -61,11 +61,9 @@
 
 ## Risks / unknowns
 
-- **`--json` decision**: decide whether agent_api should always use `--json` for Codex list/get for more machine-friendly output
-  (still returned as bounded stdout), or leave default text. (No cross-backend parity required in v1.)
-  - **De-risk plan**: pin a choice early (SEAM-3) and add tests that lock it in.
+- None (pinned: Codex `list/get` always pass `--json` for deterministic machine-friendly output; v1 still does not require
+  cross-backend output parity).
 
 ## Rollout / safety
 
 - `add/remove` capabilities remain disabled by default and only become reachable under explicit enablement (SEAM-2).
-

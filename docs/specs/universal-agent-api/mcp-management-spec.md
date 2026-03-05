@@ -256,10 +256,30 @@ Requirements:
 - MCP management APIs MUST NOT emit their stdout/stderr as `AgentWrapperEvent`s.
 - Backends SHOULD support isolated homes (e.g., `codex_home`, `claude_home`) so automation can run
   against a dedicated state root.
+  - For built-in backends, the canonical host-facing config fields are defined in:
+    - `docs/specs/universal-agent-api/contract.md`
+  - Canonical fields (v1):
+    - `agent_api::backends::codex::CodexBackendConfig.codex_home: Option<PathBuf>`
+    - `agent_api::backends::claude_code::ClaudeCodeBackendConfig.claude_home: Option<PathBuf>`
 - Write operations (`add/remove`) MUST require explicit enablement.
   - Built-in backends MUST NOT advertise `agent_api.tools.mcp.add.v1` / `agent_api.tools.mcp.remove.v1`
     unless write enablement is configured.
   - Write enablement MUST be explicit and discoverable (via backend config and/or advertised capabilities).
+  - For built-in backends, the canonical write enablement knob is:
+    - `agent_api::backends::codex::CodexBackendConfig.allow_mcp_write: bool` (default `false`)
+    - `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write: bool` (default `false`)
+    (see `docs/specs/universal-agent-api/contract.md`).
+
+## `Url.bearer_token_env_var` semantics (v1, normative)
+
+`AgentWrapperMcpAddTransport::Url.bearer_token_env_var` is an optional *environment variable name*, not a secret value.
+
+Pinned rules (v1):
+
+- A backend MUST NOT expand an env var value into argv, headers, or any other persisted config.
+- If `bearer_token_env_var` is `Some`, a backend MUST either:
+  - map it to an upstream CLI mechanism that accepts an env var **name** as configuration (preferred), or
+  - reject the request as `AgentWrapperError::InvalidRequest` (fail closed).
 
 ## Backend-specific MCP operations (v1, informative)
 

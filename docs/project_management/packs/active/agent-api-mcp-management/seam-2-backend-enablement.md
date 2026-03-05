@@ -38,6 +38,55 @@
 - Capability advertising remains the source of truth for `UnsupportedCapability` gating.
 - Isolated homes must ensure tests/automation do not mutate user state by default.
 
+## Pinned defaults (capability advertising)
+
+This table is the **single source of truth** for default MCP capability advertising posture in v1.
+
+Legend:
+- ✅ = advertised by default (when the upstream CLI subcommand is available on this target)
+- ❌ = not advertised by default
+
+| Backend | Target availability (pinned by CLI manifest) | `list` | `get` | `add` | `remove` |
+| --- | --- | --- | --- | --- | --- |
+| Codex (`codex`) | `cli_manifests/codex/current.json` | ✅ | ✅ | ❌ (requires `allow_mcp_write=true`) | ❌ (requires `allow_mcp_write=true`) |
+| Claude Code (`claude_code`) | `cli_manifests/claude_code/current.json` | ✅ | ✅ on `win32-x64` only | ❌ (requires `win32-x64` **and** `allow_mcp_write=true`) | ❌ (requires `win32-x64` **and** `allow_mcp_write=true`) |
+
+Notes:
+- Read operations (`list/get`) have no additional enablement knob in v1. If the upstream CLI exposes the subcommand on
+  this target, the backend advertises the capability by default.
+- Write operations (`add/remove`) are *always* gated behind explicit backend config opt-in (see next section), even when
+  the upstream CLI supports the subcommand.
+
+## Pinned backend config knobs (host-controlled)
+
+Canonical host-facing config surface: `docs/specs/universal-agent-api/contract.md`.
+
+- Write enablement (v1):
+  - `agent_api::backends::codex::CodexBackendConfig.allow_mcp_write: bool` (default: `false`)
+  - `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write: bool` (default: `false`)
+  - When `false`, built-in backends MUST NOT advertise:
+    - `agent_api.tools.mcp.add.v1`
+    - `agent_api.tools.mcp.remove.v1`
+- Isolated home wiring (v1):
+  - Codex: `CodexBackendConfig.codex_home: Option<PathBuf>` → wrapper `CodexClientBuilder::codex_home(...)` (injects
+    `CODEX_HOME` for subprocesses; parent env is never mutated).
+  - Claude: `ClaudeCodeBackendConfig.claude_home: Option<PathBuf>` → wrapper `ClaudeClientBuilder::claude_home(...)`
+    (injects `CLAUDE_HOME`, `HOME`, `XDG_{CONFIG,DATA,CACHE}_HOME`, and Windows equivalents for subprocesses; parent env
+    is never mutated).
+  - Request-level env overrides (`context.env`) are still applied per the universal config precedence rules (request keys
+    win). Tests should assume that explicitly overriding `HOME`/`XDG_*` can intentionally defeat isolation.
+
+## Advertising precedence (pinned)
+
+For each backend instance and operation:
+
+1) **Upstream availability**: determine whether the upstream CLI exposes the required subcommand on this target (per the
+   pinned CLI manifest snapshots).
+2) **Config enablement**:
+   - `list/get`: enabled iff available.
+   - `add/remove`: enabled iff available **and** `allow_mcp_write == true`.
+3) **Advertise**: include the capability id in `capabilities().ids` iff the operation is enabled.
+
 ## Dependencies
 
 - **Blocks**:
@@ -56,17 +105,14 @@
 ## Verification
 
 - Unit tests pinning default capability advertising (write ops off by default).
+- Unit tests pinning the v1 advertising table above (including Claude target-availability gating).
 - Harness/integration tests that run `list/get/add/remove` against an isolated home directory and confirm:
   - state mutations are confined to the isolated root,
   - no network access is required.
 
 ## Risks / unknowns
 
-- **Isolation wiring surface**: pin which `agent_api` backend config fields map to:
-  - Codex wrapper `CodexClientBuilder::codex_home` (`CODEX_HOME` injection), and
-  - Claude wrapper `ClaudeCodeClientBuilder::claude_home` (`CLAUDE_HOME` + `HOME`/`XDG_*` injection),
-  so SEAM-5 can run safely against temp roots.
-  - **De-risk plan**: document the mapping explicitly in SEAM-2 and add tests that assert the correct env vars are injected.
+- None (pinned: default advertising table + `allow_mcp_write` + `codex_home`/`claude_home` wiring).
 
 ## Rollout / safety
 

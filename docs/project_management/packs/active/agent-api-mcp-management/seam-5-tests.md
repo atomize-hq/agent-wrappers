@@ -14,6 +14,10 @@
   - request validation (trimmed/non-empty names; non-empty `Stdio.command`),
   - output truncation semantics (`…(truncated)` marker + `*_truncated` flags; UTF-8 preserved),
   - safe default advertising for write ops (SEAM-2).
+  - pinned backend-specific mapping decisions:
+    - Codex `list/get` always pass `--json` (SEAM-3),
+    - Claude rejects `Url.bearer_token_env_var` as `InvalidRequest` (SEAM-4),
+    - Claude target-availability gating for `get/add/remove` (win32-x64 only; SEAM-2/4).
 - Integration tests (opt-in if needed) that:
   - run `list/get/add/remove` against an isolated home directory,
   - do not require network access.
@@ -32,6 +36,41 @@
 
 - Tests must verify MCP management outputs are not emitted as run events.
 - Tests must verify default advertising posture stays safe (write ops off unless enabled).
+
+## Pinned assertions (v1)
+
+This section is the single place where SEAM-5 pins “what must be true” across seams.
+
+### Advertising + enablement (SEAM-2)
+
+- Default built-in backends (`allow_mcp_write == false`):
+  - Codex advertises:
+    - `agent_api.tools.mcp.list.v1`
+    - `agent_api.tools.mcp.get.v1`
+    - and does **not** advertise `agent_api.tools.mcp.{add,remove}.v1`.
+  - Claude Code advertises:
+    - `agent_api.tools.mcp.list.v1` on all targets supported by the pinned manifest, and
+    - `agent_api.tools.mcp.get.v1` on `win32-x64` only,
+    - and does **not** advertise `agent_api.tools.mcp.{add,remove}.v1`.
+- Opt-in write enablement (`allow_mcp_write == true`):
+  - Codex advertises `agent_api.tools.mcp.{add,remove}.v1`.
+  - Claude Code advertises `agent_api.tools.mcp.{add,remove}.v1` on `win32-x64` only.
+
+### Codex mapping (SEAM-3)
+
+- `mcp_list` and `mcp_get` always include `--json` in the spawned argv (no cross-backend output parity implied).
+
+### Claude mapping (SEAM-4)
+
+- `Url { bearer_token_env_var: Some(_) }` is rejected as `AgentWrapperError::InvalidRequest` on targets where `mcp add` is
+  implemented (`win32-x64` in the pinned manifest).
+- On unsupported targets, `mcp add/get/remove` MUST fail-closed with `UnsupportedCapability` because the capabilities are
+  not advertised.
+
+### Isolated homes (SEAM-2)
+
+- When `codex_home` / `claude_home` are set on backend config, integration coverage demonstrates that write operations
+  (when enabled) localize state mutation to the isolated root and do not touch user state.
 
 ## Dependencies
 
@@ -59,4 +98,3 @@
 ## Rollout / safety
 
 - Treat tests as the primary guardrail preventing accidental promotion of backend-specific behavior into universal v1.
-

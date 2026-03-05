@@ -51,14 +51,17 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 - **MM-C06 — Safe default advertising (write ops)**
   - **Type**: permission
   - **Definition**: built-in backends MUST NOT advertise write capabilities (`add/remove`) unless explicitly enabled via backend
-    configuration. Read operations may be advertised by default (exact defaults pinned in SEAM-2).
+    configuration (`allow_mcp_write`, pinned in SEAM-2 and the canonical contract spec). Read operations (`list/get`) are
+    advertised by default when supported on the current target (pinned table in SEAM-2).
   - **Owner seam**: SEAM-2
   - **Consumers**: SEAM-3/4/5
 
 - **MM-C07 — Isolated home support**
   - **Type**: integration
-  - **Definition**: built-in backends SHOULD support isolated homes (e.g., `codex_home`, `claude_home`) so automation/tests can
-    manage MCP config under a dedicated state root (no user-state mutation by default).
+  - **Definition**: built-in backends SHOULD support isolated homes via backend config:
+    - Codex: `CodexBackendConfig.codex_home: Option<PathBuf>`
+    - Claude Code: `ClaudeCodeBackendConfig.claude_home: Option<PathBuf>`
+    so automation/tests can manage MCP config under a dedicated state root (no user-state mutation by default).
   - **Owner seam**: SEAM-2
   - **Consumers**: SEAM-3/4/5
 
@@ -67,8 +70,8 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
   - **Owner seam**: SEAM-3
   - **Consumers**: SEAM-5
   - **Definition**: map universal operations to `codex mcp ...` (see `cli_manifests/codex/current.json`):
-    - `list` → `codex mcp list` (optionally `--json`, pinned in SEAM-3)
-    - `get` → `codex mcp get <name>` (optionally `--json`, pinned in SEAM-3)
+    - `list` → `codex mcp list --json` (pinned in SEAM-3)
+    - `get` → `codex mcp get --json <name>` (pinned in SEAM-3)
     - `add`:
       - `Stdio` → `codex mcp add <name> [--env KEY=VALUE]* -- <command...>`
       - `Url` → `codex mcp add <name> --url <url> [--bearer-token-env-var ENV_VAR]`
@@ -85,6 +88,7 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
         fail-closed with `UnsupportedCapability` when invoked.
       - `add/remove` are additionally gated by write enablement (SEAM-2).
       - Argv shape + flag mapping (transport/env/header/scope) is pinned in SEAM-4 (single source of truth).
+      - `Url.bearer_token_env_var` is rejected as `InvalidRequest` for Claude (pinned in SEAM-4).
 
 ## Dependency graph (text)
 

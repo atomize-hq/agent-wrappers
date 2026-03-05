@@ -69,11 +69,9 @@
 
 ## Risks / unknowns
 
-- **Claude bearer token semantics**: confirm mapping expectations for `bearer_token_env_var` (may require spec clarification).
-  - **De-risk plan**: add a pinned mapping note (or explicit “unsupported” validation) before SEAM-4 implementation lands.
+- None (pinned: Claude rejects `Url.bearer_token_env_var` as `InvalidRequest`; see SEAM-4).
 
 ## Rollout / safety
 
 - Non-breaking additive trait evolution (default hooks fail-closed).
 - Capability advertising governs reachability; write ops remain disabled by default (SEAM-2).
-

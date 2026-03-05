@@ -16,7 +16,9 @@
   - `remove` → `claude mcp remove <name>` (**win32-x64 only**; also gated by write enablement in SEAM-2)
   - `add` (**win32-x64 only**; gated by write enablement in SEAM-2):
     - `Stdio` → `claude mcp add [--transport stdio] [--env KEY=value]* <name> <command> [args...]`
-    - `Url` → `claude mcp add [--transport http] [--header ...]* <name> <url>` (auth/header mapping pinned below)
+    - `Url`:
+      - when `bearer_token_env_var == None` → `claude mcp add --transport http <name> <url>`
+      - when `bearer_token_env_var == Some(_)` → reject as `InvalidRequest` (pinned; no deterministic/safe mapping to `--header` in v1)
 - Ensure command execution honors `context.{working_dir,timeout,env}` and output bounds.
 
 ### Out
@@ -63,11 +65,7 @@
 
 ## Risks / unknowns
 
-- **Bearer token env var mapping**: universal type includes `bearer_token_env_var`, but Claude’s CLI surface appears to expose
-  `--header` rather than an env-var-name flag. Decide and pin one of:
-  - a Claude-specific convention for `bearer_token_env_var` (e.g., a deterministic header expansion rule), or
-  - reject `bearer_token_env_var` as `InvalidRequest` for Claude until upstream supports it directly.
-  - **De-risk plan**: resolve in SEAM-4 before SEAM-5 integration tests land.
+- None (pinned: `Url.bearer_token_env_var` is rejected as `InvalidRequest` for Claude in v1).
 
 - **Platform availability**: the pinned Claude Code CLI manifest snapshot shows `mcp add/get/remove` only on `win32-x64`.
   Treat this as authoritative for v1: on unsupported targets, the Claude backend MUST NOT advertise

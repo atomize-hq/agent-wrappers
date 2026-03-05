@@ -71,8 +71,8 @@ Treating this as `AgentWrapperRunRequest.extensions` is a category error: MCP ma
 ## Success criteria
 
 - A caller can invoke `mcp_list/get/add/remove` through `AgentWrapperGateway` for a chosen backend kind.
-- By default, built-in backends do **not** advertise write operations (add/remove) unless enabled (exact defaults pinned in
-  SEAM-2, including whether read ops are advertised by default).
+- By default, built-in backends advertise read operations (`list/get`) when supported on this target and do **not** advertise
+  write operations (`add/remove`) unless explicitly enabled (`allow_mcp_write=true`; pinned in SEAM-2).
 - All operations enforce request validation and output bounds.
 - Automation can run against an isolated home to avoid mutating user state.
 
@@ -93,15 +93,15 @@ Treating this as `AgentWrapperRunRequest.extensions` is a category error: MCP ma
 
 ## Known unknowns / risks
 
-- **Claude URL auth mapping**: the universal type includes `bearer_token_env_var`; Codex supports this directly, but Claude’s
-  mapping may require a pinned convention (`--header`) or spec clarification.
+- **Claude URL auth mapping (resolved)**: pinned behavior is to reject `Url.bearer_token_env_var` as `InvalidRequest` for
+  Claude (no deterministic/safe mapping to `claude mcp add --header` in v1; see SEAM-4).
 - **Claude subcommand availability variance**: the CLI manifest snapshot appears to omit some MCP subcommands on non-Windows
   targets; confirm real-world CLI parity and avoid relying on snapshot artifacts.
-- **Isolated home wiring**: Codex wrapper supports `CODEX_HOME`; Claude wrapper supports `CLAUDE_HOME` (and injects `HOME` +
-  `XDG_*` equivalents). Confirm the built-in `agent_api` backends expose/configure these reliably for tests and automation.
+- **Isolated home wiring (resolved)**: pinned backend config fields and wrapper mapping live in SEAM-2 (`codex_home` /
+  `claude_home`; no parent env mutation).
 
 ## Assumptions (explicit)
 
-- Built-in backends will gate write operations behind an explicit backend config flag (default `false`) and advertise
-  capabilities accordingly.
+- Built-in backends gate write operations behind an explicit backend config flag `allow_mcp_write: bool` (default `false`)
+  and advertise capabilities accordingly (pinned in SEAM-2 and `docs/specs/universal-agent-api/contract.md`).
 - For v1, `agent_api` returns bounded stdout/stderr as-is and does not attempt to normalize or redact backend-specific formats.
