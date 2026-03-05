@@ -56,10 +56,8 @@ fn base_env() -> BTreeMap<String, String> {
 async fn codex_backend_defaults_to_non_interactive_and_workspace_write_sandbox() {
     let backend = CodexBackend::new(CodexBackendConfig {
         binary: Some(fake_codex_binary()),
-        codex_home: None,
-        default_timeout: None,
-        default_working_dir: None,
         env: base_env(),
+        ..Default::default()
     });
 
     let handle = backend
@@ -91,9 +89,6 @@ async fn codex_backend_defaults_to_non_interactive_and_workspace_write_sandbox()
 async fn sandbox_mode_extension_overrides_codex_sandbox() {
     let backend = CodexBackend::new(CodexBackendConfig {
         binary: Some(fake_codex_binary()),
-        codex_home: None,
-        default_timeout: None,
-        default_working_dir: None,
         env: [
             (
                 "FAKE_CODEX_EXPECT_SANDBOX".to_string(),
@@ -106,6 +101,7 @@ async fn sandbox_mode_extension_overrides_codex_sandbox() {
         ]
         .into_iter()
         .collect(),
+        ..Default::default()
     });
 
     let mut extensions = BTreeMap::new();
@@ -138,9 +134,6 @@ async fn sandbox_mode_extension_overrides_codex_sandbox() {
 async fn non_interactive_false_does_not_force_ask_for_approval() {
     let backend = CodexBackend::new(CodexBackendConfig {
         binary: Some(fake_codex_binary()),
-        codex_home: None,
-        default_timeout: None,
-        default_working_dir: None,
         env: [
             (
                 "FAKE_CODEX_EXPECT_SANDBOX".to_string(),
@@ -153,6 +146,7 @@ async fn non_interactive_false_does_not_force_ask_for_approval() {
         ]
         .into_iter()
         .collect(),
+        ..Default::default()
     });
 
     let mut extensions = BTreeMap::new();

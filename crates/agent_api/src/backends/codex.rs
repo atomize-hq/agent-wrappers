@@ -39,6 +39,7 @@ pub struct CodexBackendConfig {
     pub default_timeout: Option<Duration>,
     pub default_working_dir: Option<PathBuf>,
     pub env: BTreeMap<String, String>,
+    pub allow_external_sandbox_exec: bool,
 }
 
 pub struct CodexBackend {
@@ -52,8 +53,26 @@ impl CodexBackend {
 }
 
 const EXT_NON_INTERACTIVE: &str = "agent_api.exec.non_interactive";
+const EXT_EXTERNAL_SANDBOX_V1: &str = "agent_api.exec.external_sandbox.v1";
 const EXT_CODEX_APPROVAL_POLICY: &str = "backend.codex.exec.approval_policy";
 const EXT_CODEX_SANDBOX_MODE: &str = "backend.codex.exec.sandbox_mode";
+
+const SUPPORTED_EXTENSION_KEYS_DEFAULT: &[&str] = &[
+    EXT_NON_INTERACTIVE,
+    EXT_CODEX_APPROVAL_POLICY,
+    EXT_CODEX_SANDBOX_MODE,
+    EXT_SESSION_RESUME_V1,
+    EXT_SESSION_FORK_V1,
+];
+
+const SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN: &[&str] = &[
+    EXT_NON_INTERACTIVE,
+    EXT_CODEX_APPROVAL_POLICY,
+    EXT_CODEX_SANDBOX_MODE,
+    EXT_SESSION_RESUME_V1,
+    EXT_SESSION_FORK_V1,
+    EXT_EXTERNAL_SANDBOX_V1,
+];
 
 const PINNED_APPROVAL_REQUIRED: &str = "approval required";
 const PINNED_TIMEOUT: &str = "codex backend error: timeout (details redacted when unsafe)";
@@ -358,13 +377,11 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
     }
 
     fn supported_extension_keys(&self) -> &'static [&'static str] {
-        &[
-            EXT_NON_INTERACTIVE,
-            EXT_CODEX_APPROVAL_POLICY,
-            EXT_CODEX_SANDBOX_MODE,
-            EXT_SESSION_RESUME_V1,
-            EXT_SESSION_FORK_V1,
-        ]
+        if self.config.allow_external_sandbox_exec {
+            SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN
+        } else {
+            SUPPORTED_EXTENSION_KEYS_DEFAULT
+        }
     }
 
     type Policy = CodexExecPolicy;
@@ -680,6 +697,9 @@ impl AgentWrapperBackend for CodexBackend {
         ids.insert(EXT_CODEX_SANDBOX_MODE.to_string());
         ids.insert(EXT_SESSION_RESUME_V1.to_string());
         ids.insert(EXT_SESSION_FORK_V1.to_string());
+        if self.config.allow_external_sandbox_exec {
+            ids.insert(EXT_EXTERNAL_SANDBOX_V1.to_string());
+        }
         AgentWrapperCapabilities { ids }
     }
 
