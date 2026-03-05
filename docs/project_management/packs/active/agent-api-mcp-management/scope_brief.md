@@ -54,7 +54,10 @@ Treating this as `AgentWrapperRunRequest.extensions` is a category error: MCP ma
   - `agent_api.tools.mcp.remove.v1`
 - Request validation:
   - names trimmed + non-empty,
-  - `Stdio.command` non-empty,
+  - transport validation occurs before any spawn (InvalidRequest; safe/redacted messages):
+    - `Stdio`: `command` non-empty; every item in `command` and `args` trimmed + non-empty; `argv = command + args`.
+    - `Url`: `url` trimmed + non-empty; parse absolute `http`/`https` URL; `bearer_token_env_var` (if present) trimmed +
+      non-empty and matches `^[A-Za-z_][A-Za-z0-9_]*$`.
   - output budgets applied uniformly.
 - Backend config for safe default advertising and isolated homes.
 
@@ -67,6 +70,9 @@ Treating this as `AgentWrapperRunRequest.extensions` is a category error: MCP ma
   `…(truncated)` (UTF-8 preserved).
 - **Parent env safety**: per-request env overrides apply only to spawned backend processes; parent process env is not mutated.
 - **Safe-by-default advertising**: built-in backends MUST NOT advertise `add/remove` unless explicitly enabled.
+- **Manifest snapshot drift**: pinned CLI manifest snapshots are normative for v1 advertising; if runtime behavior conflicts
+  with the snapshot, the operation MUST fail as `AgentWrapperError::Backend` and the backend MUST NOT silently mutate its
+  advertised capabilities (remediation is a repo update to the pinned manifests + mapping).
 
 ## Success criteria
 
@@ -78,7 +84,8 @@ Treating this as `AgentWrapperRunRequest.extensions` is a category error: MCP ma
 
 ## Constraints
 
-- Public API uses std + serde-friendly types only (no `codex::*` / `claude_code::*` in public types).
+- Public API uses std + serde-friendly types only (no `codex::*` / `claude_code::*` in public types). Canonical definition:
+  `docs/specs/universal-agent-api/contract.md#serde-friendly-types`.
 - The API is typed/bounded (no generic argv pass-through; no “extra args” escape hatch).
 - No network access is required for tests.
 
@@ -97,8 +104,10 @@ Treating this as `AgentWrapperRunRequest.extensions` is a category error: MCP ma
   Claude (no deterministic/safe mapping to `claude mcp add --header` in v1; see SEAM-4).
 - **Claude subcommand availability variance (pinned for v1)**: the pinned CLI manifest snapshot shows `mcp get/add/remove`
   only on `win32-x64`. Treat the manifest snapshots as the authoritative source of truth for v1 capability advertising and
-  target availability gating. If observed upstream CLI behavior differs at runtime, treat it as drift/bug and update the
-  pinned manifests + mapping in a follow-up (do not silently change advertised capabilities at runtime).
+  target availability gating. If observed upstream CLI behavior differs at runtime, treat it as drift/bug:
+  - the backend MUST NOT silently change advertised capabilities at runtime, and
+  - the operation MUST fail as `AgentWrapperError::Backend` (not `UnsupportedCapability`).
+  Remediation is to update the pinned manifests + mapping in a follow-up repo change.
 - **Isolated home wiring (resolved)**: pinned backend config fields and wrapper mapping live in SEAM-2 (`codex_home` /
   `claude_home`; no parent env mutation).
 

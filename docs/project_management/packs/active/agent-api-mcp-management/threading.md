@@ -58,7 +58,7 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 
 - **MM-C07 — Isolated home support**
   - **Type**: integration
-  - **Definition**: built-in backends SHOULD support isolated homes via backend config:
+  - **Definition**: built-in backends MUST support isolated homes via backend config:
     - Codex: `CodexBackendConfig.codex_home: Option<PathBuf>`
     - Claude Code: `ClaudeCodeBackendConfig.claude_home: Option<PathBuf>`
     so automation/tests can manage MCP config under a dedicated state root (no user-state mutation by default).

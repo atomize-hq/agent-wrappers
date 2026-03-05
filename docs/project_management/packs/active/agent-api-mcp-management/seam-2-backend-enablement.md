@@ -37,6 +37,10 @@
 - Built-in backends MUST NOT advertise `add/remove` by default.
 - Capability advertising remains the source of truth for `UnsupportedCapability` gating.
 - Isolated homes must ensure tests/automation do not mutate user state by default.
+- Manifest snapshots are normative for v1 advertising (pinned by `cli_manifests/**/current.json`). If the observed upstream
+  CLI behavior at runtime conflicts with the pinned snapshot, the operation MUST fail as `AgentWrapperError::Backend` and
+  the backend MUST NOT silently mutate its advertised capabilities (remediation is a follow-up repo update to the pinned
+  manifests + mapping).
 
 ## Pinned defaults (capability advertising)
 
@@ -112,6 +116,8 @@ For each backend instance and operation:
 - Harness/integration tests that run `list/get/add/remove` against an isolated home directory and confirm:
   - state mutations are confined to the isolated root,
   - no network access is required.
+- Deterministic drift test: simulate a pinned-manifest mismatch (fake binary rejects a pinned subcommand/flag) and assert
+  the operation fails as `Err(Backend)` (not `UnsupportedCapability`) without mutating advertised capabilities.
 
 ## Risks / unknowns
 

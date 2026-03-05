@@ -50,7 +50,7 @@ Backends:
 
 These operations are **non-run**: they MUST be exposed as dedicated API methods, not as run extensions.
 
-The API SHOULD be expressed as:
+The API MUST be expressed as:
 
 - `AgentWrapperGateway` convenience methods (backend resolution + error shaping), and
 - default methods on `AgentWrapperBackend` that return `UnsupportedCapability` (non-breaking additive trait evolution),
@@ -58,11 +58,11 @@ The API SHOULD be expressed as:
 
 ### Public types (v1, normative)
 
-The crate SHOULD expose these types under a dedicated module:
+The crate MUST expose these types under a dedicated module:
 
 - Module: `agent_api::mcp`
 
-The following paths SHOULD resolve for downstream consumers:
+The following paths MUST resolve for downstream consumers:
 
 ```rust
 use agent_api::mcp::{
@@ -72,11 +72,12 @@ use agent_api::mcp::{
 };
 ```
 
-This module MUST use only std + serde-friendly types (no `codex::*` / `claude_code::*` in the public API).
+This module MUST use only std + [serde-friendly types](contract.md#serde-friendly-types) (no `codex::*` /
+`claude_code::*` in the public API).
 
 #### Pinned type shapes (v1)
 
-The API SHOULD use the following type shapes (field names are normative once approved):
+The API MUST use the following type shapes (field names are normative once approved):
 
 ```rust
 use std::collections::BTreeMap;
@@ -152,7 +153,7 @@ The universal surface MUST be bounded and typed:
 
 ### Gateway entrypoints (v1, normative)
 
-`AgentWrapperGateway` SHOULD expose convenience entrypoints that:
+`AgentWrapperGateway` MUST expose convenience entrypoints that:
 
 - resolve a backend (else `UnknownBackend`), and
 - invoke the corresponding backend operation (else `UnsupportedCapability`).
@@ -163,7 +164,7 @@ To make error ordering deterministic, gateway entrypoints MUST:
 2) check the backend-advertised capability id for the operation (else `AgentWrapperError::UnsupportedCapability`), then
 3) invoke the backend hook.
 
-Suggested signatures:
+Pinned signatures:
 
 ```rust
 use std::future::Future;
@@ -204,7 +205,7 @@ impl AgentWrapperGateway {
 
 ### Backend hooks (v1, normative)
 
-`AgentWrapperBackend` SHOULD expose default methods for these operations (non-breaking additive evolution),
+`AgentWrapperBackend` MUST expose default methods for these operations (non-breaking additive evolution),
 with defaults that return `UnsupportedCapability`:
 
 - `mcp_list`
@@ -358,11 +359,15 @@ Requirements:
 - MCP management APIs MUST NOT emit their stdout/stderr as `AgentWrapperEvent`s.
 - Backends SHOULD support isolated homes (e.g., `codex_home`, `claude_home`) so automation can run
   against a dedicated state root.
-  - For built-in backends, the canonical host-facing config fields are defined in:
+- For built-in backends, isolated homes MUST be supported via host-provided backend config.
+  - Canonical host-facing config fields are defined in:
     - `docs/specs/universal-agent-api/contract.md`
   - Canonical fields (v1):
     - `agent_api::backends::codex::CodexBackendConfig.codex_home: Option<PathBuf>`
     - `agent_api::backends::claude_code::ClaudeCodeBackendConfig.claude_home: Option<PathBuf>`
+  - When the home override is `Some`, the backend MUST invoke the upstream CLI such that its persistent
+    state/config is read/written beneath the configured root (while still honoring request-level env overrides
+    per “Context precedence and absence semantics (pinned)”).
 - Write operations (`add/remove`) MUST require explicit enablement.
   - Built-in backends MUST NOT advertise `agent_api.tools.mcp.add.v1` / `agent_api.tools.mcp.remove.v1`
     unless write enablement is configured.

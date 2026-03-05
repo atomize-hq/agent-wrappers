@@ -40,6 +40,9 @@
 - Must not emit stdout/stderr as run events.
 - Must not mutate parent env; request env overrides apply only to spawned Codex process.
 - `add/remove` support must respect write enablement and capability advertising (SEAM-2).
+- Manifest snapshot drift handling is pinned in the canonical spec: if runtime upstream behavior conflicts with the pinned
+  CLI manifest snapshot, the operation MUST fail as `Err(AgentWrapperError::Backend { .. })` and MUST NOT silently mutate
+  advertised capabilities at runtime (remediation is a follow-up repo update to manifests + mapping).
 
 ## Dependencies
 
@@ -59,7 +62,10 @@
 ## Verification
 
 - Unit tests for request validation and correct argv construction (especially `add` transport mapping).
-- Integration tests (opt-in if needed) that run against an isolated home and assert add/remove changes are localized.
+- Default integration tests (run under normal `cargo test` / `make test`) use hermetic fake binaries and isolated homes, and
+  assert add/remove changes are localized (per the MCP management spec verification policy).
+- Optional live smoke tests against real installed `codex` are opt-in (`#[ignore]` + `AGENT_API_MCP_LIVE=1` + configured binary
+  path) and MUST NOT run in CI by default.
 
 ## Risks / unknowns
 

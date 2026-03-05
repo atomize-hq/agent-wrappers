@@ -25,6 +25,20 @@ Consumers must enable features using Cargo’s standard syntax, e.g.:
 - `cargo test -p agent_api --features claude_code`
 - `cargo test -p agent_api --all-features`
 
+## Terminology (v1, normative)
+
+### Serde-friendly types
+
+In this spec set, “serde-friendly types” is a public API hygiene constraint:
+
+- Public structs/enums MUST be composed of owned, ubiquitous std types and serde ecosystem types already present in the
+  public surface (e.g., `String`, `Vec`, `Option`, `BTreeMap`, `PathBuf`, `Duration`, `ExitStatus`, `serde_json::Value`).
+- Public APIs MUST NOT expose wrapper-specific crate types (no `codex::*` / `claude_code::*`) and MUST NOT require
+  consumers to depend on those wrapper crates.
+- This is **not** a requirement that every public type implements `serde::Serialize` / `serde::Deserialize`.
+  - When a stable serialized representation is required for cross-process or cross-language boundaries, the relevant
+    schema spec MUST pin that representation explicitly.
+
 ## Public API (v1, normative)
 
 The `agent_api` crate MUST expose the following items at the crate root (i.e., these paths MUST
@@ -256,7 +270,8 @@ For each emitted `AgentWrapperEvent`:
 ## Provided backends (feature-gated; v1, normative)
 
 When enabled, `agent_api` MUST provide built-in backends with stable paths and constructor/config
-types that use **only** std + serde-friendly types (no `codex::*` / `claude_code::*` in the public API).
+types that use **only** std + [serde-friendly types](#serde-friendly-types) (no `codex::*` / `claude_code::*` in the public
+API).
 
 ## Extensions (authoritative; v1)
 

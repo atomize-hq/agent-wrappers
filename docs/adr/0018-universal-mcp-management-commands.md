@@ -145,13 +145,15 @@ Requirements:
 
 ## Backend Mapping (draft)
 
-Universal operations map to backend subcommands as follows:
+Universal operations map to backend subcommands as follows (transport-specific; see the canonical MCP spec for the pinned argv
+construction contract):
 
 | Universal op | Claude Code | Codex |
 | --- | --- | --- |
 | list | `claude mcp list` | `codex mcp list --json` |
 | get | `claude mcp get <name>` | `codex mcp get --json <name>` |
-| add | `claude mcp add <name> <commandOrUrl> [args...]` | `codex mcp add <name> (--url <url> | -- <command>...)` |
+| add (Stdio) | `claude mcp add --transport stdio [--env KEY=VALUE]* <name> <commandOrUrl> [args...]` | `codex mcp add <name> [--env KEY=VALUE]* -- <argv...>` |
+| add (Url) | `claude mcp add --transport http <name> <url>` | `codex mcp add <name> --url <url> [--bearer-token-env-var <ENV_VAR>]` |
 | remove | `claude mcp remove <name>` | `codex mcp remove <name>` |
 
 Notes:
@@ -162,6 +164,7 @@ Notes:
 - The pinned argv construction contract for built-in backends (including Codex `--json` usage and Claude `--transport`
   usage) lives in the canonical MCP spec:
   - `docs/specs/universal-agent-api/mcp-management-spec.md` → “Built-in backend behavior” → “Built-in backend mappings (pinned)”
+- For v1, Claude URL `bearer_token_env_var` mapping is rejected (fail closed); see the pinned MCP spec.
 
 ## Alternatives Considered
 
@@ -180,6 +183,6 @@ Notes:
   - capability gating for each operation,
   - fail-closed behavior on unsupported operations,
   - request validation (non-empty server names, required URL/command fields).
-- Add backend harness integration tests (real binary optional / opt-in) that:
+- Add backend harness integration tests (default hermetic fake binaries; live smoke tests against real binaries are opt-in) that:
   - run MCP list/get/add/remove against an isolated home directory,
   - do not require network access.

@@ -15,9 +15,15 @@
   - `mcp_list`, `mcp_get`, `mcp_add`, `mcp_remove`
 - Add `AgentWrapperBackend` default hooks (non-breaking additive trait evolution) mirroring the `run_control` pattern:
   - `mcp_list`, `mcp_get`, `mcp_add`, `mcp_remove` (default: `UnsupportedCapability`)
-- Implement request validation rules:
-  - trimmed, non-empty server names
-  - `Stdio.command` non-empty
+- Implement request validation rules (pinned in `docs/specs/universal-agent-api/mcp-management-spec.md`):
+  - Server names: trimmed; empty is `AgentWrapperError::InvalidRequest`.
+  - Transport field validation (MUST occur before spawning any backend process; violations are `InvalidRequest` with a
+    safe/redacted message that does not echo raw user-provided values):
+    - `Stdio`: `command` non-empty; every item in `command` and `args` trimmed + non-empty; `argv = command + args`.
+    - `Url`: `url` trimmed + non-empty; parse absolute `http`/`https` URL; `bearer_token_env_var` (if `Some`) trimmed +
+      non-empty and matches `^[A-Za-z_][A-Za-z0-9_]*$`.
+- Provide a shared validation helper (owned by SEAM-1) that gateway entrypoints and backend hook implementations (SEAM-3/4)
+  invoke before any spawn, so invalid requests fail fast and deterministically.
 - Pin output capture bounds (65,536 bytes each) and truncation marker `…(truncated)` (UTF-8 preserved).
 
 ### Out
@@ -47,8 +53,12 @@
 ## Key invariants / rules
 
 - The API is **non-run** and MUST NOT emit stdout/stderr as run events.
+- Gateway entrypoints MUST preserve deterministic error ordering: resolve backend → capability check → invoke hook
+  (UnknownBackend must take precedence over UnsupportedCapability).
 - Capability gating is fail-closed; unadvertised operations return `UnsupportedCapability`.
 - Output capture budgets and truncation semantics are pinned and deterministic.
+- For `InvalidRequest` and `Backend` errors, messages MUST be safe/redacted and MUST NOT include partial stdout/stderr.
+  `AgentWrapperMcpCommandOutput` is returned only in the `Ok(...)` case (even if exit status is non-zero).
 
 ## Dependencies
 
@@ -65,8 +75,13 @@
 
 ## Verification
 
-- Unit tests for request validation (names trimmed/non-empty; command non-empty).
+- Unit tests for full request validation (names; `Stdio` argv + trimming; `Url` parsing/scheme; `bearer_token_env_var`
+  regex) including safe/redacted `InvalidRequest` messages.
+- Unit test pinning gateway error ordering: UnknownBackend must take precedence over UnsupportedCapability.
+- Unit test pinning “validate before spawn”: invalid requests MUST NOT spawn/invoke any backend process.
 - Unit tests for output truncation markers and `*_truncated` flags.
+- Deterministic tests for `Err(Backend)` paths asserting no partial stdout/stderr is surfaced and no output object is
+  returned (e.g., timeout-based harness using fake binaries).
 - Compile-time “non-run boundary” sanity: MCP APIs return data directly and do not use the run event pipeline.
 
 ## Risks / unknowns

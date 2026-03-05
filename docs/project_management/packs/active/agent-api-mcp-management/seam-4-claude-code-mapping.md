@@ -17,7 +17,7 @@
   - `get` → `claude mcp get <name>` (**win32-x64 only** in the pinned Claude Code CLI manifest)
   - `remove` → `claude mcp remove <name>` (**win32-x64 only**; also gated by write enablement in SEAM-2)
   - `add` (**win32-x64 only**; gated by write enablement in SEAM-2):
-    - `Stdio` → `claude mcp add --transport stdio [--env KEY=value]* <name> <command> [args...]`
+    - `Stdio` → `claude mcp add --transport stdio [--env KEY=VALUE]* <name> <command> [args...]`
     - `Url`:
       - when `bearer_token_env_var == None` → `claude mcp add --transport http <name> <url>`
       - when `bearer_token_env_var == Some(_)` → reject as `InvalidRequest` (pinned; no deterministic/safe mapping to `--header` in v1)
@@ -42,6 +42,9 @@
 - Must not emit stdout/stderr as run events.
 - Must not mutate parent env; request env overrides apply only to spawned Claude process.
 - `add/remove` support must respect write enablement and capability advertising (SEAM-2).
+- Manifest snapshot drift handling is pinned in the canonical spec: if runtime upstream behavior conflicts with the pinned
+  CLI manifest snapshot, the operation MUST fail as `Err(AgentWrapperError::Backend { .. })` and MUST NOT silently mutate
+  advertised capabilities at runtime (remediation is a follow-up repo update to manifests + mapping).
 
 ## Dependencies
 
@@ -61,9 +64,12 @@
 ## Verification
 
 - Unit tests for request validation and correct argv construction (especially `add` mapping).
-- Integration tests (opt-in if needed) that run against an isolated home and assert add/remove changes are localized.
-  - Note: for the pinned Claude Code CLI manifest, `mcp add/get/remove` are **win32-x64 only**; tests should be
-    target-aware (or skip on unsupported targets).
+- Default integration tests (run under normal `cargo test` / `make test`) use hermetic fake binaries and isolated homes, and
+  assert add/remove changes are localized (per the MCP management spec verification policy).
+- Optional live smoke tests against real installed `claude` are opt-in (`#[ignore]` + `AGENT_API_MCP_LIVE=1` + configured binary
+  path) and MUST NOT run in CI by default.
+- Note: for the pinned Claude Code CLI manifest, `mcp add/get/remove` are **win32-x64 only**; tests should be target-aware (or
+  skip on unsupported targets).
 
 ## Risks / unknowns
 
