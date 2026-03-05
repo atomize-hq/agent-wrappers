@@ -1,5 +1,6 @@
 use std::{
     env,
+    fs::OpenOptions,
     io::{self, Write},
     thread,
     time::Duration,
@@ -101,6 +102,43 @@ fn fail(mut out: impl Write, message: &str) -> ! {
     std::process::exit(2);
 }
 
+fn env_is_true(key: &str) -> bool {
+    matches!(env::var(key).as_deref(), Ok("1") | Ok("true") | Ok("TRUE"))
+}
+
+fn maybe_log_invocation(kind: &str) {
+    let Ok(path) = env::var("FAKE_CLAUDE_INVOCATION_LOG") else {
+        return;
+    };
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .expect("open FAKE_CLAUDE_INVOCATION_LOG");
+    writeln!(file, "{kind}").expect("append invocation log");
+}
+
+fn maybe_assert_flag_presence(args: &[String], env_key: &str, flag: &str, out: &mut dyn Write) {
+    let Ok(raw) = env::var(env_key) else {
+        return;
+    };
+    let expect_present = match raw.as_str() {
+        "1" => true,
+        "0" => false,
+        other => panic!("{env_key} must be \"1\" or \"0\" (got {other:?})"),
+    };
+
+    let present = has_flag(args, flag);
+    if expect_present != present {
+        let expectation = if expect_present { "present" } else { "absent" };
+        fail(
+            out,
+            &format!("assertion failed: expected {flag} to be {expectation}"),
+        );
+    }
+}
+
 fn main() -> io::Result<()> {
     // Cross-platform test binary used by `agent_api` tests.
     //
@@ -110,11 +148,52 @@ fn main() -> io::Result<()> {
     // The universal agent wrapper contract defaults to non-interactive behavior; require that the
     // wrapper passes `--permission-mode bypassPermissions` so tests fail loudly if we regress.
     let args: Vec<String> = env::args().collect();
+
+    if has_flag(&args, "--help") {
+        maybe_log_invocation("help");
+
+        if env_is_true("FAKE_CLAUDE_HELP_FAIL") {
+            let secret = env::var("FAKE_CLAUDE_HELP_FAIL_SECRET").unwrap_or_else(|_| {
+                panic!("missing required env var FAKE_CLAUDE_HELP_FAIL_SECRET")
+            });
+            eprintln!("{secret}");
+            std::process::exit(1);
+        }
+
+        let supports_allow_flag = env_is_true("FAKE_CLAUDE_HELP_SUPPORTS_ALLOW_FLAG");
+        print!("Usage: claude [options]\n");
+        if supports_allow_flag {
+            print!("  --allow-dangerously-skip-permissions\n");
+        }
+        return Ok(());
+    }
+
     let mut out = io::stdout().lock();
-    if !has_flag_value(&args, "--permission-mode", "bypassPermissions") {
-        fail(
+    if has_flag(&args, "--print") {
+        maybe_log_invocation("print");
+
+        if env_is_true("FAKE_CLAUDE_PRINT_SHOULD_NOT_RUN") {
+            fail(&mut out, "assertion failed: --print should not be spawned");
+        }
+
+        if !has_flag_value(&args, "--permission-mode", "bypassPermissions") {
+            fail(
+                &mut out,
+                "assertion failed: missing --permission-mode bypassPermissions",
+            );
+        }
+
+        maybe_assert_flag_presence(
+            &args,
+            "FAKE_CLAUDE_EXPECT_DANGEROUS_SKIP_PERMISSIONS",
+            "--dangerously-skip-permissions",
             &mut out,
-            "assertion failed: missing --permission-mode bypassPermissions",
+        );
+        maybe_assert_flag_presence(
+            &args,
+            "FAKE_CLAUDE_EXPECT_ALLOW_DANGEROUSLY_SKIP_PERMISSIONS",
+            "--allow-dangerously-skip-permissions",
+            &mut out,
         );
     }
 
