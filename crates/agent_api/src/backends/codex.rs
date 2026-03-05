@@ -9,6 +9,7 @@ use std::{
 };
 
 use codex::{CodexError, ExecStreamError, ThreadEvent};
+use futures_util::StreamExt;
 use serde_json::Value;
 
 use super::session_selectors::{
@@ -78,6 +79,10 @@ const PINNED_APPROVAL_REQUIRED: &str = "approval required";
 const PINNED_TIMEOUT: &str = "codex backend error: timeout (details redacted when unsafe)";
 const PINNED_NO_SESSION_FOUND: &str = "no session found";
 const PINNED_SESSION_NOT_FOUND: &str = "session not found";
+const PINNED_EXTERNAL_SANDBOX_WARNING: &str =
+    "DANGEROUS: external sandbox exec policy enabled (agent_api.exec.external_sandbox.v1=true)";
+const PINNED_EXTERNAL_SANDBOX_FLAG_UNSUPPORTED: &str =
+    "codex backend error: installed codex does not support --dangerously-bypass-approvals-and-sandbox (details redacted)";
 
 fn pinned_selection_failure_message(selector: &SessionSelectorV1) -> &'static str {
     match selector {
@@ -161,6 +166,7 @@ fn parse_codex_sandbox_mode(value: &Value) -> Result<CodexSandboxMode, AgentWrap
 #[derive(Clone, Debug)]
 struct CodexExecPolicy {
     non_interactive: bool,
+    external_sandbox: bool,
     approval_policy: Option<CodexApprovalPolicy>,
     sandbox_mode: CodexSandboxMode,
     resume: Option<SessionSelectorV1>,
@@ -170,12 +176,41 @@ struct CodexExecPolicy {
 fn validate_and_extract_exec_policy(
     request: &AgentWrapperRunRequest,
 ) -> Result<CodexExecPolicy, AgentWrapperError> {
-    let non_interactive = request
+    let non_interactive_requested: Option<bool> = request
         .extensions
         .get(EXT_NON_INTERACTIVE)
         .map(|value| parse_bool(value, EXT_NON_INTERACTIVE))
+        .transpose()?;
+    let non_interactive = non_interactive_requested.unwrap_or(true);
+
+    let external_sandbox = request
+        .extensions
+        .get(EXT_EXTERNAL_SANDBOX_V1)
+        .map(|value| parse_bool(value, EXT_EXTERNAL_SANDBOX_V1))
         .transpose()?
-        .unwrap_or(true);
+        .unwrap_or(false);
+
+    if external_sandbox {
+        if non_interactive_requested == Some(false) {
+            return Err(AgentWrapperError::InvalidRequest {
+                message: format!(
+                    "{EXT_EXTERNAL_SANDBOX_V1}=true must not be combined with {EXT_NON_INTERACTIVE}=false"
+                ),
+            });
+        }
+
+        if request
+            .extensions
+            .keys()
+            .any(|key| key.starts_with("backend.codex.exec."))
+        {
+            return Err(AgentWrapperError::InvalidRequest {
+                message: format!(
+                    "{EXT_EXTERNAL_SANDBOX_V1}=true must not be combined with backend.codex.exec.* keys"
+                ),
+            });
+        }
+    }
 
     let approval_policy = request
         .extensions
@@ -205,6 +240,7 @@ fn validate_and_extract_exec_policy(
 
     Ok(CodexExecPolicy {
         non_interactive,
+        external_sandbox,
         approval_policy,
         sandbox_mode,
         resume: None,
@@ -340,6 +376,7 @@ struct CodexHandleFacetState {
 
 #[derive(Debug)]
 enum CodexBackendEvent {
+    ExternalSandboxWarning,
     Thread(Box<ThreadEvent>),
     AppServerNotification(codex::mcp::AppNotification),
     NonZeroExit { status: ExitStatus },
@@ -437,6 +474,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         let handle_state = self.handle_state.clone();
         let CodexExecPolicy {
             non_interactive,
+            external_sandbox,
             approval_policy,
             sandbox_mode,
             resume,
@@ -448,8 +486,8 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         let env = req.env;
 
         Box::pin(async move {
-            if let Some(selector) = fork {
-                return fork::spawn_fork_v1_flow(fork::ForkFlowRequest {
+            let spawned = if let Some(selector) = fork {
+                fork::spawn_fork_v1_flow(fork::ForkFlowRequest {
                     selector,
                     prompt,
                     working_dir,
@@ -463,28 +501,47 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                     sandbox_mode,
                     handle_state,
                 })
-                .await;
+                .await
+            } else {
+                exec::spawn_exec_or_resume_flow(exec::ExecFlowRequest {
+                    config,
+                    run_start_cwd,
+                    termination,
+                    non_interactive,
+                    external_sandbox,
+                    approval_policy,
+                    sandbox_mode,
+                    resume,
+                    prompt,
+                    working_dir,
+                    effective_timeout,
+                    env,
+                })
+                .await
             }
+            ?;
 
-            exec::spawn_exec_or_resume_flow(exec::ExecFlowRequest {
-                config,
-                run_start_cwd,
-                termination,
-                non_interactive,
-                approval_policy,
-                sandbox_mode,
-                resume,
-                prompt,
-                working_dir,
-                effective_timeout,
-                env,
-            })
-            .await
+            let BackendSpawn { events, completion } = spawned;
+            let events = if external_sandbox {
+                Box::pin(
+                    futures_util::stream::once(async move {
+                        Ok(CodexBackendEvent::ExternalSandboxWarning)
+                    })
+                    .chain(events),
+                )
+            } else {
+                events
+            };
+
+            Ok(BackendSpawn { events, completion })
         })
     }
 
     fn map_event(&self, event: Self::BackendEvent) -> Vec<AgentWrapperEvent> {
         match event {
+            CodexBackendEvent::ExternalSandboxWarning => vec![mapping::status_event(Some(
+                PINNED_EXTERNAL_SANDBOX_WARNING.to_string(),
+            ))],
             CodexBackendEvent::Thread(ev) => {
                 let mut emit_oversize_warning_len: Option<usize> = None;
 
