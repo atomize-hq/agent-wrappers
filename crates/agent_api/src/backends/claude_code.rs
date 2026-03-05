@@ -11,7 +11,7 @@ use claude_code::{ClaudeOutputFormat, ClaudePrintRequest};
 use futures_util::stream;
 use futures_util::StreamExt;
 use serde_json::Value;
-use tokio::sync::oneshot;
+use tokio::sync::{oneshot, OnceCell};
 
 use super::session_selectors::{
     parse_session_fork_v1, parse_session_resume_v1, validate_resume_fork_mutual_exclusion,
@@ -40,6 +40,7 @@ const CHANNEL_TOOL: &str = "tool";
 
 const EXT_NON_INTERACTIVE: &str = "agent_api.exec.non_interactive";
 const EXT_EXTERNAL_SANDBOX_V1: &str = "agent_api.exec.external_sandbox.v1";
+const CLAUDE_EXEC_POLICY_PREFIX: &str = "backend.claude_code.exec.";
 
 const SUPPORTED_EXTENSION_KEYS_DEFAULT: &[&str] = &[
     EXT_NON_INTERACTIVE,
@@ -61,6 +62,8 @@ const CAP_SESSION_HANDLE_V1: &str = "agent_api.session.handle.v1";
 
 const SESSION_HANDLE_ID_BOUND_BYTES: usize = 1024;
 const SESSION_HANDLE_OVERSIZE_WARNING: &str = "session handle omitted: id exceeds 1024 bytes";
+const PINNED_EXTERNAL_SANDBOX_WARNING: &str =
+    "DANGEROUS: external sandbox exec policy enabled (agent_api.exec.external_sandbox.v1=true)";
 
 fn is_session_not_found_signal(text: &str) -> bool {
     let text = text.to_ascii_lowercase();
@@ -110,6 +113,10 @@ fn generic_non_zero_exit_message(status: &std::process::ExitStatus) -> String {
     }
 }
 
+fn help_supports_allow_flag(stdout: &str) -> bool {
+    stdout.contains("--allow-dangerously-skip-permissions")
+}
+
 #[path = "claude_code/mapping.rs"]
 mod mapping;
 
@@ -140,11 +147,15 @@ pub struct ClaudeCodeBackendConfig {
 
 pub struct ClaudeCodeBackend {
     config: ClaudeCodeBackendConfig,
+    allow_flag_preflight: Arc<OnceCell<Result<bool, String>>>,
 }
 
 impl ClaudeCodeBackend {
     pub fn new(config: ClaudeCodeBackendConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            allow_flag_preflight: Arc::new(OnceCell::new()),
+        }
     }
 }
 
@@ -155,11 +166,13 @@ struct ClaudeHarnessAdapter {
         std::sync::Arc<super::termination::TerminationState<claude_code::ClaudeTerminationHandle>>,
     >,
     handle_state: Arc<Mutex<ClaudeHandleFacetState>>,
+    allow_flag_preflight: Arc<OnceCell<Result<bool, String>>>,
 }
 
 #[derive(Clone, Debug)]
 struct ClaudeExecPolicy {
     non_interactive: bool,
+    external_sandbox: bool,
     resume: Option<SessionSelectorV1>,
     fork: Option<SessionSelectorV1>,
 }
@@ -181,6 +194,7 @@ struct ClaudeStreamState {
 
 #[derive(Debug)]
 enum ClaudeBackendEvent {
+    ExternalSandboxWarning,
     Stream(claude_code::ClaudeStreamJsonEvent),
     TerminalError { message: String },
 }
@@ -197,6 +211,7 @@ enum ClaudeBackendError {
     Spawn(claude_code::ClaudeCodeError),
     StreamParse(claude_code::ClaudeStreamJsonParseError),
     Completion(claude_code::ClaudeCodeError),
+    ExternalSandboxPreflight { message: String },
 }
 
 impl BackendHarnessAdapter for ClaudeHarnessAdapter {
@@ -218,12 +233,41 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
         &self,
         request: &AgentWrapperRunRequest,
     ) -> Result<Self::Policy, AgentWrapperError> {
-        let non_interactive = request
+        let non_interactive_requested: Option<bool> = request
             .extensions
             .get(EXT_NON_INTERACTIVE)
             .map(|value| parse_bool(value, EXT_NON_INTERACTIVE))
+            .transpose()?;
+        let non_interactive = non_interactive_requested.unwrap_or(true);
+
+        let external_sandbox = request
+            .extensions
+            .get(EXT_EXTERNAL_SANDBOX_V1)
+            .map(|value| parse_bool(value, EXT_EXTERNAL_SANDBOX_V1))
             .transpose()?
-            .unwrap_or(true);
+            .unwrap_or(false);
+
+        if external_sandbox {
+            if non_interactive_requested == Some(false) {
+                return Err(AgentWrapperError::InvalidRequest {
+                    message: format!(
+                        "{EXT_EXTERNAL_SANDBOX_V1}=true must not be combined with {EXT_NON_INTERACTIVE}=false"
+                    ),
+                });
+            }
+
+            if request
+                .extensions
+                .keys()
+                .any(|key| key.starts_with(CLAUDE_EXEC_POLICY_PREFIX))
+            {
+                return Err(AgentWrapperError::InvalidRequest {
+                    message: format!(
+                        "{EXT_EXTERNAL_SANDBOX_V1}=true must not be combined with backend.claude_code.exec.* keys"
+                    ),
+                });
+            }
+        }
 
         let resume = request
             .extensions
@@ -241,6 +285,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
 
         Ok(ClaudeExecPolicy {
             non_interactive,
+            external_sandbox,
             resume,
             fork,
         })
@@ -270,6 +315,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
     > {
         let config = self.config.clone();
         let termination = self.termination.clone();
+        let allow_flag_preflight = Arc::clone(&self.allow_flag_preflight);
         Box::pin(async move {
             let mut builder = claude_code::ClaudeClient::builder();
             if let Some(binary) = config.binary.as_ref() {
@@ -296,11 +342,53 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
 
             let client = builder.build();
 
+            let mut allow_dangerously_skip_permissions = false;
+            if req.policy.external_sandbox {
+                let cached = allow_flag_preflight
+                    .get_or_init(|| async {
+                        let output = match client.help().await {
+                            Ok(output) => output,
+                            Err(err) => {
+                                return Err(format!("claude --help preflight failed: {err}"))
+                            }
+                        };
+
+                        if !output.status.success() {
+                            let message = match output.status.code() {
+                                Some(code) => format!(
+                                    "claude --help exited non-zero: code={code} (output redacted)"
+                                ),
+                                None => "claude --help exited non-zero (output redacted)".to_string(),
+                            };
+                            return Err(message);
+                        }
+
+                        let stdout = String::from_utf8_lossy(&output.stdout);
+                        Ok(help_supports_allow_flag(&stdout))
+                    })
+                    .await;
+
+                match cached {
+                    Ok(supported) => allow_dangerously_skip_permissions = *supported,
+                    Err(message) => {
+                        return Err(ClaudeBackendError::ExternalSandboxPreflight {
+                            message: message.clone(),
+                        });
+                    }
+                }
+            }
+
             let mut print_req = ClaudePrintRequest::new(req.prompt)
                 .output_format(ClaudeOutputFormat::StreamJson)
                 .include_partial_messages(true);
             if req.policy.non_interactive {
                 print_req = print_req.permission_mode("bypassPermissions");
+            }
+            if req.policy.external_sandbox {
+                print_req = print_req.dangerously_skip_permissions(true);
+                if allow_dangerously_skip_permissions {
+                    print_req = print_req.allow_dangerously_skip_permissions(true);
+                }
             }
 
             if let Some(resume) = req.policy.resume.as_ref() {
@@ -347,7 +435,10 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                 (None, None)
             };
 
-            let events = Box::pin(stream::unfold(
+            let events: crate::backend_harness::DynBackendEventStream<
+                ClaudeBackendEvent,
+                ClaudeBackendError,
+            > = Box::pin(stream::unfold(
                 (
                     handle.events,
                     stream_state.clone(),
@@ -460,6 +551,15 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                 },
             ));
 
+            let events = if req.policy.external_sandbox {
+                Box::pin(
+                    stream::once(async move { Ok(ClaudeBackendEvent::ExternalSandboxWarning) })
+                        .chain(events),
+                )
+            } else {
+                events
+            };
+
             let completion = Box::pin(async move {
                 let _ = events_done_rx.await;
 
@@ -521,6 +621,9 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
 
     fn map_event(&self, event: Self::BackendEvent) -> Vec<AgentWrapperEvent> {
         let event = match event {
+            ClaudeBackendEvent::ExternalSandboxWarning => {
+                return vec![status_event(Some(PINNED_EXTERNAL_SANDBOX_WARNING.to_string()))];
+            }
             ClaudeBackendEvent::Stream(event) => event,
             ClaudeBackendEvent::TerminalError { message } => {
                 return vec![error_event(message)];
@@ -613,6 +716,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
             (_, ClaudeBackendError::Spawn(err) | ClaudeBackendError::Completion(err)) => {
                 format!("claude_code error: {err}")
             }
+            (_, ClaudeBackendError::ExternalSandboxPreflight { message }) => message.clone(),
             (_, ClaudeBackendError::StreamParse(err)) => err.message.clone(),
         }
     }
@@ -649,11 +753,13 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
     ) -> Pin<Box<dyn Future<Output = Result<AgentWrapperRunHandle, AgentWrapperError>> + Send + '_>>
     {
         let config = self.config.clone();
+        let allow_flag_preflight = Arc::clone(&self.allow_flag_preflight);
         Box::pin(async move {
             let adapter = Arc::new(ClaudeHarnessAdapter {
                 config: config.clone(),
                 termination: None,
                 handle_state: Arc::new(Mutex::new(ClaudeHandleFacetState::default())),
+                allow_flag_preflight,
             });
             let defaults = BackendDefaults {
                 env: config.env,
@@ -683,6 +789,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
         }
 
         let config = self.config.clone();
+        let allow_flag_preflight = Arc::clone(&self.allow_flag_preflight);
         Box::pin(async move {
             let termination_state = Arc::new(super::termination::TerminationState::new());
             let request_termination: Option<Arc<dyn Fn() + Send + Sync + 'static>> = Some({
@@ -694,6 +801,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
                 config: config.clone(),
                 termination: Some(termination_state),
                 handle_state: Arc::new(Mutex::new(ClaudeHandleFacetState::default())),
+                allow_flag_preflight,
             });
             let defaults = BackendDefaults {
                 env: config.env,

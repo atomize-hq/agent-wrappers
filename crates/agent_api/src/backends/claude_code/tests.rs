@@ -76,6 +76,7 @@ fn new_adapter() -> ClaudeHarnessAdapter {
         config: ClaudeCodeBackendConfig::default(),
         termination: None,
         handle_state: std::sync::Arc::new(std::sync::Mutex::new(ClaudeHandleFacetState::default())),
+        allow_flag_preflight: std::sync::Arc::new(OnceCell::new()),
     }
 }
 
@@ -84,6 +85,7 @@ fn new_adapter_with_config(config: ClaudeCodeBackendConfig) -> ClaudeHarnessAdap
         config,
         termination: None,
         handle_state: std::sync::Arc::new(std::sync::Mutex::new(ClaudeHandleFacetState::default())),
+        allow_flag_preflight: std::sync::Arc::new(OnceCell::new()),
     }
 }
 
