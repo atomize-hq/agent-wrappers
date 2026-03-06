@@ -1,6 +1,7 @@
 use super::*;
 use crate::{AgentWrapperBackend, AgentWrapperError, AgentWrapperEventKind};
 use claude_code::{ClaudeStreamJsonEvent, ClaudeStreamJsonParser};
+use serde_json::Value;
 
 const SYSTEM_INIT: &str =
     include_str!("../../../../claude_code/tests/fixtures/stream_json/v1/system_init.jsonl");
