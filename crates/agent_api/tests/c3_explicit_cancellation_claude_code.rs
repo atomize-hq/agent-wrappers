@@ -29,6 +29,7 @@ async fn drain_to_none(
 fn claude_gateway_block_until_killed() -> (AgentWrapperGateway, AgentWrapperKind) {
     let backend = Arc::new(ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
         binary: Some(fake_claude_binary()),
+        claude_home: None,
         default_timeout: None,
         default_working_dir: None,
         env: [(

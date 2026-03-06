@@ -9,7 +9,7 @@ use std::{
 };
 
 use codex::{CodexError, ExecStreamError, ThreadEvent};
-use futures_util::StreamExt;
+use futures_util::{stream, StreamExt};
 
 use super::session_selectors::{
     parse_session_resume_v1, validate_resume_fork_mutual_exclusion, SessionSelectorV1,
@@ -104,9 +104,9 @@ mod policy;
 
 use policy::{
     validate_and_extract_exec_policy, CodexApprovalPolicy, CodexExecPolicy, CodexSandboxMode,
-    SUPPORTED_EXTENSION_KEYS_DEFAULT, SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN,
     EXT_CODEX_APPROVAL_POLICY, EXT_CODEX_SANDBOX_MODE, EXT_EXTERNAL_SANDBOX_V1,
-    EXT_NON_INTERACTIVE,
+    EXT_NON_INTERACTIVE, SUPPORTED_EXTENSION_KEYS_DEFAULT,
+    SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN,
 };
 
 use mapping::{error_event, map_thread_event};
@@ -197,6 +197,45 @@ fn redact_exec_stream_error(err: &ExecStreamError) -> String {
             codex_error_kind(err)
         ),
     }
+}
+
+fn render_backend_error_message(err: &CodexBackendError) -> String {
+    match err {
+        CodexBackendError::Exec(err) => redact_exec_stream_error(err),
+        CodexBackendError::AppServer(codex::mcp::McpError::Handshake(_)) => {
+            "codex app-server handshake failed".to_string()
+        }
+        CodexBackendError::AppServer(_) => "codex app-server rpc error".to_string(),
+        CodexBackendError::Timeout { timeout: _timeout } => PINNED_TIMEOUT.to_string(),
+        CodexBackendError::ForkSelectionEmpty => PINNED_NO_SESSION_FOUND.to_string(),
+        CodexBackendError::ForkSessionNotFound => PINNED_SESSION_NOT_FOUND.to_string(),
+        CodexBackendError::CompletionTaskDropped => "codex completion task dropped".to_string(),
+        CodexBackendError::WorkingDirectoryUnresolved => {
+            "codex backend failed to resolve working directory".to_string()
+        }
+    }
+}
+
+fn startup_failure_spawn(
+    err: CodexBackendError,
+    emit_external_sandbox_warning: bool,
+) -> BackendSpawn<CodexBackendEvent, CodexBackendCompletion, CodexBackendError> {
+    let message = render_backend_error_message(&err);
+    let events: crate::backend_harness::DynBackendEventStream<
+        CodexBackendEvent,
+        CodexBackendError,
+    > = if emit_external_sandbox_warning {
+        Box::pin(stream::iter(vec![
+            Ok(CodexBackendEvent::ExternalSandboxWarning),
+            Ok(CodexBackendEvent::TerminalError { message }),
+        ]))
+    } else {
+        Box::pin(stream::once(async move {
+            Ok(CodexBackendEvent::TerminalError { message })
+        }))
+    };
+    let completion = Box::pin(async move { Err(err) });
+    BackendSpawn { events, completion }
 }
 
 #[derive(Clone, Debug)]
@@ -328,7 +367,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         let env = req.env;
 
         Box::pin(async move {
-            let spawned = if let Some(selector) = fork {
+            let spawned = match if let Some(selector) = fork {
                 fork::spawn_fork_v1_flow(fork::ForkFlowRequest {
                     selector,
                     prompt,
@@ -361,15 +400,17 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                     env,
                 })
                 .await
-            }?;
+            } {
+                Ok(spawned) => spawned,
+                Err(err) if external_sandbox => return Ok(startup_failure_spawn(err, true)),
+                Err(err) => return Err(err),
+            };
 
             let BackendSpawn { events, completion } = spawned;
             let events = if external_sandbox {
                 Box::pin(
-                    futures_util::stream::once(async move {
-                        Ok(CodexBackendEvent::ExternalSandboxWarning)
-                    })
-                    .chain(events),
+                    stream::once(async move { Ok(CodexBackendEvent::ExternalSandboxWarning) })
+                        .chain(events),
                 )
             } else {
                 events
@@ -558,20 +599,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
     }
 
     fn redact_error(&self, _phase: BackendHarnessErrorPhase, err: &Self::BackendError) -> String {
-        match err {
-            CodexBackendError::Exec(err) => redact_exec_stream_error(err),
-            CodexBackendError::AppServer(codex::mcp::McpError::Handshake(_)) => {
-                "codex app-server handshake failed".to_string()
-            }
-            CodexBackendError::AppServer(_) => "codex app-server rpc error".to_string(),
-            CodexBackendError::Timeout { timeout: _timeout } => PINNED_TIMEOUT.to_string(),
-            CodexBackendError::ForkSelectionEmpty => PINNED_NO_SESSION_FOUND.to_string(),
-            CodexBackendError::ForkSessionNotFound => PINNED_SESSION_NOT_FOUND.to_string(),
-            CodexBackendError::CompletionTaskDropped => "codex completion task dropped".to_string(),
-            CodexBackendError::WorkingDirectoryUnresolved => {
-                "codex backend failed to resolve working directory".to_string()
-            }
-        }
+        render_backend_error_message(err)
     }
 }
 

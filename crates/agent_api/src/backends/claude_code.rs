@@ -94,6 +94,7 @@ fn parse_bool(value: &Value, key: &str) -> Result<bool, AgentWrapperError> {
 #[derive(Clone, Debug, Default)]
 pub struct ClaudeCodeBackendConfig {
     pub binary: Option<PathBuf>,
+    pub claude_home: Option<PathBuf>,
     pub default_timeout: Option<Duration>,
     pub default_working_dir: Option<PathBuf>,
     pub env: BTreeMap<String, String>,
@@ -307,6 +308,9 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
             let mut builder = claude_code::ClaudeClient::builder();
             if let Some(binary) = config.binary.as_ref() {
                 builder = builder.binary(binary.clone());
+            }
+            if let Some(claude_home) = config.claude_home.as_ref() {
+                builder = builder.claude_home(claude_home.clone());
             }
 
             let working_dir = req

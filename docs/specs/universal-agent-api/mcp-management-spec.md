@@ -357,25 +357,25 @@ values (headers, env vars, tokens).
 Requirements:
 
 - MCP management APIs MUST NOT emit their stdout/stderr as `AgentWrapperEvent`s.
-- Backends SHOULD support isolated homes (e.g., `codex_home`, `claude_home`) so automation can run
-  against a dedicated state root.
-- For built-in backends, isolated homes MUST be supported via host-provided backend config.
-  - Canonical host-facing config fields are defined in:
-    - `docs/specs/universal-agent-api/contract.md`
-  - Canonical fields (v1):
+- Backends SHOULD support isolated homes so automation can run against a dedicated state root.
+- For built-in backends, any host-facing isolated-home config field MUST be defined in:
+  - `docs/specs/universal-agent-api/contract.md`
+  - Canonical approved field(s) in v1:
     - `agent_api::backends::codex::CodexBackendConfig.codex_home: Option<PathBuf>`
     - `agent_api::backends::claude_code::ClaudeCodeBackendConfig.claude_home: Option<PathBuf>`
-  - When the home override is `Some`, the backend MUST invoke the upstream CLI such that its persistent
-    state/config is read/written beneath the configured root (while still honoring request-level env overrides
-    per “Context precedence and absence semantics (pinned)”).
+  - When a built-in backend exposes such a home override and it is `Some`, the backend MUST invoke
+    the upstream CLI such that its persistent state/config is read/written beneath the configured
+    root (while still honoring request-level env overrides per “Context precedence and absence
+    semantics (pinned)”).
+  - Claude-specific caveat (pinned): `claude_home` is wrapper-managed user-home isolation only; it
+    does not isolate project-local `.claude/` content or `.mcp.json`.
 - Write operations (`add/remove`) MUST require explicit enablement.
   - Built-in backends MUST NOT advertise `agent_api.tools.mcp.add.v1` / `agent_api.tools.mcp.remove.v1`
     unless write enablement is configured.
-  - Write enablement MUST be explicit and discoverable (via backend config and/or advertised capabilities).
-  - For built-in backends, the canonical write enablement knob is:
-    - `agent_api::backends::codex::CodexBackendConfig.allow_mcp_write: bool` (default `false`)
-    - `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write: bool` (default `false`)
-    (see `docs/specs/universal-agent-api/contract.md`).
+  - Write enablement MUST be explicit and discoverable (via backend config and/or advertised
+    capabilities).
+  - For built-in backends, no host-facing write-enablement config field is part of the approved v1
+    public API surface today (see `docs/specs/universal-agent-api/contract.md`).
 
 ## Built-in backend behavior (v1, normative)
 
@@ -405,14 +405,15 @@ Legend:
 
 | Backend | Target availability (pinned) | `list` | `get` | `add` | `remove` |
 | --- | --- | --- | --- | --- | --- |
-| Codex (`codex`) | `cli_manifests/codex/current.json` | ✅ | ✅ | ❌ (requires `allow_mcp_write=true`) | ❌ (requires `allow_mcp_write=true`) |
-| Claude Code (`claude_code`) | `cli_manifests/claude_code/current.json` | ✅ | ✅ on `win32-x64` only | ❌ (requires `win32-x64` **and** `allow_mcp_write=true`) | ❌ (requires `win32-x64` **and** `allow_mcp_write=true`) |
+| Codex (`codex`) | `cli_manifests/codex/current.json` | ✅ | ✅ | ❌ (no approved built-in write-enablement knob in v1) | ❌ (no approved built-in write-enablement knob in v1) |
+| Claude Code (`claude_code`) | `cli_manifests/claude_code/current.json` | ✅ | ✅ on `win32-x64` only | ❌ (no approved built-in write-enablement knob in v1) | ❌ (no approved built-in write-enablement knob in v1) |
 
 Notes:
 - Read operations (`list/get`) have no additional enablement knob in v1. If the upstream CLI exposes the subcommand on
   this target, the backend advertises the capability by default.
-- Write operations (`add/remove`) are *always* gated behind explicit backend config opt-in (safe-by-default), even when the
-  upstream CLI supports the subcommand.
+- Write operations (`add/remove`) remain safe-by-default. For built-in backends, the approved v1
+  contract does not define a host-facing write-enablement knob, so these capabilities are not part
+  of the default built-in backend surface.
 
 ### Built-in backend mappings (pinned)
 

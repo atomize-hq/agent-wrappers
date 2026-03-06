@@ -1,6 +1,6 @@
 use std::{
     env,
-    fs::OpenOptions,
+    fs::{self, OpenOptions},
     io::{self, Write},
     thread,
     time::Duration,
@@ -137,6 +137,29 @@ fn maybe_assert_flag_presence(args: &[String], env_key: &str, flag: &str, out: &
             &format!("assertion failed: expected {flag} to be {expectation}"),
         );
     }
+}
+
+fn maybe_write_env_snapshot() {
+    let Ok(path) = env::var("FAKE_CLAUDE_ENV_SNAPSHOT_PATH") else {
+        return;
+    };
+
+    let mut snapshot = String::new();
+    for key in [
+        "CLAUDE_HOME",
+        "HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_CACHE_HOME",
+    ] {
+        let value = env::var(key).unwrap_or_default();
+        snapshot.push_str(key);
+        snapshot.push('=');
+        snapshot.push_str(&value);
+        snapshot.push('\n');
+    }
+
+    fs::write(path, snapshot).expect("write FAKE_CLAUDE_ENV_SNAPSHOT_PATH");
 }
 
 fn main() -> io::Result<()> {
@@ -559,6 +582,13 @@ fn main() -> io::Result<()> {
             write_line(&mut out, &format!("{tool_use_start}\n"))?;
             write_line(&mut out, &format!("{input_json_delta}\n"))?;
             write_line(&mut out, &format!("{tool_result_start}\n"))?;
+            write_line(&mut out, &format!("{assistant_text}\n"))?;
+        }
+        "claude_home_env_snapshot" => {
+            maybe_write_env_snapshot();
+            let assistant_text = first_nonempty_line(ASSISTANT_MESSAGE_TEXT);
+
+            write_line(&mut out, &format!("{init}\n"))?;
             write_line(&mut out, &format!("{assistant_text}\n"))?;
         }
         // Default: two events with a smaller delay (still long enough to demonstrate streaming).

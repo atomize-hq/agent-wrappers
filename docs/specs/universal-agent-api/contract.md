@@ -307,7 +307,6 @@ pub mod backends {
             pub default_timeout: Option<Duration>,
             pub default_working_dir: Option<PathBuf>,
             pub env: BTreeMap<String, String>,
-            pub allow_mcp_write: bool,
             pub allow_external_sandbox_exec: bool,
         }
 
@@ -341,7 +340,6 @@ pub mod backends {
             pub default_timeout: Option<Duration>,
             pub default_working_dir: Option<PathBuf>,
             pub env: BTreeMap<String, String>,
-            pub allow_mcp_write: bool,
             pub allow_external_sandbox_exec: bool,
         }
 
@@ -380,25 +378,24 @@ When `allow_external_sandbox_exec == true` for a backend instance:
 
 ### MCP management write enablement (v1, normative)
 
-MCP management `add/remove` operations are write operations and MUST remain safe-by-default.
+No built-in backend config field for MCP management write enablement is part of the approved v1
+public API surface. In particular:
 
-- `agent_api::backends::codex::CodexBackendConfig.allow_mcp_write` MUST default to `false`.
-- `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write` MUST default to `false`.
+- `agent_api::backends::codex::CodexBackendConfig` MUST NOT expose `allow_mcp_write` in v1.
+- `agent_api::backends::claude_code::ClaudeCodeBackendConfig` MUST NOT expose `allow_mcp_write`
+  in v1.
 
-When `allow_mcp_write == false` for a backend instance:
-- `capabilities().ids` MUST NOT include:
-  - `agent_api.tools.mcp.add.v1`
-  - `agent_api.tools.mcp.remove.v1`
-
-When `allow_mcp_write == true` for a backend instance:
-- the backend MAY advertise `agent_api.tools.mcp.{add,remove}.v1` only when it implements the corresponding operations per
-  `docs/specs/universal-agent-api/mcp-management-spec.md` (including target availability).
+Any future MCP management write-enablement knob for built-in backends MUST be introduced by a
+subsequent contract revision rather than backfilled into the approved v1 pinned type shapes above.
 
 ### Config and request precedence (v1, normative)
 
 - Backend config provides defaults.
 - `AgentWrapperRunRequest` fields MUST override backend config defaults for that run.
 - The backend MUST apply `AgentWrapperRunRequest.env` on top of backend config env (request keys win).
+- `agent_api::backends::claude_code::ClaudeCodeBackendConfig.claude_home` is wrapper-managed
+  user-home isolation only; it does not imply isolation of project-local `.claude/` content or
+  `.mcp.json`.
 
 ## Working directory resolution (effective working directory) (v1, normative)
 

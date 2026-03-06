@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at_utc": "2026-03-02T03:16:29Z",
+  "updated_at_utc": "2026-03-06T13:49:01Z",
   "items": [
     {
       "id": "uaa-0013",
@@ -343,6 +343,61 @@
         "Contract: ids over 1024 bytes must be treated as unknown (omit facet; MUST NOT truncate); SHOULD warn.",
         "Keep behavior consistent across Codex exec/resume and Codex fork flows."
       ]
+    },
+    {
+      "id": "uaa-0021",
+      "title": "Claude: persistent project-scoped state isolation parity (.claude / .mcp.json)",
+      "status": "todo",
+      "bucket": "agent_api.config",
+      "type": "design",
+      "kickoff": {
+        "prompt": [
+          "Work item: uaa-0021 — Claude: persistent project-scoped state isolation parity (.claude / .mcp.json).",
+          "Goal: design and implement Codex-like persistent, app-managed project state isolation for Claude runs so project-scoped Claude artifacts are redirected away from the real repo while preserving access to the real workspace.",
+          "Context: `claude_home` only isolates user-scoped state (`~/.claude*`). Claude also discovers project-scoped state from the working tree, including `.claude/settings*.json`, `.claude/agents`, `.claude/commands`, hooks/memory files, `CLAUDE.md`, and `.mcp.json`. A stop-gap `agent_api` `claude_home` wiring can ship independently, but it does not solve project-local state isolation.",
+          "Steps:",
+          "1) Inventory which Claude surfaces are discovered from cwd/project root vs user home, and pin the minimum parity target for v1 (at least `.claude/**`, `.mcp.json`, and `CLAUDE.md` discovery semantics).",
+          "2) Design a persistent app-managed project-root layout/overlay in `crates/claude_code` that can host isolated Claude project files while still exposing the real workspace contents to the CLI.",
+          "3) Decide how the wrapper selects and materializes that project overlay across repeated runs (persistent per app/project key, not one tempdir per run), including cleanup/update behavior and cross-platform filesystem strategy.",
+          "4) Evaluate where existing Claude flags (`--settings`, `--setting-sources`, `--mcp-config`) can be reused for subsets of the problem versus where project-root overlay behavior is still required for parity.",
+          "5) Expose the new project-state isolation controls through `crates/claude_code` first, then add host-facing `agent_api` config + canonical spec text only once the behavior is implemented and testable.",
+          "6) Add end-to-end tests proving Claude reads/writes isolated `.claude` / `.mcp.json` content under the app-managed root rather than the real repo, without regressing normal workspace file access.",
+          "Output: a concrete crate/API design plus implementation plan for full Claude project-state isolation; keep the smaller `claude_home` stop-gap tracked separately and unblocked."
+        ],
+        "files_to_read": [
+          "crates/claude_code/src/builder/mod.rs",
+          "crates/claude_code/src/client/mod.rs",
+          "crates/claude_code/src/home.rs",
+          "crates/claude_code/src/commands/print.rs",
+          "crates/agent_api/src/backends/claude_code.rs",
+          "docs/specs/universal-agent-api/contract.md",
+          "docs/specs/universal-agent-api/mcp-management-spec.md",
+          "crates/codex/src/home.rs"
+        ],
+        "deliverables": [
+          "A persistent project-overlay design for Claude project-scoped state",
+          "An implementation plan for exposing the feature in claude_code and then agent_api",
+          "A test strategy covering isolated `.claude` and `.mcp.json` behavior"
+        ]
+      },
+      "notes": [
+        "Do not treat `claude_home` as sufficient parity: it isolates user-home state, not project-local `.claude` / `.mcp.json` discovery.",
+        "Prefer a persistent app-managed directory keyed per app/project over ephemeral tempdirs so repeated runs share the same isolated Claude project state.",
+        "Likely requires new `claude_code` crate primitives first; `agent_api` should only surface the config after the lower-level behavior exists.",
+        "The stop-gap `ClaudeCodeBackendConfig.claude_home` wiring can land independently and should not be blocked on this larger feature."
+      ],
+      "backend_mapping": {
+        "claude_code": {
+          "notes": [
+            "Needs new crate support for a persistent project overlay/root that redirects project-scoped Claude discovery (`.claude/**`, `.mcp.json`, `CLAUDE.md`) while preserving access to the real workspace."
+          ]
+        },
+        "codex": {
+          "notes": [
+            "Serves as the parity reference for app-managed persistent state isolation, but Codex's native `CODEX_HOME` model is user-home scoped and does not directly solve Claude's project-root discovery model."
+          ]
+        }
+      }
     },
     {
       "id": "uaa-0001",
