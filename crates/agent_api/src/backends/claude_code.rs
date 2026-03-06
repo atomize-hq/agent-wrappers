@@ -68,7 +68,9 @@ const PINNED_EXTERNAL_SANDBOX_WARNING: &str =
 #[path = "claude_code/util.rs"]
 mod util;
 
-use util::{generic_non_zero_exit_message, json_contains_not_found_signal, preflight_allow_flag_support};
+use util::{
+    generic_non_zero_exit_message, json_contains_not_found_signal, preflight_allow_flag_support,
+};
 
 #[path = "claude_code/mapping.rs"]
 mod mapping;
@@ -165,6 +167,38 @@ enum ClaudeBackendError {
     StreamParse(claude_code::ClaudeStreamJsonParseError),
     Completion(claude_code::ClaudeCodeError),
     ExternalSandboxPreflight { message: String },
+}
+
+fn render_backend_error_message(err: &ClaudeBackendError) -> String {
+    match err {
+        ClaudeBackendError::Spawn(err) | ClaudeBackendError::Completion(err) => {
+            format!("claude_code error: {err}")
+        }
+        ClaudeBackendError::ExternalSandboxPreflight { message } => message.clone(),
+        ClaudeBackendError::StreamParse(err) => err.message.clone(),
+    }
+}
+
+fn startup_failure_spawn(
+    err: ClaudeBackendError,
+    emit_external_sandbox_warning: bool,
+) -> BackendSpawn<ClaudeBackendEvent, ClaudeBackendCompletion, ClaudeBackendError> {
+    let message = render_backend_error_message(&err);
+    let events: crate::backend_harness::DynBackendEventStream<
+        ClaudeBackendEvent,
+        ClaudeBackendError,
+    > = if emit_external_sandbox_warning {
+        Box::pin(stream::iter(vec![
+            Ok(ClaudeBackendEvent::ExternalSandboxWarning),
+            Ok(ClaudeBackendEvent::TerminalError { message }),
+        ]))
+    } else {
+        Box::pin(stream::once(async move {
+            Ok(ClaudeBackendEvent::TerminalError { message })
+        }))
+    };
+    let completion = Box::pin(async move { Err(err) });
+    BackendSpawn { events, completion }
 }
 
 impl BackendHarnessAdapter for ClaudeHarnessAdapter {
@@ -298,11 +332,19 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
             let mut allow_dangerously_skip_permissions = false;
             if req.policy.external_sandbox {
                 allow_dangerously_skip_permissions =
-                    preflight_allow_flag_support(allow_flag_preflight.as_ref(), || client.help())
-                        .await
-                        .map_err(|message| ClaudeBackendError::ExternalSandboxPreflight {
-                            message,
-                        })?;
+                    match preflight_allow_flag_support(allow_flag_preflight.as_ref(), || {
+                        client.help()
+                    })
+                    .await
+                    {
+                        Ok(supported) => supported,
+                        Err(message) => {
+                            return Ok(startup_failure_spawn(
+                                ClaudeBackendError::ExternalSandboxPreflight { message },
+                                true,
+                            ));
+                        }
+                    };
             }
 
             let mut print_req = ClaudePrintRequest::new(req.prompt)
@@ -341,10 +383,13 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                 }
             }
 
-            let handle = client
-                .print_stream_json_control(print_req)
-                .await
-                .map_err(ClaudeBackendError::Spawn)?;
+            let handle = match client.print_stream_json_control(print_req).await {
+                Ok(handle) => handle,
+                Err(err) if req.policy.external_sandbox => {
+                    return Ok(startup_failure_spawn(ClaudeBackendError::Spawn(err), true));
+                }
+                Err(err) => return Err(ClaudeBackendError::Spawn(err)),
+            };
 
             if let Some(state) = termination.as_ref() {
                 state.set_handle(handle.termination.clone());
@@ -549,7 +594,9 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
     fn map_event(&self, event: Self::BackendEvent) -> Vec<AgentWrapperEvent> {
         let event = match event {
             ClaudeBackendEvent::ExternalSandboxWarning => {
-                return vec![status_event(Some(PINNED_EXTERNAL_SANDBOX_WARNING.to_string()))];
+                return vec![status_event(Some(
+                    PINNED_EXTERNAL_SANDBOX_WARNING.to_string(),
+                ))];
             }
             ClaudeBackendEvent::Stream(event) => event,
             ClaudeBackendEvent::TerminalError { message } => {
@@ -640,11 +687,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
             (BackendHarnessErrorPhase::Stream, ClaudeBackendError::StreamParse(err)) => {
                 err.message.clone()
             }
-            (_, ClaudeBackendError::Spawn(err) | ClaudeBackendError::Completion(err)) => {
-                format!("claude_code error: {err}")
-            }
-            (_, ClaudeBackendError::ExternalSandboxPreflight { message }) => message.clone(),
-            (_, ClaudeBackendError::StreamParse(err)) => err.message.clone(),
+            _ => render_backend_error_message(err),
         }
     }
 }
