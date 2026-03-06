@@ -10,7 +10,6 @@ use std::{
 use claude_code::{ClaudeOutputFormat, ClaudePrintRequest};
 use futures_util::stream;
 use futures_util::StreamExt;
-use serde_json::Value;
 use tokio::sync::{oneshot, OnceCell};
 
 use super::session_selectors::{
@@ -69,7 +68,8 @@ const PINNED_EXTERNAL_SANDBOX_WARNING: &str =
 mod util;
 
 use util::{
-    generic_non_zero_exit_message, json_contains_not_found_signal, preflight_allow_flag_support,
+    generic_non_zero_exit_message, json_contains_not_found_signal, parse_bool,
+    preflight_allow_flag_support,
 };
 
 #[path = "claude_code/mapping.rs"]
@@ -82,14 +82,6 @@ use mapping::{
 
 #[cfg(test)]
 use mapping::{map_assistant_message, map_stream_event};
-
-fn parse_bool(value: &Value, key: &str) -> Result<bool, AgentWrapperError> {
-    value
-        .as_bool()
-        .ok_or_else(|| AgentWrapperError::InvalidRequest {
-            message: format!("{key} must be a boolean"),
-        })
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct ClaudeCodeBackendConfig {

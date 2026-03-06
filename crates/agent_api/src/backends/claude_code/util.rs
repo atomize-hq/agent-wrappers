@@ -2,6 +2,17 @@ use std::future::Future;
 
 use tokio::sync::OnceCell;
 
+pub(super) fn parse_bool(
+    value: &serde_json::Value,
+    key: &str,
+) -> Result<bool, crate::AgentWrapperError> {
+    value
+        .as_bool()
+        .ok_or_else(|| crate::AgentWrapperError::InvalidRequest {
+            message: format!("{key} must be a boolean"),
+        })
+}
+
 fn is_session_not_found_signal(text: &str) -> bool {
     let text = text.to_ascii_lowercase();
 
