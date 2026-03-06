@@ -42,6 +42,7 @@ pub(super) struct ForkFlowRequest {
     pub(super) run_start_cwd: Option<PathBuf>,
     pub(super) termination: Option<Arc<TerminationState<CodexTerminationHandle>>>,
     pub(super) non_interactive: bool,
+    pub(super) external_sandbox: bool,
     pub(super) approval_policy: Option<CodexApprovalPolicy>,
     pub(super) sandbox_mode: CodexSandboxMode,
     pub(super) handle_state: Arc<std::sync::Mutex<CodexHandleFacetState>>,
@@ -285,6 +286,7 @@ pub(super) async fn spawn_fork_v1_flow(
         run_start_cwd,
         termination,
         non_interactive,
+        external_sandbox,
         approval_policy,
         sandbox_mode,
         handle_state,
@@ -333,6 +335,15 @@ pub(super) async fn spawn_fork_v1_flow(
             .await
             .map_err(CodexBackendError::AppServer)?
             .ok_or(CodexBackendError::ForkSelectionEmpty)?,
+    };
+
+    let (approval_policy, sandbox_mode) = if external_sandbox {
+        (
+            Some(CodexApprovalPolicy::Never),
+            CodexSandboxMode::DangerFullAccess,
+        )
+    } else {
+        (approval_policy, sandbox_mode)
     };
 
     let approval_policy = effective_approval_policy(non_interactive, approval_policy.as_ref());

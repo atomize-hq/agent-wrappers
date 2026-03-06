@@ -25,6 +25,20 @@ Consumers must enable features using Cargo’s standard syntax, e.g.:
 - `cargo test -p agent_api --features claude_code`
 - `cargo test -p agent_api --all-features`
 
+## Terminology (v1, normative)
+
+### Serde-friendly types
+
+In this spec set, “serde-friendly types” is a public API hygiene constraint:
+
+- Public structs/enums MUST be composed of owned, ubiquitous std types and serde ecosystem types already present in the
+  public surface (e.g., `String`, `Vec`, `Option`, `BTreeMap`, `PathBuf`, `Duration`, `ExitStatus`, `serde_json::Value`).
+- Public APIs MUST NOT expose wrapper-specific crate types (no `codex::*` / `claude_code::*`) and MUST NOT require
+  consumers to depend on those wrapper crates.
+- This is **not** a requirement that every public type implements `serde::Serialize` / `serde::Deserialize`.
+  - When a stable serialized representation is required for cross-process or cross-language boundaries, the relevant
+    schema spec MUST pin that representation explicitly.
+
 ## Public API (v1, normative)
 
 The `agent_api` crate MUST expose the following items at the crate root (i.e., these paths MUST
@@ -256,7 +270,8 @@ For each emitted `AgentWrapperEvent`:
 ## Provided backends (feature-gated; v1, normative)
 
 When enabled, `agent_api` MUST provide built-in backends with stable paths and constructor/config
-types that use **only** std + serde-friendly types (no `codex::*` / `claude_code::*` in the public API).
+types that use **only** std + [serde-friendly types](#serde-friendly-types) (no `codex::*` / `claude_code::*` in the public
+API).
 
 ## Extensions (authoritative; v1)
 
@@ -292,6 +307,7 @@ pub mod backends {
             pub default_timeout: Option<Duration>,
             pub default_working_dir: Option<PathBuf>,
             pub env: BTreeMap<String, String>,
+            pub allow_external_sandbox_exec: bool,
         }
 
         pub struct CodexBackend { /* private */ }
@@ -320,9 +336,11 @@ pub mod backends {
         #[derive(Clone, Debug, Default)]
         pub struct ClaudeCodeBackendConfig {
             pub binary: Option<PathBuf>,
+            pub claude_home: Option<PathBuf>,
             pub default_timeout: Option<Duration>,
             pub default_working_dir: Option<PathBuf>,
             pub env: BTreeMap<String, String>,
+            pub allow_external_sandbox_exec: bool,
         }
 
         pub struct ClaudeCodeBackend { /* private */ }
@@ -340,11 +358,44 @@ pub mod backends {
 }
 ```
 
+### Dangerous capability opt-in (external sandbox exec policy) (v1, normative)
+
+`agent_api.exec.external_sandbox.v1` is explicitly dangerous and MUST remain safe-by-default for
+built-in backends. Concretely:
+
+- `agent_api::backends::codex::CodexBackendConfig.allow_external_sandbox_exec` MUST default to `false`.
+- `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_external_sandbox_exec` MUST default to `false`.
+
+When `allow_external_sandbox_exec == false` for a backend instance:
+- `capabilities().ids` MUST NOT include `agent_api.exec.external_sandbox.v1`, and
+- a request that includes `extensions["agent_api.exec.external_sandbox.v1"]` MUST fail closed as
+  `AgentWrapperError::UnsupportedCapability` per the extensions registry R0.
+
+When `allow_external_sandbox_exec == true` for a backend instance:
+- `capabilities().ids` MUST include `agent_api.exec.external_sandbox.v1`, and
+- the backend MUST accept the key for further validation/mapping (still validated before spawn; type
+  errors and contradiction errors are `AgentWrapperError::InvalidRequest` per `extensions-spec.md`).
+
+### MCP management write enablement (v1, normative)
+
+No built-in backend config field for MCP management write enablement is part of the approved v1
+public API surface. In particular:
+
+- `agent_api::backends::codex::CodexBackendConfig` MUST NOT expose `allow_mcp_write` in v1.
+- `agent_api::backends::claude_code::ClaudeCodeBackendConfig` MUST NOT expose `allow_mcp_write`
+  in v1.
+
+Any future MCP management write-enablement knob for built-in backends MUST be introduced by a
+subsequent contract revision rather than backfilled into the approved v1 pinned type shapes above.
+
 ### Config and request precedence (v1, normative)
 
 - Backend config provides defaults.
 - `AgentWrapperRunRequest` fields MUST override backend config defaults for that run.
 - The backend MUST apply `AgentWrapperRunRequest.env` on top of backend config env (request keys win).
+- `agent_api::backends::claude_code::ClaudeCodeBackendConfig.claude_home` is wrapper-managed
+  user-home isolation only; it does not imply isolation of project-local `.claude/` content or
+  `.mcp.json`.
 
 ## Working directory resolution (effective working directory) (v1, normative)
 

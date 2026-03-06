@@ -103,6 +103,65 @@ Backend mapping requirements:
   - Claude Code: map to `--permission-mode bypassPermissions` (see
     `docs/specs/claude-code-session-mapping-contract.md`).
 
+### `agent_api.exec.external_sandbox.v1` (boolean; dangerous)
+
+Owner: this spec (`extensions-spec.md`).
+
+Schema:
+- Type: boolean
+- Default when absent: `false`
+
+Meaning:
+- When `true`, the host asserts it provides an external isolation boundary and requests that the
+  backend relax/disable internal approvals/sandbox/permissions guardrails that would otherwise
+  block unattended automation.
+- This key is explicitly dangerous and MUST NOT be implied by `agent_api.exec.non_interactive` or
+  any other benign key.
+- When `true`, the backend MUST remain non-interactive (MUST NOT hang on prompts).
+
+Validation rules:
+- Value MUST be a boolean; otherwise the backend MUST fail before spawn with
+  `AgentWrapperError::InvalidRequest`.
+- If this key is `true` and `agent_api.exec.non_interactive` is explicitly set to `false` in the
+  same request (and both keys are supported per R0), the backend MUST fail before spawn with
+  `AgentWrapperError::InvalidRequest` (contradictory intent).
+- If this key is `true`, the request MUST NOT include any backend-scoped exec-policy keys under
+  `backend.<agent_kind>.exec.*` (ambiguous precedence). If such a key is present (and supported per
+  R0), the backend MUST fail before spawn with `AgentWrapperError::InvalidRequest`.
+  - Example backend exec-policy keys: `backend.codex.exec.approval_policy`,
+    `backend.codex.exec.sandbox_mode`.
+
+Observability / audit signal (v1, pinned):
+- When `extensions["agent_api.exec.external_sandbox.v1"] == true` is accepted (capability is
+  advertised and the request passes validation), the backend MUST emit exactly one safe
+  `AgentWrapperEventKind::Status` warning event with:
+  - `channel="status"`
+  - `message="DANGEROUS: external sandbox exec policy enabled (agent_api.exec.external_sandbox.v1=true)"`
+  - `data=None`
+- Emission ordering (pinned):
+  - The warning MUST be emitted before any `TextOutput` / `ToolCall` / `ToolResult` events for that
+    run.
+  - If the backend also advertises `agent_api.session.handle.v1`, the warning MUST be emitted
+    before the session handle facet `Status` event.
+  - The backend MUST preserve this ordering even if it buffers events for post-hoc emission (i.e.,
+    the warning must still appear earlier in the consumer-visible stream).
+- Non-emission cases (pinned):
+  - If the key is absent or `false`, the backend MUST NOT emit this warning.
+  - If the key is present but unsupported (fails R0) or invalid/contradictory (fails validation),
+    the backend MUST NOT emit this warning.
+
+Backend mapping requirements:
+- Backends that advertise this key MUST:
+  - ensure the underlying CLI/wrapper will not prompt (approvals/permissions prompts),
+  - ensure any “internal sandbox required” checks are bypassed/disabled as required by that backend,
+  - and remain deterministic (no “spawn then retry with different flags”).
+- Built-in backends MUST NOT advertise this capability by default; it is intended for explicitly
+  externally sandboxed hosts, and requires explicit opt-in via backend configuration (see
+  `docs/specs/universal-agent-api/contract.md`, "Dangerous capability opt-in (external sandbox exec policy)").
+- Concrete backend mapping contracts:
+  - Codex: `docs/specs/codex-external-sandbox-mapping-contract.md`
+  - Claude Code: `docs/specs/claude-code-session-mapping-contract.md`
+
 ### `agent_api.session.resume.v1` (object)
 
 Owner: this spec (`extensions-spec.md`).

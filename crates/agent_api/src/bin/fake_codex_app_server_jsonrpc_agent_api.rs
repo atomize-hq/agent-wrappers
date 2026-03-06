@@ -53,6 +53,8 @@ fn main() -> io::Result<()> {
     let expect_prompt = env::var("FAKE_CODEX_APP_SERVER_EXPECT_PROMPT").ok();
     let expect_source_thread_id = env::var("FAKE_CODEX_APP_SERVER_EXPECT_SOURCE_THREAD_ID").ok();
     let expect_cwd = env::var("FAKE_CODEX_APP_SERVER_EXPECT_CWD").ok();
+    let expect_thread_fork_sandbox =
+        env::var("FAKE_CODEX_APP_SERVER_EXPECT_THREAD_FORK_SANDBOX").ok();
     let secret_sentinel = env::var("FAKE_CODEX_APP_SERVER_SECRET_SENTINEL").ok();
 
     let cancel_seen = Arc::new(AtomicBool::new(false));
@@ -224,6 +226,16 @@ fn main() -> io::Result<()> {
                     std::process::exit(2);
                 }
 
+                if let Some(expected) = expect_thread_fork_sandbox.as_deref() {
+                    let sandbox = params.get("sandbox").and_then(Value::as_str);
+                    if sandbox != Some(expected) {
+                        eprintln!(
+                            "thread/fork sandbox mismatch: got {sandbox:?} expected {expected:?}"
+                        );
+                        std::process::exit(2);
+                    }
+                }
+
                 match scenario.as_str() {
                     "fork_id_success"
                     | "fork_id_success_oversize_thread_id"
@@ -286,6 +298,11 @@ fn main() -> io::Result<()> {
                 let approval_policy = params.get("approvalPolicy").and_then(Value::as_str);
                 if approval_policy != Some("never") {
                     eprintln!("turn/start approvalPolicy mismatch: got {approval_policy:?}");
+                    std::process::exit(2);
+                }
+
+                if expect_thread_fork_sandbox.is_some() && params.get("sandbox").is_some() {
+                    eprintln!("turn/start unexpected sandbox field");
                     std::process::exit(2);
                 }
 

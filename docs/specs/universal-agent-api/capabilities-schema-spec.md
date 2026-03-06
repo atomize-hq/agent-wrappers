@@ -112,6 +112,26 @@ This section defines stable universal capability ids and their minimum semantics
 - `agent_api.tools.results.v1`:
   - The backend can emit `ToolResult` events for tool completions and tool failures only when
     deterministically attributable (not “every failure becomes ToolResult”).
+- `agent_api.tools.mcp.list.v1`:
+  - The backend supports listing configured MCP servers via the non-run MCP management API (see
+    `docs/specs/universal-agent-api/mcp-management-spec.md`).
+- `agent_api.tools.mcp.get.v1`:
+  - The backend supports retrieving a specific configured MCP server entry by name via the non-run
+    MCP management API (see `docs/specs/universal-agent-api/mcp-management-spec.md`).
+- `agent_api.tools.mcp.add.v1`:
+  - The backend supports adding/configuring an MCP server entry via the non-run MCP management API
+    (see `docs/specs/universal-agent-api/mcp-management-spec.md`).
+  - This capability MUST NOT be advertised unless write enablement is explicitly configured (see
+    `docs/specs/universal-agent-api/mcp-management-spec.md`).
+    - For built-in backends, the approved v1 contract does not define a host-facing
+      `allow_mcp_write` config field (see `docs/specs/universal-agent-api/contract.md`).
+- `agent_api.tools.mcp.remove.v1`:
+  - The backend supports removing an MCP server entry by name via the non-run MCP management API
+    (see `docs/specs/universal-agent-api/mcp-management-spec.md`).
+  - This capability MUST NOT be advertised unless write enablement is explicitly configured (see
+    `docs/specs/universal-agent-api/mcp-management-spec.md`).
+    - For built-in backends, the approved v1 contract does not define a host-facing
+      `allow_mcp_write` config field (see `docs/specs/universal-agent-api/contract.md`).
 - `agent_api.artifacts.final_text.v1`:
   - The backend can deterministically populate `AgentWrapperCompletion.final_text` when full
     assistant message text blocks are observed in the supported flow; `final_text=None` is valid

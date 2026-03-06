@@ -215,6 +215,35 @@ fn main() -> io::Result<()> {
         }
     }
 
+    // Optional argv validation used by external-sandbox exec-policy conformance tests.
+    if let Ok(expect_bypass) = env::var("FAKE_CODEX_EXPECT_DANGEROUS_BYPASS") {
+        if !expect_bypass.trim().is_empty() {
+            const BYPASS_FLAG: &str = "--dangerously-bypass-approvals-and-sandbox";
+            let bypass_count = args.iter().filter(|arg| *arg == BYPASS_FLAG).count();
+            if bypass_count != 1 {
+                emit_jsonl(
+                    &mut out,
+                    &format!(
+                        r#"{{"type":"error","message":"expected {BYPASS_FLAG} exactly once, got {bypass_count}"}}"#
+                    ),
+                )?;
+                std::process::exit(1);
+            }
+
+            for forbidden in ["--full-auto", "--ask-for-approval", "--sandbox"] {
+                if has_flag(&args, forbidden) {
+                    emit_jsonl(
+                        &mut out,
+                        &format!(
+                            r#"{{"type":"error","message":"did not expect forbidden flag: {forbidden}"}}"#
+                        ),
+                    )?;
+                    std::process::exit(1);
+                }
+            }
+        }
+    }
+
     let scenario = env::var("FAKE_CODEX_SCENARIO").unwrap_or_else(|_| "ok".to_string());
     match scenario.as_str() {
         "resume_last_assert" => {

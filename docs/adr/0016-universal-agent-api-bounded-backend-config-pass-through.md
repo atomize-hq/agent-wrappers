@@ -39,14 +39,16 @@ This is the “final sweep before implementation” for backlog work item `uaa-0
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 351052fdbbfc0143648cfe9a5af5016e73b4ca4dbd3865530871c87e5f93aa39
+ADR_BODY_SHA256: 7624ac7330a8195a7e5e228d7f5f3c351a7d4145741ba3a44d9377ee10fc5c97
 
 ### Decision (draft)
 
 - Promote only **backend-neutral, stable semantics** into core extension keys under `agent_api.*`.
   - Concrete near-term universals: model selection + extra context roots.
 - When we need to express “the host provides isolation externally”, use an explicit, dangerous core
-  key (`agent_api.exec.external_sandbox.v1`) rather than ad-hoc backend keys or implicit behavior.
+  key (`agent_api.exec.external_sandbox.v1`) (see
+  `docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md`) rather than ad-hoc backend
+  keys or implicit behavior.
 - Everything else remains backend-specific, but may still be surfaced via **bounded pass-through**
   keys under `backend.<agent_kind>.*`.
 - “Bounded pass-through” means: versioned keys, closed schemas, strict bounds, deterministic
@@ -57,7 +59,8 @@ ADR_BODY_SHA256: 351052fdbbfc0143648cfe9a5af5016e73b4ca4dbd3865530871c87e5f93aa3
 **Universal (`agent_api.*`)**
 
 - `agent_api.exec.non_interactive` (boolean, already Approved)
-- `agent_api.exec.external_sandbox.v1` (boolean; explicit dangerous mode for externally sandboxed hosts)
+- `agent_api.exec.external_sandbox.v1` (boolean; explicit dangerous mode for externally sandboxed hosts;
+  see `docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md`)
 - `agent_api.config.model.v1` (string; backlog `uaa-0002`)
 - `agent_api.exec.add_dirs.v1` (object; backlog `uaa-0003`)
 
@@ -210,33 +213,6 @@ Backend mapping:
 Notes:
 - Track in `docs/backlog.json` as `uaa-0003`.
 
-### Core: `agent_api.exec.external_sandbox.v1` (boolean; dangerous)
-
-Schema:
-- Type: boolean
-- Default when absent: `false`
-
-Meaning:
-- Indicates the host runtime provides an external isolation boundary and wants the backend to
-  relax/disable internal guardrails that would otherwise block headless automation.
-- This is explicitly dangerous: it can enable “no approvals / no internal sandbox / no permission
-  checks” behavior depending on backend capabilities.
-
-Validation rules (proposed):
-- Value MUST be boolean; otherwise fail before spawn.
-- If `agent_api.exec.external_sandbox.v1=true`, backends MUST ensure the run remains
-  non-interactive (it MUST NOT hang on prompts). If the request explicitly sets
-  `agent_api.exec.non_interactive=false`, the backend SHOULD fail closed with
-  `AgentWrapperError::InvalidRequest` (contradictory intent).
-- Backends SHOULD NOT advertise this capability by default; it is intended for explicitly
-  externally sandboxed hosts (e.g. Substrate).
-
-Backend mapping:
-- Codex: pass `--dangerously-bypass-approvals-and-sandbox` (or an equivalent combination of
-  “never prompt” + “no internal sandbox” when the convenience flag is unavailable).
-- Claude Code: pass `--dangerously-skip-permissions` (and, if required by the detected CLI version,
-  also pass `--allow-dangerously-skip-permissions`).
-
 ### Backend (Codex): `backend.codex.exec.cli_overrides.v1` (object)
 
 Intent: replace open-ended `--config`/`--enable/--disable` pass-through with a typed subset of
@@ -335,7 +311,8 @@ Cons:
 - Define + implement:
   - `agent_api.config.model.v1` (uaa-0002)
   - `agent_api.exec.add_dirs.v1` (uaa-0003)
-  - `agent_api.exec.external_sandbox.v1` (uaa-0016; needs owner-doc spec entry)
+  - `agent_api.exec.external_sandbox.v1` (uaa-0016; see
+    `docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md`; needs owner-doc spec entry)
 - Define backend-owned docs for the new backend keys and implement them in `agent_api`:
   - `backend.codex.exec.cli_overrides.v1`
   - `backend.claude_code.settings.v1`

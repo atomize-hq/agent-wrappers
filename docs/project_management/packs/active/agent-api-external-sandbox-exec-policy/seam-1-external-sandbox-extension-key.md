@@ -23,6 +23,7 @@
 
 - **Extension key**: `agent_api.exec.external_sandbox.v1`
   - **Type**: boolean
+  - **Default when absent**: `false` (per `docs/specs/universal-agent-api/extensions-spec.md`)
   - **Meaning**: when `true`, the host asserts it provides isolation externally and requests the
     backend relax internal guardrails accordingly.
   - **Validation**: MUST be validated before spawn; non-boolean values fail with
@@ -33,14 +34,18 @@
 - **Cross-key contradiction rule**:
   - When `agent_api.exec.external_sandbox.v1 == true`, the backend MUST remain non-interactive.
   - If `agent_api.exec.non_interactive == false` is explicitly requested alongside it (and both
-    keys are supported), the backend SHOULD fail closed with `AgentWrapperError::InvalidRequest`.
+    keys are supported), the backend MUST fail before spawn with `AgentWrapperError::InvalidRequest`
+    (contradictory intent).
 
 ## Key invariants / rules
 
 - This key is explicitly dangerous:
-  - built-in backends SHOULD NOT advertise it by default,
+  - built-in backends MUST NOT advertise it by default,
   - it MUST remain capability-gated,
   - and it MUST remain non-interactive (no hangs on prompts).
+- Observability / audit signal (v1, pinned; canonical):
+  - See `docs/specs/universal-agent-api/extensions-spec.md` under
+    `agent_api.exec.external_sandbox.v1` for the required `Status` warning event and emission timing.
 
 ## Dependencies
 
@@ -54,14 +59,17 @@
 ## Verification
 
 - Spec review: confirm schema, defaults, and contradiction rules are unambiguous.
-- Local validation: run the relevant `xtask` spec validation (as applicable for spec changes).
+- Local validation (pinned commands + pass criteria):
+  - Capability matrix (required once any backend capability advertisement changes land):
+    - `cargo run -p xtask -- capability-matrix` (must exit 0; output is deterministic)
+    - `cargo run -p xtask -- capability-matrix-audit` (must exit 0)
+  - Integration gate (WS-INT): `make preflight` must pass before merge.
 
 ## Risks / unknowns
 
-- Deciding whether this key overrides or rejects other exec-policy keys (footgun risk).
+- None (pinned: `external_sandbox=true` rejects `backend.<agent_kind>.exec.*` keys; see `extensions-spec.md`).
 
 ## Rollout / safety
 
 - Default posture: not advertised by built-in backends.
 - Hosts must opt in explicitly (backend config + per-run extension key).
-

@@ -18,6 +18,7 @@ pub(super) struct ExecFlowRequest {
     pub(super) termination:
         Option<Arc<super::super::termination::TerminationState<super::CodexTerminationHandle>>>,
     pub(super) non_interactive: bool,
+    pub(super) external_sandbox: bool,
     pub(super) approval_policy: Option<super::CodexApprovalPolicy>,
     pub(super) sandbox_mode: super::CodexSandboxMode,
     pub(super) resume: Option<super::SessionSelectorV1>,
@@ -39,6 +40,29 @@ struct CodexStreamState {
 enum CodexTailEvent {
     NonZeroExit { status: ExitStatus },
     TerminalError { message: String },
+}
+
+fn is_unknown_bypass_flag_stderr(stderr: &str) -> bool {
+    let stderr = stderr.to_ascii_lowercase();
+    if !stderr.contains("dangerously-bypass-approvals-and-sandbox") {
+        return false;
+    }
+
+    const UNKNOWN_SIGNALS: &[&str] = &[
+        "unknown",
+        "unrecognized",
+        "unexpected",
+        "unknown option",
+        "unknown flag",
+        "unrecognized option",
+        "unrecognized flag",
+        "unexpected argument",
+        "found argument",
+        "invalid option",
+        "invalid flag",
+    ];
+
+    UNKNOWN_SIGNALS.iter().any(|signal| stderr.contains(signal))
 }
 
 fn map_approval_policy(policy: &super::CodexApprovalPolicy) -> codex::ApprovalPolicy {
@@ -69,6 +93,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
         run_start_cwd,
         termination,
         non_interactive,
+        external_sandbox,
         approval_policy,
         sandbox_mode,
         resume,
@@ -84,6 +109,10 @@ pub(super) async fn spawn_exec_or_resume_flow(
         .quiet(true)
         .color_mode(codex::ColorMode::Never)
         .sandbox_mode(map_sandbox_mode(&sandbox_mode));
+
+    if external_sandbox {
+        builder = builder.dangerously_bypass_approvals_and_sandbox(true);
+    }
 
     if non_interactive {
         builder = builder.approval_policy(codex::ApprovalPolicy::Never);
@@ -182,27 +211,39 @@ pub(super) async fn spawn_exec_or_resume_flow(
                 let _ = tail_tx.send(None);
             }
             Err(ExecStreamError::Codex(CodexError::NonZeroExit { status, stderr })) => {
-                let selection_failure_message = resume_selector.as_ref().and_then(|selector| {
-                    let snapshot = stream_state_for_completion.lock().ok()?;
-                    if snapshot.saw_thread_id || snapshot.saw_stream_error {
-                        return None;
-                    }
-
-                    let stderr_not_found = super::is_not_found_signal(&stderr);
-                    let transport_message_not_found = snapshot
-                        .last_transport_error_message
-                        .as_deref()
-                        .is_some_and(super::is_not_found_signal);
-                    let transport_code_not_found = snapshot
-                        .last_transport_error_code
-                        .as_deref()
-                        .is_some_and(super::is_not_found_signal);
-
-                    if stderr_not_found || transport_message_not_found || transport_code_not_found {
-                        Some(super::pinned_selection_failure_message(selector).to_string())
+                let bypass_flag_unsupported_message =
+                    if external_sandbox && is_unknown_bypass_flag_stderr(&stderr) {
+                        Some(super::PINNED_EXTERNAL_SANDBOX_FLAG_UNSUPPORTED.to_string())
                     } else {
                         None
-                    }
+                    };
+
+                let selection_failure_message = bypass_flag_unsupported_message.or_else(|| {
+                    resume_selector.as_ref().and_then(|selector| {
+                        let snapshot = stream_state_for_completion.lock().ok()?;
+                        if snapshot.saw_thread_id || snapshot.saw_stream_error {
+                            return None;
+                        }
+
+                        let stderr_not_found = super::is_not_found_signal(&stderr);
+                        let transport_message_not_found = snapshot
+                            .last_transport_error_message
+                            .as_deref()
+                            .is_some_and(super::is_not_found_signal);
+                        let transport_code_not_found = snapshot
+                            .last_transport_error_code
+                            .as_deref()
+                            .is_some_and(super::is_not_found_signal);
+
+                        if stderr_not_found
+                            || transport_message_not_found
+                            || transport_code_not_found
+                        {
+                            Some(super::pinned_selection_failure_message(selector).to_string())
+                        } else {
+                            None
+                        }
+                    })
                 });
 
                 let tail = if let Some(message) = selection_failure_message.clone() {

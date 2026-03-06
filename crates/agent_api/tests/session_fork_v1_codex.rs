@@ -2,6 +2,8 @@
 
 #[path = "session_fork_v1_codex/cancellation.rs"]
 mod cancellation;
+#[path = "session_fork_v1_codex/external_sandbox.rs"]
+mod external_sandbox;
 #[path = "session_fork_v1_codex/fork_id.rs"]
 mod fork_id;
 #[path = "session_fork_v1_codex/fork_last.rs"]

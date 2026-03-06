@@ -1,6 +1,7 @@
 use super::*;
-use crate::{AgentWrapperBackend, AgentWrapperEventKind};
+use crate::{AgentWrapperBackend, AgentWrapperError, AgentWrapperEventKind};
 use claude_code::{ClaudeStreamJsonEvent, ClaudeStreamJsonParser};
+use serde_json::Value;
 
 const SYSTEM_INIT: &str =
     include_str!("../../../../claude_code/tests/fixtures/stream_json/v1/system_init.jsonl");
@@ -71,11 +72,34 @@ fn success_exit_status() -> std::process::ExitStatus {
     }
 }
 
+fn exit_status_with_code(code: i32) -> std::process::ExitStatus {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::ExitStatusExt;
+        std::process::ExitStatus::from_raw(code << 8)
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::ExitStatusExt;
+        std::process::ExitStatus::from_raw(code as u32)
+    }
+}
+
 fn new_adapter() -> ClaudeHarnessAdapter {
     ClaudeHarnessAdapter {
         config: ClaudeCodeBackendConfig::default(),
         termination: None,
         handle_state: std::sync::Arc::new(std::sync::Mutex::new(ClaudeHandleFacetState::default())),
+        allow_flag_preflight: std::sync::Arc::new(OnceCell::new()),
+    }
+}
+
+fn new_adapter_with_config(config: ClaudeCodeBackendConfig) -> ClaudeHarnessAdapter {
+    ClaudeHarnessAdapter {
+        config,
+        termination: None,
+        handle_state: std::sync::Arc::new(std::sync::Mutex::new(ClaudeHandleFacetState::default())),
+        allow_flag_preflight: std::sync::Arc::new(OnceCell::new()),
     }
 }
 
@@ -109,6 +133,118 @@ fn claude_backend_reports_required_capabilities() {
     assert!(capabilities.contains(CAP_SESSION_HANDLE_V1));
     assert!(capabilities.contains(EXT_SESSION_RESUME_V1));
     assert!(capabilities.contains(EXT_SESSION_FORK_V1));
+}
+
+#[test]
+fn claude_backend_does_not_advertise_external_sandbox_exec_by_default() {
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig::default());
+    let capabilities = backend.capabilities();
+    assert!(!capabilities.contains(EXT_EXTERNAL_SANDBOX_V1));
+}
+
+#[test]
+fn claude_backend_opt_in_advertises_external_sandbox_exec_and_allowlist_accepts_key() {
+    let config = ClaudeCodeBackendConfig {
+        allow_external_sandbox_exec: true,
+        ..Default::default()
+    };
+
+    let backend = ClaudeCodeBackend::new(config.clone());
+    let capabilities = backend.capabilities();
+    assert!(capabilities.contains(EXT_EXTERNAL_SANDBOX_V1));
+
+    let adapter = new_adapter_with_config(config);
+    let defaults = crate::backend_harness::BackendDefaults::default();
+    let request = AgentWrapperRunRequest {
+        prompt: "hello".to_string(),
+        extensions: [(EXT_EXTERNAL_SANDBOX_V1.to_string(), Value::Bool(true))]
+            .into_iter()
+            .collect(),
+        ..Default::default()
+    };
+
+    crate::backend_harness::normalize_request(&adapter, &defaults, request)
+        .expect("external sandbox extension key should be allowlisted when opted-in");
+}
+
+#[test]
+fn claude_backend_fails_closed_for_external_sandbox_extension_when_opt_in_disabled() {
+    let adapter = new_adapter();
+    let defaults = crate::backend_harness::BackendDefaults::default();
+    let request = AgentWrapperRunRequest {
+        prompt: "hello".to_string(),
+        extensions: [(EXT_EXTERNAL_SANDBOX_V1.to_string(), Value::Bool(true))]
+            .into_iter()
+            .collect(),
+        ..Default::default()
+    };
+
+    let err = match crate::backend_harness::normalize_request(&adapter, &defaults, request) {
+        Ok(_) => panic!("expected normalize_request to reject unsupported extension key"),
+        Err(err) => err,
+    };
+    match err {
+        AgentWrapperError::UnsupportedCapability { capability, .. } => {
+            assert_eq!(capability, EXT_EXTERNAL_SANDBOX_V1);
+        }
+        other => panic!("expected UnsupportedCapability, got: {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn allow_flag_preflight_retries_after_failure() {
+    let cell = OnceCell::new();
+
+    let result = preflight_allow_flag_support(&cell, || async {
+        Ok::<_, claude_code::ClaudeCodeError>(claude_code::CommandOutput {
+            status: exit_status_with_code(1),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        })
+    })
+    .await;
+
+    assert!(result.is_err(), "preflight should surface the failure");
+    assert!(
+        cell.get().is_none(),
+        "failed preflight should not initialize the OnceCell"
+    );
+
+    let supported = preflight_allow_flag_support(&cell, || async {
+        Ok::<_, claude_code::ClaudeCodeError>(claude_code::CommandOutput {
+            status: success_exit_status(),
+            stdout: b"--allow-dangerously-skip-permissions".to_vec(),
+            stderr: Vec::new(),
+        })
+    })
+    .await
+    .expect("preflight should succeed");
+
+    assert!(supported);
+    assert_eq!(cell.get().copied(), Some(true));
+
+    let called = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let called_clone = std::sync::Arc::clone(&called);
+    let supported = preflight_allow_flag_support(&cell, move || {
+        let called = std::sync::Arc::clone(&called_clone);
+        async move {
+            called.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Ok::<_, claude_code::ClaudeCodeError>(claude_code::CommandOutput {
+                status: success_exit_status(),
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+            })
+        }
+    })
+    .await
+    .expect("cached preflight should succeed");
+
+    assert!(supported);
+    assert_eq!(
+        called.load(std::sync::atomic::Ordering::SeqCst),
+        0,
+        "cached preflight should not re-run help()"
+    );
 }
 
 #[test]

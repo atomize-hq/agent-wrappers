@@ -12,6 +12,8 @@ use super::super::{
 use super::{normalize_request, parse_ext_bool, parse_ext_string_enum};
 use crate::{AgentWrapperCompletion, AgentWrapperError, AgentWrapperRunRequest};
 
+mod c03_timeout;
+
 #[test]
 fn bh_c02_unknown_extension_key_is_rejected_via_normalize_request() {
     struct PanicOnPolicyAdapter;
@@ -105,6 +107,107 @@ fn bh_c02_unknown_extension_key_is_rejected_via_normalize_request() {
         other => panic!("expected UnsupportedCapability, got: {other:?}"),
     }
     assert!(!err.to_string().contains("SECRET_SHOULD_NOT_LEAK"));
+}
+
+#[test]
+fn bh_r0_external_sandbox_key_is_rejected_before_policy_validation_via_normalize_request() {
+    struct PanicOnPolicyAdapter;
+
+    impl BackendHarnessAdapter for PanicOnPolicyAdapter {
+        fn kind(&self) -> crate::AgentWrapperKind {
+            toy_kind()
+        }
+
+        fn supported_extension_keys(&self) -> &'static [&'static str] {
+            &["agent_api.exec.non_interactive"]
+        }
+
+        type Policy = ToyPolicy;
+
+        fn validate_and_extract_policy(
+            &self,
+            _request: &AgentWrapperRunRequest,
+        ) -> Result<Self::Policy, crate::AgentWrapperError> {
+            panic!("validate_and_extract_policy must not be called for unsupported keys");
+        }
+
+        type BackendEvent = ToyEvent;
+        type BackendCompletion = ToyCompletion;
+        type BackendError = ToyBackendError;
+
+        fn spawn(
+            &self,
+            _req: NormalizedRequest<Self::Policy>,
+        ) -> std::pin::Pin<
+            Box<
+                dyn std::future::Future<
+                        Output = Result<
+                            super::super::contract::BackendSpawn<
+                                Self::BackendEvent,
+                                Self::BackendCompletion,
+                                Self::BackendError,
+                            >,
+                            Self::BackendError,
+                        >,
+                    > + Send
+                    + 'static,
+            >,
+        > {
+            panic!("spawn must not be called from normalize_request");
+        }
+
+        fn map_event(&self, _event: Self::BackendEvent) -> Vec<crate::AgentWrapperEvent> {
+            panic!("map_event must not be called from normalize_request");
+        }
+
+        fn map_completion(
+            &self,
+            _completion: Self::BackendCompletion,
+        ) -> Result<AgentWrapperCompletion, crate::AgentWrapperError> {
+            panic!("map_completion must not be called from normalize_request");
+        }
+
+        fn redact_error(
+            &self,
+            _phase: BackendHarnessErrorPhase,
+            _err: &Self::BackendError,
+        ) -> String {
+            panic!("redact_error must not be called from normalize_request");
+        }
+    }
+
+    let adapter = PanicOnPolicyAdapter;
+    let defaults = BackendDefaults::default();
+    let secret = "SECRET_SHOULD_NOT_LEAK";
+
+    let mut request = AgentWrapperRunRequest {
+        prompt: "hello".to_string(),
+        ..Default::default()
+    };
+    request.extensions.insert(
+        "agent_api.exec.external_sandbox.v1".to_string(),
+        Value::String(secret.to_string()),
+    );
+    request.extensions.insert(
+        "agent_api.exec.non_interactive".to_string(),
+        Value::Bool(false),
+    );
+
+    let err = match normalize_request(&adapter, &defaults, request) {
+        Ok(_) => panic!("unsupported key must fail closed"),
+        Err(err) => err,
+    };
+    match &err {
+        AgentWrapperError::UnsupportedCapability {
+            agent_kind,
+            capability,
+        } => {
+            assert_eq!(agent_kind, "toy");
+            assert_eq!(capability, "agent_api.exec.external_sandbox.v1");
+        }
+        other => panic!("expected UnsupportedCapability, got: {other:?}"),
+    }
+    assert!(!err.to_string().contains(secret));
 }
 
 #[test]
@@ -512,70 +615,6 @@ fn bh_c03_env_merge_empty_cases_via_normalize_request() {
     };
     let normalized = normalize_request(&adapter, &defaults, request).expect("normalizes");
     assert_eq!(normalized.env.get("Y").map(String::as_str), Some("y"));
-}
-
-#[test]
-fn bh_c03_timeout_derivation_matrix_via_normalize_request() {
-    let adapter = ToyAdapter { fail_spawn: false };
-
-    struct Case {
-        request: Option<Duration>,
-        default: Option<Duration>,
-        expected: Option<Duration>,
-    }
-
-    let cases = [
-        Case {
-            request: Some(Duration::from_secs(5)),
-            default: Some(Duration::from_secs(7)),
-            expected: Some(Duration::from_secs(5)),
-        },
-        Case {
-            request: Some(Duration::from_secs(5)),
-            default: None,
-            expected: Some(Duration::from_secs(5)),
-        },
-        Case {
-            request: None,
-            default: Some(Duration::from_secs(7)),
-            expected: Some(Duration::from_secs(7)),
-        },
-        Case {
-            request: None,
-            default: None,
-            expected: None,
-        },
-    ];
-
-    for case in cases {
-        let defaults = BackendDefaults {
-            env: BTreeMap::new(),
-            default_timeout: case.default,
-        };
-        let request = AgentWrapperRunRequest {
-            prompt: "hello".to_string(),
-            timeout: case.request,
-            ..Default::default()
-        };
-        let normalized = normalize_request(&adapter, &defaults, request).expect("normalizes");
-        assert_eq!(normalized.effective_timeout, case.expected);
-    }
-}
-
-#[test]
-fn bh_c03_timeout_duration_zero_is_preserved_via_normalize_request() {
-    let adapter = ToyAdapter { fail_spawn: false };
-    let defaults = BackendDefaults {
-        env: BTreeMap::new(),
-        default_timeout: Some(Duration::from_secs(7)),
-    };
-    let request = AgentWrapperRunRequest {
-        prompt: "hello".to_string(),
-        timeout: Some(Duration::ZERO),
-        ..Default::default()
-    };
-    let normalized = normalize_request(&adapter, &defaults, request).expect("normalizes");
-    assert_eq!(normalized.effective_timeout, Some(Duration::ZERO));
 }
 
 #[test]

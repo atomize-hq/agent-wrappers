@@ -14,7 +14,11 @@
   - Map `agent_api.exec.external_sandbox.v1 == true` to:
     - `claude --print --dangerously-skip-permissions ...`
   - Ensure the required "allow" flag behavior is deterministic pre-spawn:
-    - enable `--allow-dangerously-skip-permissions` when required by the installed CLI version.
+    - enable `--allow-dangerously-skip-permissions` when supported by the installed CLI version.
+    - pinned strategy: preflight by running `claude --help` once per backend instance, parse for the
+      allow flag token, and cache the boolean result (no spawn+retry loop).
+    - canonical mapping + preflight contract:
+      - `docs/specs/claude-code-session-mapping-contract.md`
 - Out:
   - Expanding Claude wrapper semantics beyond permission bypass (not requested).
 
@@ -27,7 +31,8 @@
 
 - MUST NOT hang on prompts.
 - MUST be validated before spawn.
-- SHOULD fail closed on explicit contradiction with `agent_api.exec.non_interactive == false`.
+- MUST fail before spawn with `AgentWrapperError::InvalidRequest` on explicit contradiction with
+  `agent_api.exec.non_interactive == false`.
 - Mapping must be deterministic across CLI versions (no "spawn then retry with different flags").
 
 ## Dependencies
@@ -39,7 +44,7 @@
 
 - `crates/agent_api/src/backends/claude_code.rs`
 - `crates/agent_api/src/backends/claude_code/tests.rs`
-- Potential shared helper for CLI flag detection/caching (location TBD).
+- v1 decision: keep allow-flag detection + caching **local** to the Claude backend (no shared helper).
 - `crates/claude_code/src/commands/print.rs` already supports
   `dangerously_skip_permissions(...)` + `allow_dangerously_skip_permissions(...)`.
 
@@ -49,13 +54,15 @@
   - default capabilities do not advertise the key,
   - contradiction behavior (`external_sandbox=true` + `non_interactive=false`) fails pre-spawn, and
   - argv includes `--dangerously-skip-permissions` (and includes/excludes the allow flag per the
-    chosen detection strategy).
+    pinned `claude --help` preflight strategy), including:
+    - allow-flag supported → argv includes `--allow-dangerously-skip-permissions`
+    - allow-flag not supported → argv excludes `--allow-dangerously-skip-permissions`
+    - preflight failure (help cannot be run) → fail before spawn as `AgentWrapperError::Backend { .. }`
 
 ## Risks / unknowns
 
-- Choosing a robust pre-spawn CLI capability detection strategy that is fast, cacheable, and safe.
+- None (pinned: `claude --help` preflight + cached allow-flag support check).
 
 ## Rollout / safety
 
 - Only reachable behind explicit host opt-in (SEAM-2).
-

@@ -9,7 +9,7 @@ use std::{
 };
 
 use codex::{CodexError, ExecStreamError, ThreadEvent};
-use serde_json::Value;
+use futures_util::{stream, StreamExt};
 
 use super::session_selectors::{
     parse_session_resume_v1, validate_resume_fork_mutual_exclusion, SessionSelectorV1,
@@ -39,6 +39,7 @@ pub struct CodexBackendConfig {
     pub default_timeout: Option<Duration>,
     pub default_working_dir: Option<PathBuf>,
     pub env: BTreeMap<String, String>,
+    pub allow_external_sandbox_exec: bool,
 }
 
 pub struct CodexBackend {
@@ -51,14 +52,14 @@ impl CodexBackend {
     }
 }
 
-const EXT_NON_INTERACTIVE: &str = "agent_api.exec.non_interactive";
-const EXT_CODEX_APPROVAL_POLICY: &str = "backend.codex.exec.approval_policy";
-const EXT_CODEX_SANDBOX_MODE: &str = "backend.codex.exec.sandbox_mode";
-
 const PINNED_APPROVAL_REQUIRED: &str = "approval required";
 const PINNED_TIMEOUT: &str = "codex backend error: timeout (details redacted when unsafe)";
 const PINNED_NO_SESSION_FOUND: &str = "no session found";
 const PINNED_SESSION_NOT_FOUND: &str = "session not found";
+const PINNED_EXTERNAL_SANDBOX_WARNING: &str =
+    "DANGEROUS: external sandbox exec policy enabled (agent_api.exec.external_sandbox.v1=true)";
+const PINNED_EXTERNAL_SANDBOX_FLAG_UNSUPPORTED: &str =
+    "codex backend error: installed codex does not support --dangerously-bypass-approvals-and-sandbox (details redacted)";
 
 fn pinned_selection_failure_message(selector: &SessionSelectorV1) -> &'static str {
     match selector {
@@ -79,120 +80,6 @@ fn is_not_found_signal(text: &str) -> bool {
         || text.contains("unknown thread")
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum CodexApprovalPolicy {
-    Untrusted,
-    OnFailure,
-    OnRequest,
-    Never,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum CodexSandboxMode {
-    ReadOnly,
-    WorkspaceWrite,
-    DangerFullAccess,
-}
-
-fn parse_bool(value: &Value, key: &str) -> Result<bool, AgentWrapperError> {
-    value
-        .as_bool()
-        .ok_or_else(|| AgentWrapperError::InvalidRequest {
-            message: format!("{key} must be a boolean"),
-        })
-}
-
-fn parse_string<'a>(value: &'a Value, key: &str) -> Result<&'a str, AgentWrapperError> {
-    value
-        .as_str()
-        .ok_or_else(|| AgentWrapperError::InvalidRequest {
-            message: format!("{key} must be a string"),
-        })
-}
-
-fn parse_codex_approval_policy(value: &Value) -> Result<CodexApprovalPolicy, AgentWrapperError> {
-    let raw = parse_string(value, EXT_CODEX_APPROVAL_POLICY)?;
-    match raw {
-        "untrusted" => Ok(CodexApprovalPolicy::Untrusted),
-        "on-failure" => Ok(CodexApprovalPolicy::OnFailure),
-        "on-request" => Ok(CodexApprovalPolicy::OnRequest),
-        "never" => Ok(CodexApprovalPolicy::Never),
-        other => Err(AgentWrapperError::InvalidRequest {
-            message: format!(
-                "{EXT_CODEX_APPROVAL_POLICY} must be one of: untrusted | on-failure | on-request | never (got {other:?})"
-            ),
-        }),
-    }
-}
-
-fn parse_codex_sandbox_mode(value: &Value) -> Result<CodexSandboxMode, AgentWrapperError> {
-    let raw = parse_string(value, EXT_CODEX_SANDBOX_MODE)?;
-    match raw {
-        "read-only" => Ok(CodexSandboxMode::ReadOnly),
-        "workspace-write" => Ok(CodexSandboxMode::WorkspaceWrite),
-        "danger-full-access" => Ok(CodexSandboxMode::DangerFullAccess),
-        other => Err(AgentWrapperError::InvalidRequest {
-            message: format!(
-                "{EXT_CODEX_SANDBOX_MODE} must be one of: read-only | workspace-write | danger-full-access (got {other:?})"
-            ),
-        }),
-    }
-}
-
-#[derive(Clone, Debug)]
-struct CodexExecPolicy {
-    non_interactive: bool,
-    approval_policy: Option<CodexApprovalPolicy>,
-    sandbox_mode: CodexSandboxMode,
-    resume: Option<SessionSelectorV1>,
-    fork: Option<SessionSelectorV1>,
-}
-
-fn validate_and_extract_exec_policy(
-    request: &AgentWrapperRunRequest,
-) -> Result<CodexExecPolicy, AgentWrapperError> {
-    let non_interactive = request
-        .extensions
-        .get(EXT_NON_INTERACTIVE)
-        .map(|value| parse_bool(value, EXT_NON_INTERACTIVE))
-        .transpose()?
-        .unwrap_or(true);
-
-    let approval_policy = request
-        .extensions
-        .get(EXT_CODEX_APPROVAL_POLICY)
-        .map(parse_codex_approval_policy)
-        .transpose()?;
-
-    let sandbox_mode = request
-        .extensions
-        .get(EXT_CODEX_SANDBOX_MODE)
-        .map(parse_codex_sandbox_mode)
-        .transpose()?
-        .unwrap_or(CodexSandboxMode::WorkspaceWrite);
-
-    if non_interactive
-        && matches!(
-            approval_policy,
-            Some(ref policy) if policy != &CodexApprovalPolicy::Never
-        )
-    {
-        return Err(AgentWrapperError::InvalidRequest {
-            message: format!(
-                "{EXT_CODEX_APPROVAL_POLICY} must be \"never\" when {EXT_NON_INTERACTIVE} is true"
-            ),
-        });
-    }
-
-    Ok(CodexExecPolicy {
-        non_interactive,
-        approval_policy,
-        sandbox_mode,
-        resume: None,
-        fork: None,
-    })
-}
-
 const CAP_TOOLS_STRUCTURED_V1: &str = "agent_api.tools.structured.v1";
 const CAP_TOOLS_RESULTS_V1: &str = "agent_api.tools.results.v1";
 const CAP_ARTIFACTS_FINAL_TEXT_V1: &str = "agent_api.artifacts.final_text.v1";
@@ -211,6 +98,16 @@ mod exec;
 
 #[path = "codex/fork.rs"]
 mod fork;
+
+#[path = "codex/policy.rs"]
+mod policy;
+
+use policy::{
+    validate_and_extract_exec_policy, CodexApprovalPolicy, CodexExecPolicy, CodexSandboxMode,
+    EXT_CODEX_APPROVAL_POLICY, EXT_CODEX_SANDBOX_MODE, EXT_EXTERNAL_SANDBOX_V1,
+    EXT_NON_INTERACTIVE, SUPPORTED_EXTENSION_KEYS_DEFAULT,
+    SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN,
+};
 
 use mapping::{error_event, map_thread_event};
 
@@ -302,6 +199,45 @@ fn redact_exec_stream_error(err: &ExecStreamError) -> String {
     }
 }
 
+fn render_backend_error_message(err: &CodexBackendError) -> String {
+    match err {
+        CodexBackendError::Exec(err) => redact_exec_stream_error(err),
+        CodexBackendError::AppServer(codex::mcp::McpError::Handshake(_)) => {
+            "codex app-server handshake failed".to_string()
+        }
+        CodexBackendError::AppServer(_) => "codex app-server rpc error".to_string(),
+        CodexBackendError::Timeout { timeout: _timeout } => PINNED_TIMEOUT.to_string(),
+        CodexBackendError::ForkSelectionEmpty => PINNED_NO_SESSION_FOUND.to_string(),
+        CodexBackendError::ForkSessionNotFound => PINNED_SESSION_NOT_FOUND.to_string(),
+        CodexBackendError::CompletionTaskDropped => "codex completion task dropped".to_string(),
+        CodexBackendError::WorkingDirectoryUnresolved => {
+            "codex backend failed to resolve working directory".to_string()
+        }
+    }
+}
+
+fn startup_failure_spawn(
+    err: CodexBackendError,
+    emit_external_sandbox_warning: bool,
+) -> BackendSpawn<CodexBackendEvent, CodexBackendCompletion, CodexBackendError> {
+    let message = render_backend_error_message(&err);
+    let events: crate::backend_harness::DynBackendEventStream<
+        CodexBackendEvent,
+        CodexBackendError,
+    > = if emit_external_sandbox_warning {
+        Box::pin(stream::iter(vec![
+            Ok(CodexBackendEvent::ExternalSandboxWarning),
+            Ok(CodexBackendEvent::TerminalError { message }),
+        ]))
+    } else {
+        Box::pin(stream::once(async move {
+            Ok(CodexBackendEvent::TerminalError { message })
+        }))
+    };
+    let completion = Box::pin(async move { Err(err) });
+    BackendSpawn { events, completion }
+}
+
 #[derive(Clone, Debug)]
 struct CodexHarnessAdapter {
     config: CodexBackendConfig,
@@ -321,6 +257,7 @@ struct CodexHandleFacetState {
 
 #[derive(Debug)]
 enum CodexBackendEvent {
+    ExternalSandboxWarning,
     Thread(Box<ThreadEvent>),
     AppServerNotification(codex::mcp::AppNotification),
     NonZeroExit { status: ExitStatus },
@@ -358,13 +295,11 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
     }
 
     fn supported_extension_keys(&self) -> &'static [&'static str] {
-        &[
-            EXT_NON_INTERACTIVE,
-            EXT_CODEX_APPROVAL_POLICY,
-            EXT_CODEX_SANDBOX_MODE,
-            EXT_SESSION_RESUME_V1,
-            EXT_SESSION_FORK_V1,
-        ]
+        if self.config.allow_external_sandbox_exec {
+            SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN
+        } else {
+            SUPPORTED_EXTENSION_KEYS_DEFAULT
+        }
     }
 
     type Policy = CodexExecPolicy;
@@ -420,6 +355,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         let handle_state = self.handle_state.clone();
         let CodexExecPolicy {
             non_interactive,
+            external_sandbox,
             approval_policy,
             sandbox_mode,
             resume,
@@ -431,8 +367,8 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         let env = req.env;
 
         Box::pin(async move {
-            if let Some(selector) = fork {
-                return fork::spawn_fork_v1_flow(fork::ForkFlowRequest {
+            let spawned = match if let Some(selector) = fork {
+                fork::spawn_fork_v1_flow(fork::ForkFlowRequest {
                     selector,
                     prompt,
                     working_dir,
@@ -442,32 +378,53 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                     run_start_cwd,
                     termination,
                     non_interactive,
+                    external_sandbox,
                     approval_policy,
                     sandbox_mode,
                     handle_state,
                 })
-                .await;
-            }
+                .await
+            } else {
+                exec::spawn_exec_or_resume_flow(exec::ExecFlowRequest {
+                    config,
+                    run_start_cwd,
+                    termination,
+                    non_interactive,
+                    external_sandbox,
+                    approval_policy,
+                    sandbox_mode,
+                    resume,
+                    prompt,
+                    working_dir,
+                    effective_timeout,
+                    env,
+                })
+                .await
+            } {
+                Ok(spawned) => spawned,
+                Err(err) if external_sandbox => return Ok(startup_failure_spawn(err, true)),
+                Err(err) => return Err(err),
+            };
 
-            exec::spawn_exec_or_resume_flow(exec::ExecFlowRequest {
-                config,
-                run_start_cwd,
-                termination,
-                non_interactive,
-                approval_policy,
-                sandbox_mode,
-                resume,
-                prompt,
-                working_dir,
-                effective_timeout,
-                env,
-            })
-            .await
+            let BackendSpawn { events, completion } = spawned;
+            let events = if external_sandbox {
+                Box::pin(
+                    stream::once(async move { Ok(CodexBackendEvent::ExternalSandboxWarning) })
+                        .chain(events),
+                )
+            } else {
+                events
+            };
+
+            Ok(BackendSpawn { events, completion })
         })
     }
 
     fn map_event(&self, event: Self::BackendEvent) -> Vec<AgentWrapperEvent> {
         match event {
+            CodexBackendEvent::ExternalSandboxWarning => vec![mapping::status_event(Some(
+                PINNED_EXTERNAL_SANDBOX_WARNING.to_string(),
+            ))],
             CodexBackendEvent::Thread(ev) => {
                 let mut emit_oversize_warning_len: Option<usize> = None;
 
@@ -642,20 +599,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
     }
 
     fn redact_error(&self, _phase: BackendHarnessErrorPhase, err: &Self::BackendError) -> String {
-        match err {
-            CodexBackendError::Exec(err) => redact_exec_stream_error(err),
-            CodexBackendError::AppServer(codex::mcp::McpError::Handshake(_)) => {
-                "codex app-server handshake failed".to_string()
-            }
-            CodexBackendError::AppServer(_) => "codex app-server rpc error".to_string(),
-            CodexBackendError::Timeout { timeout: _timeout } => PINNED_TIMEOUT.to_string(),
-            CodexBackendError::ForkSelectionEmpty => PINNED_NO_SESSION_FOUND.to_string(),
-            CodexBackendError::ForkSessionNotFound => PINNED_SESSION_NOT_FOUND.to_string(),
-            CodexBackendError::CompletionTaskDropped => "codex completion task dropped".to_string(),
-            CodexBackendError::WorkingDirectoryUnresolved => {
-                "codex backend failed to resolve working directory".to_string()
-            }
-        }
+        render_backend_error_message(err)
     }
 }
 
@@ -680,6 +624,9 @@ impl AgentWrapperBackend for CodexBackend {
         ids.insert(EXT_CODEX_SANDBOX_MODE.to_string());
         ids.insert(EXT_SESSION_RESUME_V1.to_string());
         ids.insert(EXT_SESSION_FORK_V1.to_string());
+        if self.config.allow_external_sandbox_exec {
+            ids.insert(EXT_EXTERNAL_SANDBOX_V1.to_string());
+        }
         AgentWrapperCapabilities { ids }
     }
 

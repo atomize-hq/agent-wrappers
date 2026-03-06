@@ -33,6 +33,7 @@ fn claude_backend_advertises_live_events_capability() {
 async fn events_are_observable_before_process_exit() {
     let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
         binary: Some(fake_claude_binary()),
+        claude_home: None,
         default_timeout: None,
         default_working_dir: None,
         env: [(
@@ -41,6 +42,7 @@ async fn events_are_observable_before_process_exit() {
         )]
         .into_iter()
         .collect(),
+        allow_external_sandbox_exec: false,
     });
 
     let handle = backend
@@ -85,6 +87,7 @@ async fn events_are_observable_before_process_exit() {
 async fn completion_is_gated_until_events_stream_is_drained_to_none() {
     let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
         binary: Some(fake_claude_binary()),
+        claude_home: None,
         default_timeout: None,
         default_working_dir: None,
         env: [(
@@ -93,6 +96,7 @@ async fn completion_is_gated_until_events_stream_is_drained_to_none() {
         )]
         .into_iter()
         .collect(),
+        allow_external_sandbox_exec: false,
     });
 
     let handle = backend
@@ -139,6 +143,7 @@ async fn completion_is_gated_until_events_stream_is_drained_to_none() {
 async fn dropping_events_stream_unblocks_completion() {
     let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
         binary: Some(fake_claude_binary()),
+        claude_home: None,
         default_timeout: None,
         default_working_dir: None,
         env: [(
@@ -147,6 +152,7 @@ async fn dropping_events_stream_unblocks_completion() {
         )]
         .into_iter()
         .collect(),
+        allow_external_sandbox_exec: false,
     });
 
     let handle = backend
@@ -171,6 +177,7 @@ async fn dropping_events_stream_unblocks_completion() {
 async fn final_text_is_populated_even_if_events_stream_is_dropped() {
     let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
         binary: Some(fake_claude_binary()),
+        claude_home: None,
         default_timeout: None,
         default_working_dir: None,
         env: [(
@@ -179,6 +186,7 @@ async fn final_text_is_populated_even_if_events_stream_is_dropped() {
         )]
         .into_iter()
         .collect(),
+        allow_external_sandbox_exec: false,
     });
 
     let handle = backend
@@ -204,6 +212,7 @@ async fn final_text_is_populated_even_if_events_stream_is_dropped() {
 async fn tools_facet_and_final_text_are_populated() {
     let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
         binary: Some(fake_claude_binary()),
+        claude_home: None,
         default_timeout: None,
         default_working_dir: None,
         env: [(
@@ -212,6 +221,7 @@ async fn tools_facet_and_final_text_are_populated() {
         )]
         .into_iter()
         .collect(),
+        allow_external_sandbox_exec: false,
     });
 
     let handle = backend
