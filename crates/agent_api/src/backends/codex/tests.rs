@@ -1,5 +1,8 @@
 use super::*;
-use crate::{AgentWrapperBackend, AgentWrapperEventKind};
+use crate::{
+    mcp::{AgentWrapperMcpGetRequest, AgentWrapperMcpListRequest},
+    AgentWrapperBackend, AgentWrapperError, AgentWrapperEventKind,
+};
 use codex::ThreadEvent;
 use futures_util::StreamExt;
 use serde_json::{json, Value};
@@ -113,6 +116,57 @@ fn codex_backend_mcp_write_capabilities_require_opt_in_and_target_support() {
         capabilities.contains(CAPABILITY_MCP_REMOVE_V1),
         codex_mcp_supported_on_target()
     );
+}
+
+#[tokio::test]
+async fn codex_backend_mcp_list_fails_closed_when_read_capability_is_unavailable() {
+    if codex_mcp_supported_on_target() {
+        return;
+    }
+
+    let backend = CodexBackend::new(CodexBackendConfig::default());
+    let err = backend
+        .mcp_list(AgentWrapperMcpListRequest::default())
+        .await
+        .expect_err("unsupported target should fail closed");
+
+    match err {
+        AgentWrapperError::UnsupportedCapability {
+            agent_kind,
+            capability,
+        } => {
+            assert_eq!(agent_kind, "codex");
+            assert_eq!(capability, CAPABILITY_MCP_LIST_V1);
+        }
+        other => panic!("expected UnsupportedCapability, got: {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn codex_backend_mcp_get_fails_closed_when_read_capability_is_unavailable() {
+    if codex_mcp_supported_on_target() {
+        return;
+    }
+
+    let backend = CodexBackend::new(CodexBackendConfig::default());
+    let err = backend
+        .mcp_get(AgentWrapperMcpGetRequest {
+            name: "demo".to_string(),
+            context: Default::default(),
+        })
+        .await
+        .expect_err("unsupported target should fail closed");
+
+    match err {
+        AgentWrapperError::UnsupportedCapability {
+            agent_kind,
+            capability,
+        } => {
+            assert_eq!(agent_kind, "codex");
+            assert_eq!(capability, CAPABILITY_MCP_GET_V1);
+        }
+        other => panic!("expected UnsupportedCapability, got: {other:?}"),
+    }
 }
 
 #[test]
