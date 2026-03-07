@@ -22,6 +22,10 @@ use crate::{
         BackendDefaults, BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn,
         NormalizedRequest,
     },
+    mcp::{
+        CAPABILITY_MCP_ADD_V1, CAPABILITY_MCP_GET_V1, CAPABILITY_MCP_LIST_V1,
+        CAPABILITY_MCP_REMOVE_V1,
+    },
     AgentWrapperBackend, AgentWrapperCapabilities, AgentWrapperCompletion, AgentWrapperError,
     AgentWrapperEvent, AgentWrapperEventKind, AgentWrapperKind, AgentWrapperRunControl,
     AgentWrapperRunHandle, AgentWrapperRunRequest,
@@ -64,6 +68,18 @@ const SESSION_HANDLE_OVERSIZE_WARNING: &str = "session handle omitted: id exceed
 const PINNED_EXTERNAL_SANDBOX_WARNING: &str =
     "DANGEROUS: external sandbox exec policy enabled (agent_api.exec.external_sandbox.v1=true)";
 
+fn claude_mcp_list_supported_on_target() -> bool {
+    cfg!(any(
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "macos", target_arch = "aarch64"),
+        all(target_os = "windows", target_arch = "x86_64")
+    ))
+}
+
+fn claude_mcp_get_supported_on_target() -> bool {
+    cfg!(all(target_os = "windows", target_arch = "x86_64"))
+}
+
 #[path = "claude_code/util.rs"]
 mod util;
 
@@ -90,6 +106,7 @@ pub struct ClaudeCodeBackendConfig {
     pub default_timeout: Option<Duration>,
     pub default_working_dir: Option<PathBuf>,
     pub env: BTreeMap<String, String>,
+    pub allow_mcp_write: bool,
     pub allow_external_sandbox_exec: bool,
 }
 
@@ -707,6 +724,16 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
         ids.insert(EXT_NON_INTERACTIVE.to_string());
         ids.insert(EXT_SESSION_RESUME_V1.to_string());
         ids.insert(EXT_SESSION_FORK_V1.to_string());
+        if claude_mcp_list_supported_on_target() {
+            ids.insert(CAPABILITY_MCP_LIST_V1.to_string());
+        }
+        if claude_mcp_get_supported_on_target() {
+            ids.insert(CAPABILITY_MCP_GET_V1.to_string());
+            if self.config.allow_mcp_write {
+                ids.insert(CAPABILITY_MCP_ADD_V1.to_string());
+                ids.insert(CAPABILITY_MCP_REMOVE_V1.to_string());
+            }
+        }
         if self.config.allow_external_sandbox_exec {
             ids.insert(EXT_EXTERNAL_SANDBOX_V1.to_string());
         }

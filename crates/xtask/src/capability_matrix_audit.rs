@@ -3,11 +3,15 @@ use std::collections::{BTreeMap, BTreeSet};
 use agent_api::AgentWrapperCapabilities;
 use clap::Parser;
 
-const AGENT_API_ORTHOGONALITY_ALLOWLIST: [&str; 4] = [
+const AGENT_API_ORTHOGONALITY_ALLOWLIST: [&str; 8] = [
     "agent_api.run",
     "agent_api.events",
     "agent_api.events.live",
     "agent_api.exec.non_interactive",
+    "agent_api.tools.mcp.list.v1",
+    "agent_api.tools.mcp.get.v1",
+    "agent_api.tools.mcp.add.v1",
+    "agent_api.tools.mcp.remove.v1",
 ];
 
 #[derive(Debug, Parser)]
@@ -153,6 +157,18 @@ mod tests {
     fn allowlisted_agent_api_cap_supported_by_1_backend_is_ignored() {
         let mut backends = BTreeMap::<String, AgentWrapperCapabilities>::new();
         backends.insert("claude_code".to_string(), caps(&["agent_api.run"]));
+        backends.insert("codex".to_string(), caps(&[]));
+
+        audit(&backends).unwrap();
+    }
+
+    #[test]
+    fn allowlisted_mcp_cap_supported_by_1_backend_is_ignored() {
+        let mut backends = BTreeMap::<String, AgentWrapperCapabilities>::new();
+        backends.insert(
+            "claude_code".to_string(),
+            caps(&["agent_api.tools.mcp.list.v1"]),
+        );
         backends.insert("codex".to_string(), caps(&[]));
 
         audit(&backends).unwrap();

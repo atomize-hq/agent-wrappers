@@ -136,6 +136,49 @@ fn claude_backend_reports_required_capabilities() {
 }
 
 #[test]
+fn claude_backend_mcp_write_capabilities_are_disabled_by_default() {
+    assert!(!ClaudeCodeBackendConfig::default().allow_mcp_write);
+
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig::default());
+    let capabilities = backend.capabilities();
+    assert_eq!(
+        capabilities.contains(CAPABILITY_MCP_LIST_V1),
+        claude_mcp_list_supported_on_target()
+    );
+    assert_eq!(
+        capabilities.contains(CAPABILITY_MCP_GET_V1),
+        claude_mcp_get_supported_on_target()
+    );
+    assert!(!capabilities.contains(CAPABILITY_MCP_ADD_V1));
+    assert!(!capabilities.contains(CAPABILITY_MCP_REMOVE_V1));
+}
+
+#[test]
+fn claude_backend_mcp_write_capabilities_require_opt_in_and_target_support() {
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
+        allow_mcp_write: true,
+        ..Default::default()
+    });
+    let capabilities = backend.capabilities();
+    assert_eq!(
+        capabilities.contains(CAPABILITY_MCP_LIST_V1),
+        claude_mcp_list_supported_on_target()
+    );
+    assert_eq!(
+        capabilities.contains(CAPABILITY_MCP_GET_V1),
+        claude_mcp_get_supported_on_target()
+    );
+    assert_eq!(
+        capabilities.contains(CAPABILITY_MCP_ADD_V1),
+        claude_mcp_get_supported_on_target()
+    );
+    assert_eq!(
+        capabilities.contains(CAPABILITY_MCP_REMOVE_V1),
+        claude_mcp_get_supported_on_target()
+    );
+}
+
+#[test]
 fn claude_backend_does_not_advertise_external_sandbox_exec_by_default() {
     let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig::default());
     let capabilities = backend.capabilities();

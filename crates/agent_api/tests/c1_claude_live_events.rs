@@ -42,6 +42,7 @@ async fn events_are_observable_before_process_exit() {
         )]
         .into_iter()
         .collect(),
+        allow_mcp_write: false,
         allow_external_sandbox_exec: false,
     });
 
@@ -96,6 +97,7 @@ async fn completion_is_gated_until_events_stream_is_drained_to_none() {
         )]
         .into_iter()
         .collect(),
+        allow_mcp_write: false,
         allow_external_sandbox_exec: false,
     });
 
@@ -152,6 +154,7 @@ async fn dropping_events_stream_unblocks_completion() {
         )]
         .into_iter()
         .collect(),
+        allow_mcp_write: false,
         allow_external_sandbox_exec: false,
     });
 
@@ -186,6 +189,7 @@ async fn final_text_is_populated_even_if_events_stream_is_dropped() {
         )]
         .into_iter()
         .collect(),
+        allow_mcp_write: false,
         allow_external_sandbox_exec: false,
     });
 
@@ -221,6 +225,7 @@ async fn tools_facet_and_final_text_are_populated() {
         )]
         .into_iter()
         .collect(),
+        allow_mcp_write: false,
         allow_external_sandbox_exec: false,
     });
 

@@ -73,6 +73,49 @@ fn codex_backend_reports_required_capabilities() {
 }
 
 #[test]
+fn codex_backend_mcp_write_capabilities_are_disabled_by_default() {
+    assert!(!CodexBackendConfig::default().allow_mcp_write);
+
+    let backend = CodexBackend::new(CodexBackendConfig::default());
+    let capabilities = backend.capabilities();
+    assert_eq!(
+        capabilities.contains(CAPABILITY_MCP_LIST_V1),
+        codex_mcp_supported_on_target()
+    );
+    assert_eq!(
+        capabilities.contains(CAPABILITY_MCP_GET_V1),
+        codex_mcp_supported_on_target()
+    );
+    assert!(!capabilities.contains(CAPABILITY_MCP_ADD_V1));
+    assert!(!capabilities.contains(CAPABILITY_MCP_REMOVE_V1));
+}
+
+#[test]
+fn codex_backend_mcp_write_capabilities_require_opt_in_and_target_support() {
+    let backend = CodexBackend::new(CodexBackendConfig {
+        allow_mcp_write: true,
+        ..Default::default()
+    });
+    let capabilities = backend.capabilities();
+    assert_eq!(
+        capabilities.contains(CAPABILITY_MCP_LIST_V1),
+        codex_mcp_supported_on_target()
+    );
+    assert_eq!(
+        capabilities.contains(CAPABILITY_MCP_GET_V1),
+        codex_mcp_supported_on_target()
+    );
+    assert_eq!(
+        capabilities.contains(CAPABILITY_MCP_ADD_V1),
+        codex_mcp_supported_on_target()
+    );
+    assert_eq!(
+        capabilities.contains(CAPABILITY_MCP_REMOVE_V1),
+        codex_mcp_supported_on_target()
+    );
+}
+
+#[test]
 fn codex_backend_does_not_advertise_external_sandbox_exec_by_default() {
     assert!(!CodexBackendConfig::default().allow_external_sandbox_exec);
 

@@ -37,6 +37,7 @@ Do not edit by hand.
 
 | capability id | `claude_code` | `codex` |
 |---|---|---|
+| `agent_api.tools.mcp.list.v1` | ✅ | — |
 | `agent_api.tools.results.v1` | ✅ | ✅ |
 | `agent_api.tools.structured.v1` | ✅ | ✅ |
 

@@ -21,6 +21,10 @@ use crate::{
         BackendDefaults, BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn,
         NormalizedRequest,
     },
+    mcp::{
+        CAPABILITY_MCP_ADD_V1, CAPABILITY_MCP_GET_V1, CAPABILITY_MCP_LIST_V1,
+        CAPABILITY_MCP_REMOVE_V1,
+    },
     AgentWrapperBackend, AgentWrapperCapabilities, AgentWrapperCompletion, AgentWrapperError,
     AgentWrapperEvent, AgentWrapperEventKind, AgentWrapperKind, AgentWrapperRunControl,
     AgentWrapperRunHandle, AgentWrapperRunRequest,
@@ -39,6 +43,7 @@ pub struct CodexBackendConfig {
     pub default_timeout: Option<Duration>,
     pub default_working_dir: Option<PathBuf>,
     pub env: BTreeMap<String, String>,
+    pub allow_mcp_write: bool,
     pub allow_external_sandbox_exec: bool,
 }
 
@@ -89,6 +94,14 @@ const TOOLS_FACET_SCHEMA: &str = "agent_api.tools.structured.v1";
 
 const SESSION_HANDLE_ID_BOUND_BYTES: usize = 1024;
 const SESSION_HANDLE_OVERSIZE_WARNING_MARKER: &str = "session handle id oversize";
+
+fn codex_mcp_supported_on_target() -> bool {
+    cfg!(all(
+        target_os = "linux",
+        target_arch = "x86_64",
+        target_env = "musl"
+    ))
+}
 
 #[path = "codex/mapping.rs"]
 mod mapping;
@@ -624,6 +637,14 @@ impl AgentWrapperBackend for CodexBackend {
         ids.insert(EXT_CODEX_SANDBOX_MODE.to_string());
         ids.insert(EXT_SESSION_RESUME_V1.to_string());
         ids.insert(EXT_SESSION_FORK_V1.to_string());
+        if codex_mcp_supported_on_target() {
+            ids.insert(CAPABILITY_MCP_LIST_V1.to_string());
+            ids.insert(CAPABILITY_MCP_GET_V1.to_string());
+            if self.config.allow_mcp_write {
+                ids.insert(CAPABILITY_MCP_ADD_V1.to_string());
+                ids.insert(CAPABILITY_MCP_REMOVE_V1.to_string());
+            }
+        }
         if self.config.allow_external_sandbox_exec {
             ids.insert(EXT_EXTERNAL_SANDBOX_V1.to_string());
         }
