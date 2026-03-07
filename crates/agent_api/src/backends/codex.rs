@@ -22,9 +22,9 @@ use crate::{
         NormalizedRequest,
     },
     mcp::{
-        AgentWrapperMcpCommandOutput, AgentWrapperMcpGetRequest, AgentWrapperMcpListRequest,
-        CAPABILITY_MCP_ADD_V1, CAPABILITY_MCP_GET_V1, CAPABILITY_MCP_LIST_V1,
-        CAPABILITY_MCP_REMOVE_V1,
+        AgentWrapperMcpAddRequest, AgentWrapperMcpCommandOutput, AgentWrapperMcpGetRequest,
+        AgentWrapperMcpListRequest, AgentWrapperMcpRemoveRequest, CAPABILITY_MCP_ADD_V1,
+        CAPABILITY_MCP_GET_V1, CAPABILITY_MCP_LIST_V1, CAPABILITY_MCP_REMOVE_V1,
     },
     AgentWrapperBackend, AgentWrapperCapabilities, AgentWrapperCompletion, AgentWrapperError,
     AgentWrapperEvent, AgentWrapperEventKind, AgentWrapperKind, AgentWrapperRunControl,
@@ -708,6 +708,56 @@ impl AgentWrapperBackend for CodexBackend {
 
         let config = self.config.clone();
         let argv = mcp_management::codex_mcp_get_argv(&request.name);
+        Box::pin(async move { mcp_management::run_codex_mcp(config, argv, request.context).await })
+    }
+
+    fn mcp_add(
+        &self,
+        request: AgentWrapperMcpAddRequest,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<AgentWrapperMcpCommandOutput, AgentWrapperError>>
+                + Send
+                + '_,
+        >,
+    > {
+        if !self.capabilities().contains(CAPABILITY_MCP_ADD_V1) {
+            let agent_kind = self.kind().as_str().to_string();
+            return Box::pin(async move {
+                Err(AgentWrapperError::UnsupportedCapability {
+                    agent_kind,
+                    capability: CAPABILITY_MCP_ADD_V1.to_string(),
+                })
+            });
+        }
+
+        let config = self.config.clone();
+        let argv = mcp_management::codex_mcp_add_argv(&request.name, &request.transport);
+        Box::pin(async move { mcp_management::run_codex_mcp(config, argv, request.context).await })
+    }
+
+    fn mcp_remove(
+        &self,
+        request: AgentWrapperMcpRemoveRequest,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<AgentWrapperMcpCommandOutput, AgentWrapperError>>
+                + Send
+                + '_,
+        >,
+    > {
+        if !self.capabilities().contains(CAPABILITY_MCP_REMOVE_V1) {
+            let agent_kind = self.kind().as_str().to_string();
+            return Box::pin(async move {
+                Err(AgentWrapperError::UnsupportedCapability {
+                    agent_kind,
+                    capability: CAPABILITY_MCP_REMOVE_V1.to_string(),
+                })
+            });
+        }
+
+        let config = self.config.clone();
+        let argv = mcp_management::codex_mcp_remove_argv(&request.name);
         Box::pin(async move { mcp_management::run_codex_mcp(config, argv, request.context).await })
     }
 

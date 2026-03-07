@@ -1,6 +1,9 @@
 use super::*;
 use crate::{
-    mcp::{AgentWrapperMcpGetRequest, AgentWrapperMcpListRequest},
+    mcp::{
+        AgentWrapperMcpAddRequest, AgentWrapperMcpAddTransport, AgentWrapperMcpGetRequest,
+        AgentWrapperMcpListRequest, AgentWrapperMcpRemoveRequest,
+    },
     AgentWrapperBackend, AgentWrapperError, AgentWrapperEventKind,
 };
 use codex::ThreadEvent;
@@ -53,6 +56,28 @@ fn tool_field<'a>(event: &'a AgentWrapperEvent, field: &str) -> Option<&'a Value
         .as_ref()
         .and_then(|data| data.get("tool"))
         .and_then(|tool| tool.get(field))
+}
+
+fn sample_mcp_add_request() -> AgentWrapperMcpAddRequest {
+    AgentWrapperMcpAddRequest {
+        name: "demo".to_string(),
+        transport: AgentWrapperMcpAddTransport::Stdio {
+            command: vec!["node".to_string()],
+            args: vec!["server.js".to_string()],
+            env: std::collections::BTreeMap::from([(
+                "SERVER_ONLY".to_string(),
+                "server-value".to_string(),
+            )]),
+        },
+        context: Default::default(),
+    }
+}
+
+fn sample_mcp_remove_request() -> AgentWrapperMcpRemoveRequest {
+    AgentWrapperMcpRemoveRequest {
+        name: "demo".to_string(),
+        context: Default::default(),
+    }
 }
 
 #[test]
@@ -164,6 +189,46 @@ async fn codex_backend_mcp_get_fails_closed_when_read_capability_is_unavailable(
         } => {
             assert_eq!(agent_kind, "codex");
             assert_eq!(capability, CAPABILITY_MCP_GET_V1);
+        }
+        other => panic!("expected UnsupportedCapability, got: {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn codex_backend_mcp_add_fails_closed_when_write_capability_is_disabled() {
+    let backend = CodexBackend::new(CodexBackendConfig::default());
+    let err = backend
+        .mcp_add(sample_mcp_add_request())
+        .await
+        .expect_err("write support should stay disabled by default");
+
+    match err {
+        AgentWrapperError::UnsupportedCapability {
+            agent_kind,
+            capability,
+        } => {
+            assert_eq!(agent_kind, "codex");
+            assert_eq!(capability, CAPABILITY_MCP_ADD_V1);
+        }
+        other => panic!("expected UnsupportedCapability, got: {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn codex_backend_mcp_remove_fails_closed_when_write_capability_is_disabled() {
+    let backend = CodexBackend::new(CodexBackendConfig::default());
+    let err = backend
+        .mcp_remove(sample_mcp_remove_request())
+        .await
+        .expect_err("write support should stay disabled by default");
+
+    match err {
+        AgentWrapperError::UnsupportedCapability {
+            agent_kind,
+            capability,
+        } => {
+            assert_eq!(agent_kind, "codex");
+            assert_eq!(capability, CAPABILITY_MCP_REMOVE_V1);
         }
         other => panic!("expected UnsupportedCapability, got: {other:?}"),
     }
@@ -335,6 +400,32 @@ fn codex_backend_routes_through_harness_and_does_not_reintroduce_orchestration_p
     assert!(
         !SOURCE.contains("tokio::time::timeout("),
         "expected Codex backend to not wrap runs with backend-local timeout orchestration"
+    );
+}
+
+#[test]
+fn codex_backend_mcp_write_hooks_route_through_shared_mcp_runner() {
+    const SOURCE: &str = include_str!("../codex.rs");
+
+    assert!(
+        SOURCE.contains("fn mcp_add("),
+        "expected Codex backend to implement mcp_add"
+    );
+    assert!(
+        SOURCE.contains("mcp_management::codex_mcp_add_argv"),
+        "expected mcp_add to build pinned argv via the shared helper module"
+    );
+    assert!(
+        SOURCE.contains("fn mcp_remove("),
+        "expected Codex backend to implement mcp_remove"
+    );
+    assert!(
+        SOURCE.contains("mcp_management::codex_mcp_remove_argv"),
+        "expected mcp_remove to build pinned argv via the shared helper module"
+    );
+    assert!(
+        SOURCE.matches("mcp_management::run_codex_mcp(").count() >= 4,
+        "expected list/get/add/remove hooks to reuse the shared Codex MCP runner"
     );
 }
 

@@ -11,7 +11,9 @@ use tokio::{
 
 use crate::{
     bounds::{enforce_mcp_output_bound, MCP_STDERR_BOUND_BYTES, MCP_STDOUT_BOUND_BYTES},
-    mcp::{AgentWrapperMcpCommandContext, AgentWrapperMcpCommandOutput},
+    mcp::{
+        AgentWrapperMcpAddTransport, AgentWrapperMcpCommandContext, AgentWrapperMcpCommandOutput,
+    },
     AgentWrapperError,
 };
 
@@ -50,6 +52,50 @@ pub(super) fn codex_mcp_get_argv(name: &str) -> Vec<OsString> {
         OsString::from("--json"),
         OsString::from(name),
     ]
+}
+
+pub(super) fn codex_mcp_remove_argv(name: &str) -> Vec<OsString> {
+    vec![
+        OsString::from("mcp"),
+        OsString::from("remove"),
+        OsString::from(name),
+    ]
+}
+
+pub(super) fn codex_mcp_add_argv(
+    name: &str,
+    transport: &AgentWrapperMcpAddTransport,
+) -> Vec<OsString> {
+    let mut argv = vec![
+        OsString::from("mcp"),
+        OsString::from("add"),
+        OsString::from(name),
+    ];
+
+    match transport {
+        AgentWrapperMcpAddTransport::Stdio { command, args, env } => {
+            for (key, value) in env {
+                argv.push(OsString::from("--env"));
+                argv.push(OsString::from(format!("{key}={value}")));
+            }
+            argv.push(OsString::from("--"));
+            argv.extend(command.iter().cloned().map(OsString::from));
+            argv.extend(args.iter().cloned().map(OsString::from));
+        }
+        AgentWrapperMcpAddTransport::Url {
+            url,
+            bearer_token_env_var,
+        } => {
+            argv.push(OsString::from("--url"));
+            argv.push(OsString::from(url));
+            if let Some(env_var) = bearer_token_env_var {
+                argv.push(OsString::from("--bearer-token-env-var"));
+                argv.push(OsString::from(env_var));
+            }
+        }
+    }
+
+    argv
 }
 
 pub(super) async fn run_codex_mcp(
@@ -279,6 +325,12 @@ fn backend_error(message: &'static str) -> AgentWrapperError {
 mod tests {
     use super::*;
     use std::collections::BTreeMap;
+    #[cfg(unix)]
+    use std::{
+        fs,
+        os::unix::fs::PermissionsExt,
+        time::{SystemTime, UNIX_EPOCH},
+    };
 
     use tokio::io::{AsyncWriteExt, DuplexStream};
 
@@ -312,6 +364,32 @@ mod tests {
         writer.shutdown().await.expect("shutdown succeeds");
     }
 
+    #[cfg(unix)]
+    fn temp_test_dir(label: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after epoch")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!(
+            "agent-api-codex-mcp-{label}-{}-{unique}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&dir).expect("temp dir should be created");
+        dir
+    }
+
+    #[cfg(unix)]
+    fn write_fake_codex(dir: &PathBuf, script: &str) -> PathBuf {
+        let path = dir.join("codex");
+        fs::write(&path, script).expect("script should be written");
+        let mut permissions = fs::metadata(&path)
+            .expect("script metadata should exist")
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&path, permissions).expect("script should be executable");
+        path
+    }
+
     #[test]
     fn codex_mcp_list_argv_is_pinned() {
         assert_eq!(
@@ -335,6 +413,143 @@ mod tests {
                 OsString::from("demo"),
             ]
         );
+    }
+
+    #[test]
+    fn codex_mcp_remove_argv_is_pinned() {
+        assert_eq!(
+            codex_mcp_remove_argv("demo"),
+            vec![
+                OsString::from("mcp"),
+                OsString::from("remove"),
+                OsString::from("demo"),
+            ]
+        );
+    }
+
+    #[test]
+    fn codex_mcp_add_argv_maps_stdio_transport_with_sorted_env_and_separator() {
+        let transport = AgentWrapperMcpAddTransport::Stdio {
+            command: vec!["node".to_string()],
+            args: vec!["server.js".to_string(), "--flag".to_string()],
+            env: BTreeMap::from([
+                ("BETA".to_string(), "two".to_string()),
+                ("ALPHA".to_string(), "one".to_string()),
+            ]),
+        };
+
+        assert_eq!(
+            codex_mcp_add_argv("demo", &transport),
+            vec![
+                OsString::from("mcp"),
+                OsString::from("add"),
+                OsString::from("demo"),
+                OsString::from("--env"),
+                OsString::from("ALPHA=one"),
+                OsString::from("--env"),
+                OsString::from("BETA=two"),
+                OsString::from("--"),
+                OsString::from("node"),
+                OsString::from("server.js"),
+                OsString::from("--flag"),
+            ]
+        );
+    }
+
+    #[test]
+    fn codex_mcp_add_argv_maps_url_transport() {
+        let transport = AgentWrapperMcpAddTransport::Url {
+            url: "https://example.test/mcp".to_string(),
+            bearer_token_env_var: Some("TOKEN_ENV".to_string()),
+        };
+
+        assert_eq!(
+            codex_mcp_add_argv("demo", &transport),
+            vec![
+                OsString::from("mcp"),
+                OsString::from("add"),
+                OsString::from("demo"),
+                OsString::from("--url"),
+                OsString::from("https://example.test/mcp"),
+                OsString::from("--bearer-token-env-var"),
+                OsString::from("TOKEN_ENV"),
+            ]
+        );
+    }
+
+    #[test]
+    fn codex_mcp_add_argv_maps_url_transport_without_bearer_env() {
+        let transport = AgentWrapperMcpAddTransport::Url {
+            url: "https://example.test/mcp".to_string(),
+            bearer_token_env_var: None,
+        };
+
+        assert_eq!(
+            codex_mcp_add_argv("demo", &transport),
+            vec![
+                OsString::from("mcp"),
+                OsString::from("add"),
+                OsString::from("demo"),
+                OsString::from("--url"),
+                OsString::from("https://example.test/mcp"),
+            ]
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn run_codex_mcp_uses_context_env_without_leaking_stdio_transport_env() {
+        let temp_dir = temp_test_dir("write-env");
+        let script_path = write_fake_codex(
+            &temp_dir,
+            r#"#!/usr/bin/env bash
+printf "%s\n" "$@"
+printf "CLI_ONLY=%s\n" "${CLI_ONLY-unset}" 1>&2
+printf "SERVER_ONLY=%s\n" "${SERVER_ONLY-unset}" 1>&2
+"#,
+        );
+
+        let transport = AgentWrapperMcpAddTransport::Stdio {
+            command: vec!["node".to_string()],
+            args: vec!["server.js".to_string()],
+            env: BTreeMap::from([("SERVER_ONLY".to_string(), "server-value".to_string())]),
+        };
+        let argv = codex_mcp_add_argv("demo", &transport);
+        let context = AgentWrapperMcpCommandContext {
+            env: BTreeMap::from([("CLI_ONLY".to_string(), "cli-value".to_string())]),
+            ..Default::default()
+        };
+
+        let result = run_codex_mcp(
+            super::super::CodexBackendConfig {
+                binary: Some(script_path),
+                ..Default::default()
+            },
+            argv,
+            context,
+        )
+        .await
+        .expect("runner should succeed");
+
+        assert_eq!(
+            result.stdout.lines().collect::<Vec<_>>(),
+            vec![
+                "mcp",
+                "add",
+                "demo",
+                "--env",
+                "SERVER_ONLY=server-value",
+                "--",
+                "node",
+                "server.js",
+            ]
+        );
+        assert_eq!(
+            result.stderr.lines().collect::<Vec<_>>(),
+            vec!["CLI_ONLY=cli-value", "SERVER_ONLY=unset"]
+        );
+
+        fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
     }
 
     #[test]
