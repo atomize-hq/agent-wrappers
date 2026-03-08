@@ -1,5 +1,8 @@
 use super::*;
-use crate::{AgentWrapperBackend, AgentWrapperError, AgentWrapperEventKind};
+use crate::{
+    mcp::{AgentWrapperMcpAddRequest, AgentWrapperMcpAddTransport, AgentWrapperMcpRemoveRequest},
+    AgentWrapperBackend, AgentWrapperError, AgentWrapperEventKind,
+};
 use claude_code::{ClaudeStreamJsonEvent, ClaudeStreamJsonParser};
 use serde_json::Value;
 
@@ -82,6 +85,28 @@ fn exit_status_with_code(code: i32) -> std::process::ExitStatus {
     {
         use std::os::windows::process::ExitStatusExt;
         std::process::ExitStatus::from_raw(code as u32)
+    }
+}
+
+fn sample_mcp_add_request() -> AgentWrapperMcpAddRequest {
+    AgentWrapperMcpAddRequest {
+        name: "demo".to_string(),
+        transport: AgentWrapperMcpAddTransport::Stdio {
+            command: vec!["node".to_string()],
+            args: vec!["server.js".to_string()],
+            env: std::collections::BTreeMap::from([(
+                "SERVER_ONLY".to_string(),
+                "server-value".to_string(),
+            )]),
+        },
+        context: Default::default(),
+    }
+}
+
+fn sample_mcp_remove_request() -> AgentWrapperMcpRemoveRequest {
+    AgentWrapperMcpRemoveRequest {
+        name: "demo".to_string(),
+        context: Default::default(),
     }
 }
 
@@ -224,6 +249,46 @@ async fn claude_backend_mcp_get_fails_closed_when_read_capability_is_unavailable
         } => {
             assert_eq!(agent_kind, "claude_code");
             assert_eq!(capability, CAPABILITY_MCP_GET_V1);
+        }
+        other => panic!("expected UnsupportedCapability, got: {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn claude_backend_mcp_add_fails_closed_when_write_capability_is_disabled() {
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig::default());
+    let err = backend
+        .mcp_add(sample_mcp_add_request())
+        .await
+        .expect_err("write support should stay disabled by default");
+
+    match err {
+        AgentWrapperError::UnsupportedCapability {
+            agent_kind,
+            capability,
+        } => {
+            assert_eq!(agent_kind, "claude_code");
+            assert_eq!(capability, CAPABILITY_MCP_ADD_V1);
+        }
+        other => panic!("expected UnsupportedCapability, got: {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn claude_backend_mcp_remove_fails_closed_when_write_capability_is_disabled() {
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig::default());
+    let err = backend
+        .mcp_remove(sample_mcp_remove_request())
+        .await
+        .expect_err("write support should stay disabled by default");
+
+    match err {
+        AgentWrapperError::UnsupportedCapability {
+            agent_kind,
+            capability,
+        } => {
+            assert_eq!(agent_kind, "claude_code");
+            assert_eq!(capability, CAPABILITY_MCP_REMOVE_V1);
         }
         other => panic!("expected UnsupportedCapability, got: {other:?}"),
     }
