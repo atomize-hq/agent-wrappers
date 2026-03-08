@@ -379,7 +379,7 @@ mod tests {
     }
 
     #[cfg(unix)]
-    fn write_fake_codex(dir: &PathBuf, script: &str) -> PathBuf {
+    fn write_fake_codex(dir: &std::path::Path, script: &str) -> PathBuf {
         let path = dir.join("codex");
         fs::write(&path, script).expect("script should be written");
         let mut permissions = fs::metadata(&path)
