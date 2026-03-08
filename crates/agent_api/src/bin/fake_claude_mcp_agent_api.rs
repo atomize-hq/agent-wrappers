@@ -19,7 +19,9 @@ const XDG_DATA_HOME_ENV: &str = "XDG_DATA_HOME";
 const XDG_CACHE_HOME_ENV: &str = "XDG_CACHE_HOME";
 const SENTINEL_DIR: &str = ".agent_api_fake_mcp";
 const OVERSIZED_OUTPUT_BYTES: usize = 65_536 + 128;
-const SLEEP_FOR_TIMEOUT_MS: u64 = 500;
+const SLEEP_FOR_TIMEOUT_MS: u64 = 1_500;
+const TIMEOUT_STDOUT_SENTINEL: &str = "fake_claude_mcp timeout stdout sentinel\n";
+const TIMEOUT_STDERR_SENTINEL: &str = "fake_claude_mcp timeout stderr sentinel\n";
 
 // Test-only fake Claude MCP binary contract:
 // - Required env: FAKE_CLAUDE_MCP_RECORD_PATH
@@ -64,6 +66,8 @@ fn main() -> io::Result<()> {
             std::process::exit(7);
         }
         "sleep_for_timeout" => {
+            write_payload(&mut io::stdout().lock(), TIMEOUT_STDOUT_SENTINEL.as_bytes())?;
+            write_payload(&mut io::stderr().lock(), TIMEOUT_STDERR_SENTINEL.as_bytes())?;
             thread::sleep(Duration::from_millis(SLEEP_FOR_TIMEOUT_MS));
             Ok(())
         }
