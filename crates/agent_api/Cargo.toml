@@ -21,3 +21,6 @@ url = "2"
 codex = { path = "../codex", optional = true }
 claude_code = { path = "../claude_code", optional = true }
 tokio = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
