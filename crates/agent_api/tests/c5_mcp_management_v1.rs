@@ -16,6 +16,9 @@ mod claude_support;
 #[path = "mcp_management_v1/codex_failures.rs"]
 mod codex_failures;
 #[cfg(feature = "codex")]
+#[path = "mcp_management_v1/codex_direct_backend.rs"]
+mod codex_direct_backend;
+#[cfg(feature = "codex")]
 #[path = "mcp_management_v1/codex_read_ops.rs"]
 mod codex_read_ops;
 #[cfg(feature = "codex")]

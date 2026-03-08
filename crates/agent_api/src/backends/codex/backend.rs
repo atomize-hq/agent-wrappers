@@ -9,6 +9,7 @@ use super::{
 use crate::{
     backend_harness::BackendDefaults,
     mcp::{
+        normalize_mcp_add_request, normalize_mcp_get_request, normalize_mcp_remove_request,
         AgentWrapperMcpAddRequest, AgentWrapperMcpCommandOutput, AgentWrapperMcpGetRequest,
         AgentWrapperMcpListRequest, AgentWrapperMcpRemoveRequest, CAPABILITY_MCP_ADD_V1,
         CAPABILITY_MCP_GET_V1, CAPABILITY_MCP_LIST_V1, CAPABILITY_MCP_REMOVE_V1,
@@ -108,6 +109,10 @@ impl AgentWrapperBackend for CodexBackend {
             return unsupported_capability(self.kind().as_str().to_string(), CAPABILITY_MCP_GET_V1);
         }
 
+        let request = match normalize_mcp_get_request(request) {
+            Ok(request) => request,
+            Err(err) => return Box::pin(async move { Err(err) }),
+        };
         let config = self.config.clone();
         let argv = mcp_management::codex_mcp_get_argv(&request.name);
         Box::pin(async move { mcp_management::run_codex_mcp(config, argv, request.context).await })
@@ -127,6 +132,10 @@ impl AgentWrapperBackend for CodexBackend {
             return unsupported_capability(self.kind().as_str().to_string(), CAPABILITY_MCP_ADD_V1);
         }
 
+        let request = match normalize_mcp_add_request(request) {
+            Ok(request) => request,
+            Err(err) => return Box::pin(async move { Err(err) }),
+        };
         let config = self.config.clone();
         let argv = mcp_management::codex_mcp_add_argv(&request.name, &request.transport);
         Box::pin(async move { mcp_management::run_codex_mcp(config, argv, request.context).await })
@@ -149,6 +158,10 @@ impl AgentWrapperBackend for CodexBackend {
             );
         }
 
+        let request = match normalize_mcp_remove_request(request) {
+            Ok(request) => request,
+            Err(err) => return Box::pin(async move { Err(err) }),
+        };
         let config = self.config.clone();
         let argv = mcp_management::codex_mcp_remove_argv(&request.name);
         Box::pin(async move { mcp_management::run_codex_mcp(config, argv, request.context).await })
