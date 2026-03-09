@@ -373,8 +373,11 @@ fn request_env_with_same_injected_home_values_keeps_materialization() {
 }
 
 #[test]
-fn zero_timeout_is_treated_as_no_timeout() {
-    assert_eq!(effective_timeout_for_wait(Some(Duration::ZERO)), None);
+fn zero_timeout_is_preserved_for_wait_enforcement() {
+    assert_eq!(
+        effective_timeout_for_wait(Some(Duration::ZERO)),
+        Some(Duration::ZERO)
+    );
     assert_eq!(
         effective_timeout_for_wait(Some(Duration::from_secs(3))),
         Some(Duration::from_secs(3))

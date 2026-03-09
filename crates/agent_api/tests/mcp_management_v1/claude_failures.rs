@@ -144,3 +144,52 @@ async fn claude_mcp_timeout_returns_backend_error_without_leaking_partial_output
         "timeout failures should stay redacted but mention timeout: {message}"
     );
 }
+
+#[tokio::test]
+async fn claude_mcp_zero_timeout_returns_backend_error_without_leaking_partial_output() {
+    if !claude_list_supported() {
+        return;
+    }
+
+    let sandbox = McpTestSandbox::new("claude_mcp_zero_timeout").expect("sandbox");
+    let (_backend, gateway, kind) = claude_gateway(
+        &sandbox,
+        false,
+        claude_config_env(
+            &sandbox,
+            [(
+                FAKE_CLAUDE_SCENARIO_ENV.to_string(),
+                "sleep_for_timeout".to_string(),
+            )],
+        ),
+        None,
+        None,
+    );
+
+    let err = gateway
+        .mcp_list(
+            &kind,
+            AgentWrapperMcpListRequest {
+                context: AgentWrapperMcpCommandContext {
+                    timeout: Some(Duration::ZERO),
+                    ..Default::default()
+                },
+            },
+        )
+        .await
+        .expect_err("zero timeout should return Backend error");
+
+    let message = backend_error_message(err);
+    assert!(
+        !message.contains(TIMEOUT_STDOUT_SENTINEL),
+        "zero-timeout error leaked stdout sentinel: {message}"
+    );
+    assert!(
+        !message.contains(TIMEOUT_STDERR_SENTINEL),
+        "zero-timeout error leaked stderr sentinel: {message}"
+    );
+    assert!(
+        message.contains("timeout"),
+        "zero-timeout failures should stay redacted but mention timeout: {message}"
+    );
+}

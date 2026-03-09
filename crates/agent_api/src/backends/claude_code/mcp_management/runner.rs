@@ -172,10 +172,7 @@ fn manifest_conflict_tokens(argv: &[OsString]) -> Vec<&'static str> {
 }
 
 pub(super) fn effective_timeout_for_wait(timeout: Option<Duration>) -> Option<Duration> {
-    match timeout {
-        Some(timeout) if timeout == Duration::ZERO => None,
-        other => other,
-    }
+    timeout
 }
 
 async fn wait_for_exit(
