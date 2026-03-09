@@ -154,9 +154,20 @@ pub(super) fn classify_manifest_runtime_conflict_text(argv: &[OsString], text: &
         return false;
     }
 
+    if is_add_shape_conflict(argv, &text) {
+        return true;
+    }
+
     manifest_conflict_tokens(argv)
         .into_iter()
         .any(|token| text.contains(token))
+}
+
+fn is_add_shape_conflict(argv: &[OsString], text: &str) -> bool {
+    matches!(argv.get(1).and_then(|arg| arg.to_str()), Some("add"))
+        && ["--transport", "--env"]
+            .iter()
+            .any(|token| text.contains(token))
 }
 
 fn manifest_conflict_tokens(argv: &[OsString]) -> Vec<&'static str> {

@@ -97,6 +97,56 @@ async fn claude_mcp_drift_returns_backend_error_without_mutating_capabilities() 
 }
 
 #[tokio::test]
+async fn claude_mcp_add_flag_drift_returns_backend_error_without_mutating_capabilities() {
+    if !claude_get_supported() {
+        return;
+    }
+
+    let sandbox = McpTestSandbox::new("claude_mcp_add_flag_drift").expect("sandbox");
+    let (backend, gateway, kind) = claude_gateway(
+        &sandbox,
+        true,
+        claude_config_env(
+            &sandbox,
+            [(
+                FAKE_CLAUDE_SCENARIO_ENV.to_string(),
+                "add_flag_drift".to_string(),
+            )],
+        ),
+        None,
+        None,
+    );
+    let before = backend.capabilities().ids.clone();
+
+    let err = gateway
+        .mcp_add(
+            &kind,
+            AgentWrapperMcpAddRequest {
+                name: "demo".to_string(),
+                transport: AgentWrapperMcpAddTransport::Stdio {
+                    command: vec!["node".to_string()],
+                    args: vec!["server.js".to_string()],
+                    env: Default::default(),
+                },
+                context: Default::default(),
+            },
+        )
+        .await
+        .expect_err("add flag drift must fail closed");
+
+    let message = backend_error_message(err);
+    assert!(
+        !message.contains("unexpected argument '--transport'"),
+        "drift error leaked subprocess stderr: {message}"
+    );
+    assert_eq!(backend.capabilities().ids, before);
+    assert!(
+        sandbox.record_path().exists(),
+        "add flag drift path should have spawned the fake claude binary"
+    );
+}
+
+#[tokio::test]
 async fn claude_mcp_timeout_returns_backend_error_without_leaking_partial_output() {
     if !claude_list_supported() {
         return;

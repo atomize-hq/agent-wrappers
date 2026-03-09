@@ -455,6 +455,36 @@ fn classify_manifest_runtime_conflict_detects_unknown_add_subcommand() {
 }
 
 #[test]
+fn classify_manifest_runtime_conflict_detects_add_transport_flag_drift_without_echoed_add() {
+    let transport = AgentWrapperMcpAddTransport::Stdio {
+        command: vec!["node".to_string()],
+        args: vec!["server.js".to_string()],
+        env: BTreeMap::new(),
+    };
+    let argv = claude_mcp_add_argv("demo", &transport).expect("stdio transport should map");
+
+    assert!(classify_manifest_runtime_conflict_text(
+        &argv,
+        "error: unexpected argument '--transport' found"
+    ));
+}
+
+#[test]
+fn classify_manifest_runtime_conflict_detects_add_env_flag_usage_drift() {
+    let transport = AgentWrapperMcpAddTransport::Stdio {
+        command: vec!["node".to_string()],
+        args: vec!["server.js".to_string()],
+        env: BTreeMap::from([("ALPHA_ENV".to_string(), "1".to_string())]),
+    };
+    let argv = claude_mcp_add_argv("demo", &transport).expect("stdio transport should map");
+
+    assert!(classify_manifest_runtime_conflict_text(
+        &argv,
+        "error: unexpected argument '--env' found\n\nusage: claude mcp add [options]"
+    ));
+}
+
+#[test]
 fn classify_manifest_runtime_conflict_detects_unknown_list_subcommand() {
     assert!(classify_manifest_runtime_conflict_text(
         &claude_mcp_list_argv(),
@@ -488,6 +518,17 @@ fn classify_manifest_runtime_conflict_ignores_domain_failures() {
         &claude_mcp_get_argv("demo"),
         "network error: failed to connect"
     ));
+
+    let transport = AgentWrapperMcpAddTransport::Stdio {
+        command: vec!["node".to_string()],
+        args: vec!["server.js".to_string()],
+        env: BTreeMap::new(),
+    };
+    let argv = claude_mcp_add_argv("demo", &transport).expect("stdio transport should map");
+    assert!(!classify_manifest_runtime_conflict_text(
+        &argv,
+        "error: unexpected argument '--foo' found"
+    ));
 }
 
 #[test]
@@ -503,6 +544,35 @@ fn finalize_claude_mcp_output_returns_backend_error_for_drift() {
         },
     )
     .expect_err("drift should fail closed");
+
+    match err {
+        AgentWrapperError::Backend { message } => {
+            assert_eq!(message, PINNED_MCP_RUNTIME_CONFLICT);
+        }
+        other => panic!("expected Backend error, got {other:?}"),
+    }
+}
+
+#[test]
+fn finalize_claude_mcp_output_returns_backend_error_for_add_flag_drift() {
+    let transport = AgentWrapperMcpAddTransport::Stdio {
+        command: vec!["node".to_string()],
+        args: vec!["server.js".to_string()],
+        env: BTreeMap::new(),
+    };
+    let argv = claude_mcp_add_argv("demo", &transport).expect("stdio transport should map");
+
+    let err = finalize_claude_mcp_output(
+        &argv,
+        CapturedClaudeMcpCommandOutput {
+            status: exit_status_with_code(2),
+            stdout_bytes: b"raw stdout should not leak".to_vec(),
+            stdout_saw_more: false,
+            stderr_bytes: b"error: unexpected argument '--transport' found".to_vec(),
+            stderr_saw_more: false,
+        },
+    )
+    .expect_err("add flag drift should fail closed");
 
     match err {
         AgentWrapperError::Backend { message } => {

@@ -26,7 +26,7 @@ const TIMEOUT_STDERR_SENTINEL: &str = "fake_claude_mcp timeout stderr sentinel\n
 // Test-only fake Claude MCP binary contract:
 // - Required env: FAKE_CLAUDE_MCP_RECORD_PATH
 // - Optional env: FAKE_CLAUDE_MCP_RECORD_ENV_KEYS (comma-separated), FAKE_CLAUDE_MCP_SCENARIO
-// - Scenarios: ok, oversized_output, nonzero_exit, sleep_for_timeout, drift
+// - Scenarios: ok, oversized_output, nonzero_exit, sleep_for_timeout, drift, add_flag_drift
 
 fn main() -> io::Result<()> {
     let record_path = match required_path_env(RECORD_PATH_ENV) {
@@ -75,6 +75,13 @@ fn main() -> io::Result<()> {
             let subcommand = invocation_subcommand(&args).unwrap_or("mcp");
             let message = format!("error: unknown subcommand '{subcommand}'\n");
             write_payload(&mut io::stderr().lock(), message.as_bytes())?;
+            std::process::exit(2);
+        }
+        "add_flag_drift" => {
+            write_payload(
+                &mut io::stderr().lock(),
+                b"error: unexpected argument '--transport' found\n",
+            )?;
             std::process::exit(2);
         }
         _ => Ok(()),
@@ -180,7 +187,8 @@ fn invocation_subcommand(args: &[String]) -> Option<&str> {
 fn scenario_name() -> String {
     match env::var(SCENARIO_ENV) {
         Ok(value) => match value.as_str() {
-            "ok" | "oversized_output" | "nonzero_exit" | "sleep_for_timeout" | "drift" => value,
+            "ok" | "oversized_output" | "nonzero_exit" | "sleep_for_timeout" | "drift"
+            | "add_flag_drift" => value,
             _ => "ok".to_string(),
         },
         Err(_) => "ok".to_string(),
