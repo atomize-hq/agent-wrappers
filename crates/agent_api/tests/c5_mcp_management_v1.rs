@@ -7,6 +7,9 @@ mod claude_capabilities;
 #[path = "mcp_management_v1/claude_failures.rs"]
 mod claude_failures;
 #[cfg(feature = "claude_code")]
+#[path = "mcp_management_v1/claude_direct_backend.rs"]
+mod claude_direct_backend;
+#[cfg(feature = "claude_code")]
 #[path = "mcp_management_v1/claude_mapping.rs"]
 mod claude_mapping;
 #[cfg(feature = "claude_code")]

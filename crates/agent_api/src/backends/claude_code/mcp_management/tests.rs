@@ -324,10 +324,52 @@ fn request_env_overrides_injected_home_keys() {
         resolved.env.get(CLAUDE_HOME_ENV).map(String::as_str),
         Some("/tmp/claude-home")
     );
-    assert_eq!(
-        resolved.materialize_claude_home,
-        Some(ClaudeHomeLayout::new("/tmp/claude-home"))
+    assert_eq!(resolved.materialize_claude_home, None);
+}
+
+#[test]
+fn request_env_override_of_claude_home_suppresses_materialization() {
+    let mut context = AgentWrapperMcpCommandContext::default();
+    context.env.insert(
+        CLAUDE_HOME_ENV.to_string(),
+        "/tmp/request-claude-home".to_string(),
     );
+
+    let resolved = resolve_claude_mcp_command_with_env(&sample_config(), &context, None);
+
+    assert_eq!(
+        resolved.env.get(CLAUDE_HOME_ENV).map(String::as_str),
+        Some("/tmp/request-claude-home")
+    );
+    assert_eq!(resolved.materialize_claude_home, None);
+}
+
+#[test]
+fn request_env_with_same_injected_home_values_keeps_materialization() {
+    let layout = ClaudeHomeLayout::new("/tmp/claude-home");
+    let mut context = AgentWrapperMcpCommandContext::default();
+    context
+        .env
+        .insert(CLAUDE_HOME_ENV.to_string(), "/tmp/claude-home".to_string());
+    context
+        .env
+        .insert(HOME_ENV.to_string(), "/tmp/claude-home".to_string());
+    context.env.insert(
+        XDG_CONFIG_HOME_ENV.to_string(),
+        layout.xdg_config_home().to_string_lossy().into_owned(),
+    );
+    context.env.insert(
+        XDG_DATA_HOME_ENV.to_string(),
+        layout.xdg_data_home().to_string_lossy().into_owned(),
+    );
+    context.env.insert(
+        XDG_CACHE_HOME_ENV.to_string(),
+        layout.xdg_cache_home().to_string_lossy().into_owned(),
+    );
+
+    let resolved = resolve_claude_mcp_command_with_env(&sample_config(), &context, None);
+
+    assert_eq!(resolved.materialize_claude_home, Some(layout));
 }
 
 #[test]

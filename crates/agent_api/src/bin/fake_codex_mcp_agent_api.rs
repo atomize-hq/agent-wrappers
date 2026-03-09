@@ -20,7 +20,7 @@ const SLEEP_FOR_TIMEOUT_MS: u64 = 500;
 // Test-only fake Codex MCP binary contract:
 // - Required env: FAKE_CODEX_MCP_RECORD_PATH
 // - Optional env: FAKE_CODEX_MCP_RECORD_ENV_KEYS (comma-separated), FAKE_CODEX_MCP_SCENARIO
-// - Scenarios: ok, oversized_output, nonzero_exit, sleep_for_timeout, drift
+// - Scenarios: ok, oversized_output, nonzero_exit, sleep_for_timeout, drift, legacy_add_drift
 
 fn main() -> io::Result<()> {
     let record_path = match required_path_env(RECORD_PATH_ENV) {
@@ -71,6 +71,12 @@ fn main() -> io::Result<()> {
             } else {
                 "error: unknown subcommand 'mcp'\n"
             };
+            write_payload(&mut io::stderr().lock(), message.as_bytes())?;
+            std::process::exit(2);
+        }
+        "legacy_add_drift" => {
+            let message =
+                "error: unexpected argument '--env' found\n\nusage: codex mcp add <name> --url <url>\n";
             write_payload(&mut io::stderr().lock(), message.as_bytes())?;
             std::process::exit(2);
         }
@@ -165,7 +171,8 @@ fn invocation_subcommand(args: &[String]) -> Option<&str> {
 fn scenario_name() -> String {
     match env::var(SCENARIO_ENV) {
         Ok(value) => match value.as_str() {
-            "ok" | "oversized_output" | "nonzero_exit" | "sleep_for_timeout" | "drift" => value,
+            "ok" | "oversized_output" | "nonzero_exit" | "sleep_for_timeout" | "drift"
+            | "legacy_add_drift" => value,
             _ => "ok".to_string(),
         },
         Err(_) => "ok".to_string(),

@@ -3,7 +3,8 @@ use std::{collections::BTreeMap, path::PathBuf, sync::Arc, time::Duration};
 use agent_api::{
     backends::codex::{CodexBackend, CodexBackendConfig},
     mcp::{
-        AgentWrapperMcpCommandContext, AgentWrapperMcpListRequest, AgentWrapperMcpRemoveRequest,
+        AgentWrapperMcpAddRequest, AgentWrapperMcpAddTransport, AgentWrapperMcpCommandContext,
+        AgentWrapperMcpListRequest, AgentWrapperMcpRemoveRequest,
     },
     AgentWrapperBackend, AgentWrapperError, AgentWrapperGateway, AgentWrapperKind,
 };
@@ -200,6 +201,52 @@ async fn codex_mcp_drift_unknown_subcommand_returns_backend_error_without_mutati
     assert!(
         !message.contains("unknown subcommand 'mcp'"),
         "drift error leaked subprocess stderr: {message}"
+    );
+    assert_eq!(backend.capabilities().ids, before);
+}
+
+#[tokio::test]
+async fn codex_mcp_add_legacy_usage_drift_returns_backend_error_without_mutating_capabilities() {
+    if !codex_mcp_supported() {
+        return;
+    }
+
+    let sandbox = McpTestSandbox::new("codex_mcp_add_legacy_usage_drift").expect("sandbox");
+    let (backend, gateway, kind) = codex_gateway(
+        &sandbox,
+        true,
+        codex_config_env(
+            &sandbox,
+            [(FAKE_CODEX_SCENARIO_ENV.to_string(), "legacy_add_drift".to_string())],
+        ),
+        None,
+    );
+    let before = backend.capabilities().ids.clone();
+
+    let err = gateway
+        .mcp_add(
+            &kind,
+            AgentWrapperMcpAddRequest {
+                name: "demo".to_string(),
+                transport: AgentWrapperMcpAddTransport::Stdio {
+                    command: vec!["node".to_string()],
+                    args: vec!["server.js".to_string()],
+                    env: BTreeMap::from([("MCP_SERVER_ENV".to_string(), "1".to_string())]),
+                },
+                context: AgentWrapperMcpCommandContext::default(),
+            },
+        )
+        .await
+        .expect_err("legacy add usage drift must fail closed");
+
+    let message = backend_error_message(err);
+    assert!(
+        !message.contains("unexpected argument '--env'"),
+        "drift error leaked subprocess stderr: {message}"
+    );
+    assert!(
+        !message.contains("usage: codex mcp add"),
+        "drift error leaked subprocess usage text: {message}"
     );
     assert_eq!(backend.capabilities().ids, before);
 }

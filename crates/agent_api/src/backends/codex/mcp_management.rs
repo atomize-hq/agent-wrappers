@@ -311,8 +311,16 @@ fn classify_manifest_runtime_conflict_text(text: &str) -> bool {
     let subcommand_conflict = text.contains("subcommand") && text.contains("mcp");
     let json_flag_conflict = text.contains("--json")
         && (text.contains("flag") || text.contains("option") || text.contains("argument"));
+    let add_usage_conflict = text.contains("mcp add")
+        && text.contains("usage:")
+        && (text.contains("unexpected argument")
+            || text.contains("unexpected arguments")
+            || text.contains("missing required argument")
+            || text.contains("requires")
+            || text.contains("found argument")
+            || text.contains("unexpected value"));
 
-    subcommand_conflict || json_flag_conflict
+    subcommand_conflict || json_flag_conflict || add_usage_conflict
 }
 
 fn backend_error(message: &'static str) -> AgentWrapperError {
@@ -661,12 +669,22 @@ printf "SERVER_ONLY=%s\n" "${SERVER_ONLY-unset}" 1>&2
     }
 
     #[test]
+    fn classify_manifest_runtime_conflict_detects_legacy_add_usage_error() {
+        assert!(classify_manifest_runtime_conflict_text(
+            "error: unexpected argument '--env' found\n\nusage: codex mcp add <name> --url <url>"
+        ));
+    }
+
+    #[test]
     fn classify_manifest_runtime_conflict_ignores_normal_domain_failures() {
         assert!(!classify_manifest_runtime_conflict_text(
             "server demo not found"
         ));
         assert!(!classify_manifest_runtime_conflict_text(
             "unknown server demo"
+        ));
+        assert!(!classify_manifest_runtime_conflict_text(
+            "error: unexpected argument '--env' found"
         ));
     }
 }
