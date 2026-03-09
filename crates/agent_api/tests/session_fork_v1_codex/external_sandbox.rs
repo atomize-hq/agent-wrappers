@@ -79,7 +79,8 @@ async fn fork_id_external_sandbox_pins_jsonrpc_params_and_emits_warning_before_h
         .filter(|(_, ev)| ev.kind == AgentWrapperEventKind::Status)
         .filter_map(|(idx, ev)| {
             let message = ev.message.as_deref()?;
-            (message == PINNED_EXTERNAL_SANDBOX_WARNING && ev.data.is_none()).then_some((idx, message))
+            (message == PINNED_EXTERNAL_SANDBOX_WARNING && ev.data.is_none())
+                .then_some((idx, message))
         })
         .collect();
     assert_eq!(
@@ -120,4 +121,3 @@ async fn fork_id_external_sandbox_pins_jsonrpc_params_and_emits_warning_before_h
         .expect("completion ok");
     assert!(completion.status.success());
 }
-

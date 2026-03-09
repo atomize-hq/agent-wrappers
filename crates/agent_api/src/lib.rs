@@ -11,6 +11,13 @@ use std::time::Duration;
 
 use futures_core::Stream;
 
+use crate::mcp::{
+    normalize_mcp_add_request, normalize_mcp_get_request, normalize_mcp_remove_request,
+    AgentWrapperMcpAddRequest, AgentWrapperMcpCommandOutput, AgentWrapperMcpGetRequest,
+    AgentWrapperMcpListRequest, AgentWrapperMcpRemoveRequest, CAPABILITY_MCP_ADD_V1,
+    CAPABILITY_MCP_GET_V1, CAPABILITY_MCP_LIST_V1, CAPABILITY_MCP_REMOVE_V1,
+};
+
 #[cfg(any(feature = "codex", feature = "claude_code"))]
 mod bounds;
 
@@ -21,6 +28,7 @@ mod run_handle_gate;
 mod backend_harness;
 
 pub mod backends;
+pub mod mcp;
 
 const CAPABILITY_CONTROL_CANCEL_V1: &str = "agent_api.control.cancel.v1";
 
@@ -223,6 +231,102 @@ pub trait AgentWrapperBackend: Send + Sync {
             })
         })
     }
+
+    /// Runs `mcp list` and returns bounded command output.
+    ///
+    /// Backends that do not advertise `agent_api.tools.mcp.list.v1` MUST return:
+    /// `AgentWrapperError::UnsupportedCapability { agent_kind, capability: "agent_api.tools.mcp.list.v1" }`,
+    /// where `agent_kind == self.kind().as_str().to_string()`.
+    fn mcp_list(
+        &self,
+        _request: AgentWrapperMcpListRequest,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<AgentWrapperMcpCommandOutput, AgentWrapperError>>
+                + Send
+                + '_,
+        >,
+    > {
+        let agent_kind = self.kind().as_str().to_string();
+        Box::pin(async move {
+            Err(AgentWrapperError::UnsupportedCapability {
+                agent_kind,
+                capability: CAPABILITY_MCP_LIST_V1.to_string(),
+            })
+        })
+    }
+
+    /// Runs `mcp get` and returns bounded command output.
+    ///
+    /// Backends that do not advertise `agent_api.tools.mcp.get.v1` MUST return:
+    /// `AgentWrapperError::UnsupportedCapability { agent_kind, capability: "agent_api.tools.mcp.get.v1" }`,
+    /// where `agent_kind == self.kind().as_str().to_string()`.
+    fn mcp_get(
+        &self,
+        _request: AgentWrapperMcpGetRequest,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<AgentWrapperMcpCommandOutput, AgentWrapperError>>
+                + Send
+                + '_,
+        >,
+    > {
+        let agent_kind = self.kind().as_str().to_string();
+        Box::pin(async move {
+            Err(AgentWrapperError::UnsupportedCapability {
+                agent_kind,
+                capability: CAPABILITY_MCP_GET_V1.to_string(),
+            })
+        })
+    }
+
+    /// Runs `mcp add` and returns bounded command output.
+    ///
+    /// Backends that do not advertise `agent_api.tools.mcp.add.v1` MUST return:
+    /// `AgentWrapperError::UnsupportedCapability { agent_kind, capability: "agent_api.tools.mcp.add.v1" }`,
+    /// where `agent_kind == self.kind().as_str().to_string()`.
+    fn mcp_add(
+        &self,
+        _request: AgentWrapperMcpAddRequest,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<AgentWrapperMcpCommandOutput, AgentWrapperError>>
+                + Send
+                + '_,
+        >,
+    > {
+        let agent_kind = self.kind().as_str().to_string();
+        Box::pin(async move {
+            Err(AgentWrapperError::UnsupportedCapability {
+                agent_kind,
+                capability: CAPABILITY_MCP_ADD_V1.to_string(),
+            })
+        })
+    }
+
+    /// Runs `mcp remove` and returns bounded command output.
+    ///
+    /// Backends that do not advertise `agent_api.tools.mcp.remove.v1` MUST return:
+    /// `AgentWrapperError::UnsupportedCapability { agent_kind, capability: "agent_api.tools.mcp.remove.v1" }`,
+    /// where `agent_kind == self.kind().as_str().to_string()`.
+    fn mcp_remove(
+        &self,
+        _request: AgentWrapperMcpRemoveRequest,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<AgentWrapperMcpCommandOutput, AgentWrapperError>>
+                + Send
+                + '_,
+        >,
+    > {
+        let agent_kind = self.kind().as_str().to_string();
+        Box::pin(async move {
+            Err(AgentWrapperError::UnsupportedCapability {
+                agent_kind,
+                capability: CAPABILITY_MCP_REMOVE_V1.to_string(),
+            })
+        })
+    }
 }
 
 #[derive(Clone, Default)]
@@ -313,6 +417,165 @@ impl AgentWrapperGateway {
             backend.run_control(request).await
         })
     }
+
+    /// Resolves a backend and runs `mcp list`.
+    ///
+    /// This MUST return `AgentWrapperError::UnknownBackend { agent_kind }` when no backend is
+    /// registered for the requested `agent_kind`, where
+    /// `agent_kind == <requested AgentWrapperKind>.as_str().to_string()`.
+    ///
+    /// If the resolved backend does not advertise `agent_api.tools.mcp.list.v1`, this MUST
+    /// return `AgentWrapperError::UnsupportedCapability { agent_kind, capability:
+    /// "agent_api.tools.mcp.list.v1" }`, where
+    /// `agent_kind == <requested AgentWrapperKind>.as_str().to_string()`.
+    pub fn mcp_list(
+        &self,
+        agent_kind: &AgentWrapperKind,
+        request: AgentWrapperMcpListRequest,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<AgentWrapperMcpCommandOutput, AgentWrapperError>>
+                + Send
+                + '_,
+        >,
+    > {
+        let backend = self.backends.get(agent_kind).cloned();
+        let agent_kind = agent_kind.as_str().to_string();
+        Box::pin(async move {
+            let backend = backend.ok_or(AgentWrapperError::UnknownBackend {
+                agent_kind: agent_kind.clone(),
+            })?;
+
+            if !backend.capabilities().contains(CAPABILITY_MCP_LIST_V1) {
+                return Err(AgentWrapperError::UnsupportedCapability {
+                    agent_kind,
+                    capability: CAPABILITY_MCP_LIST_V1.to_string(),
+                });
+            }
+
+            backend.mcp_list(request).await
+        })
+    }
+
+    /// Resolves a backend and runs `mcp get`.
+    ///
+    /// This MUST return `AgentWrapperError::UnknownBackend { agent_kind }` when no backend is
+    /// registered for the requested `agent_kind`, where
+    /// `agent_kind == <requested AgentWrapperKind>.as_str().to_string()`.
+    ///
+    /// If the resolved backend does not advertise `agent_api.tools.mcp.get.v1`, this MUST return
+    /// `AgentWrapperError::UnsupportedCapability { agent_kind, capability:
+    /// "agent_api.tools.mcp.get.v1" }`, where
+    /// `agent_kind == <requested AgentWrapperKind>.as_str().to_string()`.
+    pub fn mcp_get(
+        &self,
+        agent_kind: &AgentWrapperKind,
+        request: AgentWrapperMcpGetRequest,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<AgentWrapperMcpCommandOutput, AgentWrapperError>>
+                + Send
+                + '_,
+        >,
+    > {
+        let backend = self.backends.get(agent_kind).cloned();
+        let agent_kind = agent_kind.as_str().to_string();
+        Box::pin(async move {
+            let backend = backend.ok_or(AgentWrapperError::UnknownBackend {
+                agent_kind: agent_kind.clone(),
+            })?;
+
+            if !backend.capabilities().contains(CAPABILITY_MCP_GET_V1) {
+                return Err(AgentWrapperError::UnsupportedCapability {
+                    agent_kind,
+                    capability: CAPABILITY_MCP_GET_V1.to_string(),
+                });
+            }
+
+            let request = normalize_mcp_get_request(request)?;
+            backend.mcp_get(request).await
+        })
+    }
+
+    /// Resolves a backend and runs `mcp add`.
+    ///
+    /// This MUST return `AgentWrapperError::UnknownBackend { agent_kind }` when no backend is
+    /// registered for the requested `agent_kind`, where
+    /// `agent_kind == <requested AgentWrapperKind>.as_str().to_string()`.
+    ///
+    /// If the resolved backend does not advertise `agent_api.tools.mcp.add.v1`, this MUST return
+    /// `AgentWrapperError::UnsupportedCapability { agent_kind, capability:
+    /// "agent_api.tools.mcp.add.v1" }`, where
+    /// `agent_kind == <requested AgentWrapperKind>.as_str().to_string()`.
+    pub fn mcp_add(
+        &self,
+        agent_kind: &AgentWrapperKind,
+        request: AgentWrapperMcpAddRequest,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<AgentWrapperMcpCommandOutput, AgentWrapperError>>
+                + Send
+                + '_,
+        >,
+    > {
+        let backend = self.backends.get(agent_kind).cloned();
+        let agent_kind = agent_kind.as_str().to_string();
+        Box::pin(async move {
+            let backend = backend.ok_or(AgentWrapperError::UnknownBackend {
+                agent_kind: agent_kind.clone(),
+            })?;
+
+            if !backend.capabilities().contains(CAPABILITY_MCP_ADD_V1) {
+                return Err(AgentWrapperError::UnsupportedCapability {
+                    agent_kind,
+                    capability: CAPABILITY_MCP_ADD_V1.to_string(),
+                });
+            }
+
+            let request = normalize_mcp_add_request(request)?;
+            backend.mcp_add(request).await
+        })
+    }
+
+    /// Resolves a backend and runs `mcp remove`.
+    ///
+    /// This MUST return `AgentWrapperError::UnknownBackend { agent_kind }` when no backend is
+    /// registered for the requested `agent_kind`, where
+    /// `agent_kind == <requested AgentWrapperKind>.as_str().to_string()`.
+    ///
+    /// If the resolved backend does not advertise `agent_api.tools.mcp.remove.v1`, this MUST
+    /// return `AgentWrapperError::UnsupportedCapability { agent_kind, capability:
+    /// "agent_api.tools.mcp.remove.v1" }`, where
+    /// `agent_kind == <requested AgentWrapperKind>.as_str().to_string()`.
+    pub fn mcp_remove(
+        &self,
+        agent_kind: &AgentWrapperKind,
+        request: AgentWrapperMcpRemoveRequest,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<AgentWrapperMcpCommandOutput, AgentWrapperError>>
+                + Send
+                + '_,
+        >,
+    > {
+        let backend = self.backends.get(agent_kind).cloned();
+        let agent_kind = agent_kind.as_str().to_string();
+        Box::pin(async move {
+            let backend = backend.ok_or(AgentWrapperError::UnknownBackend {
+                agent_kind: agent_kind.clone(),
+            })?;
+
+            if !backend.capabilities().contains(CAPABILITY_MCP_REMOVE_V1) {
+                return Err(AgentWrapperError::UnsupportedCapability {
+                    agent_kind,
+                    capability: CAPABILITY_MCP_REMOVE_V1.to_string(),
+                });
+            }
+
+            let request = normalize_mcp_remove_request(request)?;
+            backend.mcp_remove(request).await
+        })
+    }
 }
 
 fn validate_agent_kind(value: &str) -> Result<(), AgentWrapperError> {
@@ -340,9 +603,18 @@ fn validate_agent_kind(value: &str) -> Result<(), AgentWrapperError> {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::atomic::AtomicUsize;
+    use std::collections::BTreeSet;
+    use std::future::Future;
+    use std::pin::Pin;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Arc, Mutex};
+    use std::task::{Context, Poll, Wake, Waker};
 
     use super::*;
+    use crate::mcp::{
+        AgentWrapperMcpAddRequest, AgentWrapperMcpAddTransport, AgentWrapperMcpCommandContext,
+        AgentWrapperMcpGetRequest, CAPABILITY_MCP_ADD_V1, CAPABILITY_MCP_GET_V1,
+    };
 
     #[test]
     fn cancel_handle_is_idempotent() {
@@ -357,5 +629,246 @@ mod tests {
         cancel.cancel();
 
         assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn mcp_add_returns_unknown_backend_before_validation() {
+        let gateway = AgentWrapperGateway::new();
+        let agent_kind = AgentWrapperKind::new("codex").expect("valid kind");
+        let secret = "SECRET_BACKEND_VALUE";
+
+        let err = block_on_immediate(gateway.mcp_add(
+            &agent_kind,
+            AgentWrapperMcpAddRequest {
+                name: format!("  {secret}  "),
+                transport: AgentWrapperMcpAddTransport::Url {
+                    url: format!("relative/{secret}"),
+                    bearer_token_env_var: None,
+                },
+                context: AgentWrapperMcpCommandContext::default(),
+            },
+        ))
+        .expect_err("unknown backend should fail first");
+
+        match err {
+            AgentWrapperError::UnknownBackend { agent_kind } => {
+                assert_eq!(agent_kind, "codex");
+            }
+            other => panic!("expected UnknownBackend, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn mcp_add_returns_unsupported_capability_before_validation_and_without_hook_call() {
+        let backend = Arc::new(TestBackend::new(BTreeSet::new()));
+        let mut gateway = AgentWrapperGateway::new();
+        gateway.register(backend.clone()).expect("register backend");
+        let agent_kind = backend.kind();
+        let secret = "SECRET_UNSUPPORTED_VALUE";
+
+        let err = block_on_immediate(gateway.mcp_add(
+            &agent_kind,
+            AgentWrapperMcpAddRequest {
+                name: format!("  {secret}  "),
+                transport: AgentWrapperMcpAddTransport::Url {
+                    url: format!("relative/{secret}"),
+                    bearer_token_env_var: None,
+                },
+                context: AgentWrapperMcpCommandContext::default(),
+            },
+        ))
+        .expect_err("unsupported capability should fail before validation");
+
+        match err {
+            AgentWrapperError::UnsupportedCapability {
+                agent_kind,
+                capability,
+            } => {
+                assert_eq!(agent_kind, "test_backend");
+                assert_eq!(capability, CAPABILITY_MCP_ADD_V1);
+            }
+            other => panic!("expected UnsupportedCapability, got {other:?}"),
+        }
+
+        assert_eq!(backend.mcp_add_calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn mcp_add_returns_invalid_request_before_hook_when_capability_is_advertised() {
+        let backend = Arc::new(TestBackend::new(BTreeSet::from([
+            CAPABILITY_MCP_ADD_V1.to_string()
+        ])));
+        let mut gateway = AgentWrapperGateway::new();
+        gateway.register(backend.clone()).expect("register backend");
+        let agent_kind = backend.kind();
+        let secret = "SECRET_INVALID_VALUE";
+
+        let err = block_on_immediate(gateway.mcp_add(
+            &agent_kind,
+            AgentWrapperMcpAddRequest {
+                name: "  example  ".to_string(),
+                transport: AgentWrapperMcpAddTransport::Url {
+                    url: format!("relative/{secret}"),
+                    bearer_token_env_var: None,
+                },
+                context: AgentWrapperMcpCommandContext::default(),
+            },
+        ))
+        .expect_err("invalid request should fail before hook");
+
+        match err {
+            AgentWrapperError::InvalidRequest { message } => {
+                assert_eq!(message, "mcp add url must be an absolute http or https URL");
+                assert!(!message.contains(secret));
+            }
+            other => panic!("expected InvalidRequest, got {other:?}"),
+        }
+
+        assert_eq!(backend.mcp_add_calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn mcp_get_passes_normalized_request_to_hook() {
+        let backend = Arc::new(TestBackend::new(BTreeSet::from([
+            CAPABILITY_MCP_GET_V1.to_string()
+        ])));
+        let mut gateway = AgentWrapperGateway::new();
+        gateway.register(backend.clone()).expect("register backend");
+        let agent_kind = backend.kind();
+
+        let output = block_on_immediate(gateway.mcp_get(
+            &agent_kind,
+            AgentWrapperMcpGetRequest {
+                name: "  normalized-name  ".to_string(),
+                context: AgentWrapperMcpCommandContext::default(),
+            },
+        ))
+        .expect("normalized request should reach hook");
+
+        assert_eq!(output.stdout, "ok");
+        assert_eq!(backend.mcp_get_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            backend
+                .last_get_name
+                .lock()
+                .expect("get name mutex")
+                .as_deref(),
+            Some("normalized-name")
+        );
+    }
+
+    struct NoopWake;
+
+    impl Wake for NoopWake {
+        fn wake(self: Arc<Self>) {}
+    }
+
+    fn block_on_immediate<F>(future: F) -> F::Output
+    where
+        F: Future,
+    {
+        let waker = Waker::from(Arc::new(NoopWake));
+        let mut future = Box::pin(future);
+        let mut context = Context::from_waker(&waker);
+
+        loop {
+            match future.as_mut().poll(&mut context) {
+                Poll::Ready(output) => return output,
+                Poll::Pending => std::thread::yield_now(),
+            }
+        }
+    }
+
+    fn success_exit_status() -> std::process::ExitStatus {
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            std::process::ExitStatus::from_raw(0)
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::ExitStatusExt;
+            std::process::ExitStatus::from_raw(0)
+        }
+    }
+
+    fn success_output() -> AgentWrapperMcpCommandOutput {
+        AgentWrapperMcpCommandOutput {
+            status: success_exit_status(),
+            stdout: "ok".to_string(),
+            stderr: String::new(),
+            stdout_truncated: false,
+            stderr_truncated: false,
+        }
+    }
+
+    struct TestBackend {
+        capabilities: AgentWrapperCapabilities,
+        mcp_add_calls: AtomicUsize,
+        mcp_get_calls: AtomicUsize,
+        last_get_name: Mutex<Option<String>>,
+    }
+
+    impl TestBackend {
+        fn new(capabilities: BTreeSet<String>) -> Self {
+            Self {
+                capabilities: AgentWrapperCapabilities { ids: capabilities },
+                mcp_add_calls: AtomicUsize::new(0),
+                mcp_get_calls: AtomicUsize::new(0),
+                last_get_name: Mutex::new(None),
+            }
+        }
+    }
+
+    impl AgentWrapperBackend for TestBackend {
+        fn kind(&self) -> AgentWrapperKind {
+            AgentWrapperKind("test_backend".to_string())
+        }
+
+        fn capabilities(&self) -> AgentWrapperCapabilities {
+            self.capabilities.clone()
+        }
+
+        fn run(
+            &self,
+            _request: AgentWrapperRunRequest,
+        ) -> Pin<
+            Box<dyn Future<Output = Result<AgentWrapperRunHandle, AgentWrapperError>> + Send + '_>,
+        > {
+            Box::pin(async {
+                Err(AgentWrapperError::Backend {
+                    message: "run not used in tests".to_string(),
+                })
+            })
+        }
+
+        fn mcp_get(
+            &self,
+            request: AgentWrapperMcpGetRequest,
+        ) -> Pin<
+            Box<
+                dyn Future<Output = Result<AgentWrapperMcpCommandOutput, AgentWrapperError>>
+                    + Send
+                    + '_,
+            >,
+        > {
+            self.mcp_get_calls.fetch_add(1, Ordering::SeqCst);
+            *self.last_get_name.lock().expect("last get name mutex") = Some(request.name);
+            Box::pin(async move { Ok(success_output()) })
+        }
+
+        fn mcp_add(
+            &self,
+            _request: AgentWrapperMcpAddRequest,
+        ) -> Pin<
+            Box<
+                dyn Future<Output = Result<AgentWrapperMcpCommandOutput, AgentWrapperError>>
+                    + Send
+                    + '_,
+            >,
+        > {
+            self.mcp_add_calls.fetch_add(1, Ordering::SeqCst);
+            Box::pin(async move { Ok(success_output()) })
+        }
     }
 }

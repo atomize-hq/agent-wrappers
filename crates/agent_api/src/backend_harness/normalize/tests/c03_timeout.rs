@@ -63,4 +63,3 @@ fn bh_c03_timeout_duration_zero_is_preserved_via_normalize_request() {
     let normalized = normalize_request(&adapter, &defaults, request).expect("normalizes");
     assert_eq!(normalized.effective_timeout, Some(Duration::ZERO));
 }
-

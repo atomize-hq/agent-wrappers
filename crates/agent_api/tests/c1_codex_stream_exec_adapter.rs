@@ -1,6 +1,11 @@
 #![cfg(feature = "codex")]
 
-use std::{collections::BTreeMap, path::PathBuf, pin::Pin, time::Duration};
+use std::{
+    collections::BTreeMap,
+    path::PathBuf,
+    pin::Pin,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use agent_api::{
     backends::codex::{CodexBackend, CodexBackendConfig},
@@ -37,6 +42,15 @@ fn fake_codex_binary() -> PathBuf {
     PathBuf::from(env!(
         "CARGO_BIN_EXE_fake_codex_stream_exec_scenarios_agent_api"
     ))
+}
+
+fn unique_missing_dir_path(test_name: &str) -> PathBuf {
+    let pid = std::process::id();
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system time after unix epoch")
+        .as_nanos();
+    std::env::temp_dir().join(format!("{test_name}_{pid}_{nanos}_missing"))
 }
 
 fn any_event_contains(events: &[AgentWrapperEvent], needle: &str) -> bool {
@@ -359,6 +373,75 @@ async fn request_env_overrides_config_env_and_parent_env_is_unchanged() {
         std::env::var(key).ok().as_deref(),
         Some("original"),
         "expected backend to not mutate parent process environment"
+    );
+}
+
+#[tokio::test]
+async fn request_env_override_wins_over_codex_home_injection_and_parent_codex_home_is_unchanged() {
+    let original_codex_home = std::env::var_os("CODEX_HOME");
+
+    let injected_home = unique_missing_dir_path("codex_home_injected_root");
+    let override_home = unique_missing_dir_path("codex_home_override_root");
+
+    let backend = CodexBackend::new(CodexBackendConfig {
+        binary: Some(fake_codex_binary()),
+        codex_home: Some(injected_home),
+        env: [
+            ("FAKE_CODEX_SCENARIO".to_string(), "env_assert".to_string()),
+            ("C1_ISOLATED_KEY".to_string(), "config".to_string()),
+            (
+                "C1_ISOLATED_CONFIG_ONLY".to_string(),
+                "config-only".to_string(),
+            ),
+            (
+                "FAKE_CODEX_ASSERT_ENV_CODEX_HOME".to_string(),
+                override_home.to_string_lossy().to_string(),
+            ),
+            (
+                "FAKE_CODEX_ASSERT_ENV_C1_ISOLATED_KEY".to_string(),
+                "request".to_string(),
+            ),
+            (
+                "FAKE_CODEX_ASSERT_ENV_C1_ISOLATED_CONFIG_ONLY".to_string(),
+                "config-only".to_string(),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+        ..Default::default()
+    });
+
+    let handle = backend
+        .run(AgentWrapperRunRequest {
+            prompt: "hello".to_string(),
+            env: [
+                (
+                    "CODEX_HOME".to_string(),
+                    override_home.to_string_lossy().to_string(),
+                ),
+                ("C1_ISOLATED_KEY".to_string(), "request".to_string()),
+            ]
+            .into_iter()
+            .collect::<BTreeMap<_, _>>(),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    let mut events = handle.events;
+    let completion = handle.completion;
+    let _ = drain_to_none(events.as_mut(), Duration::from_secs(2)).await;
+
+    let completion = tokio::time::timeout(Duration::from_secs(2), completion)
+        .await
+        .expect("completion resolves")
+        .unwrap();
+    assert!(completion.status.success());
+
+    assert_eq!(
+        std::env::var_os("CODEX_HOME"),
+        original_codex_home,
+        "expected backend to not mutate parent CODEX_HOME"
     );
 }
 

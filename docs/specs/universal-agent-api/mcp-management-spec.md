@@ -270,6 +270,8 @@ Backends MUST determine an effective process context before spawning any backend
   2) Else, if backend config provides `default_timeout`, it MUST be used.
   3) Else, the backend MAY use an internal default (or no timeout).
   - If `timeout` is absent, the universal API MUST NOT invent a global default.
+  - For MCP management command execution, a present timeout value MUST be enforced verbatim, including
+    `Duration::ZERO` as an immediate fail-fast timeout budget.
 
 - Effective environment:
   - `request.context.env` applies only to the spawned backend process (never to the parent process).

@@ -184,9 +184,9 @@ fn main() -> io::Result<()> {
         }
 
         let supports_allow_flag = env_is_true("FAKE_CLAUDE_HELP_SUPPORTS_ALLOW_FLAG");
-        print!("Usage: claude [options]\n");
+        println!("Usage: claude [options]");
         if supports_allow_flag {
-            print!("  --allow-dangerously-skip-permissions\n");
+            println!("  --allow-dangerously-skip-permissions");
         }
         return Ok(());
     }
