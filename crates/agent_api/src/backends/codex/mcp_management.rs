@@ -1,5 +1,11 @@
 use std::{
-    collections::BTreeMap, env, ffi::OsString, io, path::PathBuf, process::Stdio, time::Duration,
+    collections::BTreeMap,
+    env,
+    ffi::OsString,
+    fs, io,
+    path::{Path, PathBuf},
+    process::Stdio,
+    time::Duration,
 };
 
 use codex::CodexHomeLayout;
@@ -19,6 +25,7 @@ use crate::{
 
 const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
 const CODEX_HOME_ENV: &str = "CODEX_HOME";
+const PATH_ENV: &str = "PATH";
 
 const PINNED_SPAWN_FAILURE: &str = "codex backend error: spawn (details redacted when unsafe)";
 const PINNED_WAIT_FAILURE: &str = "codex backend error: wait (details redacted when unsafe)";
@@ -118,6 +125,7 @@ pub(super) async fn run_codex_mcp(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true)
+        .env_clear()
         .envs(&resolved.env);
 
     if let Some(working_dir) = resolved.working_dir.as_ref() {
@@ -174,10 +182,16 @@ fn resolve_codex_mcp_command(
     config: &super::CodexBackendConfig,
     context: &AgentWrapperMcpCommandContext,
 ) -> ResolvedCodexMcpCommand {
-    let binary_path = config
-        .binary
-        .clone()
-        .unwrap_or_else(default_codex_binary_path);
+    let binary_path = resolve_codex_binary_path(
+        config.binary.as_ref(),
+        env::var_os(CODEX_BINARY_ENV),
+        context
+            .env
+            .get(PATH_ENV)
+            .map(String::as_str)
+            .or_else(|| config.env.get(PATH_ENV).map(String::as_str)),
+        env::var_os(PATH_ENV),
+    );
     let mut env = config.env.clone();
     env.insert(
         CODEX_BINARY_ENV.to_string(),
@@ -212,8 +226,92 @@ fn resolve_codex_mcp_command(
 
 fn default_codex_binary_path() -> PathBuf {
     env::var_os(CODEX_BINARY_ENV)
+        .filter(|value| !value.is_empty())
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("codex"))
+}
+
+fn resolve_codex_binary_path(
+    config_binary: Option<&PathBuf>,
+    ambient_codex_binary: Option<OsString>,
+    effective_path_env: Option<&str>,
+    ambient_path_env: Option<OsString>,
+) -> PathBuf {
+    let binary_path = config_binary
+        .cloned()
+        .or_else(|| {
+            ambient_codex_binary.and_then(|value| {
+                if value.is_empty() {
+                    None
+                } else {
+                    Some(PathBuf::from(value))
+                }
+            })
+        })
+        .unwrap_or_else(default_codex_binary_path);
+
+    resolve_path_for_spawn(binary_path, effective_path_env, ambient_path_env)
+}
+
+fn resolve_path_for_spawn(
+    binary_path: PathBuf,
+    effective_path_env: Option<&str>,
+    ambient_path_env: Option<OsString>,
+) -> PathBuf {
+    if is_path_qualified(&binary_path) {
+        return binary_path;
+    }
+
+    if let Some(path_env) = effective_path_env {
+        return find_binary_on_path(&binary_path, Some(OsString::from(path_env)))
+            .unwrap_or(binary_path);
+    }
+
+    find_binary_on_path(&binary_path, ambient_path_env).unwrap_or(binary_path)
+}
+
+fn is_path_qualified(path: &Path) -> bool {
+    path.is_absolute()
+        || path
+            .parent()
+            .is_some_and(|parent| !parent.as_os_str().is_empty())
+}
+
+fn find_binary_on_path(binary_name: &Path, path_env: Option<OsString>) -> Option<PathBuf> {
+    let path_env = path_env?;
+    env::split_paths(&path_env)
+        .find_map(|directory| candidate_binary_path(&directory, binary_name))
+        .map(|candidate| fs::canonicalize(&candidate).unwrap_or(candidate))
+}
+
+fn candidate_binary_path(directory: &Path, binary_name: &Path) -> Option<PathBuf> {
+    let candidate = directory.join(binary_name);
+    if candidate.is_file() {
+        return Some(candidate);
+    }
+
+    #[cfg(windows)]
+    {
+        if candidate.extension().is_some() {
+            return None;
+        }
+
+        let pathext =
+            env::var_os("PATHEXT").unwrap_or_else(|| OsString::from(".COM;.EXE;.BAT;.CMD"));
+        for extension in pathext.to_string_lossy().split(';') {
+            let extension = extension.trim();
+            if extension.is_empty() {
+                continue;
+            }
+
+            let suffixed = candidate.with_extension(extension.trim_start_matches('.'));
+            if suffixed.is_file() {
+                return Some(suffixed);
+            }
+        }
+    }
+
+    None
 }
 
 async fn wait_for_exit(
@@ -332,7 +430,11 @@ fn backend_error(message: &'static str) -> AgentWrapperError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::BTreeMap;
+    use std::{
+        collections::BTreeMap,
+        ffi::OsString,
+        sync::{Mutex, OnceLock},
+    };
     #[cfg(unix)]
     use std::{
         fs,
@@ -364,6 +466,34 @@ mod tests {
                 ("OVERRIDE_ME".to_string(), "request".to_string()),
                 ("REQUEST_ONLY".to_string(), "request-only".to_string()),
             ]),
+        }
+    }
+
+    fn test_env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    struct EnvGuard {
+        key: &'static str,
+        previous: Option<OsString>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: impl Into<OsString>) -> Self {
+            let previous = env::var_os(key);
+            env::set_var(key, value.into());
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            if let Some(value) = self.previous.take() {
+                env::set_var(self.key, value);
+            } else {
+                env::remove_var(self.key);
+            }
         }
     }
 
@@ -560,6 +690,41 @@ printf "SERVER_ONLY=%s\n" "${SERVER_ONLY-unset}" 1>&2
         fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
     }
 
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn run_codex_mcp_clears_ambient_env_before_spawn() {
+        let _env_lock = test_env_lock().lock().expect("lock test env");
+        let temp_dir = temp_test_dir("ambient-env");
+        let script_path = write_fake_codex(
+            &temp_dir,
+            r#"#!/usr/bin/env bash
+printf "AMBIENT_ONLY=%s\n" "${AMBIENT_ONLY-unset}" 1>&2
+printf "CODEX_HOME=%s\n" "${CODEX_HOME-unset}" 1>&2
+"#,
+        );
+        let _ambient_only = EnvGuard::set("AMBIENT_ONLY", "ambient-value");
+        let _ambient_home = EnvGuard::set("CODEX_HOME", "/tmp/ambient-codex-home");
+
+        let result = run_codex_mcp(
+            super::super::CodexBackendConfig {
+                binary: Some(script_path),
+                codex_home: Some(PathBuf::from("/tmp/resolved-codex-home")),
+                ..Default::default()
+            },
+            codex_mcp_list_argv(),
+            AgentWrapperMcpCommandContext::default(),
+        )
+        .await
+        .expect("runner should succeed");
+
+        assert_eq!(
+            result.stderr.lines().collect::<Vec<_>>(),
+            vec!["AMBIENT_ONLY=unset", "CODEX_HOME=/tmp/resolved-codex-home"]
+        );
+
+        fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
+    }
+
     #[test]
     fn resolve_codex_mcp_command_applies_precedence_and_materializes_injected_home() {
         let resolved = resolve_codex_mcp_command(&sample_config(), &sample_context());
@@ -616,6 +781,27 @@ printf "SERVER_ONLY=%s\n" "${SERVER_ONLY-unset}" 1>&2
 
         assert_eq!(resolved.working_dir, Some(PathBuf::from("default/workdir")));
         assert_eq!(resolved.timeout, Some(Duration::from_secs(30)));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn resolve_codex_binary_path_uses_effective_path_env_for_unqualified_binary() {
+        let temp_dir = temp_test_dir("binary-path");
+        let script_path = write_fake_codex(&temp_dir, "#!/usr/bin/env bash\nexit 0\n");
+
+        let resolved = resolve_codex_binary_path(
+            None,
+            Some(OsString::from("codex")),
+            Some(temp_dir.to_string_lossy().as_ref()),
+            None,
+        );
+
+        assert_eq!(
+            resolved,
+            fs::canonicalize(&script_path).expect("canonicalize fake codex")
+        );
+
+        fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
     }
 
     #[tokio::test]

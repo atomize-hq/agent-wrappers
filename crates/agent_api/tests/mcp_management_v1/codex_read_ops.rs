@@ -6,12 +6,14 @@ use agent_api::{
     AgentWrapperBackend, AgentWrapperGateway, AgentWrapperKind,
 };
 
-use super::support::McpTestSandbox;
+use super::support::{process_env_lock, EnvGuard, McpTestSandbox};
 
 const FAKE_CODEX_RECORD_PATH_ENV: &str = "FAKE_CODEX_MCP_RECORD_PATH";
 const FAKE_CODEX_RECORD_ENV_KEYS_ENV: &str = "FAKE_CODEX_MCP_RECORD_ENV_KEYS";
 const ALL_RECORDED_ENV_KEYS: &str =
     "CLI_ONLY,CONFIG_ONLY,OVERRIDE_ME,REQUEST_ONLY,MY_TOKEN,MCP_SERVER_ENV";
+const CODEX_HOME_ENV: &str = "CODEX_HOME";
+const MY_TOKEN_ENV: &str = "MY_TOKEN";
 
 #[tokio::test]
 async fn codex_mcp_list_records_pinned_argv_and_request_context() {
@@ -169,6 +171,98 @@ async fn codex_mcp_get_records_pinned_argv_and_request_context() {
     assert_eq!(
         record.env.get("CLI_ONLY").map(String::as_str),
         Some("cli-value")
+    );
+}
+
+#[tokio::test]
+async fn codex_mcp_list_does_not_inherit_ambient_env_outside_resolved_context() {
+    if !codex_mcp_supported() {
+        return;
+    }
+
+    let _env_lock = process_env_lock().lock().expect("lock process env");
+    let sandbox = McpTestSandbox::new("codex_mcp_list_no_ambient_env").expect("sandbox");
+    let ambient_home = sandbox.root().join("ambient-codex-home");
+    let _ambient_home = EnvGuard::set(CODEX_HOME_ENV, ambient_home.as_os_str().to_os_string());
+    let _ambient_token = EnvGuard::set(MY_TOKEN_ENV, "ambient-secret");
+
+    let (_backend, gateway, kind) = codex_gateway(
+        &sandbox,
+        false,
+        codex_config_env(
+            &sandbox,
+            [("CONFIG_ONLY".to_string(), "config-only".to_string())],
+        ),
+        None,
+        None,
+    );
+
+    let output = gateway
+        .mcp_list(&kind, AgentWrapperMcpListRequest::default())
+        .await
+        .expect("mcp list should succeed");
+
+    assert!(output.status.success(), "expected success status");
+
+    let record = sandbox
+        .read_single_record()
+        .expect("single invocation record");
+    assert_eq!(
+        record.env.get(CODEX_HOME_ENV).map(String::as_str),
+        Some(sandbox.codex_home().to_string_lossy().as_ref())
+    );
+    assert!(
+        !record.env.contains_key(MY_TOKEN_ENV),
+        "ambient bearer token env must not leak into the spawned codex process"
+    );
+}
+
+#[tokio::test]
+async fn codex_mcp_get_does_not_inherit_ambient_env_outside_resolved_context() {
+    if !codex_mcp_supported() {
+        return;
+    }
+
+    let _env_lock = process_env_lock().lock().expect("lock process env");
+    let sandbox = McpTestSandbox::new("codex_mcp_get_no_ambient_env").expect("sandbox");
+    let ambient_home = sandbox.root().join("ambient-codex-home");
+    let _ambient_home = EnvGuard::set(CODEX_HOME_ENV, ambient_home.as_os_str().to_os_string());
+    let _ambient_token = EnvGuard::set(MY_TOKEN_ENV, "ambient-secret");
+
+    let (_backend, gateway, kind) = codex_gateway(
+        &sandbox,
+        false,
+        codex_config_env(
+            &sandbox,
+            [("CONFIG_ONLY".to_string(), "config-only".to_string())],
+        ),
+        None,
+        None,
+    );
+
+    let output = gateway
+        .mcp_get(
+            &kind,
+            AgentWrapperMcpGetRequest {
+                name: "demo".to_string(),
+                context: AgentWrapperMcpCommandContext::default(),
+            },
+        )
+        .await
+        .expect("mcp get should succeed");
+
+    assert!(output.status.success(), "expected success status");
+
+    let record = sandbox
+        .read_single_record()
+        .expect("single invocation record");
+    assert_eq!(
+        record.env.get(CODEX_HOME_ENV).map(String::as_str),
+        Some(sandbox.codex_home().to_string_lossy().as_ref())
+    );
+    assert!(
+        !record.env.contains_key(MY_TOKEN_ENV),
+        "ambient bearer token env must not leak into the spawned codex process"
     );
 }
 
