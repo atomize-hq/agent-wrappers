@@ -1,12 +1,19 @@
-use std::{collections::BTreeMap, env, path::PathBuf, time::Duration};
+use std::{
+    collections::BTreeMap,
+    env,
+    ffi::OsString,
+    fs,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 use claude_code::ClaudeHomeLayout;
 
 use crate::mcp::AgentWrapperMcpCommandContext;
 
 use super::{
-    CLAUDE_BINARY_ENV, CLAUDE_HOME_ENV, DISABLE_AUTOUPDATER_ENV, HOME_ENV, XDG_CACHE_HOME_ENV,
-    XDG_CONFIG_HOME_ENV, XDG_DATA_HOME_ENV,
+    CLAUDE_BINARY_ENV, CLAUDE_HOME_ENV, DISABLE_AUTOUPDATER_ENV, HOME_ENV, PATH_ENV,
+    XDG_CACHE_HOME_ENV, XDG_CONFIG_HOME_ENV, XDG_DATA_HOME_ENV,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -25,7 +32,7 @@ pub(super) fn resolve_claude_mcp_command(
     resolve_claude_mcp_command_with_env(
         config,
         context,
-        env::var(CLAUDE_BINARY_ENV).ok(),
+        env::var_os(CLAUDE_BINARY_ENV),
         env::var_os(CLAUDE_HOME_ENV).map(PathBuf::from),
     )
 }
@@ -33,10 +40,19 @@ pub(super) fn resolve_claude_mcp_command(
 pub(super) fn resolve_claude_mcp_command_with_env(
     config: &super::super::ClaudeCodeBackendConfig,
     context: &AgentWrapperMcpCommandContext,
-    claude_binary_env: Option<String>,
+    claude_binary_env: Option<OsString>,
     claude_home_env: Option<PathBuf>,
 ) -> ResolvedClaudeMcpCommand {
-    let binary_path = resolve_claude_binary_path(config.binary.as_ref(), claude_binary_env);
+    let binary_path = resolve_claude_binary_path(
+        config.binary.as_ref(),
+        claude_binary_env,
+        context
+            .env
+            .get(PATH_ENV)
+            .map(String::as_str)
+            .or_else(|| config.env.get(PATH_ENV).map(String::as_str)),
+        env::var_os(PATH_ENV),
+    );
     let mut env = config.env.clone();
     env.entry(DISABLE_AUTOUPDATER_ENV.to_string())
         .or_insert_with(|| "1".to_string());
@@ -67,17 +83,85 @@ pub(super) fn resolve_claude_mcp_command_with_env(
 
 pub(super) fn resolve_claude_binary_path(
     config_binary: Option<&PathBuf>,
-    claude_binary_env: Option<String>,
+    claude_binary_env: Option<OsString>,
+    effective_path_env: Option<&str>,
+    ambient_path_env: Option<OsString>,
 ) -> PathBuf {
-    if let Some(binary) = config_binary {
-        return binary.clone();
+    let binary_path = config_binary
+        .cloned()
+        .or_else(|| {
+            claude_binary_env.and_then(|value| {
+                if value.is_empty() {
+                    None
+                } else {
+                    Some(PathBuf::from(value))
+                }
+            })
+        })
+        .unwrap_or_else(|| PathBuf::from("claude"));
+
+    resolve_path_for_spawn(binary_path, effective_path_env, ambient_path_env)
+}
+
+fn resolve_path_for_spawn(
+    binary_path: PathBuf,
+    effective_path_env: Option<&str>,
+    ambient_path_env: Option<OsString>,
+) -> PathBuf {
+    if is_path_qualified(&binary_path) {
+        return binary_path;
     }
-    if let Some(binary) = claude_binary_env {
-        if !binary.trim().is_empty() {
-            return PathBuf::from(binary);
+
+    if let Some(path_env) = effective_path_env {
+        return find_binary_on_path(&binary_path, Some(OsString::from(path_env)))
+            .unwrap_or(binary_path);
+    }
+
+    find_binary_on_path(&binary_path, ambient_path_env).unwrap_or(binary_path)
+}
+
+fn is_path_qualified(path: &Path) -> bool {
+    path.is_absolute()
+        || path
+            .parent()
+            .is_some_and(|parent| !parent.as_os_str().is_empty())
+}
+
+fn find_binary_on_path(binary_name: &Path, path_env: Option<OsString>) -> Option<PathBuf> {
+    let path_env = path_env?;
+    env::split_paths(&path_env)
+        .find_map(|directory| candidate_binary_path(&directory, binary_name))
+        .map(|candidate| fs::canonicalize(&candidate).unwrap_or(candidate))
+}
+
+fn candidate_binary_path(directory: &Path, binary_name: &Path) -> Option<PathBuf> {
+    let candidate = directory.join(binary_name);
+    if candidate.is_file() {
+        return Some(candidate);
+    }
+
+    #[cfg(windows)]
+    {
+        if candidate.extension().is_some() {
+            return None;
+        }
+
+        let pathext =
+            env::var_os("PATHEXT").unwrap_or_else(|| OsString::from(".COM;.EXE;.BAT;.CMD"));
+        for extension in pathext.to_string_lossy().split(';') {
+            let extension = extension.trim();
+            if extension.is_empty() {
+                continue;
+            }
+
+            let suffixed = candidate.with_extension(extension.trim_start_matches('.'));
+            if suffixed.is_file() {
+                return Some(suffixed);
+            }
         }
     }
-    PathBuf::from("claude")
+
+    None
 }
 
 fn resolve_claude_home_layout(

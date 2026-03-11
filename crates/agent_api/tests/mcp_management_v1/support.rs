@@ -117,6 +117,12 @@ impl EnvGuard {
         std::env::set_var(key, value.into());
         Self { key, previous }
     }
+
+    pub(crate) fn unset(key: &'static str) -> Self {
+        let previous = std::env::var_os(key);
+        std::env::remove_var(key);
+        Self { key, previous }
+    }
 }
 
 impl Drop for EnvGuard {

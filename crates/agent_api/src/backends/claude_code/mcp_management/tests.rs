@@ -1,5 +1,11 @@
 use std::{
-    collections::BTreeMap, ffi::OsString, path::PathBuf, process::ExitStatus, time::Duration,
+    collections::BTreeMap,
+    env,
+    ffi::OsString,
+    path::PathBuf,
+    process::ExitStatus,
+    sync::{Mutex, OnceLock},
+    time::Duration,
 };
 
 use claude_code::ClaudeHomeLayout;
@@ -7,6 +13,13 @@ use tokio::io::{duplex, AsyncWriteExt, DuplexStream};
 
 use super::*;
 use crate::mcp::{AgentWrapperMcpAddTransport, AgentWrapperMcpCommandContext};
+
+#[cfg(unix)]
+use std::{
+    fs,
+    os::unix::fs::PermissionsExt,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 fn success_exit_status() -> ExitStatus {
     #[cfg(unix)]
@@ -73,9 +86,69 @@ fn sample_context() -> AgentWrapperMcpCommandContext {
     }
 }
 
+fn test_env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+struct EnvGuard {
+    key: &'static str,
+    previous: Option<OsString>,
+}
+
+impl EnvGuard {
+    fn set(key: &'static str, value: impl Into<OsString>) -> Self {
+        let previous = env::var_os(key);
+        env::set_var(key, value.into());
+        Self { key, previous }
+    }
+
+    fn unset(key: &'static str) -> Self {
+        let previous = env::var_os(key);
+        env::remove_var(key);
+        Self { key, previous }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        if let Some(value) = self.previous.take() {
+            env::set_var(self.key, value);
+        } else {
+            env::remove_var(self.key);
+        }
+    }
+}
+
 async fn write_all_and_close(mut writer: DuplexStream, bytes: Vec<u8>) {
     writer.write_all(&bytes).await.expect("write succeeds");
     writer.shutdown().await.expect("shutdown succeeds");
+}
+
+#[cfg(unix)]
+fn temp_test_dir(label: &str) -> PathBuf {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock should be after epoch")
+        .as_nanos();
+    let dir = std::env::temp_dir().join(format!(
+        "agent-api-claude-mcp-{label}-{}-{unique}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&dir).expect("temp dir should be created");
+    dir
+}
+
+#[cfg(unix)]
+fn write_fake_claude(dir: &std::path::Path, script: &str) -> PathBuf {
+    let path = dir.join("claude");
+    fs::write(&path, script).expect("script should be written");
+    let mut permissions = fs::metadata(&path)
+        .expect("script metadata should exist")
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&path, permissions).expect("script should be executable");
+    path
 }
 
 #[test]
@@ -194,7 +267,9 @@ fn claude_mcp_add_argv_rejects_url_transport_with_bearer_env_var() {
 fn resolve_claude_binary_path_prefers_config_over_env() {
     let resolved = resolve_claude_binary_path(
         Some(&PathBuf::from("/tmp/from-config")),
-        Some("/tmp/from-env".to_string()),
+        Some(OsString::from("/tmp/from-env")),
+        None,
+        None,
     );
 
     assert_eq!(resolved, PathBuf::from("/tmp/from-config"));
@@ -202,16 +277,119 @@ fn resolve_claude_binary_path_prefers_config_over_env() {
 
 #[test]
 fn resolve_claude_binary_path_uses_env_when_config_absent() {
-    let resolved = resolve_claude_binary_path(None, Some("/tmp/from-env".to_string()));
+    let resolved =
+        resolve_claude_binary_path(None, Some(OsString::from("/tmp/from-env")), None, None);
 
     assert_eq!(resolved, PathBuf::from("/tmp/from-env"));
 }
 
 #[test]
 fn resolve_claude_binary_path_ignores_blank_env() {
-    let resolved = resolve_claude_binary_path(None, Some("   ".to_string()));
+    let resolved = resolve_claude_binary_path(None, Some(OsString::from("")), None, None);
 
     assert_eq!(resolved, PathBuf::from("claude"));
+}
+
+#[cfg(unix)]
+#[test]
+fn resolve_claude_binary_path_uses_effective_path_env_for_unqualified_binary() {
+    let temp_dir = temp_test_dir("binary-path");
+    let script_path = write_fake_claude(&temp_dir, "#!/usr/bin/env bash\nexit 0\n");
+
+    let resolved = resolve_claude_binary_path(
+        None,
+        Some(OsString::from("claude")),
+        Some(temp_dir.to_string_lossy().as_ref()),
+        None,
+    );
+
+    assert_eq!(
+        resolved,
+        fs::canonicalize(&script_path).expect("canonicalize fake claude")
+    );
+
+    fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
+}
+
+#[cfg(unix)]
+#[test]
+fn resolve_claude_binary_path_prefers_request_path_over_config_and_ambient_path() {
+    let _env_lock = test_env_lock().lock().expect("lock test env");
+    let request_dir = temp_test_dir("request-path");
+    let config_dir = temp_test_dir("config-path");
+    let ambient_dir = temp_test_dir("ambient-path");
+
+    let request_binary = write_fake_claude(&request_dir, "#!/usr/bin/env bash\nexit 0\n");
+    let _config_binary = write_fake_claude(&config_dir, "#!/usr/bin/env bash\nexit 0\n");
+    let _ambient_binary = write_fake_claude(&ambient_dir, "#!/usr/bin/env bash\nexit 0\n");
+    let _ambient_path = EnvGuard::set(PATH_ENV, ambient_dir.as_os_str().to_os_string());
+
+    let resolved = resolve_claude_binary_path(
+        None,
+        Some(OsString::from("claude")),
+        Some(
+            env::join_paths([request_dir.as_path(), config_dir.as_path()])
+                .expect("join request path")
+                .to_string_lossy()
+                .as_ref(),
+        ),
+        env::var_os(PATH_ENV),
+    );
+
+    assert_eq!(
+        resolved,
+        fs::canonicalize(&request_binary).expect("canonicalize request binary")
+    );
+
+    fs::remove_dir_all(request_dir).expect("request dir should be removed");
+    fs::remove_dir_all(config_dir).expect("config dir should be removed");
+    fs::remove_dir_all(ambient_dir).expect("ambient dir should be removed");
+}
+
+#[cfg(unix)]
+#[test]
+fn resolve_claude_binary_path_prefers_config_path_over_ambient_path() {
+    let _env_lock = test_env_lock().lock().expect("lock test env");
+    let config_dir = temp_test_dir("config-precedence");
+    let ambient_dir = temp_test_dir("ambient-precedence");
+
+    let config_binary = write_fake_claude(&config_dir, "#!/usr/bin/env bash\nexit 0\n");
+    let _ambient_binary = write_fake_claude(&ambient_dir, "#!/usr/bin/env bash\nexit 0\n");
+    let _ambient_path = EnvGuard::set(PATH_ENV, ambient_dir.as_os_str().to_os_string());
+
+    let resolved = resolve_claude_binary_path(
+        None,
+        Some(OsString::from("claude")),
+        Some(config_dir.to_string_lossy().as_ref()),
+        env::var_os(PATH_ENV),
+    );
+
+    assert_eq!(
+        resolved,
+        fs::canonicalize(&config_binary).expect("canonicalize config binary")
+    );
+
+    fs::remove_dir_all(config_dir).expect("config dir should be removed");
+    fs::remove_dir_all(ambient_dir).expect("ambient dir should be removed");
+}
+
+#[cfg(unix)]
+#[test]
+fn resolve_claude_binary_path_uses_ambient_path_when_effective_path_is_absent() {
+    let _env_lock = test_env_lock().lock().expect("lock test env");
+    let ambient_dir = temp_test_dir("ambient-only");
+    let ambient_binary = write_fake_claude(&ambient_dir, "#!/usr/bin/env bash\nexit 0\n");
+    let _ambient_path = EnvGuard::set(PATH_ENV, ambient_dir.as_os_str().to_os_string());
+    let _claude_binary = EnvGuard::unset(CLAUDE_BINARY_ENV);
+
+    let resolved = resolve_claude_binary_path(None, None, None, env::var_os(PATH_ENV));
+
+    assert_eq!(
+        resolved,
+        fs::canonicalize(&ambient_binary).expect("canonicalize ambient binary")
+    );
+
+    fs::remove_dir_all(ambient_dir).expect("ambient dir should be removed");
 }
 
 #[test]
@@ -219,7 +397,7 @@ fn resolve_claude_mcp_command_applies_precedence_and_home_injection() {
     let resolved = resolve_claude_mcp_command_with_env(
         &sample_config(),
         &sample_context(),
-        Some("/tmp/from-env".to_string()),
+        Some(OsString::from("/tmp/from-env")),
         Some(PathBuf::from("/tmp/from-ambient-home")),
     );
     let layout = ClaudeHomeLayout::new("/tmp/claude-home");
@@ -280,6 +458,78 @@ fn resolve_claude_mcp_command_uses_backend_defaults_when_request_values_absent()
 
     assert_eq!(resolved.working_dir, Some(PathBuf::from("default/workdir")));
     assert_eq!(resolved.timeout, Some(Duration::from_secs(30)));
+}
+
+#[cfg(unix)]
+#[test]
+fn resolve_claude_mcp_command_prefers_request_path_over_config_and_ambient_path() {
+    let _env_lock = test_env_lock().lock().expect("lock test env");
+    let request_dir = temp_test_dir("request-command-path");
+    let config_dir = temp_test_dir("config-command-path");
+    let ambient_dir = temp_test_dir("ambient-command-path");
+    let request_binary = write_fake_claude(&request_dir, "#!/usr/bin/env bash\nexit 0\n");
+    let _config_binary = write_fake_claude(&config_dir, "#!/usr/bin/env bash\nexit 0\n");
+    let _ambient_binary = write_fake_claude(&ambient_dir, "#!/usr/bin/env bash\nexit 0\n");
+    let _ambient_path = EnvGuard::set(PATH_ENV, ambient_dir.as_os_str().to_os_string());
+    let _claude_binary = EnvGuard::unset(CLAUDE_BINARY_ENV);
+
+    let mut config = sample_config_without_home();
+    config.binary = None;
+    config.env.insert(
+        PATH_ENV.to_string(),
+        config_dir.to_string_lossy().into_owned(),
+    );
+
+    let mut context = AgentWrapperMcpCommandContext::default();
+    context.env.insert(
+        PATH_ENV.to_string(),
+        request_dir.to_string_lossy().into_owned(),
+    );
+
+    let resolved = resolve_claude_mcp_command_with_env(&config, &context, None, None);
+
+    assert_eq!(
+        resolved.binary_path,
+        fs::canonicalize(&request_binary).expect("canonicalize request binary")
+    );
+
+    fs::remove_dir_all(request_dir).expect("request dir should be removed");
+    fs::remove_dir_all(config_dir).expect("config dir should be removed");
+    fs::remove_dir_all(ambient_dir).expect("ambient dir should be removed");
+}
+
+#[cfg(unix)]
+#[test]
+fn resolve_claude_mcp_command_prefers_config_path_over_ambient_path() {
+    let _env_lock = test_env_lock().lock().expect("lock test env");
+    let config_dir = temp_test_dir("config-command-only-path");
+    let ambient_dir = temp_test_dir("ambient-command-only-path");
+    let config_binary = write_fake_claude(&config_dir, "#!/usr/bin/env bash\nexit 0\n");
+    let _ambient_binary = write_fake_claude(&ambient_dir, "#!/usr/bin/env bash\nexit 0\n");
+    let _ambient_path = EnvGuard::set(PATH_ENV, ambient_dir.as_os_str().to_os_string());
+    let _claude_binary = EnvGuard::unset(CLAUDE_BINARY_ENV);
+
+    let mut config = sample_config_without_home();
+    config.binary = None;
+    config.env.insert(
+        PATH_ENV.to_string(),
+        config_dir.to_string_lossy().into_owned(),
+    );
+
+    let resolved = resolve_claude_mcp_command_with_env(
+        &config,
+        &AgentWrapperMcpCommandContext::default(),
+        None,
+        None,
+    );
+
+    assert_eq!(
+        resolved.binary_path,
+        fs::canonicalize(&config_binary).expect("canonicalize config binary")
+    );
+
+    fs::remove_dir_all(config_dir).expect("config dir should be removed");
+    fs::remove_dir_all(ambient_dir).expect("ambient dir should be removed");
 }
 
 #[test]

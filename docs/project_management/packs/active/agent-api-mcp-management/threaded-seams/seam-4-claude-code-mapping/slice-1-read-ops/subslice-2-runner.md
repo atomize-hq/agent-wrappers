@@ -39,7 +39,10 @@
 Checklist:
 - Implement:
   - Resolve binary path deterministically:
-    - `ClaudeCodeBackendConfig.binary` (if set) → `CLAUDE_BINARY` env var (if set) → `"claude"`.
+    - Choose the binary token with precedence:
+      `ClaudeCodeBackendConfig.binary` (if set) → `CLAUDE_BINARY` env var (if set) → `"claude"`.
+    - If the chosen token is not path-qualified, resolve it against the effective `PATH` before spawn
+      (`request.context.env["PATH"]` → backend config env `PATH` → ambient parent `PATH`).
   - Apply pinned context precedence:
     - working_dir: `request.context.working_dir` → `config.default_working_dir` → backend default.
     - timeout: `request.context.timeout` → `config.default_timeout` → backend default (or none).
@@ -51,4 +54,3 @@ Checklist:
   - Run `cargo test -p agent_api --features claude_code`.
 - Validate:
   - Confirm bounded capture is used and the SEAM-1 enforcement helper applies suffix + flags deterministically.
-

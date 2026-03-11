@@ -10,7 +10,7 @@ use agent_api::{AgentWrapperBackend, AgentWrapperGateway};
 use super::{
     claude_support::{
         claude_config_env, claude_gateway, claude_gateway_with_home, claude_get_supported,
-        claude_list_supported, FAKE_CLAUDE_SCENARIO_ENV,
+        claude_list_supported, ALL_RECORDED_ENV_KEYS, FAKE_CLAUDE_SCENARIO_ENV,
     },
     support::{
         collect_fake_mcp_sentinels, fake_mcp_sentinel, process_env_lock,
@@ -20,8 +20,10 @@ use super::{
 
 const MCP_OUTPUT_BOUND_BYTES: usize = 65_536;
 const TRUNCATION_SUFFIX: &str = "…(truncated)";
+const CLAUDE_BINARY_ENV: &str = "CLAUDE_BINARY";
 const CLAUDE_HOME_ENV: &str = "CLAUDE_HOME";
 const MY_TOKEN_ENV: &str = "MY_TOKEN";
+const PATH_ENV: &str = "PATH";
 
 #[tokio::test]
 async fn claude_mcp_list_records_pinned_argv_and_request_context_on_supported_targets() {
@@ -336,6 +338,64 @@ async fn claude_mcp_list_uses_ambient_claude_home_when_config_home_is_absent() {
     assert!(
         ambient_claude_home.join(".cache").is_dir(),
         "ambient xdg cache dir should exist"
+    );
+}
+
+#[tokio::test]
+async fn claude_mcp_list_resolves_ambient_path_before_env_clear() {
+    if !claude_list_supported() {
+        return;
+    }
+
+    let _env_lock = process_env_lock().lock().expect("lock process env");
+    let sandbox = McpTestSandbox::new("claude_mcp_list_resolves_ambient_path").expect("sandbox");
+    let fake_claude = sandbox.install_fake_claude().expect("install fake claude");
+    let _ambient_path =
+        SupportEnvGuard::set(PATH_ENV, sandbox.bin_dir().as_os_str().to_os_string());
+    let _ambient_token = SupportEnvGuard::set(MY_TOKEN_ENV, "ambient-secret");
+    let _ambient_binary = SupportEnvGuard::unset(CLAUDE_BINARY_ENV);
+
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
+        binary: None,
+        claude_home: Some(sandbox.claude_home().to_path_buf()),
+        env: claude_config_env(
+            &sandbox,
+            [(
+                "FAKE_CLAUDE_MCP_RECORD_ENV_KEYS".to_string(),
+                format!("{ALL_RECORDED_ENV_KEYS},PATH"),
+            )],
+        ),
+        ..Default::default()
+    });
+
+    let kind = backend.kind();
+    let mut gateway = AgentWrapperGateway::new();
+    gateway
+        .register(Arc::new(backend))
+        .expect("register claude backend");
+
+    let output = gateway
+        .mcp_list(&kind, AgentWrapperMcpListRequest::default())
+        .await
+        .expect("supported list should succeed");
+
+    assert!(output.status.success(), "expected success status");
+    assert!(
+        fake_claude.is_file(),
+        "fake claude must exist on ambient PATH"
+    );
+
+    let record = sandbox
+        .read_single_record()
+        .expect("single invocation record");
+    assert_eq!(record.args, vec!["mcp", "list"]);
+    assert!(
+        !record.env.contains_key(PATH_ENV),
+        "ambient PATH must be used only for pre-spawn binary resolution"
+    );
+    assert!(
+        !record.env.contains_key(MY_TOKEN_ENV),
+        "ambient bearer token env must not leak into the spawned claude process"
     );
 }
 
