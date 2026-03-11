@@ -18,12 +18,16 @@ use super::{
         claude_config_env, claude_gateway, claude_gateway_with_home, claude_get_supported,
         claude_list_supported, FAKE_CLAUDE_SCENARIO_ENV,
     },
-    support::{collect_fake_mcp_sentinels, fake_mcp_sentinel, McpTestSandbox},
+    support::{
+        collect_fake_mcp_sentinels, fake_mcp_sentinel, process_env_lock,
+        EnvGuard as SupportEnvGuard, McpTestSandbox,
+    },
 };
 
 const MCP_OUTPUT_BOUND_BYTES: usize = 65_536;
 const TRUNCATION_SUFFIX: &str = "…(truncated)";
 const CLAUDE_HOME_ENV: &str = "CLAUDE_HOME";
+const MY_TOKEN_ENV: &str = "MY_TOKEN";
 
 fn claude_home_env_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -116,6 +120,55 @@ async fn claude_mcp_list_records_pinned_argv_and_request_context_on_supported_ta
     assert_eq!(
         record.env.get("CLI_ONLY").map(String::as_str),
         Some("cli-value")
+    );
+}
+
+#[tokio::test]
+async fn claude_mcp_list_does_not_inherit_ambient_env_outside_resolved_context() {
+    if !claude_list_supported() {
+        return;
+    }
+
+    let _env_lock = process_env_lock().lock().expect("lock process env");
+    let _ambient_token = SupportEnvGuard::set(MY_TOKEN_ENV, "ambient-secret");
+
+    let sandbox = McpTestSandbox::new("claude_mcp_list_no_ambient_env").expect("sandbox");
+    let (_backend, gateway, kind) = claude_gateway(
+        &sandbox,
+        false,
+        claude_config_env(
+            &sandbox,
+            [("CONFIG_ONLY".to_string(), "config-only".to_string())],
+        ),
+        None,
+        None,
+    );
+
+    let output = gateway
+        .mcp_list(&kind, AgentWrapperMcpListRequest::default())
+        .await
+        .expect("mcp list should succeed");
+
+    assert!(output.status.success(), "expected success status");
+
+    let record = sandbox
+        .read_single_record()
+        .expect("single invocation record");
+    assert_eq!(
+        record.env.get("CLAUDE_HOME").map(String::as_str),
+        Some(sandbox.claude_home().to_string_lossy().as_ref())
+    );
+    assert_eq!(
+        record.env.get("HOME").map(String::as_str),
+        Some(sandbox.claude_home().to_string_lossy().as_ref())
+    );
+    assert_eq!(
+        record.env.get("CONFIG_ONLY").map(String::as_str),
+        Some("config-only")
+    );
+    assert!(
+        !record.env.contains_key(MY_TOKEN_ENV),
+        "ambient bearer token env must not leak into the spawned claude process"
     );
 }
 

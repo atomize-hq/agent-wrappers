@@ -51,6 +51,7 @@ pub(super) async fn capture_claude_mcp_output(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true)
+        .env_clear()
         .envs(&resolved.env);
 
     if let Some(working_dir) = resolved.working_dir.as_ref() {
