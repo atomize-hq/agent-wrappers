@@ -24,15 +24,13 @@ pub(super) fn resolve_codex_mcp_command(
     config: &super::super::CodexBackendConfig,
     context: &AgentWrapperMcpCommandContext,
 ) -> Result<ResolvedCodexMcpCommand, AgentWrapperError> {
+    let ambient_path_env = env::var_os(PATH_ENV);
+    let effective_path_env = effective_path_env(config, context, ambient_path_env.as_ref());
     let binary_path = resolve_codex_binary_path(
         config.binary.as_ref(),
         env::var_os(CODEX_BINARY_ENV),
-        context
-            .env
-            .get(PATH_ENV)
-            .map(String::as_str)
-            .or_else(|| config.env.get(PATH_ENV).map(String::as_str)),
-        env::var_os(PATH_ENV),
+        effective_path_env.as_deref(),
+        ambient_path_env,
     )?;
     let mut env = config.env.clone();
     env.insert(
@@ -48,6 +46,9 @@ pub(super) fn resolve_codex_mcp_command(
     }
 
     env.extend(context.env.clone());
+    if let Some(path_env) = effective_path_env {
+        env.entry(PATH_ENV.to_string()).or_insert(path_env);
+    }
 
     let materialize_codex_home = config.codex_home.clone().filter(|codex_home| {
         env.get(CODEX_HOME_ENV)
@@ -71,6 +72,19 @@ fn default_codex_binary_path() -> PathBuf {
         .filter(|value| !value.is_empty())
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("codex"))
+}
+
+fn effective_path_env(
+    config: &super::super::CodexBackendConfig,
+    context: &AgentWrapperMcpCommandContext,
+    ambient_path_env: Option<&OsString>,
+) -> Option<String> {
+    context
+        .env
+        .get(PATH_ENV)
+        .cloned()
+        .or_else(|| config.env.get(PATH_ENV).cloned())
+        .or_else(|| ambient_path_env.map(|value| value.to_string_lossy().into_owned()))
 }
 
 pub(super) fn resolve_codex_binary_path(

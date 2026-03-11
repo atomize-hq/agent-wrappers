@@ -228,6 +228,83 @@ fn resolve_claude_mcp_command_uses_backend_defaults_when_request_values_absent()
 
 #[cfg(unix)]
 #[test]
+fn resolve_claude_mcp_command_prefers_request_path_in_child_env() {
+    let _env_lock = test_env_lock().lock().expect("lock test env");
+    let ambient_dir = temp_test_dir("ambient-command-path");
+    let _ambient_path = EnvGuard::set(PATH_ENV, ambient_dir.as_os_str().to_os_string());
+
+    let request_path = "/tmp/request-path".to_string();
+    let mut config = sample_config_without_home();
+    config
+        .env
+        .insert(PATH_ENV.to_string(), "/tmp/config-path".to_string());
+    let mut context = sample_context();
+    context
+        .env
+        .insert(PATH_ENV.to_string(), request_path.clone());
+
+    let resolved = resolve_claude_mcp_command_with_env(
+        &config,
+        &context,
+        Some(OsString::from("/tmp/claude")),
+        None,
+    )
+    .expect("resolve");
+
+    assert_eq!(resolved.env.get(PATH_ENV), Some(&request_path));
+
+    fs::remove_dir_all(ambient_dir).expect("ambient dir should be removed");
+}
+
+#[cfg(unix)]
+#[test]
+fn resolve_claude_mcp_command_uses_config_path_in_child_env_when_request_missing() {
+    let _env_lock = test_env_lock().lock().expect("lock test env");
+    let ambient_dir = temp_test_dir("ambient-config-path");
+    let _ambient_path = EnvGuard::set(PATH_ENV, ambient_dir.as_os_str().to_os_string());
+
+    let config_path = "/tmp/config-path".to_string();
+    let mut config = sample_config_without_home();
+    config.env.insert(PATH_ENV.to_string(), config_path.clone());
+
+    let resolved = resolve_claude_mcp_command_with_env(
+        &config,
+        &AgentWrapperMcpCommandContext::default(),
+        Some(OsString::from("/tmp/claude")),
+        None,
+    )
+    .expect("resolve");
+
+    assert_eq!(resolved.env.get(PATH_ENV), Some(&config_path));
+
+    fs::remove_dir_all(ambient_dir).expect("ambient dir should be removed");
+}
+
+#[cfg(unix)]
+#[test]
+fn resolve_claude_mcp_command_injects_ambient_path_into_child_env_when_unset() {
+    let _env_lock = test_env_lock().lock().expect("lock test env");
+    let ambient_dir = temp_test_dir("ambient-only-command-path");
+    let _ambient_path = EnvGuard::set(PATH_ENV, ambient_dir.as_os_str().to_os_string());
+
+    let resolved = resolve_claude_mcp_command_with_env(
+        &sample_config_without_home(),
+        &AgentWrapperMcpCommandContext::default(),
+        Some(OsString::from("/tmp/claude")),
+        None,
+    )
+    .expect("resolve");
+
+    assert_eq!(
+        resolved.env.get(PATH_ENV).map(String::as_str),
+        Some(ambient_dir.to_string_lossy().as_ref())
+    );
+
+    fs::remove_dir_all(ambient_dir).expect("ambient dir should be removed");
+}
+
+#[cfg(unix)]
+#[test]
 fn resolve_claude_mcp_command_prefers_request_path_over_config_and_ambient_path() {
     let _env_lock = test_env_lock().lock().expect("lock test env");
     let request_dir = temp_test_dir("request-command-path");

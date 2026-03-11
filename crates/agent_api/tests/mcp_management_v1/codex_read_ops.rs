@@ -284,7 +284,13 @@ async fn codex_mcp_list_resolves_ambient_path_before_env_clear() {
     let backend = Arc::new(CodexBackend::new(CodexBackendConfig {
         binary: None,
         codex_home: Some(sandbox.codex_home().to_path_buf()),
-        env: codex_config_env(&sandbox, std::iter::empty()),
+        env: codex_config_env(
+            &sandbox,
+            [(
+                FAKE_CODEX_RECORD_ENV_KEYS_ENV.to_string(),
+                format!("{ALL_RECORDED_ENV_KEYS},PATH"),
+            )],
+        ),
         ..Default::default()
     }));
 
@@ -307,9 +313,9 @@ async fn codex_mcp_list_resolves_ambient_path_before_env_clear() {
         .read_single_record()
         .expect("single invocation record");
     assert_eq!(record.args, vec!["mcp", "list", "--json"]);
-    assert!(
-        !record.env.contains_key(PATH_ENV),
-        "ambient PATH must be used only for pre-spawn binary resolution"
+    assert_eq!(
+        record.env.get(PATH_ENV).map(String::as_str),
+        Some(sandbox.bin_dir().to_string_lossy().as_ref())
     );
     assert!(
         !record.env.contains_key(MY_TOKEN_ENV),

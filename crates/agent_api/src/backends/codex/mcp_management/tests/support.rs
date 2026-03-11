@@ -88,6 +88,12 @@ impl EnvGuard {
         env::set_var(key, value.into());
         Self { key, previous }
     }
+
+    pub(super) fn unset(key: &'static str) -> Self {
+        let previous = env::var_os(key);
+        env::remove_var(key);
+        Self { key, previous }
+    }
 }
 
 impl Drop for EnvGuard {

@@ -43,15 +43,13 @@ pub(super) fn resolve_claude_mcp_command_with_env(
     claude_binary_env: Option<OsString>,
     claude_home_env: Option<PathBuf>,
 ) -> Result<ResolvedClaudeMcpCommand, AgentWrapperError> {
+    let ambient_path_env = env::var_os(PATH_ENV);
+    let effective_path_env = effective_path_env(config, context, ambient_path_env.as_ref());
     let binary_path = resolve_claude_binary_path(
         config.binary.as_ref(),
         claude_binary_env,
-        context
-            .env
-            .get(PATH_ENV)
-            .map(String::as_str)
-            .or_else(|| config.env.get(PATH_ENV).map(String::as_str)),
-        env::var_os(PATH_ENV),
+        effective_path_env.as_deref(),
+        ambient_path_env,
     )?;
     let mut env = config.env.clone();
     env.entry(DISABLE_AUTOUPDATER_ENV.to_string())
@@ -64,6 +62,9 @@ pub(super) fn resolve_claude_mcp_command_with_env(
     }
 
     env.extend(context.env.clone());
+    if let Some(path_env) = effective_path_env {
+        env.entry(PATH_ENV.to_string()).or_insert(path_env);
+    }
     let materialize_claude_home = claude_home_layout
         .as_ref()
         .filter(|layout| effective_env_matches_claude_home_layout(&env, layout))
@@ -79,6 +80,19 @@ pub(super) fn resolve_claude_mcp_command_with_env(
         env,
         materialize_claude_home,
     })
+}
+
+fn effective_path_env(
+    config: &super::super::ClaudeCodeBackendConfig,
+    context: &AgentWrapperMcpCommandContext,
+    ambient_path_env: Option<&OsString>,
+) -> Option<String> {
+    context
+        .env
+        .get(PATH_ENV)
+        .cloned()
+        .or_else(|| config.env.get(PATH_ENV).cloned())
+        .or_else(|| ambient_path_env.map(|value| value.to_string_lossy().into_owned()))
 }
 
 pub(super) fn resolve_claude_binary_path(

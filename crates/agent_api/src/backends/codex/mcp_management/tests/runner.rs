@@ -1,4 +1,7 @@
-use std::{collections::BTreeMap, path::PathBuf};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 
 use crate::{
     bounds::enforce_mcp_output_bound,
@@ -26,6 +29,22 @@ use std::fs;
 use super::support::{temp_test_dir, write_fake_codex};
 
 #[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
+const PATH_ENV: &str = "PATH";
+const UNIX_TEST_PATH: &str = "/usr/bin:/bin";
+
+#[cfg(unix)]
+fn write_test_executable(path: &Path, script: &str) {
+    fs::write(path, script).expect("script should be written");
+    let mut permissions = fs::metadata(path)
+        .expect("script metadata should exist")
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(path, permissions).expect("script should be executable");
+}
+
+#[cfg(unix)]
 #[tokio::test]
 async fn run_codex_mcp_uses_context_env_without_leaking_stdio_transport_env() {
     let temp_dir = temp_test_dir("write-env");
@@ -45,7 +64,10 @@ printf "SERVER_ONLY=%s\n" "${SERVER_ONLY-unset}" 1>&2
     };
     let argv = codex_mcp_add_argv("demo", &transport);
     let context = AgentWrapperMcpCommandContext {
-        env: BTreeMap::from([("CLI_ONLY".to_string(), "cli-value".to_string())]),
+        env: BTreeMap::from([
+            ("CLI_ONLY".to_string(), "cli-value".to_string()),
+            (PATH_ENV.to_string(), UNIX_TEST_PATH.to_string()),
+        ]),
         ..Default::default()
     };
 
@@ -92,6 +114,7 @@ async fn run_codex_mcp_clears_ambient_env_before_spawn() {
         r#"#!/usr/bin/env bash
 printf "AMBIENT_ONLY=%s\n" "${AMBIENT_ONLY-unset}" 1>&2
 printf "CODEX_HOME=%s\n" "${CODEX_HOME-unset}" 1>&2
+printf "PATH=%s\n" "${PATH-unset}" 1>&2
 "#,
     );
     let _ambient_only = EnvGuard::set("AMBIENT_ONLY", "ambient-value");
@@ -104,15 +127,59 @@ printf "CODEX_HOME=%s\n" "${CODEX_HOME-unset}" 1>&2
             ..Default::default()
         },
         codex_mcp_list_argv(),
-        AgentWrapperMcpCommandContext::default(),
+        AgentWrapperMcpCommandContext {
+            env: BTreeMap::from([(PATH_ENV.to_string(), UNIX_TEST_PATH.to_string())]),
+            ..Default::default()
+        },
     )
     .await
     .expect("runner should succeed");
 
     assert_eq!(
         result.stderr.lines().collect::<Vec<_>>(),
-        vec!["AMBIENT_ONLY=unset", "CODEX_HOME=/tmp/resolved-codex-home"]
+        vec![
+            "AMBIENT_ONLY=unset".to_string(),
+            "CODEX_HOME=/tmp/resolved-codex-home".to_string(),
+            format!("PATH={UNIX_TEST_PATH}"),
+        ]
     );
+
+    fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
+}
+
+#[cfg(unix)]
+#[tokio::test]
+#[allow(clippy::await_holding_lock)]
+async fn run_codex_mcp_preserves_path_for_launcher_script_helpers() {
+    let _env_lock = test_env_lock().lock().expect("lock test env");
+    let temp_dir = temp_test_dir("path-helper");
+    let helper_path = temp_dir.join("helper-bin");
+    let script_path = temp_dir.join("codex");
+    let effective_path = format!("{}:{UNIX_TEST_PATH}", temp_dir.to_string_lossy());
+
+    write_test_executable(&helper_path, "#!/usr/bin/env bash\nprintf 'helper-ran\\n'");
+    write_test_executable(&script_path, "#!/usr/bin/env bash\nhelper-bin\n");
+
+    let result = run_codex_mcp(
+        super::super::super::CodexBackendConfig {
+            binary: Some(script_path),
+            ..Default::default()
+        },
+        codex_mcp_list_argv(),
+        AgentWrapperMcpCommandContext {
+            env: BTreeMap::from([(PATH_ENV.to_string(), effective_path.clone())]),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("runner should succeed");
+
+    assert!(
+        result.status.success(),
+        "launcher helper should resolve via PATH"
+    );
+    assert_eq!(result.stdout, "helper-ran\n");
+    assert!(result.stderr.is_empty(), "stderr should remain empty");
 
     fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
 }

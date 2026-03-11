@@ -1,16 +1,41 @@
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 
 use crate::{mcp::AgentWrapperMcpAddTransport, AgentWrapperError};
 
 use super::super::{
     claude_mcp_add_argv, claude_mcp_get_argv, claude_mcp_list_argv, claude_mcp_remove_argv,
+    run_claude_mcp,
     runner::{
         capture_bounded, classify_manifest_runtime_conflict_text, finalize_claude_mcp_output,
         CapturedClaudeMcpCommandOutput,
     },
     PINNED_MCP_RUNTIME_CONFLICT,
 };
-use super::support::{exit_status_with_code, success_exit_status, write_all_and_close};
+use super::support::{
+    exit_status_with_code, success_exit_status, test_env_lock, write_all_and_close, EnvGuard,
+};
+
+#[cfg(unix)]
+use std::{fs, os::unix::fs::PermissionsExt};
+
+#[cfg(unix)]
+use super::support::temp_test_dir;
+
+const PATH_ENV: &str = "PATH";
+const UNIX_TEST_PATH: &str = "/usr/bin:/bin";
+
+#[cfg(unix)]
+fn write_test_executable(path: &Path, script: &str) {
+    fs::write(path, script).expect("script should be written");
+    let mut permissions = fs::metadata(path)
+        .expect("script metadata should exist")
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(path, permissions).expect("script should be executable");
+}
 
 fn sample_stdio_transport() -> AgentWrapperMcpAddTransport {
     AgentWrapperMcpAddTransport::Stdio {
@@ -27,6 +52,90 @@ fn assert_runtime_conflict(err: AgentWrapperError) {
         }
         other => panic!("expected Backend error, got {other:?}"),
     }
+}
+
+#[cfg(unix)]
+#[tokio::test]
+#[allow(clippy::await_holding_lock)]
+async fn run_claude_mcp_clears_ambient_env_before_spawn() {
+    let _env_lock = test_env_lock().lock().expect("lock test env");
+    let temp_dir = temp_test_dir("ambient-env");
+    let script_path = temp_dir.join("claude");
+    write_test_executable(
+        &script_path,
+        r#"#!/usr/bin/env bash
+printf "AMBIENT_ONLY=%s\n" "${AMBIENT_ONLY-unset}" 1>&2
+printf "CLAUDE_HOME=%s\n" "${CLAUDE_HOME-unset}" 1>&2
+printf "HOME=%s\n" "${HOME-unset}" 1>&2
+printf "PATH=%s\n" "${PATH-unset}" 1>&2
+"#,
+    );
+    let _ambient_only = EnvGuard::set("AMBIENT_ONLY", "ambient-value");
+    let _ambient_home = EnvGuard::set("CLAUDE_HOME", "/tmp/ambient-claude-home");
+
+    let result = run_claude_mcp(
+        super::super::super::ClaudeCodeBackendConfig {
+            binary: Some(script_path),
+            claude_home: Some(PathBuf::from("/tmp/resolved-claude-home")),
+            ..Default::default()
+        },
+        claude_mcp_list_argv(),
+        crate::mcp::AgentWrapperMcpCommandContext {
+            env: BTreeMap::from([(PATH_ENV.to_string(), UNIX_TEST_PATH.to_string())]),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("runner should succeed");
+
+    assert_eq!(
+        result.stderr.lines().collect::<Vec<_>>(),
+        vec![
+            "AMBIENT_ONLY=unset".to_string(),
+            "CLAUDE_HOME=/tmp/resolved-claude-home".to_string(),
+            "HOME=/tmp/resolved-claude-home".to_string(),
+            format!("PATH={UNIX_TEST_PATH}"),
+        ]
+    );
+
+    fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
+}
+
+#[cfg(unix)]
+#[tokio::test]
+#[allow(clippy::await_holding_lock)]
+async fn run_claude_mcp_preserves_path_for_launcher_script_helpers() {
+    let _env_lock = test_env_lock().lock().expect("lock test env");
+    let temp_dir = temp_test_dir("path-helper");
+    let helper_path = temp_dir.join("helper-bin");
+    let script_path = temp_dir.join("claude");
+    let effective_path = format!("{}:{UNIX_TEST_PATH}", temp_dir.to_string_lossy());
+
+    write_test_executable(&helper_path, "#!/usr/bin/env bash\nprintf 'helper-ran\\n'");
+    write_test_executable(&script_path, "#!/usr/bin/env bash\nhelper-bin\n");
+
+    let result = run_claude_mcp(
+        super::super::super::ClaudeCodeBackendConfig {
+            binary: Some(script_path),
+            ..Default::default()
+        },
+        claude_mcp_list_argv(),
+        crate::mcp::AgentWrapperMcpCommandContext {
+            env: BTreeMap::from([(PATH_ENV.to_string(), effective_path.clone())]),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("runner should succeed");
+
+    assert!(
+        result.status.success(),
+        "launcher helper should resolve via PATH"
+    );
+    assert_eq!(result.stdout, "helper-ran\n");
+    assert!(result.stderr.is_empty(), "stderr should remain empty");
+
+    fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
 }
 
 #[tokio::test]
