@@ -18,6 +18,8 @@ use super::{
 
 const TIMEOUT_STDOUT_SENTINEL: &str = "fake_claude_mcp timeout stdout sentinel";
 const TIMEOUT_STDERR_SENTINEL: &str = "fake_claude_mcp timeout stderr sentinel";
+const FAST_EXIT_STDOUT_SENTINEL: &str = "fake_claude_mcp fast-exit stdout sentinel";
+const FAST_EXIT_STDERR_SENTINEL: &str = "fake_claude_mcp fast-exit stderr sentinel";
 
 #[tokio::test]
 async fn claude_mcp_add_url_rejects_bearer_env_var_without_spawning() {
@@ -241,5 +243,54 @@ async fn claude_mcp_zero_timeout_returns_backend_error_without_leaking_partial_o
     assert!(
         message.contains("timeout"),
         "zero-timeout failures should stay redacted but mention timeout: {message}"
+    );
+}
+
+#[tokio::test]
+async fn claude_mcp_zero_timeout_fast_exit_still_returns_timeout_error() {
+    if !claude_list_supported() {
+        return;
+    }
+
+    let sandbox = McpTestSandbox::new("claude_mcp_zero_timeout_fast_exit").expect("sandbox");
+    let (_backend, gateway, kind) = claude_gateway(
+        &sandbox,
+        false,
+        claude_config_env(
+            &sandbox,
+            [(
+                FAKE_CLAUDE_SCENARIO_ENV.to_string(),
+                "fast_exit_with_output".to_string(),
+            )],
+        ),
+        None,
+        None,
+    );
+
+    let err = gateway
+        .mcp_list(
+            &kind,
+            AgentWrapperMcpListRequest {
+                context: AgentWrapperMcpCommandContext {
+                    timeout: Some(Duration::ZERO),
+                    ..Default::default()
+                },
+            },
+        )
+        .await
+        .expect_err("zero timeout should fail even for fast-exit commands");
+
+    let message = backend_error_message(err);
+    assert!(
+        !message.contains(FAST_EXIT_STDOUT_SENTINEL),
+        "zero-timeout error leaked fast-exit stdout sentinel: {message}"
+    );
+    assert!(
+        !message.contains(FAST_EXIT_STDERR_SENTINEL),
+        "zero-timeout error leaked fast-exit stderr sentinel: {message}"
+    );
+    assert!(
+        message.contains("timeout"),
+        "zero-timeout fast-exit failures should stay redacted but mention timeout: {message}"
     );
 }

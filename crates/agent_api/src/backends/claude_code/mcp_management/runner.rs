@@ -183,15 +183,15 @@ fn manifest_conflict_tokens(argv: &[OsString]) -> Vec<&'static str> {
     tokens
 }
 
-pub(super) fn effective_timeout_for_wait(timeout: Option<Duration>) -> Option<Duration> {
-    timeout
-}
-
 async fn wait_for_exit(
     child: &mut Child,
     timeout: Option<Duration>,
 ) -> Result<ExitStatus, AgentWrapperError> {
-    match effective_timeout_for_wait(timeout) {
+    match timeout {
+        Some(timeout) if timeout == Duration::ZERO => {
+            cleanup_child(child).await;
+            Err(backend_error(PINNED_TIMEOUT_FAILURE))
+        }
         Some(timeout) => match tokio::time::timeout(timeout, child.wait()).await {
             Ok(Ok(status)) => Ok(status),
             Ok(Err(_)) => Err(backend_error(PINNED_WAIT_FAILURE)),

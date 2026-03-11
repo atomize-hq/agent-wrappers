@@ -20,6 +20,8 @@ const MCP_OUTPUT_BOUND_BYTES: usize = 65_536;
 const TRUNCATION_SUFFIX: &str = "…(truncated)";
 const TIMEOUT_STDOUT_SENTINEL: &str = "fake_codex_mcp timeout stdout sentinel";
 const TIMEOUT_STDERR_SENTINEL: &str = "fake_codex_mcp timeout stderr sentinel";
+const FAST_EXIT_STDOUT_SENTINEL: &str = "fake_codex_mcp fast-exit stdout sentinel";
+const FAST_EXIT_STDERR_SENTINEL: &str = "fake_codex_mcp fast-exit stderr sentinel";
 
 #[tokio::test]
 async fn codex_mcp_nonzero_exit_returns_output_in_ok_result() {
@@ -182,6 +184,54 @@ async fn codex_mcp_zero_timeout_returns_backend_error_without_leaking_partial_ou
     assert!(
         message.contains("timeout"),
         "zero-timeout failures should stay redacted but mention timeout: {message}"
+    );
+}
+
+#[tokio::test]
+async fn codex_mcp_zero_timeout_fast_exit_still_returns_timeout_error() {
+    if !codex_mcp_supported() {
+        return;
+    }
+
+    let sandbox = McpTestSandbox::new("codex_mcp_zero_timeout_fast_exit").expect("sandbox");
+    let (_backend, gateway, kind) = codex_gateway(
+        &sandbox,
+        false,
+        codex_config_env(
+            &sandbox,
+            [(
+                FAKE_CODEX_SCENARIO_ENV.to_string(),
+                "fast_exit_with_output".to_string(),
+            )],
+        ),
+        None,
+    );
+
+    let err = gateway
+        .mcp_list(
+            &kind,
+            AgentWrapperMcpListRequest {
+                context: AgentWrapperMcpCommandContext {
+                    timeout: Some(Duration::ZERO),
+                    ..Default::default()
+                },
+            },
+        )
+        .await
+        .expect_err("zero timeout should fail even for fast-exit commands");
+
+    let message = backend_error_message(err);
+    assert!(
+        !message.contains(FAST_EXIT_STDOUT_SENTINEL),
+        "zero-timeout error leaked fast-exit stdout sentinel: {message}"
+    );
+    assert!(
+        !message.contains(FAST_EXIT_STDERR_SENTINEL),
+        "zero-timeout error leaked fast-exit stderr sentinel: {message}"
+    );
+    assert!(
+        message.contains("timeout"),
+        "zero-timeout fast-exit failures should stay redacted but mention timeout: {message}"
     );
 }
 
@@ -396,7 +446,10 @@ async fn codex_mcp_add_url_flag_drift_returns_backend_error_without_mutating_cap
         true,
         codex_config_env(
             &sandbox,
-            [(FAKE_CODEX_SCENARIO_ENV.to_string(), "url_add_drift".to_string())],
+            [(
+                FAKE_CODEX_SCENARIO_ENV.to_string(),
+                "url_add_drift".to_string(),
+            )],
         ),
         None,
     );

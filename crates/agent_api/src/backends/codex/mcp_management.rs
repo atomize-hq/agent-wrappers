@@ -351,6 +351,10 @@ async fn wait_for_exit(
     timeout: Option<Duration>,
 ) -> Result<std::process::ExitStatus, AgentWrapperError> {
     match timeout {
+        Some(timeout) if timeout == Duration::ZERO => {
+            cleanup_child(child).await;
+            Err(backend_error(super::PINNED_TIMEOUT))
+        }
         Some(timeout) => match tokio::time::timeout(timeout, child.wait()).await {
             Ok(Ok(status)) => Ok(status),
             Ok(Err(_)) => Err(backend_error(PINNED_WAIT_FAILURE)),

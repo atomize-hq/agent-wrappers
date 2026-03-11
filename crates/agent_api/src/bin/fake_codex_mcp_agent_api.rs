@@ -16,12 +16,14 @@ const CODEX_HOME_ENV: &str = "CODEX_HOME";
 const SENTINEL_DIR: &str = ".agent_api_fake_mcp";
 const OVERSIZED_OUTPUT_BYTES: usize = 65_536 + 128;
 const SLEEP_FOR_TIMEOUT_MS: u64 = 500;
+const FAST_EXIT_STDOUT_SENTINEL: &str = "fake_codex_mcp fast-exit stdout sentinel\n";
+const FAST_EXIT_STDERR_SENTINEL: &str = "fake_codex_mcp fast-exit stderr sentinel\n";
 
 // Test-only fake Codex MCP binary contract:
 // - Required env: FAKE_CODEX_MCP_RECORD_PATH
 // - Optional env: FAKE_CODEX_MCP_RECORD_ENV_KEYS (comma-separated), FAKE_CODEX_MCP_SCENARIO
-// - Scenarios: ok, oversized_output, nonzero_exit, sleep_for_timeout, drift,
-//   operation_subcommand_drift, legacy_add_drift, url_add_drift
+// - Scenarios: ok, oversized_output, nonzero_exit, sleep_for_timeout, fast_exit_with_output,
+//   drift, operation_subcommand_drift, legacy_add_drift, url_add_drift
 
 fn main() -> io::Result<()> {
     let record_path = match required_path_env(RECORD_PATH_ENV) {
@@ -64,6 +66,17 @@ fn main() -> io::Result<()> {
                 b"fake_codex_mcp timeout stderr sentinel\n",
             )?;
             thread::sleep(Duration::from_millis(SLEEP_FOR_TIMEOUT_MS));
+            Ok(())
+        }
+        "fast_exit_with_output" => {
+            write_payload(
+                &mut io::stdout().lock(),
+                FAST_EXIT_STDOUT_SENTINEL.as_bytes(),
+            )?;
+            write_payload(
+                &mut io::stderr().lock(),
+                FAST_EXIT_STDERR_SENTINEL.as_bytes(),
+            )?;
             Ok(())
         }
         "drift" => {
@@ -191,6 +204,7 @@ fn scenario_name() -> String {
             | "oversized_output"
             | "nonzero_exit"
             | "sleep_for_timeout"
+            | "fast_exit_with_output"
             | "drift"
             | "operation_subcommand_drift"
             | "legacy_add_drift"

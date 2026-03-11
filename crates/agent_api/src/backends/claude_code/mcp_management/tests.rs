@@ -766,18 +766,6 @@ fn no_claude_home_is_materialized_without_config_or_ambient_home() {
     assert_eq!(resolved.materialize_claude_home, None);
 }
 
-#[test]
-fn zero_timeout_is_preserved_for_wait_enforcement() {
-    assert_eq!(
-        effective_timeout_for_wait(Some(Duration::ZERO)),
-        Some(Duration::ZERO)
-    );
-    assert_eq!(
-        effective_timeout_for_wait(Some(Duration::from_secs(3))),
-        Some(Duration::from_secs(3))
-    );
-}
-
 #[tokio::test]
 async fn capture_bounded_preserves_small_streams() {
     let (writer, reader) = duplex(64);
