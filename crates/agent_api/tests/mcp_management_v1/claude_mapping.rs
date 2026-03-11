@@ -241,8 +241,20 @@ async fn claude_mcp_list_request_env_overrides_injected_home_and_xdg_values() {
         Some(override_xdg_cache.to_string_lossy().as_ref())
     );
     assert!(
-        !fresh_claude_home.exists(),
-        "configured claude_home should stay unmaterialized when request env overrides home roots"
+        fresh_claude_home.is_dir(),
+        "configured claude_home should be materialized when CLAUDE_HOME still targets it"
+    );
+    assert!(
+        fresh_claude_home.join(".config").is_dir(),
+        "configured claude_home should prepare its default xdg config dir"
+    );
+    assert!(
+        fresh_claude_home.join(".local").join("share").is_dir(),
+        "configured claude_home should prepare its default xdg data dir"
+    );
+    assert!(
+        fresh_claude_home.join(".cache").is_dir(),
+        "configured claude_home should prepare its default xdg cache dir"
     );
 }
 

@@ -67,7 +67,7 @@ pub(super) fn resolve_claude_mcp_command_with_env(
     }
     let materialize_claude_home = claude_home_layout
         .as_ref()
-        .filter(|layout| effective_env_matches_claude_home_layout(&env, layout))
+        .filter(|layout| effective_claude_home_targets_layout_root(&env, layout))
         .cloned();
 
     Ok(ResolvedClaudeMcpCommand {
@@ -212,49 +212,10 @@ fn inject_claude_home_env(env: &mut BTreeMap<String, String>, layout: &ClaudeHom
     }
 }
 
-fn effective_env_matches_claude_home_layout(
+fn effective_claude_home_targets_layout_root(
     env: &BTreeMap<String, String>,
     layout: &ClaudeHomeLayout,
 ) -> bool {
     let root = layout.root().to_string_lossy();
-    if env.get(CLAUDE_HOME_ENV).map(String::as_str) != Some(root.as_ref()) {
-        return false;
-    }
-    if env.get(HOME_ENV).map(String::as_str) != Some(root.as_ref()) {
-        return false;
-    }
-    if env.get(XDG_CONFIG_HOME_ENV).map(String::as_str)
-        != Some(layout.xdg_config_home().to_string_lossy().as_ref())
-    {
-        return false;
-    }
-    if env.get(XDG_DATA_HOME_ENV).map(String::as_str)
-        != Some(layout.xdg_data_home().to_string_lossy().as_ref())
-    {
-        return false;
-    }
-    if env.get(XDG_CACHE_HOME_ENV).map(String::as_str)
-        != Some(layout.xdg_cache_home().to_string_lossy().as_ref())
-    {
-        return false;
-    }
-
-    #[cfg(windows)]
-    {
-        if env.get(super::USERPROFILE_ENV).map(String::as_str) != Some(root.as_ref()) {
-            return false;
-        }
-        if env.get(super::APPDATA_ENV).map(String::as_str)
-            != Some(layout.appdata_dir().to_string_lossy().as_ref())
-        {
-            return false;
-        }
-        if env.get(super::LOCALAPPDATA_ENV).map(String::as_str)
-            != Some(layout.localappdata_dir().to_string_lossy().as_ref())
-        {
-            return false;
-        }
-    }
-
-    true
+    env.get(CLAUDE_HOME_ENV).map(String::as_str) == Some(root.as_ref())
 }
