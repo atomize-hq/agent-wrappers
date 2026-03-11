@@ -4,7 +4,7 @@ use agent_api::{
     backends::codex::{CodexBackend, CodexBackendConfig},
     mcp::{
         AgentWrapperMcpAddRequest, AgentWrapperMcpAddTransport, AgentWrapperMcpCommandContext,
-        AgentWrapperMcpListRequest, AgentWrapperMcpRemoveRequest,
+        AgentWrapperMcpGetRequest, AgentWrapperMcpListRequest, AgentWrapperMcpRemoveRequest,
     },
     AgentWrapperBackend, AgentWrapperError, AgentWrapperGateway, AgentWrapperKind,
 };
@@ -248,6 +248,88 @@ async fn codex_mcp_drift_unknown_subcommand_returns_backend_error_without_mutati
     let message = backend_error_message(err);
     assert!(
         !message.contains("unknown subcommand 'mcp'"),
+        "drift error leaked subprocess stderr: {message}"
+    );
+    assert_eq!(backend.capabilities().ids, before);
+}
+
+#[tokio::test]
+async fn codex_mcp_drift_unknown_get_subcommand_returns_backend_error_without_mutating_capabilities(
+) {
+    if !codex_mcp_supported() {
+        return;
+    }
+
+    let sandbox = McpTestSandbox::new("codex_mcp_drift_get_subcommand").expect("sandbox");
+    let (backend, gateway, kind) = codex_gateway(
+        &sandbox,
+        false,
+        codex_config_env(
+            &sandbox,
+            [(
+                FAKE_CODEX_SCENARIO_ENV.to_string(),
+                "operation_subcommand_drift".to_string(),
+            )],
+        ),
+        None,
+    );
+    let before = backend.capabilities().ids.clone();
+
+    let err = gateway
+        .mcp_get(
+            &kind,
+            AgentWrapperMcpGetRequest {
+                name: "demo".to_string(),
+                context: AgentWrapperMcpCommandContext::default(),
+            },
+        )
+        .await
+        .expect_err("per-operation drift must fail closed");
+
+    let message = backend_error_message(err);
+    assert!(
+        !message.contains("unknown subcommand 'get'"),
+        "drift error leaked subprocess stderr: {message}"
+    );
+    assert_eq!(backend.capabilities().ids, before);
+}
+
+#[tokio::test]
+async fn codex_mcp_drift_unknown_remove_subcommand_returns_backend_error_without_mutating_capabilities(
+) {
+    if !codex_mcp_supported() {
+        return;
+    }
+
+    let sandbox = McpTestSandbox::new("codex_mcp_drift_remove_subcommand").expect("sandbox");
+    let (backend, gateway, kind) = codex_gateway(
+        &sandbox,
+        true,
+        codex_config_env(
+            &sandbox,
+            [(
+                FAKE_CODEX_SCENARIO_ENV.to_string(),
+                "operation_subcommand_drift".to_string(),
+            )],
+        ),
+        None,
+    );
+    let before = backend.capabilities().ids.clone();
+
+    let err = gateway
+        .mcp_remove(
+            &kind,
+            AgentWrapperMcpRemoveRequest {
+                name: "demo".to_string(),
+                context: AgentWrapperMcpCommandContext::default(),
+            },
+        )
+        .await
+        .expect_err("per-operation drift must fail closed");
+
+    let message = backend_error_message(err);
+    assert!(
+        !message.contains("unknown subcommand 'remove'"),
         "drift error leaked subprocess stderr: {message}"
     );
     assert_eq!(backend.capabilities().ids, before);

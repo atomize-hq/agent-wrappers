@@ -44,6 +44,14 @@ struct ResolvedCodexMcpCommand {
     materialize_codex_home: Option<PathBuf>,
 }
 
+struct CapturedCodexMcpCommandOutput {
+    status: std::process::ExitStatus,
+    stdout_bytes: Vec<u8>,
+    stdout_saw_more: bool,
+    stderr_bytes: Vec<u8>,
+    stderr_saw_more: bool,
+}
+
 pub(super) fn codex_mcp_list_argv() -> Vec<OsString> {
     vec![
         OsString::from("mcp"),
@@ -160,17 +168,41 @@ pub(super) async fn run_codex_mcp(
     let (stdout_bytes, stdout_saw_more) = join_capture_task(stdout_task).await?;
     let (stderr_bytes, stderr_saw_more) = join_capture_task(stderr_task).await?;
 
-    if !status.success() && is_manifest_runtime_conflict(&stdout_bytes, &stderr_bytes) {
+    finalize_codex_mcp_output(
+        &argv,
+        CapturedCodexMcpCommandOutput {
+            status,
+            stdout_bytes,
+            stdout_saw_more,
+            stderr_bytes,
+            stderr_saw_more,
+        },
+    )
+}
+
+fn finalize_codex_mcp_output(
+    argv: &[OsString],
+    captured: CapturedCodexMcpCommandOutput,
+) -> Result<AgentWrapperMcpCommandOutput, AgentWrapperError> {
+    if !captured.status.success()
+        && is_manifest_runtime_conflict(argv, &captured.stdout_bytes, &captured.stderr_bytes)
+    {
         return Err(backend_error(PINNED_MCP_RUNTIME_CONFLICT));
     }
 
-    let (stdout, stdout_truncated) =
-        enforce_mcp_output_bound(&stdout_bytes, stdout_saw_more, MCP_STDOUT_BOUND_BYTES);
-    let (stderr, stderr_truncated) =
-        enforce_mcp_output_bound(&stderr_bytes, stderr_saw_more, MCP_STDERR_BOUND_BYTES);
+    let (stdout, stdout_truncated) = enforce_mcp_output_bound(
+        &captured.stdout_bytes,
+        captured.stdout_saw_more,
+        MCP_STDOUT_BOUND_BYTES,
+    );
+    let (stderr, stderr_truncated) = enforce_mcp_output_bound(
+        &captured.stderr_bytes,
+        captured.stderr_saw_more,
+        MCP_STDERR_BOUND_BYTES,
+    );
 
     Ok(AgentWrapperMcpCommandOutput {
-        status,
+        status: captured.status,
         stdout,
         stderr,
         stdout_truncated,
@@ -382,13 +414,13 @@ where
     Ok((retained, saw_more))
 }
 
-fn is_manifest_runtime_conflict(stdout: &[u8], stderr: &[u8]) -> bool {
+fn is_manifest_runtime_conflict(argv: &[OsString], stdout: &[u8], stderr: &[u8]) -> bool {
     let stderr = String::from_utf8_lossy(stderr);
     let stdout = String::from_utf8_lossy(stdout);
-    classify_manifest_runtime_conflict_text(&format!("{stderr}\n{stdout}"))
+    classify_manifest_runtime_conflict_text(argv, &format!("{stderr}\n{stdout}"))
 }
 
-fn classify_manifest_runtime_conflict_text(text: &str) -> bool {
+fn classify_manifest_runtime_conflict_text(argv: &[OsString], text: &str) -> bool {
     let text = text.to_ascii_lowercase();
 
     let unknown_signal = [
@@ -406,7 +438,16 @@ fn classify_manifest_runtime_conflict_text(text: &str) -> bool {
         return false;
     }
 
-    let subcommand_conflict = text.contains("subcommand") && text.contains("mcp");
+    let syntax_context = ["command", "subcommand", "argument", "option", "flag"]
+        .iter()
+        .any(|signal| text.contains(signal));
+    if !syntax_context {
+        return false;
+    }
+
+    let subcommand_conflict = manifest_conflict_tokens(argv)
+        .into_iter()
+        .any(|token| text.contains(token));
     let json_flag_conflict = text.contains("--json")
         && (text.contains("flag") || text.contains("option") || text.contains("argument"));
     let add_usage_conflict = text.contains("mcp add")
@@ -421,6 +462,18 @@ fn classify_manifest_runtime_conflict_text(text: &str) -> bool {
     subcommand_conflict || json_flag_conflict || add_usage_conflict
 }
 
+fn manifest_conflict_tokens(argv: &[OsString]) -> Vec<&'static str> {
+    let mut tokens = vec!["mcp"];
+    match argv.get(1).and_then(|arg| arg.to_str()) {
+        Some("list") => tokens.push("list"),
+        Some("get") => tokens.push("get"),
+        Some("add") => tokens.push("add"),
+        Some("remove") => tokens.push("remove"),
+        _ => {}
+    }
+    tokens
+}
+
 fn backend_error(message: &'static str) -> AgentWrapperError {
     AgentWrapperError::Backend {
         message: message.to_string(),
@@ -433,6 +486,7 @@ mod tests {
     use std::{
         collections::BTreeMap,
         ffi::OsString,
+        process::ExitStatus,
         sync::{Mutex, OnceLock},
     };
     #[cfg(unix)]
@@ -443,6 +497,32 @@ mod tests {
     };
 
     use tokio::io::{AsyncWriteExt, DuplexStream};
+
+    fn success_exit_status() -> ExitStatus {
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            ExitStatus::from_raw(0)
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::ExitStatusExt;
+            ExitStatus::from_raw(0)
+        }
+    }
+
+    fn exit_status_with_code(code: i32) -> ExitStatus {
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            ExitStatus::from_raw(code << 8)
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::ExitStatusExt;
+            ExitStatus::from_raw(code as u32)
+        }
+    }
 
     fn sample_config() -> super::super::CodexBackendConfig {
         super::super::CodexBackendConfig {
@@ -843,20 +923,67 @@ printf "CODEX_HOME=%s\n" "${CODEX_HOME-unset}" 1>&2
     #[test]
     fn classify_manifest_runtime_conflict_detects_unknown_mcp_subcommand() {
         assert!(classify_manifest_runtime_conflict_text(
+            &codex_mcp_list_argv(),
             "error: unrecognized subcommand 'mcp'"
+        ));
+    }
+
+    #[test]
+    fn classify_manifest_runtime_conflict_detects_unknown_list_subcommand() {
+        assert!(classify_manifest_runtime_conflict_text(
+            &codex_mcp_list_argv(),
+            "error: unknown subcommand 'list'"
+        ));
+    }
+
+    #[test]
+    fn classify_manifest_runtime_conflict_detects_unknown_get_subcommand() {
+        assert!(classify_manifest_runtime_conflict_text(
+            &codex_mcp_get_argv("demo"),
+            "error: no such subcommand 'get'"
+        ));
+    }
+
+    #[test]
+    fn classify_manifest_runtime_conflict_detects_unknown_remove_subcommand() {
+        assert!(classify_manifest_runtime_conflict_text(
+            &codex_mcp_remove_argv("demo"),
+            "error: unrecognized subcommand 'remove'"
+        ));
+    }
+
+    #[test]
+    fn classify_manifest_runtime_conflict_detects_unknown_add_subcommand() {
+        let transport = AgentWrapperMcpAddTransport::Stdio {
+            command: vec!["node".to_string()],
+            args: vec!["server.js".to_string()],
+            env: BTreeMap::new(),
+        };
+
+        assert!(classify_manifest_runtime_conflict_text(
+            &codex_mcp_add_argv("demo", &transport),
+            "error: unknown subcommand 'add'"
         ));
     }
 
     #[test]
     fn classify_manifest_runtime_conflict_detects_unknown_json_flag() {
         assert!(classify_manifest_runtime_conflict_text(
+            &codex_mcp_list_argv(),
             "error: unexpected argument '--json' found"
         ));
     }
 
     #[test]
     fn classify_manifest_runtime_conflict_detects_legacy_add_usage_error() {
+        let transport = AgentWrapperMcpAddTransport::Stdio {
+            command: vec!["node".to_string()],
+            args: vec!["server.js".to_string()],
+            env: BTreeMap::new(),
+        };
+
         assert!(classify_manifest_runtime_conflict_text(
+            &codex_mcp_add_argv("demo", &transport),
             "error: unexpected argument '--env' found\n\nusage: codex mcp add <name> --url <url>"
         ));
     }
@@ -864,13 +991,64 @@ printf "CODEX_HOME=%s\n" "${CODEX_HOME-unset}" 1>&2
     #[test]
     fn classify_manifest_runtime_conflict_ignores_normal_domain_failures() {
         assert!(!classify_manifest_runtime_conflict_text(
+            &codex_mcp_get_argv("demo"),
             "server demo not found"
         ));
         assert!(!classify_manifest_runtime_conflict_text(
+            &codex_mcp_get_argv("demo"),
             "unknown server demo"
         ));
+
+        let transport = AgentWrapperMcpAddTransport::Stdio {
+            command: vec!["node".to_string()],
+            args: vec!["server.js".to_string()],
+            env: BTreeMap::new(),
+        };
+
         assert!(!classify_manifest_runtime_conflict_text(
+            &codex_mcp_add_argv("demo", &transport),
             "error: unexpected argument '--env' found"
         ));
+    }
+
+    #[test]
+    fn codex_unknown_get_subcommand_drift_maps_to_pinned_backend_error() {
+        let err = finalize_codex_mcp_output(
+            &codex_mcp_get_argv("demo"),
+            CapturedCodexMcpCommandOutput {
+                status: exit_status_with_code(2),
+                stdout_bytes: b"raw stdout should not leak".to_vec(),
+                stdout_saw_more: false,
+                stderr_bytes: b"error: no such subcommand 'get'".to_vec(),
+                stderr_saw_more: false,
+            },
+        )
+        .expect_err("drift should fail closed");
+
+        match err {
+            AgentWrapperError::Backend { message } => {
+                assert_eq!(message, PINNED_MCP_RUNTIME_CONFLICT);
+            }
+            other => panic!("expected Backend error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn codex_success_exit_skips_drift_classification() {
+        let output = finalize_codex_mcp_output(
+            &codex_mcp_get_argv("demo"),
+            CapturedCodexMcpCommandOutput {
+                status: success_exit_status(),
+                stdout_bytes: b"error: no such subcommand 'get'".to_vec(),
+                stdout_saw_more: false,
+                stderr_bytes: Vec::new(),
+                stderr_saw_more: false,
+            },
+        )
+        .expect("successful exits should remain Ok(output)");
+
+        assert_eq!(output.status, success_exit_status());
+        assert_eq!(output.stdout, "error: no such subcommand 'get'");
+        assert!(output.stderr.is_empty());
     }
 }

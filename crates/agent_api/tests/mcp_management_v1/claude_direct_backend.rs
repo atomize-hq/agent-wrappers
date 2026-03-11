@@ -111,9 +111,8 @@ async fn direct_claude_mcp_add_rejects_invalid_url_without_spawning() {
         ("relative", "/relative"),
         ("missing_authority", "https:example.test/mcp"),
     ] {
-        let sandbox =
-            McpTestSandbox::new(&format!("direct_claude_mcp_add_invalid_url_{label}"))
-                .expect("sandbox");
+        let sandbox = McpTestSandbox::new(&format!("direct_claude_mcp_add_invalid_url_{label}"))
+            .expect("sandbox");
         let backend = claude_backend(&sandbox, true);
 
         let err = backend
