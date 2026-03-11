@@ -1,9 +1,4 @@
-use std::{
-    collections::BTreeMap,
-    fs,
-    sync::Arc,
-    time::Duration,
-};
+use std::{collections::BTreeMap, fs, sync::Arc, time::Duration};
 
 use agent_api::backends::claude_code::{ClaudeCodeBackend, ClaudeCodeBackendConfig};
 use agent_api::mcp::{
@@ -242,20 +237,8 @@ async fn claude_mcp_list_request_env_overrides_injected_home_and_xdg_values() {
         Some(override_xdg_cache.to_string_lossy().as_ref())
     );
     assert!(
-        fresh_claude_home.is_dir(),
-        "configured claude_home should exist"
-    );
-    assert!(
-        fresh_claude_home.join(".config").is_dir(),
-        "configured xdg config dir should exist"
-    );
-    assert!(
-        fresh_claude_home.join(".local").join("share").is_dir(),
-        "configured xdg data dir should exist"
-    );
-    assert!(
-        fresh_claude_home.join(".cache").is_dir(),
-        "configured xdg cache dir should exist"
+        !fresh_claude_home.exists(),
+        "configured claude_home should stay unmaterialized when request env overrides home roots"
     );
 }
 

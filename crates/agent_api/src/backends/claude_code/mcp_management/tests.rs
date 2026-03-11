@@ -318,7 +318,6 @@ fn disable_autoupdater_default_does_not_override_explicit_values() {
 
 #[test]
 fn request_env_overrides_injected_home_keys() {
-    let layout = ClaudeHomeLayout::new("/tmp/claude-home");
     let mut context = AgentWrapperMcpCommandContext::default();
     context
         .env
@@ -342,12 +341,11 @@ fn request_env_overrides_injected_home_keys() {
         resolved.env.get(CLAUDE_HOME_ENV).map(String::as_str),
         Some("/tmp/claude-home")
     );
-    assert_eq!(resolved.materialize_claude_home, Some(layout));
+    assert_eq!(resolved.materialize_claude_home, None);
 }
 
 #[test]
-fn request_env_override_of_claude_home_keeps_materialization() {
-    let layout = ClaudeHomeLayout::new("/tmp/claude-home");
+fn request_env_override_of_claude_home_disables_materialization() {
     let mut context = AgentWrapperMcpCommandContext::default();
     context.env.insert(
         CLAUDE_HOME_ENV.to_string(),
@@ -360,7 +358,7 @@ fn request_env_override_of_claude_home_keeps_materialization() {
         resolved.env.get(CLAUDE_HOME_ENV).map(String::as_str),
         Some("/tmp/request-claude-home")
     );
-    assert_eq!(resolved.materialize_claude_home, Some(layout));
+    assert_eq!(resolved.materialize_claude_home, None);
 }
 
 #[test]
@@ -449,9 +447,33 @@ fn configured_claude_home_beats_ambient_claude_home() {
 }
 
 #[test]
-fn request_env_override_of_ambient_claude_home_keeps_materialization() {
+fn config_env_override_of_home_disables_materialization() {
+    let mut config = sample_config();
+    config
+        .env
+        .insert(HOME_ENV.to_string(), "/tmp/config-home".to_string());
+
+    let resolved = resolve_claude_mcp_command_with_env(
+        &config,
+        &AgentWrapperMcpCommandContext::default(),
+        None,
+        None,
+    );
+
+    assert_eq!(
+        resolved.env.get(CLAUDE_HOME_ENV).map(String::as_str),
+        Some("/tmp/claude-home")
+    );
+    assert_eq!(
+        resolved.env.get(HOME_ENV).map(String::as_str),
+        Some("/tmp/config-home")
+    );
+    assert_eq!(resolved.materialize_claude_home, None);
+}
+
+#[test]
+fn request_env_override_of_ambient_claude_home_disables_materialization() {
     let ambient_home = PathBuf::from("/tmp/ambient-claude-home");
-    let layout = ClaudeHomeLayout::new(ambient_home.clone());
     let mut context = AgentWrapperMcpCommandContext::default();
     context.env.insert(
         CLAUDE_HOME_ENV.to_string(),
@@ -477,7 +499,7 @@ fn request_env_override_of_ambient_claude_home_keeps_materialization() {
         resolved.env.get(XDG_CONFIG_HOME_ENV).map(String::as_str),
         Some("/tmp/request-xdg-config")
     );
-    assert_eq!(resolved.materialize_claude_home, Some(layout));
+    assert_eq!(resolved.materialize_claude_home, None);
 }
 
 #[test]

@@ -48,6 +48,10 @@ pub(super) fn resolve_claude_mcp_command_with_env(
     }
 
     env.extend(context.env.clone());
+    let materialize_claude_home = claude_home_layout
+        .as_ref()
+        .filter(|layout| effective_env_matches_claude_home_layout(&env, layout))
+        .cloned();
 
     ResolvedClaudeMcpCommand {
         binary_path,
@@ -57,7 +61,7 @@ pub(super) fn resolve_claude_mcp_command_with_env(
             .or_else(|| config.default_working_dir.clone()),
         timeout: context.timeout.or(config.default_timeout),
         env,
-        materialize_claude_home: claude_home_layout,
+        materialize_claude_home,
     }
 }
 
@@ -108,4 +112,51 @@ fn inject_claude_home_env(env: &mut BTreeMap<String, String>, layout: &ClaudeHom
         env.entry(super::LOCALAPPDATA_ENV.to_string())
             .or_insert_with(|| layout.localappdata_dir().to_string_lossy().into_owned());
     }
+}
+
+fn effective_env_matches_claude_home_layout(
+    env: &BTreeMap<String, String>,
+    layout: &ClaudeHomeLayout,
+) -> bool {
+    let root = layout.root().to_string_lossy();
+    if env.get(CLAUDE_HOME_ENV).map(String::as_str) != Some(root.as_ref()) {
+        return false;
+    }
+    if env.get(HOME_ENV).map(String::as_str) != Some(root.as_ref()) {
+        return false;
+    }
+    if env.get(XDG_CONFIG_HOME_ENV).map(String::as_str)
+        != Some(layout.xdg_config_home().to_string_lossy().as_ref())
+    {
+        return false;
+    }
+    if env.get(XDG_DATA_HOME_ENV).map(String::as_str)
+        != Some(layout.xdg_data_home().to_string_lossy().as_ref())
+    {
+        return false;
+    }
+    if env.get(XDG_CACHE_HOME_ENV).map(String::as_str)
+        != Some(layout.xdg_cache_home().to_string_lossy().as_ref())
+    {
+        return false;
+    }
+
+    #[cfg(windows)]
+    {
+        if env.get(super::USERPROFILE_ENV).map(String::as_str) != Some(root.as_ref()) {
+            return false;
+        }
+        if env.get(super::APPDATA_ENV).map(String::as_str)
+            != Some(layout.appdata_dir().to_string_lossy().as_ref())
+        {
+            return false;
+        }
+        if env.get(super::LOCALAPPDATA_ENV).map(String::as_str)
+            != Some(layout.localappdata_dir().to_string_lossy().as_ref())
+        {
+            return false;
+        }
+    }
+
+    true
 }
