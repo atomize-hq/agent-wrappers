@@ -1,8 +1,7 @@
 use std::{
     collections::BTreeMap,
-    ffi::OsString,
     fs,
-    sync::{Arc, Mutex, OnceLock},
+    sync::Arc,
     time::Duration,
 };
 
@@ -28,26 +27,6 @@ const MCP_OUTPUT_BOUND_BYTES: usize = 65_536;
 const TRUNCATION_SUFFIX: &str = "…(truncated)";
 const CLAUDE_HOME_ENV: &str = "CLAUDE_HOME";
 const MY_TOKEN_ENV: &str = "MY_TOKEN";
-
-fn claude_home_env_lock() -> &'static Mutex<()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-}
-
-struct EnvGuard {
-    key: &'static str,
-    previous: Option<OsString>,
-}
-
-impl Drop for EnvGuard {
-    fn drop(&mut self) {
-        if let Some(value) = self.previous.take() {
-            std::env::set_var(self.key, value);
-        } else {
-            std::env::remove_var(self.key);
-        }
-    }
-}
 
 #[tokio::test]
 async fn claude_mcp_list_records_pinned_argv_and_request_context_on_supported_targets() {
@@ -286,9 +265,7 @@ async fn claude_mcp_list_uses_ambient_claude_home_when_config_home_is_absent() {
         return;
     }
 
-    let _env_lock = claude_home_env_lock()
-        .lock()
-        .expect("lock ambient claude home env");
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_list_uses_ambient_claude_home").expect("sandbox");
     let binary = sandbox.install_fake_claude().expect("install fake claude");
     let ambient_claude_home = sandbox.root().join("ambient-claude-home");
@@ -297,12 +274,10 @@ async fn claude_mcp_list_uses_ambient_claude_home_when_config_home_is_absent() {
         "test requires an unmaterialized ambient claude home"
     );
 
-    let previous = std::env::var_os(CLAUDE_HOME_ENV);
-    std::env::set_var(CLAUDE_HOME_ENV, &ambient_claude_home);
-    let _guard = EnvGuard {
-        key: CLAUDE_HOME_ENV,
-        previous,
-    };
+    let _ambient_claude_home = SupportEnvGuard::set(
+        CLAUDE_HOME_ENV,
+        ambient_claude_home.as_os_str().to_os_string(),
+    );
 
     let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
         binary: Some(binary),
