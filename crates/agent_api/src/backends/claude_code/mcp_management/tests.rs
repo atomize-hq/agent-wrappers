@@ -120,6 +120,15 @@ impl Drop for EnvGuard {
     }
 }
 
+fn assert_backend_spawn_failure(err: AgentWrapperError) {
+    match err {
+        AgentWrapperError::Backend { message } => {
+            assert_eq!(message, PINNED_SPAWN_FAILURE);
+        }
+        other => panic!("expected Backend error, got: {other:?}"),
+    }
+}
+
 async fn write_all_and_close(mut writer: DuplexStream, bytes: Vec<u8>) {
     writer.write_all(&bytes).await.expect("write succeeds");
     writer.shutdown().await.expect("shutdown succeeds");
@@ -270,7 +279,8 @@ fn resolve_claude_binary_path_prefers_config_over_env() {
         Some(OsString::from("/tmp/from-env")),
         None,
         None,
-    );
+    )
+    .expect("config path should resolve");
 
     assert_eq!(resolved, PathBuf::from("/tmp/from-config"));
 }
@@ -278,16 +288,18 @@ fn resolve_claude_binary_path_prefers_config_over_env() {
 #[test]
 fn resolve_claude_binary_path_uses_env_when_config_absent() {
     let resolved =
-        resolve_claude_binary_path(None, Some(OsString::from("/tmp/from-env")), None, None);
+        resolve_claude_binary_path(None, Some(OsString::from("/tmp/from-env")), None, None)
+            .expect("env path should resolve");
 
     assert_eq!(resolved, PathBuf::from("/tmp/from-env"));
 }
 
 #[test]
-fn resolve_claude_binary_path_ignores_blank_env() {
-    let resolved = resolve_claude_binary_path(None, Some(OsString::from("")), None, None);
+fn resolve_claude_binary_path_rejects_blank_env_without_a_resolvable_path() {
+    let err = resolve_claude_binary_path(None, Some(OsString::from("")), None, None)
+        .expect_err("blank env should fail resolution");
 
-    assert_eq!(resolved, PathBuf::from("claude"));
+    assert_backend_spawn_failure(err);
 }
 
 #[cfg(unix)]
@@ -301,7 +313,8 @@ fn resolve_claude_binary_path_uses_effective_path_env_for_unqualified_binary() {
         Some(OsString::from("claude")),
         Some(temp_dir.to_string_lossy().as_ref()),
         None,
-    );
+    )
+    .expect("effective PATH should resolve claude");
 
     assert_eq!(
         resolved,
@@ -334,7 +347,8 @@ fn resolve_claude_binary_path_prefers_request_path_over_config_and_ambient_path(
                 .as_ref(),
         ),
         env::var_os(PATH_ENV),
-    );
+    )
+    .expect("request PATH should resolve claude");
 
     assert_eq!(
         resolved,
@@ -362,7 +376,8 @@ fn resolve_claude_binary_path_prefers_config_path_over_ambient_path() {
         Some(OsString::from("claude")),
         Some(config_dir.to_string_lossy().as_ref()),
         env::var_os(PATH_ENV),
-    );
+    )
+    .expect("config PATH should resolve claude");
 
     assert_eq!(
         resolved,
@@ -382,7 +397,8 @@ fn resolve_claude_binary_path_uses_ambient_path_when_effective_path_is_absent() 
     let _ambient_path = EnvGuard::set(PATH_ENV, ambient_dir.as_os_str().to_os_string());
     let _claude_binary = EnvGuard::unset(CLAUDE_BINARY_ENV);
 
-    let resolved = resolve_claude_binary_path(None, None, None, env::var_os(PATH_ENV));
+    let resolved = resolve_claude_binary_path(None, None, None, env::var_os(PATH_ENV))
+        .expect("ambient PATH should resolve claude");
 
     assert_eq!(
         resolved,
@@ -399,7 +415,8 @@ fn resolve_claude_mcp_command_applies_precedence_and_home_injection() {
         &sample_context(),
         Some(OsString::from("/tmp/from-env")),
         Some(PathBuf::from("/tmp/from-ambient-home")),
-    );
+    )
+    .expect("command should resolve");
     let layout = ClaudeHomeLayout::new("/tmp/claude-home");
 
     assert_eq!(resolved.binary_path, PathBuf::from("/tmp/fake-claude"));
@@ -454,7 +471,8 @@ fn resolve_claude_mcp_command_uses_backend_defaults_when_request_values_absent()
         &AgentWrapperMcpCommandContext::default(),
         None,
         None,
-    );
+    )
+    .expect("command should resolve");
 
     assert_eq!(resolved.working_dir, Some(PathBuf::from("default/workdir")));
     assert_eq!(resolved.timeout, Some(Duration::from_secs(30)));
@@ -486,7 +504,8 @@ fn resolve_claude_mcp_command_prefers_request_path_over_config_and_ambient_path(
         request_dir.to_string_lossy().into_owned(),
     );
 
-    let resolved = resolve_claude_mcp_command_with_env(&config, &context, None, None);
+    let resolved =
+        resolve_claude_mcp_command_with_env(&config, &context, None, None).expect("resolve");
 
     assert_eq!(
         resolved.binary_path,
@@ -521,7 +540,8 @@ fn resolve_claude_mcp_command_prefers_config_path_over_ambient_path() {
         &AgentWrapperMcpCommandContext::default(),
         None,
         None,
-    );
+    )
+    .expect("command should resolve");
 
     assert_eq!(
         resolved.binary_path,
@@ -543,7 +563,8 @@ fn disable_autoupdater_default_does_not_override_explicit_values() {
         &AgentWrapperMcpCommandContext::default(),
         None,
         None,
-    );
+    )
+    .expect("command should resolve");
     assert_eq!(
         resolved
             .env
@@ -556,7 +577,8 @@ fn disable_autoupdater_default_does_not_override_explicit_values() {
     context
         .env
         .insert(DISABLE_AUTOUPDATER_ENV.to_string(), "2".to_string());
-    let resolved = resolve_claude_mcp_command_with_env(&config, &context, None, None);
+    let resolved =
+        resolve_claude_mcp_command_with_env(&config, &context, None, None).expect("resolve");
     assert_eq!(
         resolved
             .env
@@ -577,7 +599,8 @@ fn request_env_overrides_injected_home_keys() {
         "/tmp/request-xdg-config".to_string(),
     );
 
-    let resolved = resolve_claude_mcp_command_with_env(&sample_config(), &context, None, None);
+    let resolved = resolve_claude_mcp_command_with_env(&sample_config(), &context, None, None)
+        .expect("resolve");
 
     assert_eq!(
         resolved.env.get(HOME_ENV).map(String::as_str),
@@ -602,7 +625,8 @@ fn request_env_override_of_claude_home_disables_materialization() {
         "/tmp/request-claude-home".to_string(),
     );
 
-    let resolved = resolve_claude_mcp_command_with_env(&sample_config(), &context, None, None);
+    let resolved = resolve_claude_mcp_command_with_env(&sample_config(), &context, None, None)
+        .expect("resolve");
 
     assert_eq!(
         resolved.env.get(CLAUDE_HOME_ENV).map(String::as_str),
@@ -634,7 +658,8 @@ fn request_env_with_same_injected_home_values_keeps_materialization() {
         layout.xdg_cache_home().to_string_lossy().into_owned(),
     );
 
-    let resolved = resolve_claude_mcp_command_with_env(&sample_config(), &context, None, None);
+    let resolved = resolve_claude_mcp_command_with_env(&sample_config(), &context, None, None)
+        .expect("resolve");
 
     assert_eq!(resolved.materialize_claude_home, Some(layout));
 }
@@ -648,7 +673,8 @@ fn ambient_claude_home_is_used_when_config_home_is_absent() {
         &AgentWrapperMcpCommandContext::default(),
         None,
         Some(ambient_home.clone()),
-    );
+    )
+    .expect("command should resolve");
 
     assert_eq!(
         resolved.env.get(CLAUDE_HOME_ENV).map(String::as_str),
@@ -672,7 +698,8 @@ fn blank_ambient_claude_home_is_ignored_when_config_home_is_absent() {
         &AgentWrapperMcpCommandContext::default(),
         None,
         Some(PathBuf::new()),
-    );
+    )
+    .expect("command should resolve");
 
     assert_eq!(resolved.env.get(CLAUDE_HOME_ENV), None);
     assert_eq!(resolved.env.get(HOME_ENV), None);
@@ -687,7 +714,8 @@ fn configured_claude_home_beats_ambient_claude_home() {
         &AgentWrapperMcpCommandContext::default(),
         None,
         Some(PathBuf::from("/tmp/ambient-claude-home")),
-    );
+    )
+    .expect("command should resolve");
 
     assert_eq!(
         resolved.env.get(CLAUDE_HOME_ENV).map(String::as_str),
@@ -708,7 +736,8 @@ fn config_env_override_of_home_disables_materialization() {
         &AgentWrapperMcpCommandContext::default(),
         None,
         None,
-    );
+    )
+    .expect("command should resolve");
 
     assert_eq!(
         resolved.env.get(CLAUDE_HOME_ENV).map(String::as_str),
@@ -739,7 +768,8 @@ fn request_env_override_of_ambient_claude_home_disables_materialization() {
         &context,
         None,
         Some(ambient_home.clone()),
-    );
+    )
+    .expect("command should resolve");
 
     assert_eq!(
         resolved.env.get(CLAUDE_HOME_ENV).map(String::as_str),
@@ -759,7 +789,8 @@ fn no_claude_home_is_materialized_without_config_or_ambient_home() {
         &AgentWrapperMcpCommandContext::default(),
         None,
         None,
-    );
+    )
+    .expect("command should resolve");
 
     assert_eq!(resolved.env.get(CLAUDE_HOME_ENV), None);
     assert_eq!(resolved.env.get(HOME_ENV), None);

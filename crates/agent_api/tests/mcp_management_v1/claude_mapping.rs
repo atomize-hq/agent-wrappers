@@ -31,6 +31,7 @@ async fn claude_mcp_list_records_pinned_argv_and_request_context_on_supported_ta
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_list_records_pinned_argv").expect("sandbox");
     let default_cwd = sandbox.root().join("default-list-cwd");
     let request_cwd = sandbox.root().join("request-list-cwd");
@@ -154,6 +155,7 @@ async fn claude_mcp_list_request_env_overrides_injected_home_and_xdg_values() {
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_list_env_override").expect("sandbox");
     let fresh_claude_home = sandbox.root().join("fresh-claude-home");
     let override_home = sandbox.root().join("override-home");
@@ -405,6 +407,7 @@ async fn claude_mcp_get_records_pinned_argv_on_win32_x64() {
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_get_records_pinned_argv").expect("sandbox");
     let (_backend, gateway, kind) = claude_gateway(
         &sandbox,
@@ -439,6 +442,7 @@ async fn claude_mcp_add_stdio_records_sorted_env_without_separator_and_writes_se
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_add_stdio_records").expect("sandbox");
     let (_backend, gateway, kind) = claude_gateway(
         &sandbox,
@@ -525,6 +529,7 @@ async fn claude_mcp_add_url_records_pinned_argv_on_win32_x64() {
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_add_url_records").expect("sandbox");
     let (_backend, gateway, kind) = claude_gateway(
         &sandbox,
@@ -573,6 +578,7 @@ async fn claude_mcp_remove_records_pinned_argv_and_writes_sentinel_on_win32_x64(
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_remove_records").expect("sandbox");
     let (_backend, gateway, kind) = claude_gateway(
         &sandbox,
@@ -618,6 +624,7 @@ async fn claude_mcp_oversized_output_is_truncated_and_flagged_on_supported_targe
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_oversized_output").expect("sandbox");
     let (_backend, gateway, kind) = claude_gateway(
         &sandbox,

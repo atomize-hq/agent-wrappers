@@ -118,7 +118,7 @@ pub(super) async fn run_codex_mcp(
     argv: Vec<OsString>,
     context: AgentWrapperMcpCommandContext,
 ) -> Result<AgentWrapperMcpCommandOutput, AgentWrapperError> {
-    let resolved = resolve_codex_mcp_command(&config, &context);
+    let resolved = resolve_codex_mcp_command(&config, &context)?;
 
     if let Some(codex_home) = resolved.materialize_codex_home.as_ref() {
         CodexHomeLayout::new(codex_home.clone())
@@ -213,7 +213,7 @@ fn finalize_codex_mcp_output(
 fn resolve_codex_mcp_command(
     config: &super::CodexBackendConfig,
     context: &AgentWrapperMcpCommandContext,
-) -> ResolvedCodexMcpCommand {
+) -> Result<ResolvedCodexMcpCommand, AgentWrapperError> {
     let binary_path = resolve_codex_binary_path(
         config.binary.as_ref(),
         env::var_os(CODEX_BINARY_ENV),
@@ -223,7 +223,7 @@ fn resolve_codex_mcp_command(
             .map(String::as_str)
             .or_else(|| config.env.get(PATH_ENV).map(String::as_str)),
         env::var_os(PATH_ENV),
-    );
+    )?;
     let mut env = config.env.clone();
     env.insert(
         CODEX_BINARY_ENV.to_string(),
@@ -244,7 +244,7 @@ fn resolve_codex_mcp_command(
             .is_some_and(|value| value == &codex_home.to_string_lossy())
     });
 
-    ResolvedCodexMcpCommand {
+    Ok(ResolvedCodexMcpCommand {
         binary_path,
         working_dir: context
             .working_dir
@@ -253,7 +253,7 @@ fn resolve_codex_mcp_command(
         timeout: context.timeout.or(config.default_timeout),
         env,
         materialize_codex_home,
-    }
+    })
 }
 
 fn default_codex_binary_path() -> PathBuf {
@@ -268,7 +268,7 @@ fn resolve_codex_binary_path(
     ambient_codex_binary: Option<OsString>,
     effective_path_env: Option<&str>,
     ambient_path_env: Option<OsString>,
-) -> PathBuf {
+) -> Result<PathBuf, AgentWrapperError> {
     let binary_path = config_binary
         .cloned()
         .or_else(|| {
@@ -283,23 +283,23 @@ fn resolve_codex_binary_path(
         .unwrap_or_else(default_codex_binary_path);
 
     resolve_path_for_spawn(binary_path, effective_path_env, ambient_path_env)
+        .ok_or_else(|| backend_error(PINNED_SPAWN_FAILURE))
 }
 
 fn resolve_path_for_spawn(
     binary_path: PathBuf,
     effective_path_env: Option<&str>,
     ambient_path_env: Option<OsString>,
-) -> PathBuf {
+) -> Option<PathBuf> {
     if is_path_qualified(&binary_path) {
-        return binary_path;
+        return Some(binary_path);
     }
 
     if let Some(path_env) = effective_path_env {
-        return find_binary_on_path(&binary_path, Some(OsString::from(path_env)))
-            .unwrap_or(binary_path);
+        return find_binary_on_path(&binary_path, Some(OsString::from(path_env)));
     }
 
-    find_binary_on_path(&binary_path, ambient_path_env).unwrap_or(binary_path)
+    find_binary_on_path(&binary_path, ambient_path_env)
 }
 
 fn is_path_qualified(path: &Path) -> bool {
@@ -584,6 +584,15 @@ mod tests {
         }
     }
 
+    fn assert_backend_spawn_failure(err: AgentWrapperError) {
+        match err {
+            AgentWrapperError::Backend { message } => {
+                assert_eq!(message, PINNED_SPAWN_FAILURE);
+            }
+            other => panic!("expected Backend error, got {other:?}"),
+        }
+    }
+
     async fn write_all_and_close(mut writer: DuplexStream, bytes: Vec<u8>) {
         writer.write_all(&bytes).await.expect("write succeeds");
         writer.shutdown().await.expect("shutdown succeeds");
@@ -814,7 +823,8 @@ printf "CODEX_HOME=%s\n" "${CODEX_HOME-unset}" 1>&2
 
     #[test]
     fn resolve_codex_mcp_command_applies_precedence_and_materializes_injected_home() {
-        let resolved = resolve_codex_mcp_command(&sample_config(), &sample_context());
+        let resolved =
+            resolve_codex_mcp_command(&sample_config(), &sample_context()).expect("resolve");
 
         assert_eq!(resolved.binary_path, PathBuf::from("/tmp/fake-codex"));
         assert_eq!(resolved.working_dir, Some(PathBuf::from("request/workdir")));
@@ -852,7 +862,7 @@ printf "CODEX_HOME=%s\n" "${CODEX_HOME-unset}" 1>&2
             .env
             .insert(CODEX_HOME_ENV.to_string(), "/tmp/request-home".to_string());
 
-        let resolved = resolve_codex_mcp_command(&sample_config(), &context);
+        let resolved = resolve_codex_mcp_command(&sample_config(), &context).expect("resolve");
 
         assert_eq!(
             resolved.env.get(CODEX_HOME_ENV).map(String::as_str),
@@ -864,7 +874,8 @@ printf "CODEX_HOME=%s\n" "${CODEX_HOME-unset}" 1>&2
     #[test]
     fn resolve_codex_mcp_command_uses_backend_defaults_when_request_values_absent() {
         let resolved =
-            resolve_codex_mcp_command(&sample_config(), &AgentWrapperMcpCommandContext::default());
+            resolve_codex_mcp_command(&sample_config(), &AgentWrapperMcpCommandContext::default())
+                .expect("resolve");
 
         assert_eq!(resolved.working_dir, Some(PathBuf::from("default/workdir")));
         assert_eq!(resolved.timeout, Some(Duration::from_secs(30)));
@@ -881,7 +892,8 @@ printf "CODEX_HOME=%s\n" "${CODEX_HOME-unset}" 1>&2
             Some(OsString::from("codex")),
             Some(temp_dir.to_string_lossy().as_ref()),
             None,
-        );
+        )
+        .expect("effective PATH should resolve codex");
 
         assert_eq!(
             resolved,
@@ -889,6 +901,60 @@ printf "CODEX_HOME=%s\n" "${CODEX_HOME-unset}" 1>&2
         );
 
         fs::remove_dir_all(temp_dir).expect("temp dir should be removed");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn resolve_codex_binary_path_prefers_request_path_over_ambient_path() {
+        let _env_lock = test_env_lock().lock().expect("lock test env");
+        let request_dir = temp_test_dir("request-path");
+        let ambient_dir = temp_test_dir("ambient-path");
+        let request_binary = write_fake_codex(&request_dir, "#!/usr/bin/env bash\nexit 0\n");
+        let _ambient_binary = write_fake_codex(&ambient_dir, "#!/usr/bin/env bash\nexit 0\n");
+        let _ambient_path = EnvGuard::set(PATH_ENV, ambient_dir.as_os_str().to_os_string());
+
+        let resolved = resolve_codex_binary_path(
+            None,
+            Some(OsString::from("codex")),
+            Some(request_dir.to_string_lossy().as_ref()),
+            env::var_os(PATH_ENV),
+        )
+        .expect("request PATH should resolve codex");
+
+        assert_eq!(
+            resolved,
+            fs::canonicalize(&request_binary).expect("canonicalize request binary")
+        );
+
+        fs::remove_dir_all(request_dir).expect("request dir should be removed");
+        fs::remove_dir_all(ambient_dir).expect("ambient dir should be removed");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn resolve_codex_binary_path_uses_ambient_path_when_effective_path_is_absent() {
+        let _env_lock = test_env_lock().lock().expect("lock test env");
+        let ambient_dir = temp_test_dir("ambient-only");
+        let ambient_binary = write_fake_codex(&ambient_dir, "#!/usr/bin/env bash\nexit 0\n");
+        let _ambient_path = EnvGuard::set(PATH_ENV, ambient_dir.as_os_str().to_os_string());
+
+        let resolved = resolve_codex_binary_path(None, None, None, env::var_os(PATH_ENV))
+            .expect("ambient PATH should resolve codex");
+
+        assert_eq!(
+            resolved,
+            fs::canonicalize(&ambient_binary).expect("canonicalize ambient binary")
+        );
+
+        fs::remove_dir_all(ambient_dir).expect("ambient dir should be removed");
+    }
+
+    #[test]
+    fn resolve_codex_binary_path_rejects_unresolved_default_binary() {
+        let err = resolve_codex_binary_path(None, None, None, None)
+            .expect_err("default bare codex should fail when PATH cannot resolve it");
+
+        assert_backend_spawn_failure(err);
     }
 
     #[tokio::test]

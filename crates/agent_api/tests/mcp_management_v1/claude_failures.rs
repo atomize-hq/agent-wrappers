@@ -13,13 +13,15 @@ use super::{
         backend_error_message, claude_config_env, claude_gateway, claude_get_supported,
         claude_list_supported, FAKE_CLAUDE_SCENARIO_ENV,
     },
-    support::McpTestSandbox,
+    support::{process_env_lock, EnvGuard, McpTestSandbox},
 };
 
 const TIMEOUT_STDOUT_SENTINEL: &str = "fake_claude_mcp timeout stdout sentinel";
 const TIMEOUT_STDERR_SENTINEL: &str = "fake_claude_mcp timeout stderr sentinel";
 const FAST_EXIT_STDOUT_SENTINEL: &str = "fake_claude_mcp fast-exit stdout sentinel";
 const FAST_EXIT_STDERR_SENTINEL: &str = "fake_claude_mcp fast-exit stderr sentinel";
+const CLAUDE_BINARY_ENV: &str = "CLAUDE_BINARY";
+const PATH_ENV: &str = "PATH";
 
 #[tokio::test]
 async fn claude_mcp_add_url_rejects_bearer_env_var_without_spawning() {
@@ -27,6 +29,7 @@ async fn claude_mcp_add_url_rejects_bearer_env_var_without_spawning() {
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_add_url_rejects_bearer_env").expect("sandbox");
     let (_backend, gateway, kind) = claude_gateway(
         &sandbox,
@@ -67,11 +70,55 @@ async fn claude_mcp_add_url_rejects_bearer_env_var_without_spawning() {
 }
 
 #[tokio::test]
+async fn claude_mcp_unresolved_default_binary_returns_backend_error_without_writing_record() {
+    if !claude_list_supported() {
+        return;
+    }
+
+    let _env_lock = process_env_lock().lock().expect("lock process env");
+    let sandbox = McpTestSandbox::new("claude_mcp_unresolved_default_binary").expect("sandbox");
+    let empty_path_dir = sandbox.root().join("empty-path");
+    std::fs::create_dir_all(&empty_path_dir).expect("create empty PATH dir");
+    let _ambient_path = EnvGuard::set(PATH_ENV, empty_path_dir.as_os_str().to_os_string());
+    let _claude_binary = EnvGuard::unset(CLAUDE_BINARY_ENV);
+
+    let backend = agent_api::backends::claude_code::ClaudeCodeBackend::new(
+        agent_api::backends::claude_code::ClaudeCodeBackendConfig {
+            binary: None,
+            claude_home: Some(sandbox.claude_home().to_path_buf()),
+            env: claude_config_env(&sandbox, std::iter::empty()),
+            ..Default::default()
+        },
+    );
+    let kind = backend.kind();
+    let mut gateway = agent_api::AgentWrapperGateway::new();
+    gateway
+        .register(std::sync::Arc::new(backend))
+        .expect("register claude backend");
+
+    let err = gateway
+        .mcp_list(&kind, AgentWrapperMcpListRequest::default())
+        .await
+        .expect_err("unresolved default binary must fail with Backend");
+
+    let message = backend_error_message(err);
+    assert!(
+        message.contains("spawn"),
+        "spawn failures should mention spawn in the redacted backend error: {message}"
+    );
+    assert!(
+        !sandbox.record_path().exists(),
+        "pre-spawn resolution failure must not create an invocation record"
+    );
+}
+
+#[tokio::test]
 async fn claude_mcp_drift_returns_backend_error_without_mutating_capabilities() {
     if !claude_list_supported() {
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_drift").expect("sandbox");
     let (backend, gateway, kind) = claude_gateway(
         &sandbox,
@@ -104,6 +151,7 @@ async fn claude_mcp_add_flag_drift_returns_backend_error_without_mutating_capabi
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_add_flag_drift").expect("sandbox");
     let (backend, gateway, kind) = claude_gateway(
         &sandbox,
@@ -154,6 +202,7 @@ async fn claude_mcp_timeout_returns_backend_error_without_leaking_partial_output
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_timeout").expect("sandbox");
     let (_backend, gateway, kind) = claude_gateway(
         &sandbox,
@@ -203,6 +252,7 @@ async fn claude_mcp_zero_timeout_returns_backend_error_without_leaking_partial_o
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_zero_timeout").expect("sandbox");
     let (_backend, gateway, kind) = claude_gateway(
         &sandbox,
@@ -252,6 +302,7 @@ async fn claude_mcp_zero_timeout_fast_exit_still_returns_timeout_error() {
         return;
     }
 
+    let _env_lock = process_env_lock().lock().expect("lock process env");
     let sandbox = McpTestSandbox::new("claude_mcp_zero_timeout_fast_exit").expect("sandbox");
     let (_backend, gateway, kind) = claude_gateway(
         &sandbox,

@@ -9,7 +9,7 @@ use std::{
 
 use claude_code::ClaudeHomeLayout;
 
-use crate::mcp::AgentWrapperMcpCommandContext;
+use crate::{mcp::AgentWrapperMcpCommandContext, AgentWrapperError};
 
 use super::{
     CLAUDE_BINARY_ENV, CLAUDE_HOME_ENV, DISABLE_AUTOUPDATER_ENV, HOME_ENV, PATH_ENV,
@@ -28,7 +28,7 @@ pub(super) struct ResolvedClaudeMcpCommand {
 pub(super) fn resolve_claude_mcp_command(
     config: &super::super::ClaudeCodeBackendConfig,
     context: &AgentWrapperMcpCommandContext,
-) -> ResolvedClaudeMcpCommand {
+) -> Result<ResolvedClaudeMcpCommand, AgentWrapperError> {
     resolve_claude_mcp_command_with_env(
         config,
         context,
@@ -42,7 +42,7 @@ pub(super) fn resolve_claude_mcp_command_with_env(
     context: &AgentWrapperMcpCommandContext,
     claude_binary_env: Option<OsString>,
     claude_home_env: Option<PathBuf>,
-) -> ResolvedClaudeMcpCommand {
+) -> Result<ResolvedClaudeMcpCommand, AgentWrapperError> {
     let binary_path = resolve_claude_binary_path(
         config.binary.as_ref(),
         claude_binary_env,
@@ -52,7 +52,7 @@ pub(super) fn resolve_claude_mcp_command_with_env(
             .map(String::as_str)
             .or_else(|| config.env.get(PATH_ENV).map(String::as_str)),
         env::var_os(PATH_ENV),
-    );
+    )?;
     let mut env = config.env.clone();
     env.entry(DISABLE_AUTOUPDATER_ENV.to_string())
         .or_insert_with(|| "1".to_string());
@@ -69,7 +69,7 @@ pub(super) fn resolve_claude_mcp_command_with_env(
         .filter(|layout| effective_env_matches_claude_home_layout(&env, layout))
         .cloned();
 
-    ResolvedClaudeMcpCommand {
+    Ok(ResolvedClaudeMcpCommand {
         binary_path,
         working_dir: context
             .working_dir
@@ -78,7 +78,7 @@ pub(super) fn resolve_claude_mcp_command_with_env(
         timeout: context.timeout.or(config.default_timeout),
         env,
         materialize_claude_home,
-    }
+    })
 }
 
 pub(super) fn resolve_claude_binary_path(
@@ -86,7 +86,7 @@ pub(super) fn resolve_claude_binary_path(
     claude_binary_env: Option<OsString>,
     effective_path_env: Option<&str>,
     ambient_path_env: Option<OsString>,
-) -> PathBuf {
+) -> Result<PathBuf, AgentWrapperError> {
     let binary_path = config_binary
         .cloned()
         .or_else(|| {
@@ -101,23 +101,23 @@ pub(super) fn resolve_claude_binary_path(
         .unwrap_or_else(|| PathBuf::from("claude"));
 
     resolve_path_for_spawn(binary_path, effective_path_env, ambient_path_env)
+        .ok_or_else(|| super::backend_error(super::PINNED_SPAWN_FAILURE))
 }
 
 fn resolve_path_for_spawn(
     binary_path: PathBuf,
     effective_path_env: Option<&str>,
     ambient_path_env: Option<OsString>,
-) -> PathBuf {
+) -> Option<PathBuf> {
     if is_path_qualified(&binary_path) {
-        return binary_path;
+        return Some(binary_path);
     }
 
     if let Some(path_env) = effective_path_env {
-        return find_binary_on_path(&binary_path, Some(OsString::from(path_env)))
-            .unwrap_or(binary_path);
+        return find_binary_on_path(&binary_path, Some(OsString::from(path_env)));
     }
 
-    find_binary_on_path(&binary_path, ambient_path_env).unwrap_or(binary_path)
+    find_binary_on_path(&binary_path, ambient_path_env)
 }
 
 fn is_path_qualified(path: &Path) -> bool {

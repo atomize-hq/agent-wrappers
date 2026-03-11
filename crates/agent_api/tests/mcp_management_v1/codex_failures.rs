@@ -10,6 +10,7 @@ use agent_api::{
 };
 
 use super::support::McpTestSandbox;
+use super::support::{process_env_lock, EnvGuard};
 
 const FAKE_CODEX_RECORD_PATH_ENV: &str = "FAKE_CODEX_MCP_RECORD_PATH";
 const FAKE_CODEX_RECORD_ENV_KEYS_ENV: &str = "FAKE_CODEX_MCP_RECORD_ENV_KEYS";
@@ -22,6 +23,8 @@ const TIMEOUT_STDOUT_SENTINEL: &str = "fake_codex_mcp timeout stdout sentinel";
 const TIMEOUT_STDERR_SENTINEL: &str = "fake_codex_mcp timeout stderr sentinel";
 const FAST_EXIT_STDOUT_SENTINEL: &str = "fake_codex_mcp fast-exit stdout sentinel";
 const FAST_EXIT_STDERR_SENTINEL: &str = "fake_codex_mcp fast-exit stderr sentinel";
+const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
+const PATH_ENV: &str = "PATH";
 
 #[tokio::test]
 async fn codex_mcp_nonzero_exit_returns_output_in_ok_result() {
@@ -512,6 +515,46 @@ async fn codex_mcp_missing_binary_returns_backend_error_without_writing_record()
     assert!(
         !sandbox.record_path().exists(),
         "spawn failure must not create an invocation record"
+    );
+}
+
+#[tokio::test]
+async fn codex_mcp_unresolved_default_binary_returns_backend_error_without_writing_record() {
+    if !codex_mcp_supported() {
+        return;
+    }
+
+    let _env_lock = process_env_lock().lock().expect("lock process env");
+    let sandbox = McpTestSandbox::new("codex_mcp_unresolved_default_binary").expect("sandbox");
+    let empty_path_dir = sandbox.root().join("empty-path");
+    std::fs::create_dir_all(&empty_path_dir).expect("create empty PATH dir");
+    let _ambient_path = EnvGuard::set(PATH_ENV, empty_path_dir.as_os_str().to_os_string());
+    let _codex_binary = EnvGuard::unset(CODEX_BINARY_ENV);
+
+    let backend = Arc::new(CodexBackend::new(CodexBackendConfig {
+        binary: None,
+        codex_home: Some(sandbox.codex_home().to_path_buf()),
+        env: codex_config_env(&sandbox, std::iter::empty()),
+        ..Default::default()
+    }));
+
+    let kind = backend.kind();
+    let mut gateway = AgentWrapperGateway::new();
+    gateway.register(backend).expect("register codex backend");
+
+    let err = gateway
+        .mcp_list(&kind, AgentWrapperMcpListRequest::default())
+        .await
+        .expect_err("unresolved default binary must fail with Backend");
+
+    let message = backend_error_message(err);
+    assert!(
+        message.contains("spawn"),
+        "spawn failures should mention spawn in the redacted backend error: {message}"
+    );
+    assert!(
+        !sandbox.record_path().exists(),
+        "pre-spawn resolution failure must not create an invocation record"
     );
 }
 

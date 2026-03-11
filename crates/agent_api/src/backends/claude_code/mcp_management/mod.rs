@@ -72,7 +72,7 @@ pub(super) async fn run_claude_mcp(
     argv: Vec<OsString>,
     context: AgentWrapperMcpCommandContext,
 ) -> Result<AgentWrapperMcpCommandOutput, AgentWrapperError> {
-    let resolved = resolve::resolve_claude_mcp_command(&config, &context);
+    let resolved = resolve::resolve_claude_mcp_command(&config, &context)?;
     let captured = runner::capture_claude_mcp_output(&resolved, &argv).await?;
     runner::finalize_claude_mcp_output(&argv, captured)
 }
