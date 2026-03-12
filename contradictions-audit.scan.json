@@ -1,0 +1,922 @@
+{
+  "meta": {
+    "tool": "contradictions-scan",
+    "generated_at": "2026-03-12T19:30:40Z",
+    "scanned_files": [
+      "docs/project_management/packs/active/agent-api-add-dirs/README.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam_map.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-1-add-dir-contract-and-normalization.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-2-shared-agent-api-normalizer.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "docs/adr/0006-agent-wrappers-workspace.md",
+      "docs/adr/0007-wrapper-events-ingestion-contract.md",
+      "docs/adr/0008-claude-stream-json-parser-api.md",
+      "docs/adr/0009-universal-agent-api.md",
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "docs/adr/0013-agent-api-backend-harness.md",
+      "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "docs/adr/0018-universal-mcp-management-commands.md",
+      "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "docs/adr/0020-universal-agent-api-model-selection.md",
+      "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "docs/specs/claude-code-session-mapping-contract.md",
+      "docs/specs/claude-stream-json-parser-contract.md",
+      "docs/specs/claude-stream-json-parser-scenarios-v1.md",
+      "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "docs/specs/codex-external-sandbox-mapping-contract.md",
+      "docs/specs/codex-streaming-exec-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+      "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "docs/specs/wrapper-events-ingestion-contract.md",
+      "docs/specs/universal-agent-api/README.md",
+      "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "docs/specs/universal-agent-api/capability-matrix.md",
+      "docs/specs/universal-agent-api/contract.md",
+      "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/specs/universal-agent-api/extensions-spec.md",
+      "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "docs/specs/universal-agent-api/run-protocol-spec.md"
+    ],
+    "total_claim_keys": 26,
+    "candidate_keys": 8,
+    "note": "Candidates are heuristic leads; audit must confirm contradictions with scope/context."
+  },
+  "candidates": [
+    {
+      "key": "KV::ADR_BODY_SHA256",
+      "values": [
+        {
+          "value": "16d5a34efc82f12f49584da22bd4a8544afe795ac7cf5514fcfc922bcfb3f8cf",
+          "occurrences": [
+            {
+              "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+              "line": 59,
+              "excerpt": "ADR_BODY_SHA256: 16d5a34efc82f12f49584da22bd4a8544afe795ac7cf5514fcfc922bcfb3f8cf"
+            }
+          ]
+        },
+        {
+          "value": "2f21a08280b6a4d3bb36e31a099cfa78a880015ede03e7fa1b5a07f318144bd7",
+          "occurrences": [
+            {
+              "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+              "line": 37,
+              "excerpt": "ADR_BODY_SHA256: 2f21a08280b6a4d3bb36e31a099cfa78a880015ede03e7fa1b5a07f318144bd7"
+            }
+          ]
+        },
+        {
+          "value": "37cf98a07880307dc2e156ca91a3c4ef5185db622ab4da3e48d5c7b74400567d",
+          "occurrences": [
+            {
+              "file": "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+              "line": 37,
+              "excerpt": "ADR_BODY_SHA256: 37cf98a07880307dc2e156ca91a3c4ef5185db622ab4da3e48d5c7b74400567d"
+            }
+          ]
+        },
+        {
+          "value": "4a68939d08f9a6cc385cdc890e5c0052f6c880cff8632c35032552608bfafb11",
+          "occurrences": [
+            {
+              "file": "docs/adr/0015-universal-agent-api-session-extensions.md",
+              "line": 34,
+              "excerpt": "ADR_BODY_SHA256: 4a68939d08f9a6cc385cdc890e5c0052f6c880cff8632c35032552608bfafb11"
+            }
+          ]
+        },
+        {
+          "value": "65e730cba10be32d51d978299331925930ede19bd694904fbe208c27e2a21616",
+          "occurrences": [
+            {
+              "file": "docs/adr/0009-universal-agent-api.md",
+              "line": 43,
+              "excerpt": "ADR_BODY_SHA256: 65e730cba10be32d51d978299331925930ede19bd694904fbe208c27e2a21616"
+            }
+          ]
+        },
+        {
+          "value": "6b4c9723a55d8b29586b59a5f59af7ccfe8613aeb9cbe90a2e0ea3e17d0406bb",
+          "occurrences": [
+            {
+              "file": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+              "line": 41,
+              "excerpt": "ADR_BODY_SHA256: 6b4c9723a55d8b29586b59a5f59af7ccfe8613aeb9cbe90a2e0ea3e17d0406bb"
+            }
+          ]
+        },
+        {
+          "value": "9b0a2ca67edd67ca56db41d5203b7f4e3214dcd3ab486dbecfc76964b5ac7330",
+          "occurrences": [
+            {
+              "file": "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+              "line": 42,
+              "excerpt": "ADR_BODY_SHA256: 9b0a2ca67edd67ca56db41d5203b7f4e3214dcd3ab486dbecfc76964b5ac7330"
+            }
+          ]
+        },
+        {
+          "value": "9c3a16d3cce9862fc38672b1061f5481c84354689d9c8e9cc6490140cabf6aaf",
+          "occurrences": [
+            {
+              "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+              "line": 40,
+              "excerpt": "ADR_BODY_SHA256: 9c3a16d3cce9862fc38672b1061f5481c84354689d9c8e9cc6490140cabf6aaf"
+            }
+          ]
+        },
+        {
+          "value": "dcbef68108e3c20f1b3b2f981bfe0a6e5513b6283b015d92e8d6a3b997c006a7",
+          "occurrences": [
+            {
+              "file": "docs/adr/0010-claude-code-live-stream-json.md",
+              "line": 39,
+              "excerpt": "ADR_BODY_SHA256: dcbef68108e3c20f1b3b2f981bfe0a6e5513b6283b015d92e8d6a3b997c006a7"
+            }
+          ]
+        },
+        {
+          "value": "e335f45f122ecab4ca4ea18efa11bfdacc4df23a62edd389d70251b8bf066b8b",
+          "occurrences": [
+            {
+              "file": "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+              "line": 34,
+              "excerpt": "ADR_BODY_SHA256: e335f45f122ecab4ca4ea18efa11bfdacc4df23a62edd389d70251b8bf066b8b"
+            }
+          ]
+        },
+        {
+          "value": "ed679f96b44845b497542edce8863b7f050691adbae79d05a5f41bc5478db457",
+          "occurrences": [
+            {
+              "file": "docs/adr/0018-universal-mcp-management-commands.md",
+              "line": 46,
+              "excerpt": "ADR_BODY_SHA256: ed679f96b44845b497542edce8863b7f050691adbae79d05a5f41bc5478db457"
+            }
+          ]
+        },
+        {
+          "value": "f50df499202efeb7d2f1a0a740fa5bfe5c1784c93b33875bc3ac56e84ddbc1ee",
+          "occurrences": [
+            {
+              "file": "docs/adr/0013-agent-api-backend-harness.md",
+              "line": 33,
+              "excerpt": "ADR_BODY_SHA256: f50df499202efeb7d2f1a0a740fa5bfe5c1784c93b33875bc3ac56e84ddbc1ee"
+            }
+          ]
+        },
+        {
+          "value": "f9cbd67176f8073b836cce2ab77b9b635236ac181b8ae685838951b7f88597d9",
+          "occurrences": [
+            {
+              "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+              "line": 41,
+              "excerpt": "ADR_BODY_SHA256: f9cbd67176f8073b836cce2ab77b9b635236ac181b8ae685838951b7f88597d9"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "ENV::ADR",
+      "values": [
+        {
+          "value": "docs/adr/0021-universal-agent-api-add-dirs.md`",
+          "occurrences": [
+            {
+              "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-1-add-dir-contract-and-normalization.md",
+              "line": 69,
+              "excerpt": "- `make adr-check ADR=docs/adr/0021-universal-agent-api-add-dirs.md`"
+            },
+            {
+              "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+              "line": 3,
+              "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0021-universal-agent-api-add-dirs.md`"
+            },
+            {
+              "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+              "line": 248,
+              "excerpt": "- `make adr-check ADR=docs/adr/0021-universal-agent-api-add-dirs.md`"
+            }
+          ]
+        },
+        {
+          "value": "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md`",
+          "occurrences": [
+            {
+              "file": "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+              "line": 3,
+              "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md`"
+            },
+            {
+              "file": "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+              "line": 129,
+              "excerpt": "- `make adr-check ADR=docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md`"
+            }
+          ]
+        },
+        {
+          "value": "docs/adr/0015-universal-agent-api-session-extensions.md`",
+          "occurrences": [
+            {
+              "file": "docs/adr/0015-universal-agent-api-session-extensions.md",
+              "line": 3,
+              "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0015-universal-agent-api-session-extensions.md` after editing"
+            },
+            {
+              "file": "docs/adr/0015-universal-agent-api-session-extensions.md",
+              "line": 179,
+              "excerpt": "- `make adr-check ADR=docs/adr/0015-universal-agent-api-session-extensions.md`"
+            }
+          ]
+        },
+        {
+          "value": "docs/adr/0020-universal-agent-api-model-selection.md`",
+          "occurrences": [
+            {
+              "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+              "line": 3,
+              "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0020-universal-agent-api-model-selection.md`"
+            },
+            {
+              "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+              "line": 221,
+              "excerpt": "- `make adr-check ADR=docs/adr/0020-universal-agent-api-model-selection.md`"
+            }
+          ]
+        },
+        {
+          "value": "docs/adr/0010-claude-code-live-stream-json.md`",
+          "occurrences": [
+            {
+              "file": "docs/adr/0010-claude-code-live-stream-json.md",
+              "line": 3,
+              "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0010-claude-code-live-stream-json.md` after editing to update"
+            }
+          ]
+        },
+        {
+          "value": "docs/adr/0011-agent-api-codex-stream-exec.md`",
+          "occurrences": [
+            {
+              "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+              "line": 3,
+              "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0011-agent-api-codex-stream-exec.md` after editing to update"
+            }
+          ]
+        },
+        {
+          "value": "docs/adr/0013-agent-api-backend-harness.md`",
+          "occurrences": [
+            {
+              "file": "docs/adr/0013-agent-api-backend-harness.md",
+              "line": 3,
+              "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0013-agent-api-backend-harness.md` after editing to update"
+            }
+          ]
+        },
+        {
+          "value": "docs/adr/0014-agent-api-explicit-cancellation.md`",
+          "occurrences": [
+            {
+              "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+              "line": 3,
+              "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0014-agent-api-explicit-cancellation.md` after editing to update"
+            }
+          ]
+        },
+        {
+          "value": "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md`",
+          "occurrences": [
+            {
+              "file": "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+              "line": 3,
+              "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md`"
+            }
+          ]
+        },
+        {
+          "value": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md`",
+          "occurrences": [
+            {
+              "file": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+              "line": 3,
+              "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md`"
+            }
+          ]
+        },
+        {
+          "value": "docs/adr/0018-universal-mcp-management-commands.md`",
+          "occurrences": [
+            {
+              "file": "docs/adr/0018-universal-mcp-management-commands.md",
+              "line": 3,
+              "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0018-universal-mcp-management-commands.md`"
+            }
+          ]
+        },
+        {
+          "value": "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md`",
+          "occurrences": [
+            {
+              "file": "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+              "line": 3,
+              "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md`"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "KV::Status",
+      "values": [
+        {
+          "value": "Approved",
+          "occurrences": [
+            {
+              "file": "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+              "line": 3,
+              "excerpt": "Status: Approved"
+            },
+            {
+              "file": "docs/specs/universal-agent-api/capability-matrix.md",
+              "line": 3,
+              "excerpt": "Status: Approved"
+            },
+            {
+              "file": "docs/specs/universal-agent-api/contract.md",
+              "line": 3,
+              "excerpt": "Status: Approved"
+            },
+            {
+              "file": "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+              "line": 3,
+              "excerpt": "Status: Approved"
+            },
+            {
+              "file": "docs/specs/universal-agent-api/extensions-spec.md",
+              "line": 3,
+              "excerpt": "Status: Approved"
+            },
+            {
+              "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+              "line": 3,
+              "excerpt": "Status: Approved"
+            }
+          ]
+        },
+        {
+          "value": "**Normative**",
+          "occurrences": [
+            {
+              "file": "docs/specs/claude-code-session-mapping-contract.md",
+              "line": 3,
+              "excerpt": "Status: **Normative**"
+            },
+            {
+              "file": "docs/specs/codex-app-server-jsonrpc-contract.md",
+              "line": 3,
+              "excerpt": "Status: **Normative**"
+            },
+            {
+              "file": "docs/specs/codex-external-sandbox-mapping-contract.md",
+              "line": 3,
+              "excerpt": "Status: **Normative**"
+            },
+            {
+              "file": "docs/specs/codex-streaming-exec-contract.md",
+              "line": 3,
+              "excerpt": "Status: **Normative**"
+            },
+            {
+              "file": "docs/specs/wrapper-events-ingestion-contract.md",
+              "line": 3,
+              "excerpt": "Status: **Normative**"
+            }
+          ]
+        },
+        {
+          "value": "Proposed",
+          "occurrences": [
+            {
+              "file": "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+              "line": 4,
+              "excerpt": "Status: Proposed"
+            },
+            {
+              "file": "docs/adr/0005-codex-jsonl-log-parser-api.md",
+              "line": 4,
+              "excerpt": "Status: Proposed"
+            },
+            {
+              "file": "docs/adr/0007-wrapper-events-ingestion-contract.md",
+              "line": 4,
+              "excerpt": "Status: Proposed"
+            },
+            {
+              "file": "docs/adr/0008-claude-stream-json-parser-api.md",
+              "line": 4,
+              "excerpt": "Status: Proposed"
+            },
+            {
+              "file": "docs/adr/0009-universal-agent-api.md",
+              "line": 4,
+              "excerpt": "Status: Proposed"
+            }
+          ]
+        },
+        {
+          "value": "Accepted",
+          "occurrences": [
+            {
+              "file": "docs/adr/0001-codex-cli-parity-maintenance.md",
+              "line": 4,
+              "excerpt": "Status: Accepted"
+            },
+            {
+              "file": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+              "line": 4,
+              "excerpt": "Status: Accepted"
+            },
+            {
+              "file": "docs/adr/0003-wrapper-coverage-auto-generation.md",
+              "line": 4,
+              "excerpt": "Status: Accepted"
+            },
+            {
+              "file": "docs/adr/0006-agent-wrappers-workspace.md",
+              "line": 4,
+              "excerpt": "Status: Accepted"
+            }
+          ]
+        },
+        {
+          "value": "**Normative** (paired with ADR 0003)",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-wrapper-coverage-generator-contract.md",
+              "line": 3,
+              "excerpt": "Status: **Normative** (paired with ADR 0003)"
+            }
+          ]
+        },
+        {
+          "value": "**Normative** (paired with ADR 0005)",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+              "line": 3,
+              "excerpt": "Status: **Normative** (paired with ADR 0005)"
+            }
+          ]
+        },
+        {
+          "value": "**Normative** (paired with ADR 0008)",
+          "occurrences": [
+            {
+              "file": "docs/specs/claude-stream-json-parser-contract.md",
+              "line": 3,
+              "excerpt": "Status: **Normative** (paired with ADR 0008)"
+            }
+          ]
+        },
+        {
+          "value": "**Normative** (paired with `claude-stream-json-parser-contract.md`)",
+          "occurrences": [
+            {
+              "file": "docs/specs/claude-stream-json-parser-scenarios-v1.md",
+              "line": 3,
+              "excerpt": "Status: **Normative** (paired with `claude-stream-json-parser-contract.md`)"
+            }
+          ]
+        },
+        {
+          "value": "**Normative** (paired with the generator contract)",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+              "line": 3,
+              "excerpt": "Status: **Normative** (paired with the generator contract)"
+            }
+          ]
+        },
+        {
+          "value": "**Normative** (paired with the parser contract)",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+              "line": 3,
+              "excerpt": "Status: **Normative** (paired with the parser contract)"
+            }
+          ]
+        },
+        {
+          "value": "Draft",
+          "occurrences": [
+            {
+              "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+              "line": 3,
+              "excerpt": "Status: Draft"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "KV::Scope",
+      "values": [
+        {
+          "value": "`cli_manifests/codex/wrapper_coverage.json` generation for CI parity reports",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-wrapper-coverage-generator-contract.md",
+              "line": 4,
+              "excerpt": "Scope: `cli_manifests/codex/wrapper_coverage.json` generation for CI parity reports"
+            }
+          ]
+        },
+        {
+          "value": "`codex app-server` stdio JSON-RPC (fork flow primitives + streaming notifications)",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-app-server-jsonrpc-contract.md",
+              "line": 4,
+              "excerpt": "Scope: `codex app-server` stdio JSON-RPC (fork flow primitives + streaming notifications)"
+            }
+          ]
+        },
+        {
+          "value": "acceptance criteria for the offline JSONL parsing API in ADR 0005",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+              "line": 4,
+              "excerpt": "Scope: acceptance criteria for the offline JSONL parsing API in ADR 0005"
+            }
+          ]
+        },
+        {
+          "value": "concrete Codex backend mapping for the dangerous universal extension key",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-external-sandbox-mapping-contract.md",
+              "line": 4,
+              "excerpt": "Scope: concrete Codex backend mapping for the dangerous universal extension key"
+            }
+          ]
+        },
+        {
+          "value": "concrete `claude --print` spawn/mapping rules for Universal Agent API session semantics",
+          "occurrences": [
+            {
+              "file": "docs/specs/claude-code-session-mapping-contract.md",
+              "line": 4,
+              "excerpt": "Scope: concrete `claude --print` spawn/mapping rules for Universal Agent API session semantics"
+            }
+          ]
+        },
+        {
+          "value": "live streaming via `codex::CodexClient::stream_exec*` / `stream_resume`",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-streaming-exec-contract.md",
+              "line": 4,
+              "excerpt": "Scope: live streaming via `codex::CodexClient::stream_exec*` / `stream_resume`"
+            }
+          ]
+        },
+        {
+          "value": "offline parsing of Claude Code `--output-format=stream-json` logs",
+          "occurrences": [
+            {
+              "file": "docs/specs/claude-stream-json-parser-contract.md",
+              "line": 4,
+              "excerpt": "Scope: offline parsing of Claude Code `--output-format=stream-json` logs"
+            }
+          ]
+        },
+        {
+          "value": "offline parsing of Codex `--json` JSONL logs into `ThreadEvent`",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+              "line": 4,
+              "excerpt": "Scope: offline parsing of Codex `--json` JSONL logs into `ThreadEvent`"
+            }
+          ]
+        },
+        {
+          "value": "required scenario set for `wrapper_coverage_manifest()` derivation",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+              "line": 4,
+              "excerpt": "Scope: required scenario set for `wrapper_coverage_manifest()` derivation"
+            }
+          ]
+        },
+        {
+          "value": "wrapper-level ingestion of JSONL/NDJSON / line-oriented outputs",
+          "occurrences": [
+            {
+              "file": "docs/specs/wrapper-events-ingestion-contract.md",
+              "line": 4,
+              "excerpt": "Scope: wrapper-level ingestion of JSONL/NDJSON / line-oriented outputs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "KV::Date",
+      "values": [
+        {
+          "value": "2026-02-14",
+          "occurrences": [
+            {
+              "file": "docs/adr/0007-wrapper-events-ingestion-contract.md",
+              "line": 3,
+              "excerpt": "Date: 2026-02-14"
+            },
+            {
+              "file": "docs/adr/0008-claude-stream-json-parser-api.md",
+              "line": 3,
+              "excerpt": "Date: 2026-02-14"
+            }
+          ]
+        },
+        {
+          "value": "2025-12-24",
+          "occurrences": [
+            {
+              "file": "docs/adr/0001-codex-cli-parity-maintenance.md",
+              "line": 3,
+              "excerpt": "Date: 2025-12-24"
+            }
+          ]
+        },
+        {
+          "value": "2026-01-26",
+          "occurrences": [
+            {
+              "file": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+              "line": 3,
+              "excerpt": "Date: 2026-01-26"
+            }
+          ]
+        },
+        {
+          "value": "2026-01-29",
+          "occurrences": [
+            {
+              "file": "docs/adr/0003-wrapper-coverage-auto-generation.md",
+              "line": 3,
+              "excerpt": "Date: 2026-01-29"
+            }
+          ]
+        },
+        {
+          "value": "2026-01-31",
+          "occurrences": [
+            {
+              "file": "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+              "line": 3,
+              "excerpt": "Date: 2026-01-31"
+            }
+          ]
+        },
+        {
+          "value": "2026-02-02",
+          "occurrences": [
+            {
+              "file": "docs/adr/0005-codex-jsonl-log-parser-api.md",
+              "line": 3,
+              "excerpt": "Date: 2026-02-02"
+            }
+          ]
+        },
+        {
+          "value": "2026-02-12",
+          "occurrences": [
+            {
+              "file": "docs/adr/0006-agent-wrappers-workspace.md",
+              "line": 3,
+              "excerpt": "Date: 2026-02-12"
+            }
+          ]
+        },
+        {
+          "value": "2026-02-16",
+          "occurrences": [
+            {
+              "file": "docs/adr/0009-universal-agent-api.md",
+              "line": 3,
+              "excerpt": "Date: 2026-02-16"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "KV::Note",
+      "values": [
+        {
+          "value": "CI/workflow and artifact model details are implemented per ADR 0002",
+          "occurrences": [
+            {
+              "file": "docs/adr/0001-codex-cli-parity-maintenance.md",
+              "line": 6,
+              "excerpt": "Note: CI/workflow and artifact model details are implemented per ADR 0002"
+            }
+          ]
+        },
+        {
+          "value": "This makes `line_number` values potentially non-contiguous in the emitted record stream when",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+              "line": 165,
+              "excerpt": "Note: This makes `line_number` values potentially non-contiguous in the emitted record stream when"
+            }
+          ]
+        },
+        {
+          "value": "`AgentWrapperMcpAddTransport::Stdio.env` configures environment variables for the *MCP server process* (as persisted",
+          "occurrences": [
+            {
+              "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+              "line": 283,
+              "excerpt": "Note: `AgentWrapperMcpAddTransport::Stdio.env` configures environment variables for the *MCP server process* (as persisted"
+            }
+          ]
+        },
+        {
+          "value": "`uaa-0016` was previously referenced inline as “follow-on work” in",
+          "occurrences": [
+            {
+              "file": "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+              "line": 19,
+              "excerpt": "Note: `uaa-0016` was previously referenced inline as “follow-on work” in"
+            }
+          ]
+        },
+        {
+          "value": "feature stages in `codex features list` may include `deprecated` and `removed` in addition to `stable|beta|experimental`. We record the stage string to support proactive planning before surfaces disappear.",
+          "occurrences": [
+            {
+              "file": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+              "line": 16,
+              "excerpt": "Note: feature stages in `codex features list` may include `deprecated` and `removed` in addition to `stable|beta|experimental`. We record the stage string to support proactive planning before surfaces"
+            }
+          ]
+        },
+        {
+          "value": "the parser MUST trim only the trailing `\\\\r` (not full `.trim()`), per `crates/codex/JSONL_COMPAT.md`.",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+              "line": 101,
+              "excerpt": "Note: the parser MUST trim only the trailing `\\\\r` (not full `.trim()`), per `crates/codex/JSONL_COMPAT.md`."
+            }
+          ]
+        },
+        {
+          "value": "upstream treats `COMMAND` as variadic; v1 records it as a single positional identity.",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+              "line": 348,
+              "excerpt": "Note: upstream treats `COMMAND` as variadic; v1 records it as a single positional identity."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "KV::Rationale",
+      "values": [
+        {
+          "value": "downstream orchestrators (e.g. Substrate) commonly drain `events` first and only await",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-streaming-exec-contract.md",
+              "line": 38,
+              "excerpt": "Rationale: downstream orchestrators (e.g. Substrate) commonly drain `events` first and only await"
+            }
+          ]
+        },
+        {
+          "value": "some Codex subcommands accept free positional args (for example `codex exec [PROMPT] [COMMAND]`).",
+          "occurrences": [
+            {
+              "file": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+              "line": 187,
+              "excerpt": "Rationale: some Codex subcommands accept free positional args (for example `codex exec [PROMPT] [COMMAND]`)."
+            }
+          ]
+        },
+        {
+          "value": "the dangerous bypass override collapses approval/sandbox behavior; mixing it with other",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-external-sandbox-mapping-contract.md",
+              "line": 62,
+              "excerpt": "Rationale: the dangerous bypass override collapses approval/sandbox behavior; mixing it with other"
+            }
+          ]
+        },
+        {
+          "value": "this avoids brittle direct `Eq` requirements while still asserting identical shapes and",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+              "line": 88,
+              "excerpt": "Rationale: this avoids brittle direct `Eq` requirements while still asserting identical shapes and"
+            }
+          ]
+        },
+        {
+          "value": "wrapper forwards `key=value` overrides but does not type individual upstream config keys.",
+          "occurrences": [
+            {
+              "file": "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+              "line": 51,
+              "excerpt": "Rationale: wrapper forwards `key=value` overrides but does not type individual upstream config keys."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "KV::request",
+      "values": [
+        {
+          "value": "AgentWrapperMcpAddRequest,",
+          "occurrences": [
+            {
+              "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+              "line": 195,
+              "excerpt": "request: AgentWrapperMcpAddRequest,"
+            }
+          ]
+        },
+        {
+          "value": "AgentWrapperMcpGetRequest,",
+          "occurrences": [
+            {
+              "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+              "line": 189,
+              "excerpt": "request: AgentWrapperMcpGetRequest,"
+            }
+          ]
+        },
+        {
+          "value": "AgentWrapperMcpListRequest,",
+          "occurrences": [
+            {
+              "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+              "line": 183,
+              "excerpt": "request: AgentWrapperMcpListRequest,"
+            }
+          ]
+        },
+        {
+          "value": "AgentWrapperMcpRemoveRequest,",
+          "occurrences": [
+            {
+              "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+              "line": 201,
+              "excerpt": "request: AgentWrapperMcpRemoveRequest,"
+            }
+          ]
+        },
+        {
+          "value": "ClaudePrintRequest,",
+          "occurrences": [
+            {
+              "file": "docs/adr/0010-claude-code-live-stream-json.md",
+              "line": 122,
+              "excerpt": "request: ClaudePrintRequest,"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

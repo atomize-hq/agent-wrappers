@@ -79,6 +79,23 @@ Deterministic allow-flag preflight requirement (pinned):
 Implementation note (non-normative): keep the `--help` parser a pure function so unit tests can pin
 both the allow-flag-supported and allow-flag-not-supported cases without spawning Claude.
 
+## `agent_api.exec.add_dirs.v1` mapping (pinned)
+
+The add-dir extension key is owned by `docs/specs/universal-agent-api/extensions-spec.md`. This
+section pins the Claude CLI mapping when the Claude backend advertises and accepts the key.
+
+When `extensions["agent_api.exec.add_dirs.v1"]` is accepted, the Claude backend MUST:
+
+- emit exactly one `--add-dir <DIR...>` argv group,
+- include the normalized unique directories in order, and
+- keep the group in the root-flags region before the final prompt token.
+
+Placement rules (pinned):
+
+- The group MUST appear before `--continue`, `--fork-session`, and `--resume`.
+- The group MUST appear before the final `--verbose` token that precedes the prompt.
+- The backend MUST NOT emit repeated `--add-dir` flags for this key.
+
 ## `agent_api.session.resume.v1` mapping (pinned)
 
 The resume extension key is owned by `docs/specs/universal-agent-api/extensions-spec.md`. This
@@ -91,7 +108,7 @@ Universal Agent API run protocol).
 
 The backend MUST spawn an argv containing the following **ordered subsequence**:
 
-`--print --output-format stream-json [--permission-mode bypassPermissions] --continue --verbose PROMPT`
+`--print --output-format stream-json [--permission-mode bypassPermissions] [--add-dir <DIR...>] --continue --verbose PROMPT`
 
 ### selector `"id"`
 
@@ -99,7 +116,7 @@ Let `ID == extensions["agent_api.session.resume.v1"].id` (non-empty after trimmi
 
 The backend MUST spawn an argv containing the following **ordered subsequence**:
 
-`--print --output-format stream-json [--permission-mode bypassPermissions] --resume ID --verbose PROMPT`
+`--print --output-format stream-json [--permission-mode bypassPermissions] [--add-dir <DIR...>] --resume ID --verbose PROMPT`
 
 ## `agent_api.session.fork.v1` mapping (pinned)
 
@@ -112,7 +129,7 @@ Let `PROMPT == AgentWrapperRunRequest.prompt` (non-empty after trimming; validat
 
 The backend MUST spawn an argv containing the following **ordered subsequence**:
 
-`--print --output-format stream-json [--permission-mode bypassPermissions] --continue --fork-session --verbose PROMPT`
+`--print --output-format stream-json [--permission-mode bypassPermissions] [--add-dir <DIR...>] --continue --fork-session --verbose PROMPT`
 
 ### selector `"id"`
 
@@ -120,7 +137,7 @@ Let `ID == extensions["agent_api.session.fork.v1"].id` (non-empty after trimming
 
 The backend MUST spawn an argv containing the following **ordered subsequence**:
 
-`--print --output-format stream-json [--permission-mode bypassPermissions] --fork-session --resume ID --verbose PROMPT`
+`--print --output-format stream-json [--permission-mode bypassPermissions] [--add-dir <DIR...>] --fork-session --resume ID --verbose PROMPT`
 
 ## Error translation requirements (pinned)
 

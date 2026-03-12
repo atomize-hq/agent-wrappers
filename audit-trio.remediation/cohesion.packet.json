@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "tool": "audit-trio-remediator",
+    "generated_at": "2026-03-12T20:00:38.200348+00:00",
+    "input_report": "audit-trio.report.json",
+    "remediator": "cohesion-remediator",
+    "routing": {
+      "multi_auditor_precedence": [
+        "contradictions",
+        "concrete",
+        "cohesion"
+      ],
+      "file_ownership_precedence": [
+        "contradictions",
+        "concrete",
+        "cohesion"
+      ]
+    }
+  },
+  "allowlist_files": [],
+  "clusters": [],
+  "unassigned_clusters": []
+}

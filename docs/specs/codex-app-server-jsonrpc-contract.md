@@ -147,6 +147,30 @@ Prompt mapping (pinned):
 }
 ```
 
+## Interaction with `agent_api.exec.add_dirs.v1` (pinned current truth)
+
+The add-dir extension key is owned by:
+
+- `docs/specs/universal-agent-api/extensions-spec.md`
+
+Current wire truth for the pinned fork subset:
+
+- `ThreadForkParams` has no field that can carry accepted add-dir inputs.
+- `TurnStartParamsV2` has no field that can carry accepted add-dir inputs.
+- Therefore this v1 app-server contract cannot honor an accepted add-dir list on Codex fork flows.
+
+Required backend behavior (pinned):
+
+- If a run selects `agent_api.session.fork.v1` and also includes an accepted
+  `agent_api.exec.add_dirs.v1` payload, the Codex backend MUST fail the run before sending
+  `thread/list`, `thread/fork`, or `turn/start`.
+- The failure MUST be returned directly as:
+  - `AgentWrapperError::Backend { message: "add_dirs unsupported for codex fork" }`
+- Because no run handle is returned on this path, the backend MUST NOT emit any user-visible event
+  stream item for this rejection.
+- Future support for add-dir-on-fork requires a new pinned contract revision that names the exact
+  wire field(s) carrying the normalized directory list.
+
 ## Notifications → Universal Agent API events (pinned minimum)
 
 During the `turn/start` lifecycle the server emits JSON-RPC notifications. For `agent_api` fork

@@ -1,0 +1,1791 @@
+{
+  "meta": {
+    "tool": "cohesion-scan",
+    "generated_at": "2026-03-12T19:30:40Z",
+    "scanned_files": [
+      "docs/project_management/packs/active/agent-api-add-dirs/README.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam_map.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-1-add-dir-contract-and-normalization.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-2-shared-agent-api-normalizer.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "docs/adr/0006-agent-wrappers-workspace.md",
+      "docs/adr/0007-wrapper-events-ingestion-contract.md",
+      "docs/adr/0008-claude-stream-json-parser-api.md",
+      "docs/adr/0009-universal-agent-api.md",
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "docs/adr/0013-agent-api-backend-harness.md",
+      "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "docs/adr/0018-universal-mcp-management-commands.md",
+      "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "docs/adr/0020-universal-agent-api-model-selection.md",
+      "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "docs/specs/claude-code-session-mapping-contract.md",
+      "docs/specs/claude-stream-json-parser-contract.md",
+      "docs/specs/claude-stream-json-parser-scenarios-v1.md",
+      "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "docs/specs/codex-external-sandbox-mapping-contract.md",
+      "docs/specs/codex-streaming-exec-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+      "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "docs/specs/wrapper-events-ingestion-contract.md",
+      "docs/specs/universal-agent-api/README.md",
+      "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "docs/specs/universal-agent-api/capability-matrix.md",
+      "docs/specs/universal-agent-api/contract.md",
+      "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/specs/universal-agent-api/extensions-spec.md",
+      "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "docs/specs/universal-agent-api/run-protocol-spec.md"
+    ],
+    "counts": {
+      "broken_links": 0,
+      "missing_anchors": 0,
+      "sequence_markers": 0,
+      "sequence_anomalies": 0,
+      "dependency_lines": 344
+    },
+    "note": "Candidates are heuristic leads; audit must confirm cohesion breaks with context and plan reasoning."
+  },
+  "broken_links": [],
+  "missing_anchors": [],
+  "sequence_markers": [],
+  "sequence_anomalies": [],
+  "dependency_lines": [
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "line": 61,
+      "excerpt": "- dedup after normalization, preserving first occurrence order"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "line": 74,
+      "excerpt": "- **Fail-closed R0 gating**: unsupported key fails as `UnsupportedCapability` before value"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "line": 79,
+      "excerpt": "set before backend argv mapping."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "line": 89,
+      "excerpt": "- Duplicate directories collapse deterministically after normalization."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "line": 90,
+      "excerpt": "- Missing or non-directory paths fail before spawn."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "line": 127,
+      "excerpt": "- Built-in backends should advertise `agent_api.exec.add_dirs.v1` unconditionally once the"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "line": 3,
+      "excerpt": "This section makes coupling explicit: contracts/interfaces, dependency edges, and sequencing."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "line": 58,
+      "excerpt": "## Dependency graph (text)"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "line": 79,
+      "excerpt": "keys before any add-dir value parsing happens."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "line": 94,
+      "excerpt": "- **WS-INT (Integration)**: end-to-end validation and `make preflight` after the seams land."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "line": 102,
+      "excerpt": "- **Dedup is not an error**: duplicates collapse after normalization while preserving order."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-1-add-dir-contract-and-normalization.md",
+      "line": 51,
+      "excerpt": "- v1 requires lexical normalization only."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-1-add-dir-contract-and-normalization.md",
+      "line": 58,
+      "excerpt": "- Blocked by: none"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-1-add-dir-contract-and-normalization.md",
+      "line": 70,
+      "excerpt": "- Integration gate once implementation lands:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-2-shared-agent-api-normalizer.md",
+      "line": 5,
+      "excerpt": "- **Goal / user value**: compute the effective add-dir set once so Codex and Claude Code consume"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-2-shared-agent-api-normalizer.md",
+      "line": 50,
+      "excerpt": "- Blocked by: SEAM-1"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "line": 11,
+      "excerpt": "- Advertise `agent_api.exec.add_dirs.v1` from the Codex backend once implemented."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "line": 24,
+      "excerpt": "- Codex backend instance after implementation lands"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "line": 43,
+      "excerpt": "- Capability support is not conditional on path contents once the backend supports the key."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "line": 46,
+      "excerpt": "- Ordering after dedup must be preserved in argv emission."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "line": 51,
+      "excerpt": "- Blocked by: SEAM-1/2"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "line": 60,
+      "excerpt": "- Existing wrapper dependency surface:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "line": 77,
+      "excerpt": "parity is impossible, pin the exact safe rejection path before broad implementation."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "line": 81,
+      "excerpt": "- Land after the shared normalizer so Codex does not grow backend-local path semantics."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "line": 11,
+      "excerpt": "- Advertise `agent_api.exec.add_dirs.v1` from the Claude Code backend once implemented."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "line": 24,
+      "excerpt": "- Claude Code backend instance after implementation lands"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "line": 43,
+      "excerpt": "- Capability support is not conditional on path contents once the backend supports the key."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "line": 51,
+      "excerpt": "- Blocked by: SEAM-1/2"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "line": 58,
+      "excerpt": "- Existing wrapper dependency surface:"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "line": 74,
+      "excerpt": "- **De-risk plan**: pin resume/fork CLI behavior in fake-stream tests before broad refactoring so"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "line": 79,
+      "excerpt": "- Land after the shared normalizer so Claude does not grow backend-local path semantics."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "line": 46,
+      "excerpt": "- Tests must assert dedup behavior after normalization, not before."
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "line": 51,
+      "excerpt": "- Blocked by: SEAM-2/3/4"
+    },
+    {
+      "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "line": 63,
+      "excerpt": "- Full gate before merge:"
+    },
+    {
+      "file": "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 8,
+      "excerpt": "`docs/project_management/next/codex-cli-parity-coverage-mapping/`. ADR 0001 remains the"
+    },
+    {
+      "file": "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 33,
+      "excerpt": "- Platform priority: Linux first, then macOS, then Windows (primarily via WSL; native Windows support is best-effort)"
+    },
+    {
+      "file": "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 39,
+      "excerpt": "### 1) Adopt a “CLI Snapshot → Diff → Update” workflow (local first, CI next)"
+    },
+    {
+      "file": "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 106,
+      "excerpt": "- Be exhaustive and recursive: enumerate commands/subcommands from `codex --help`, then run `--help` for every discovered command path until leaf commands are reached."
+    },
+    {
+      "file": "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 149,
+      "excerpt": "- `platforms` (prioritize Linux, then macOS; Windows is primarily via WSL and does not need native Windows CI)"
+    },
+    {
+      "file": "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 194,
+      "excerpt": "- macOS smoke coverage (added incrementally after Linux baseline is reliable)"
+    },
+    {
+      "file": "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 259,
+      "excerpt": "- Requires maintaining snapshot tooling and CI jobs."
+    },
+    {
+      "file": "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 272,
+      "excerpt": "## Next Steps (for the upcoming planning session)"
+    },
+    {
+      "file": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 16,
+      "excerpt": "Note: feature stages in `codex features list` may include `deprecated` and `removed` in addition to `stable|beta|experimental`. We record the stage string to support proactive planning before surfaces"
+    },
+    {
+      "file": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 33,
+      "excerpt": "- validate a version via a real-binary test matrix before promoting `latest_validated.txt`."
+    },
+    {
+      "file": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 107,
+      "excerpt": "- Update Snapshot downloads upstream assets from GitHub Releases (direct download URLs), pins them in `artifacts.lock.json`, and runs multi-platform snapshot generation before union merge/report gener"
+    },
+    {
+      "file": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 135,
+      "excerpt": "- Requires a complete union snapshot (`complete=true`) with a known `semantic_version`."
+    },
+    {
+      "file": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 165,
+      "excerpt": "- `validated` requires validation passing on the required target and coverage being supported on that target."
+    },
+    {
+      "file": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 182,
+      "excerpt": "- Apply `supplement/commands.json` per-target (before union merge). Supplements may be platform-scoped; the union must reflect availability only on the targets the supplement applied to."
+    },
+    {
+      "file": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 306,
+      "excerpt": "5. Only after integration validations pass on Linux (per ADR 0001) promote:"
+    },
+    {
+      "file": "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 318,
+      "excerpt": "- The wrapper coverage manifest requires ongoing maintenance."
+    },
+    {
+      "file": "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "line": 82,
+      "excerpt": "## What Is Not Yet Specified (Requires a Generator Contract)"
+    },
+    {
+      "file": "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "line": 18,
+      "excerpt": "The v1 generator contract requires:"
+    },
+    {
+      "file": "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "line": 28,
+      "excerpt": "Today, the parity pipeline requires explicit unit-by-unit enumeration to classify an entire subtree as intentionally unsupported:"
+    },
+    {
+      "file": "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "line": 38,
+      "excerpt": "If the wrapper explicitly marks a command path as `intentionally_unsupported`, then upstream units under that command subtree are classified as `intentionally_unsupported` by inheritance, unless overr"
+    },
+    {
+      "file": "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "line": 85,
+      "excerpt": "If the wrapper explicitly declares coverage for U (exact unit identity), then IU inheritance does not apply to U."
+    },
+    {
+      "file": "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "line": 111,
+      "excerpt": "Then:"
+    },
+    {
+      "file": "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "line": 140,
+      "excerpt": "1. Unit kind order: command entries first, then flag entries, then arg entries"
+    },
+    {
+      "file": "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "line": 142,
+      "excerpt": "2. `path` (lexicographic token compare, then length; i.e. `[\"a\"] < [\"a\",\"b\"]`)"
+    },
+    {
+      "file": "docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "line": 12,
+      "excerpt": "- A raw JSONL tee facility (`json_event_log`) that appends each stdout line to a file before parsing."
+    },
+    {
+      "file": "docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "line": 14,
+      "excerpt": "In practice, consumers (including multi-agent/orchestrator CLIs) want to ingest Codex session logs *after the fact*:"
+    },
+    {
+      "file": "docs/adr/0006-agent-wrappers-workspace.md",
+      "line": 85,
+      "excerpt": "- `xtask` becomes a central dependency and must stay deterministic and stable across lanes."
+    },
+    {
+      "file": "docs/adr/0008-claude-stream-json-parser-api.md",
+      "line": 12,
+      "excerpt": "artifacts *after the fact*:"
+    },
+    {
+      "file": "docs/adr/0008-claude-stream-json-parser-api.md",
+      "line": 51,
+      "excerpt": "- Requires a fixture corpus to validate behavior and prevent regressions."
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 9,
+      "excerpt": "- Feature directory: `docs/project_management/next/universal-agent-api/` (planning + triads)"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 10,
+      "excerpt": "- Sequencing spine: `docs/project_management/next/sequencing.json`"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 18,
+      "excerpt": "- `docs/project_management/next/universal-agent-api/plan.md`"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 19,
+      "excerpt": "- `docs/project_management/next/universal-agent-api/tasks.json`"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 20,
+      "excerpt": "- `docs/project_management/next/universal-agent-api/session_log.md`"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 21,
+      "excerpt": "- `docs/project_management/next/universal-agent-api/decision_register.md`"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 22,
+      "excerpt": "- Spec manifest (derived, authoritative for spec set): `docs/project_management/next/universal-agent-api/spec_manifest.md`"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 23,
+      "excerpt": "- Impact map (derived, authoritative for touch set + conflicts): `docs/project_management/next/universal-agent-api/impact_map.md`"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 24,
+      "excerpt": "- CI checkpoint plan (derived, authoritative for bounded multi-OS gates): `docs/project_management/next/universal-agent-api/ci_checkpoint_plan.md`"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 32,
+      "excerpt": "- `docs/project_management/next/universal-agent-api/platform-parity-spec.md`"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 34,
+      "excerpt": "- `docs/project_management/next/universal-agent-api/manual_testing_playbook.md`"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 35,
+      "excerpt": "- `docs/project_management/next/universal-agent-api/smoke/`"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 176,
+      "excerpt": "- Sequencing entry: `docs/project_management/next/sequencing.json` → add a new track"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 177,
+      "excerpt": "sourced by this ADR under `docs/project_management/next/universal-agent-api/`."
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 211,
+      "excerpt": "- Manual playbook will be created under `docs/project_management/next/universal-agent-api/` once the"
+    },
+    {
+      "file": "docs/adr/0009-universal-agent-api.md",
+      "line": 224,
+      "excerpt": "`docs/project_management/next/universal-agent-api/`."
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 3,
+      "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0010-claude-code-live-stream-json.md` after editing to update"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 12,
+      "excerpt": "- Feature directory: `docs/project_management/next/claude-code-live-stream-json/`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 14,
+      "excerpt": "- Sequencing spine: `docs/project_management/next/sequencing.json`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 21,
+      "excerpt": "- Prior planning pack (baseline): `docs/project_management/next/universal-agent-api/`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 22,
+      "excerpt": "- Spec manifest: `docs/project_management/next/claude-code-live-stream-json/spec_manifest.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 23,
+      "excerpt": "- Decision Register: `docs/project_management/next/claude-code-live-stream-json/decision_register.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 24,
+      "excerpt": "- Plan: `docs/project_management/next/claude-code-live-stream-json/plan.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 25,
+      "excerpt": "- Tasks: `docs/project_management/next/claude-code-live-stream-json/tasks.json`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 26,
+      "excerpt": "- Session log: `docs/project_management/next/claude-code-live-stream-json/session_log.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 28,
+      "excerpt": "- `docs/project_management/next/claude-code-live-stream-json/contract.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 29,
+      "excerpt": "- `docs/project_management/next/claude-code-live-stream-json/stream-json-print-protocol-spec.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 30,
+      "excerpt": "- `docs/project_management/next/claude-code-live-stream-json/platform-parity-spec.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 31,
+      "excerpt": "- `docs/project_management/next/claude-code-live-stream-json/ci_checkpoint_plan.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 32,
+      "excerpt": "- `docs/project_management/next/claude-code-live-stream-json/C0-spec.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 33,
+      "excerpt": "- `docs/project_management/next/claude-code-live-stream-json/C1-spec.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 34,
+      "excerpt": "- Impact Map: `docs/project_management/next/claude-code-live-stream-json/impact_map.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 35,
+      "excerpt": "- Manual Playbook: `docs/project_management/next/claude-code-live-stream-json/manual_testing_playbook.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 43,
+      "excerpt": "- Existing: `agent_api`’s Claude Code backend emits events only after the `claude` process exits because it buffers stdout before parsing."
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 45,
+      "excerpt": "- Why: Unlocks real-time UX/progress for Claude runs, aligns Claude backend behavior with operator expectations, and preserves Universal Agent API DR-0012 completion safety guarantees (completion reso"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 55,
+      "excerpt": "- Today, the Claude Code backend in `agent_api` calls `claude_code::ClaudeClient::print(...)`, which buffers all stdout before parsing stream-json lines. This prevents callers from receiving events un"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 119,
+      "excerpt": "/// This MUST NOT require the process to exit before yielding events."
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 144,
+      "excerpt": "- Line ending handling MUST be tolerant of CRLF (parser strips trailing `\\r` before JSON parse)."
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 172,
+      "excerpt": "- wait for process exit and resolve completion only after the universal stream is final (Universal Agent API DR-0012)"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 178,
+      "excerpt": "- Sequencing entry: `docs/project_management/next/sequencing.json` → add new feature track `claude-code-live-stream-json`."
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 179,
+      "excerpt": "- Prerequisites:"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 180,
+      "excerpt": "- Requires the baseline universal API contract (ADR 0009) and existing `agent_api` Claude backend to exist."
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 212,
+      "excerpt": "- Manual playbook (required): `docs/project_management/next/claude-code-live-stream-json/manual_testing_playbook.md`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 214,
+      "excerpt": "- at least one event arrives before process exit"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 215,
+      "excerpt": "- `completion` resolves only after events stream finality (Universal Agent API DR-0012)"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 219,
+      "excerpt": "- `docs/project_management/next/claude-code-live-stream-json/smoke/linux-smoke.sh`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 220,
+      "excerpt": "- `docs/project_management/next/claude-code-live-stream-json/smoke/macos-smoke.sh`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 221,
+      "excerpt": "- `docs/project_management/next/claude-code-live-stream-json/smoke/windows-smoke.ps1`"
+    },
+    {
+      "file": "docs/adr/0010-claude-code-live-stream-json.md",
+      "line": 237,
+      "excerpt": "- `docs/project_management/next/claude-code-live-stream-json/decision_register.md`:"
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 3,
+      "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0011-agent-api-codex-stream-exec.md` after editing to update"
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 67,
+      "excerpt": "completion future, and then maps those typed events into the universal event envelope"
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 152,
+      "excerpt": "platform parity planning under `docs/project_management/next/universal-agent-api/platform-parity-spec.md`)."
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 165,
+      "excerpt": "- enforce bounds and redaction before emitting any universal event"
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 166,
+      "excerpt": "- preserve DR-0012 completion gating semantics (completion resolves only once the universal"
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 184,
+      "excerpt": "- await wrapper completion; resolve universal completion only after event stream termination"
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 190,
+      "excerpt": "Prerequisites:"
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 193,
+      "excerpt": "Integration dependency notes:"
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 194,
+      "excerpt": "- If `crates/codex` requires additive API to support per-run env overrides, that change MUST land"
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 195,
+      "excerpt": "before `agent_api` can fully switch to `CodexClient::stream_exec` without regressing the"
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 201,
+      "excerpt": "- If `extensions` contains any key not present in backend capabilities, the run MUST fail before"
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 219,
+      "excerpt": "- Fake-binary-based test that proves at least one event is emitted before completion resolves."
+    },
+    {
+      "file": "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 234,
+      "excerpt": "documented in this ADR before acceptance)."
+    },
+    {
+      "file": "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "line": 4,
+      "excerpt": "# after editing to update the ADR_BODY_SHA256 drift guard."
+    },
+    {
+      "file": "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "line": 15,
+      "excerpt": "- `docs/project_management/next/universal-agent-api/`"
+    },
+    {
+      "file": "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "line": 17,
+      "excerpt": "- `docs/project_management/next/cli-agent-onboarding-charter.md`"
+    },
+    {
+      "file": "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "line": 28,
+      "excerpt": "- `docs/project_management/next/cli-agent-onboarding-charter.md`"
+    },
+    {
+      "file": "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "line": 53,
+      "excerpt": "- `docs/project_management/next/cli-agent-onboarding-charter.md`"
+    },
+    {
+      "file": "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "line": 109,
+      "excerpt": "- `docs/project_management/next/cli-agent-onboarding-charter.md`"
+    },
+    {
+      "file": "docs/adr/0013-agent-api-backend-harness.md",
+      "line": 3,
+      "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0013-agent-api-backend-harness.md` after editing to update"
+    },
+    {
+      "file": "docs/adr/0013-agent-api-backend-harness.md",
+      "line": 29,
+      "excerpt": "- `docs/project_management/next/cli-agent-onboarding-charter.md`"
+    },
+    {
+      "file": "docs/adr/0013-agent-api-backend-harness.md",
+      "line": 58,
+      "excerpt": "- onboarding a new CLI requires copying and re-auditing glue logic, and"
+    },
+    {
+      "file": "docs/adr/0013-agent-api-backend-harness.md",
+      "line": 64,
+      "excerpt": "- implement wrapper crate stream parsing (typed events + completion), then"
+    },
+    {
+      "file": "docs/adr/0013-agent-api-backend-harness.md",
+      "line": 116,
+      "excerpt": "- canonical env merge semantics (backend config env, then per-request env overrides)"
+    },
+    {
+      "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "line": 3,
+      "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0014-agent-api-explicit-cancellation.md` after editing to update"
+    },
+    {
+      "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "line": 118,
+      "excerpt": "- If cancellation is requested before `completion` resolves (i.e., before it would resolve as `Ok(...)` or `Err(...)`),"
+    },
+    {
+      "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "line": 121,
+      "excerpt": "This MUST override any backend error completion that would otherwise occur after cancellation is requested."
+    },
+    {
+      "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "line": 122,
+      "excerpt": "- If `completion` resolves before cancellation is requested, `cancel()` is a no-op and MUST NOT change the"
+    },
+    {
+      "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "line": 130,
+      "excerpt": "in which case completion MAY resolve after process exit without waiting for stream finality)."
+    },
+    {
+      "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "line": 132,
+      "excerpt": "- Consumer-visible event stream behavior after `cancel()` (pinned):"
+    },
+    {
+      "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "line": 133,
+      "excerpt": "- After cancellation is requested, the backend MUST stop forwarding any additional `AgentWrapperEvent` items and MUST"
+    },
+    {
+      "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "line": 143,
+      "excerpt": "- the pinned cancellation completion *value* (error) when cancellation is requested before the"
+    },
+    {
+      "file": "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "line": 182,
+      "excerpt": "## Validation Plan (Authoritative for this ADR once Accepted)"
+    },
+    {
+      "file": "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 3,
+      "excerpt": "# Note: Run `make adr-fix ADR=docs/adr/0015-universal-agent-api-session-extensions.md` after editing"
+    },
+    {
+      "file": "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 40,
+      "excerpt": "- `agent_api.session.resume.v1` — resume an existing session then send a follow-up prompt"
+    },
+    {
+      "file": "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 41,
+      "excerpt": "- `agent_api.session.fork.v1` — fork from an existing session then send a follow-up prompt"
+    },
+    {
+      "file": "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 123,
+      "excerpt": "- “fork via app-server, then resume via exec” is plausible only if the forked thread is persisted"
+    },
+    {
+      "file": "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 150,
+      "excerpt": "contract still requires a non-empty prompt."
+    },
+    {
+      "file": "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 164,
+      "excerpt": "`AgentWrapperError::UnsupportedCapability` before spawning any process."
+    },
+    {
+      "file": "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 166,
+      "excerpt": "- The universal run contract requires a non-empty prompt; session resume/fork is defined only as"
+    },
+    {
+      "file": "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 177,
+      "excerpt": "## Validation Plan (Authoritative for this ADR once Accepted)"
+    },
+    {
+      "file": "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 4,
+      "excerpt": "# after editing to update the ADR_BODY_SHA256 drift guard."
+    },
+    {
+      "file": "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 21,
+      "excerpt": "This is the “final sweep before implementation” for backlog work item `uaa-0012`."
+    },
+    {
+      "file": "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 55,
+      "excerpt": "validation before spawn, and explicit “dangerous” knobs (never implied by `non_interactive`)."
+    },
+    {
+      "file": "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 94,
+      "excerpt": "- deterministic validation (“fail before spawn”),"
+    },
+    {
+      "file": "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 154,
+      "excerpt": "4) **Deterministic validation**: invalid values can be rejected *before spawn*."
+    },
+    {
+      "file": "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 171,
+      "excerpt": "`docs/specs/universal-agent-api/extensions-spec.md` before shipping; backend keys must be defined in"
+    },
+    {
+      "file": "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 293,
+      "excerpt": "- Requires ongoing curation: adding a new backend knob means adding a schema field (or a new"
+    },
+    {
+      "file": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 4,
+      "excerpt": "# after editing to update the ADR_BODY_SHA256 drift guard."
+    },
+    {
+      "file": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 48,
+      "excerpt": "- emitted once as an early `AgentWrapperEventKind::Status` event `data` payload (as soon as the"
+    },
+    {
+      "file": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 67,
+      "excerpt": "- Resume-by-id UX requires callers to *discover and persist* an id. Today the id exists in backend"
+    },
+    {
+      "file": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 133,
+      "excerpt": "- `session.id` MUST be a non-empty string after trimming."
+    },
+    {
+      "file": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 147,
+      "excerpt": "synthetic `Status` event immediately after capturing the id."
+    },
+    {
+      "file": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 196,
+      "excerpt": "- Rejected: streaming consumers may need the id before completion (and completion may not exist"
+    },
+    {
+      "file": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 204,
+      "excerpt": "- For built-in backends, the capability should be advertised only once both:"
+    },
+    {
+      "file": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 208,
+      "excerpt": "## Validation Plan (Authoritative for this ADR once Accepted)"
+    },
+    {
+      "file": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 211,
+      "excerpt": "- a `Status` event is emitted containing the facet once the id is observed,"
+    },
+    {
+      "file": "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 214,
+      "excerpt": "- Use fake-binary / fixture-backed event streams when the behavior depends on backend output shape."
+    },
+    {
+      "file": "docs/adr/0018-universal-mcp-management-commands.md",
+      "line": 4,
+      "excerpt": "# after editing to update the ADR_BODY_SHA256 drift guard."
+    },
+    {
+      "file": "docs/adr/0018-universal-mcp-management-commands.md",
+      "line": 71,
+      "excerpt": "- Orchestrators need a backend-neutral way to ensure tool servers are present/removed before a run."
+    },
+    {
+      "file": "docs/adr/0018-universal-mcp-management-commands.md",
+      "line": 110,
+      "excerpt": "- Universalizing authentication flows:"
+    },
+    {
+      "file": "docs/adr/0018-universal-mcp-management-commands.md",
+      "line": 182,
+      "excerpt": "- Deferred: requires a stable cross-backend representation we do not have yet."
+    },
+    {
+      "file": "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "line": 4,
+      "excerpt": "# after editing to update the ADR_BODY_SHA256 drift guard."
+    },
+    {
+      "file": "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "line": 53,
+      "excerpt": "- value MUST be boolean; otherwise fail before spawn with `AgentWrapperError::InvalidRequest`."
+    },
+    {
+      "file": "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "line": 55,
+      "excerpt": "is explicitly requested (and both keys are supported), the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "line": 74,
+      "excerpt": "- extension keys are capability-gated and validated before spawn,"
+    },
+    {
+      "file": "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "line": 92,
+      "excerpt": "- validate before spawn, and"
+    },
+    {
+      "file": "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "line": 120,
+      "excerpt": "- unsupported key fails with `UnsupportedCapability` before any value/contradiction validation,"
+    },
+    {
+      "file": "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "line": 121,
+      "excerpt": "- value type validation + contradiction handling fail before spawn, and"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 4,
+      "excerpt": "# after editing to update the ADR_BODY_SHA256 drift guard."
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 48,
+      "excerpt": "- trim leading/trailing Unicode whitespace before validation and mapping"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 63,
+      "excerpt": "- v1 performs syntax/bounds validation before spawn, but does not require wrappers to ship or"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 96,
+      "excerpt": "- deterministic request-shape validation before spawn."
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 131,
+      "excerpt": "- the backend MUST trim leading/trailing Unicode whitespace before validation and mapping"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 132,
+      "excerpt": "- after trimming, value MUST be non-empty"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 149,
+      "excerpt": "Before spawn:"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 156,
+      "excerpt": "After spawn / backend-owned validation:"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 161,
+      "excerpt": "- If this failure occurs after the backend has already returned an `AgentWrapperRunHandle` and the"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 163,
+      "excerpt": "`AgentWrapperEventKind::Error` event with the same safe/redacted message before closing the"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 197,
+      "excerpt": "- For the current built-in backends, this is expected to be unconditional once implementation lands,"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 219,
+      "excerpt": "## Validation Plan (Authoritative for this ADR once Accepted)"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 224,
+      "excerpt": "- unsupported key fails before spawn,"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 225,
+      "excerpt": "- non-string / empty / oversize values fail before spawn,"
+    },
+    {
+      "file": "docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 226,
+      "excerpt": "- surrounding whitespace is trimmed before validation and argv/builder mapping,"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 4,
+      "excerpt": "# after editing to update the ADR_BODY_SHA256 drift guard."
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 18,
+      "excerpt": "- normalization/validation behavior before spawn, and"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 58,
+      "excerpt": "- each entry is trimmed before validation/mapping"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 67,
+      "excerpt": "- after resolution, each path MUST exist and MUST be a directory before spawn"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 69,
+      "excerpt": "- backends MUST trim each entry, resolve relative paths before spawn, and lexically normalize the"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 145,
+      "excerpt": "- the backend MUST trim leading/trailing Unicode whitespace before validation and mapping"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 146,
+      "excerpt": "- after trimming, each entry MUST be non-empty"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 147,
+      "excerpt": "- after trimming, each entry MUST be `<= 1024` bytes (UTF-8)"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 165,
+      "excerpt": "7. Validate that the resolved path exists and is a directory before spawn."
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 174,
+      "excerpt": "- After resolution/normalization, duplicate directories MUST be removed while preserving first"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 206,
+      "excerpt": "Before spawn:"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 213,
+      "excerpt": "After spawn:"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 218,
+      "excerpt": "- If this occurs after an event stream has been returned and the stream is still open, the backend"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 220,
+      "excerpt": "message before closing the stream."
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 246,
+      "excerpt": "## Validation Plan (Authoritative for this ADR once Accepted)"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 251,
+      "excerpt": "- unsupported key fails before spawn,"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 252,
+      "excerpt": "- invalid shape / bounds fail before spawn,"
+    },
+    {
+      "file": "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 256,
+      "excerpt": "- non-directory / missing paths fail before spawn, and"
+    },
+    {
+      "file": "docs/specs/claude-code-session-mapping-contract.md",
+      "line": 69,
+      "excerpt": "- The backend MUST determine allow-flag support pre-spawn and MUST NOT spawn a session and then"
+    },
+    {
+      "file": "docs/specs/claude-code-session-mapping-contract.md",
+      "line": 72,
+      "excerpt": "- run `claude --help` once per backend instance,"
+    },
+    {
+      "file": "docs/specs/claude-code-session-mapping-contract.md",
+      "line": 76,
+      "excerpt": "etc.) and the key is requested, the backend MUST fail the run **before spawning** as"
+    },
+    {
+      "file": "docs/specs/claude-code-session-mapping-contract.md",
+      "line": 87,
+      "excerpt": "Let `PROMPT == AgentWrapperRunRequest.prompt` (non-empty after trimming; validated pre-spawn by the"
+    },
+    {
+      "file": "docs/specs/claude-code-session-mapping-contract.md",
+      "line": 98,
+      "excerpt": "Let `ID == extensions[\"agent_api.session.resume.v1\"].id` (non-empty after trimming)."
+    },
+    {
+      "file": "docs/specs/claude-code-session-mapping-contract.md",
+      "line": 109,
+      "excerpt": "Let `PROMPT == AgentWrapperRunRequest.prompt` (non-empty after trimming; validated pre-spawn)."
+    },
+    {
+      "file": "docs/specs/claude-code-session-mapping-contract.md",
+      "line": 119,
+      "excerpt": "Let `ID == extensions[\"agent_api.session.fork.v1\"].id` (non-empty after trimming)."
+    },
+    {
+      "file": "docs/specs/claude-stream-json-parser-contract.md",
+      "line": 9,
+      "excerpt": "requirements requires updating this spec and reviewing ADR 0008."
+    },
+    {
+      "file": "docs/specs/claude-stream-json-parser-contract.md",
+      "line": 72,
+      "excerpt": "Before JSON parsing, `parse_line` MUST:"
+    },
+    {
+      "file": "docs/specs/claude-stream-json-parser-contract.md",
+      "line": 76,
+      "excerpt": "- MUST NOT apply full `.trim()` before JSON parsing."
+    },
+    {
+      "file": "docs/specs/claude-stream-json-parser-contract.md",
+      "line": 155,
+      "excerpt": "Let a logical line `L` parse as JSON value `V`. Then:"
+    },
+    {
+      "file": "docs/specs/claude-stream-json-parser-contract.md",
+      "line": 159,
+      "excerpt": "- If `parse_line(L)` returns `Err` with `code` in `{TypedParse, Normalize}`, then `parse_json(&V)`"
+    },
+    {
+      "file": "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 38,
+      "excerpt": "Before issuing any thread/turn method, clients MUST send `initialize` and await its response."
+    },
+    {
+      "file": "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 86,
+      "excerpt": "\"nextCursor\": \"string|null\""
+    },
+    {
+      "file": "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 99,
+      "excerpt": "2) follow pagination by repeating the call with `cursor = nextCursor` until `nextCursor == null`."
+    },
+    {
+      "file": "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 140,
+      "excerpt": "- The Universal Agent API prompt is always required and non-empty after trimming."
+    },
+    {
+      "file": "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 224,
+      "excerpt": "the client MUST immediately send `$/cancelRequest` for that id before failing:"
+    },
+    {
+      "file": "docs/specs/codex-external-sandbox-mapping-contract.md",
+      "line": 67,
+      "excerpt": "- The backend MUST NOT attempt a fallback mapping (no spawn then retry with different flags)."
+    },
+    {
+      "file": "docs/specs/codex-external-sandbox-mapping-contract.md",
+      "line": 97,
+      "excerpt": "- The backend MUST NOT attempt a fallback mapping (no spawn then retry with different params)."
+    },
+    {
+      "file": "docs/specs/codex-external-sandbox-mapping-contract.md",
+      "line": 104,
+      "excerpt": "before closing the stream (per `docs/specs/universal-agent-api/run-protocol-spec.md`, \"Error event"
+    },
+    {
+      "file": "docs/specs/codex-streaming-exec-contract.md",
+      "line": 62,
+      "excerpt": "- Once termination is requested, the wrapper MUST request best-effort termination of the underlying"
+    },
+    {
+      "file": "docs/specs/codex-streaming-exec-contract.md",
+      "line": 65,
+      "excerpt": "once the underlying process has been terminated and stdout has been fully observed/closed."
+    },
+    {
+      "file": "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "line": 9,
+      "excerpt": "Any change to these requirements requires updating this spec and reviewing ADR 0005."
+    },
+    {
+      "file": "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "line": 121,
+      "excerpt": "Async reader support (e.g., `tokio::io::AsyncBufRead`) is explicitly deferred to a future v2/vNext"
+    },
+    {
+      "file": "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "line": 128,
+      "excerpt": "Before attempting JSON parsing, the parser MUST apply the same line-handling rules as"
+    },
+    {
+      "file": "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "line": 137,
+      "excerpt": "The parser MUST NOT apply a full `.trim()` before JSON parsing."
+    },
+    {
+      "file": "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "line": 159,
+      "excerpt": "- If the line is empty/whitespace-only (after trimming `\\r`), it MUST advance the line counter and"
+    },
+    {
+      "file": "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+      "line": 69,
+      "excerpt": "outcome after the malformed line."
+    },
+    {
+      "file": "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+      "line": 70,
+      "excerpt": "- The emitted record stream MUST contain **at least one** successful `turn.started` outcome after"
+    },
+    {
+      "file": "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "line": 9,
+      "excerpt": "Any change to these requirements requires updating this spec (and, if applicable, ADR 0003)."
+    },
+    {
+      "file": "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "line": 143,
+      "excerpt": "### No upstream dependency"
+    },
+    {
+      "file": "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "line": 216,
+      "excerpt": "Any future introduction of scope requires updating this contract and the scenario catalog to enumerate every scoped entry explicitly."
+    },
+    {
+      "file": "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "line": 279,
+      "excerpt": "- `intentionally_unsupported` requires non-empty `note`,"
+    },
+    {
+      "file": "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "line": 89,
+      "excerpt": "The wrapper requires a non-empty prompt string. Prompt forwarding is pinned as:"
+    },
+    {
+      "file": "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "line": 93,
+      "excerpt": "MUST write `PROMPT` to stdin, append exactly one `\\n`, and then close stdin."
+    },
+    {
+      "file": "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "line": 118,
+      "excerpt": "MUST close stdin after writing."
+    },
+    {
+      "file": "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "line": 146,
+      "excerpt": "to stdin, append exactly one `\\n`, and then close stdin."
+    },
+    {
+      "file": "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "line": 288,
+      "excerpt": "Represents the trailing command vector (passed after `--`)."
+    },
+    {
+      "file": "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "line": 307,
+      "excerpt": "Represents the trailing command vector (passed after `--`)."
+    },
+    {
+      "file": "docs/specs/wrapper-events-ingestion-contract.md",
+      "line": 12,
+      "excerpt": "requires updating this spec and reviewing ADR 0007."
+    },
+    {
+      "file": "docs/specs/wrapper-events-ingestion-contract.md",
+      "line": 52,
+      "excerpt": "5. If a line exceeds `max_line_bytes`, enter discard-mode until the next `\\\\n` is seen."
+    },
+    {
+      "file": "docs/specs/wrapper-events-ingestion-contract.md",
+      "line": 63,
+      "excerpt": "- discard bytes until the next `\\\\n` (without storing the oversized content)"
+    },
+    {
+      "file": "docs/specs/wrapper-events-ingestion-contract.md",
+      "line": 151,
+      "excerpt": "exactly once per adapter error, from the ingestion task/thread."
+    },
+    {
+      "file": "docs/specs/wrapper-events-ingestion-contract.md",
+      "line": 167,
+      "excerpt": "- captured before parsing when `CaptureRaw` includes `Line`"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/README.md",
+      "line": 22,
+      "excerpt": "- the Universal Agent API planning pack under `docs/project_management/next/`"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "line": 57,
+      "excerpt": "- New universal buckets SHOULD be introduced in this spec before shipping new `agent_api.*` ids."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "line": 63,
+      "excerpt": "- Core `agent_api.*` capability ids are stable once shipped."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "line": 64,
+      "excerpt": "- Backend-specific capability ids are stable per backend once shipped, but may be added over time."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "line": 110,
+      "excerpt": "- If cancellation is requested before `AgentWrapperRunHandle.completion` resolves,"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/contract.md",
+      "line": 20,
+      "excerpt": "- `codex`: enable Codex backend support (depends on `crates/codex`)"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/contract.md",
+      "line": 21,
+      "excerpt": "- `claude_code`: enable Claude Code backend support (depends on `crates/claude_code`)"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/contract.md",
+      "line": 144,
+      "excerpt": "/// If cancellation is requested before `AgentWrapperRunHandle.completion` resolves, the completion"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/contract.md",
+      "line": 378,
+      "excerpt": "- the backend MUST accept the key for further validation/mapping (still validated before spawn; type"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/contract.md",
+      "line": 419,
+      "excerpt": "For each run, the backend MUST determine an **effective working directory** before spawning any backend process."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/contract.md",
+      "line": 422,
+      "excerpt": "- The **effective working directory** is the resolved directory the backend uses as the run’s working directory (e.g., process `cwd`) after applying config/request precedence."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/contract.md",
+      "line": 445,
+      "excerpt": "- Validation of extension keys and values MUST occur before spawning any backend process."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "line": 100,
+      "excerpt": "- once as an early `AgentWrapperEventKind::Status` event `data` payload as soon as the id is known"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "line": 117,
+      "excerpt": "- `session.id` MUST be a non-empty string after trimming."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "line": 132,
+      "excerpt": "`AgentWrapperEvent.data` once the id is known and satisfies the field rules above (including"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "line": 135,
+      "excerpt": "synthetic `Status` event immediately after capturing the id."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 43,
+      "excerpt": "For every run, backends MUST validate `request.extensions` before spawning any backend process:"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 57,
+      "excerpt": "- When validating `request.extensions` (after prompt non-empty validation per"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 58,
+      "excerpt": "`run-protocol-spec.md`), the backend MUST apply the R0 key gate before extension value validation"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 64,
+      "excerpt": "- Cross-key extension contradiction rules (e.g., mutual exclusivity) apply only after all extension"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 76,
+      "excerpt": "- Once shipped, core extension key semantics are stable."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 77,
+      "excerpt": "- Backend extension keys are stable per backend once shipped, but may be added over time."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 96,
+      "excerpt": "- Value MUST be a boolean; otherwise the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 123,
+      "excerpt": "- Value MUST be a boolean; otherwise the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 126,
+      "excerpt": "same request (and both keys are supported per R0), the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 130,
+      "excerpt": "R0), the backend MUST fail before spawn with `AgentWrapperError::InvalidRequest`."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 142,
+      "excerpt": "- The warning MUST be emitted before any `TextOutput` / `ToolCall` / `ToolResult` events for that"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 145,
+      "excerpt": "before the session handle facet `Status` event."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 157,
+      "excerpt": "- and remain deterministic (no “spawn then retry with different flags”)."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 159,
+      "excerpt": "externally sandboxed hosts, and requires explicit opt-in via backend configuration (see"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 177,
+      "excerpt": "before validation and mapping."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 189,
+      "excerpt": "- Value MUST be a string; otherwise the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 191,
+      "excerpt": "- After trimming, the value MUST be non-empty; otherwise the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 193,
+      "excerpt": "- The trimmed value MUST be no more than 128 UTF-8 bytes; otherwise the backend MUST fail before"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 220,
+      "excerpt": "- If such failure occurs after the backend has already returned an `AgentWrapperRunHandle` and the"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 222,
+      "excerpt": "`AgentWrapperEventKind::Error` event with the same safe/redacted message before closing the"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 239,
+      "excerpt": "whitespace before validation and mapping."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 252,
+      "excerpt": "- Value MUST be an object; otherwise the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 255,
+      "excerpt": "- `dirs` MUST be present; otherwise the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 257,
+      "excerpt": "- `dirs` MUST be an array; otherwise the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 259,
+      "excerpt": "- `dirs` MUST contain at least 1 and at most 16 entries; otherwise the backend MUST fail before"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 261,
+      "excerpt": "- Each `dirs[i]` entry MUST be a string; otherwise the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 263,
+      "excerpt": "- After trimming, each `dirs[i]` entry MUST be non-empty; otherwise the backend MUST fail before"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 265,
+      "excerpt": "- After trimming, each `dirs[i]` entry MUST be no more than 1024 UTF-8 bytes; otherwise the"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 266,
+      "excerpt": "backend MUST fail before spawn with `AgentWrapperError::InvalidRequest`."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 275,
+      "excerpt": "- After resolution and lexical normalization, each effective path MUST exist and MUST be a"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 276,
+      "excerpt": "directory before spawn; otherwise the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 278,
+      "excerpt": "- After resolution and lexical normalization, duplicate directories MUST be removed while"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 296,
+      "excerpt": "once implementation lands; support MUST NOT depend on per-run path contents."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 309,
+      "excerpt": "- If such failure occurs after the backend has already returned an `AgentWrapperRunHandle` and the"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 311,
+      "excerpt": "`AgentWrapperEventKind::Error` event with the same safe/redacted message before closing the"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 323,
+      "excerpt": "- If `selector == \"id\"`, `id` (string) MUST be present and MUST be non-empty (after trimming)."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 346,
+      "excerpt": "- Value MUST be an object; otherwise the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 349,
+      "excerpt": "are supported by the backend (per R0), the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 371,
+      "excerpt": "- Backends SHOULD validate selection before spawning any long-lived backend process when the"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 377,
+      "excerpt": "- If selection failure occurs after the backend has already returned an `AgentWrapperRunHandle`,"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 379,
+      "excerpt": "`event.message == <pinned message>` before closing the consumer-visible stream."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 397,
+      "excerpt": "- If `selector == \"id\"`, `id` (string) MUST be present and MUST be non-empty (after trimming)."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 419,
+      "excerpt": "- Value MUST be an object; otherwise the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 422,
+      "excerpt": "are supported by the backend (per R0), the backend MUST fail before spawn with"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 459,
+      "excerpt": "3) The backend MUST validate the key/value before spawn and apply defaults deterministically."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 10,
+      "excerpt": "This document is normative once approved and uses RFC 2119 keywords (`MUST`, `MUST NOT`, `SHOULD`)."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 80,
+      "excerpt": "The API MUST use the following type shapes (field names are normative once approved):"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 127,
+      "excerpt": "/// Additional argv items appended after `command`."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 163,
+      "excerpt": "1) resolve the backend (else `AgentWrapperError::UnknownBackend`), then"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 164,
+      "excerpt": "2) check the backend-advertised capability id for the operation (else `AgentWrapperError::UnsupportedCapability`), then"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 225,
+      "excerpt": "All transport field validation MUST occur before spawning any backend process. Violations MUST be rejected as"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 257,
+      "excerpt": "Backends MUST determine an effective process context before spawning any backend process. The precedence rules MUST mirror"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 415,
+      "excerpt": "| Codex (`codex`) | `cli_manifests/codex/current.json` | ✅ | ✅ | ❌ (requires `allow_mcp_write=true`) | ❌ (requires `allow_mcp_write=true`) |"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 416,
+      "excerpt": "| Claude Code (`claude_code`) | `cli_manifests/claude_code/current.json` | ✅ | ✅ on `win32-x64` only | ❌ (requires `win32-x64` and `allow_mcp_write=true`) | ❌ (requires `win32-x64` and `allow_mcp_writ"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 27,
+      "excerpt": "`AgentWrapperEvent` before the underlying process exits for non-trivial runs (i.e., events are not"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 30,
+      "excerpt": "only post-hoc (after the underlying process exits)."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 32,
+      "excerpt": "- it may buffer events and emit them post-hoc (after the underlying process exits)"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 49,
+      "excerpt": "- If the consumer opts out by dropping `events`, `completion` MAY resolve after (1) without waiting for (2)."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 56,
+      "excerpt": "to the consumer-visible stream before stream finality, except when explicit cancellation closes"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 93,
+      "excerpt": "- Consumer-visible event stream behavior after `cancel()`:"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 94,
+      "excerpt": "- Once cancellation is requested, the backend MUST:"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 97,
+      "excerpt": "- Events already successfully forwarded before the backend observes cancellation MAY still be received."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 98,
+      "excerpt": "- Buffered (non-live) events that have not yet been emitted MUST be dropped (MUST NOT be emitted after cancellation)."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 105,
+      "excerpt": "- If cancellation is requested before `completion` resolves (i.e., before it would resolve as `Ok(...)` or `Err(...)`),"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 108,
+      "excerpt": "This MUST override any backend error completion that would otherwise occur after cancellation is requested."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 109,
+      "excerpt": "- If `completion` resolves before cancellation is requested, `cancel()` is a no-op and MUST NOT"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 125,
+      "excerpt": "- Backends MUST validate `AgentWrapperRunRequest.prompt` is non-empty (after trimming) before"
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 130,
+      "excerpt": "- Backends MUST validate required capability ids for the requested operation before spawning any backend process."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 135,
+      "excerpt": "- Backends MUST validate `AgentWrapperRunRequest.extensions` keys and values before spawning any backend process."
+    },
+    {
+      "file": "docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 142,
+      "excerpt": "event (with a safe/redacted `message`) before closing the stream."
+    }
+  ]
+}

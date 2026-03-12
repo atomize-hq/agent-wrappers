@@ -243,8 +243,10 @@ Meaning:
 - There is intentionally no containment requirement that keeps resolved directories under the
   effective working directory.
 - This key is orthogonal to `agent_api.session.resume.v1` and `agent_api.session.fork.v1`.
-  Backends MUST honor the same effective add-dir set for new-session, resume, and forked runs, and
-  MUST NOT silently ignore an accepted add-dir request for session-based flows.
+  Backends MUST preserve the same accepted effective add-dir set across new-session, resume, and
+  fork decision-making. A selected session flow MUST either apply that set unchanged or take a
+  pinned safe backend-rejection path owned by its backend contract; it MUST NOT silently ignore an
+  accepted add-dir request for session-based flows.
 - When absent, the backend MUST NOT synthesize any additional directories and MUST NOT emit any
   `--add-dir` flag or equivalent backend-specific override on behalf of this key.
 
@@ -280,18 +282,29 @@ Validation rules:
 
 Error message posture (v1, pinned):
 - InvalidRequest messages for this key MUST be safe-by-default and MUST NOT echo raw path values.
-- Backends SHOULD use stable, testable messages that identify the failing field/index without
-  embedding the original path text.
+- InvalidRequest messages for this key MUST use one of these exact safe templates:
+  - `invalid agent_api.exec.add_dirs.v1`
+  - `invalid agent_api.exec.add_dirs.v1.dirs`
+  - `invalid agent_api.exec.add_dirs.v1.dirs[<i>]`
+- `<i>` is the zero-based decimal index of the failing `dirs[i]` entry.
+- Backends MAY reuse the same template for multiple failure classes within the same location, but
+  MUST NOT invent any other InvalidRequest message shape for this key.
 
 Mapping requirements:
 - The backend MUST pass the normalized unique directory list, in order, to its underlying
   CLI/backend mapping.
 - Built-in backends that advertise this key MUST map it as follows:
-  - Codex: emit one repeated `--add-dir <dir>` pair per normalized unique directory.
+  - Codex exec/resume: emit one repeated `--add-dir <dir>` pair per normalized unique directory.
+  - Codex fork: the current pinned app-server v1 subset has no add-dir transport field on
+    `thread/fork` or `turn/start`; the backend contract in
+    `docs/specs/codex-app-server-jsonrpc-contract.md` therefore owns a deterministic pre-handle
+    safe rejection path for accepted add-dir inputs on fork flows.
   - Claude Code: emit one variadic `--add-dir <dir...>` argument group containing the normalized
-    unique directories in order.
-- A backend MUST advertise `agent_api.exec.add_dirs.v1` only when it can deterministically map the
-  key to its underlying CLI/backend surface.
+    unique directories in order, placed before session-selector flags and before the final prompt
+    token per `docs/specs/claude-code-session-mapping-contract.md`.
+- A backend MUST advertise `agent_api.exec.add_dirs.v1` only when it has a deterministic contract
+  for every run surface it exposes for this key: either a pinned mapping that honors the accepted
+  directory list or a pinned backend-owned safe rejection path.
 - For the current built-in backends, this capability is expected to be advertised unconditionally
   once implementation lands; support MUST NOT depend on per-run path contents.
 
@@ -306,6 +319,8 @@ Runtime rejection behavior (v1, normative):
   - any other backend-owned inability to honor the accepted effective directory set.
 - The `message` MUST be safe/redacted and MUST NOT embed raw backend stdout/stderr.
 - v1 does not pin a universal runtime-rejection message string for add-dir failures.
+- If the backend can determine that inability before spawning its backend surface, it MUST return
+  `AgentWrapperError::Backend { message }` without returning an `AgentWrapperRunHandle`.
 - If such failure occurs after the backend has already returned an `AgentWrapperRunHandle` and the
   consumer-visible events stream is still open, the backend MUST emit exactly one terminal
   `AgentWrapperEventKind::Error` event with the same safe/redacted message before closing the

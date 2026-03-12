@@ -12,6 +12,7 @@
   - Add the key to Claude supported-extension allowlists.
   - Thread the normalized directory list through Claude policy/spawn structures.
   - Map the list to one `--add-dir <DIR...>` argv group using existing wrapper support.
+  - Pin the argv placement in the backend-owned Claude session mapping contract doc.
   - Preserve or safely reject the same directory set for resume/fork flows.
 - Out:
   - Shared normalization rules.
@@ -30,7 +31,8 @@
   - **Inputs**:
     - normalized unique directory list
   - **Outputs**:
-    - one `--add-dir <DIR...>` argv group in normalized order
+    - one `--add-dir <DIR...>` argv group in normalized order, before session-selector flags and
+      before the final prompt token
 
 - **Claude session-flow contract**
   - **Inputs**:
@@ -44,6 +46,8 @@
 - When the key is absent, Claude emits no `--add-dir`.
 - Resume and fork must not silently ignore accepted directories.
 - The backend must emit one variadic group, not repeated `--add-dir` flags.
+- The variadic group must appear before `--continue`, `--fork-session`, `--resume`, and the final
+  prompt token.
 
 ## Dependencies
 
@@ -55,6 +59,7 @@
 - `crates/agent_api/src/backends/claude_code/mod.rs`
 - `crates/agent_api/src/backends/claude_code/harness.rs`
 - `crates/agent_api/src/backends/claude_code/backend.rs`
+- `docs/specs/claude-code-session-mapping-contract.md`
 - Existing wrapper dependency surface:
   - `crates/claude_code/src/commands/print.rs`
 
@@ -64,6 +69,8 @@
 - Mapping tests prove:
   - absent key emits no `--add-dir`
   - present key emits exactly one `--add-dir <DIR...>` group in order
+  - the add-dir group appears before `--continue`, `--fork-session`, `--resume`, and the final
+    prompt token
   - relative paths resolve against the effective working directory actually used by Claude Code
 - Resume/fork tests prove accepted add-dir inputs are honored or safely rejected.
 

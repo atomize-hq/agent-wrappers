@@ -1,0 +1,246 @@
+{
+  "meta": {
+    "generated_at": "2026-03-12T19:34:17Z",
+    "repo_root": ".",
+    "git_commit": "862355325f07d47abd33986197e0122975f31a15",
+    "audited_files": [
+      "docs/project_management/packs/active/agent-api-add-dirs/README.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam_map.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-1-add-dir-contract-and-normalization.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-2-shared-agent-api-normalizer.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "docs/adr/0006-agent-wrappers-workspace.md",
+      "docs/adr/0007-wrapper-events-ingestion-contract.md",
+      "docs/adr/0008-claude-stream-json-parser-api.md",
+      "docs/adr/0009-universal-agent-api.md",
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "docs/adr/0013-agent-api-backend-harness.md",
+      "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "docs/adr/0018-universal-mcp-management-commands.md",
+      "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "docs/adr/0020-universal-agent-api-model-selection.md",
+      "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "docs/specs/claude-code-session-mapping-contract.md",
+      "docs/specs/claude-stream-json-parser-contract.md",
+      "docs/specs/claude-stream-json-parser-scenarios-v1.md",
+      "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "docs/specs/codex-external-sandbox-mapping-contract.md",
+      "docs/specs/codex-streaming-exec-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+      "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "docs/specs/wrapper-events-ingestion-contract.md",
+      "docs/specs/universal-agent-api/README.md",
+      "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "docs/specs/universal-agent-api/capability-matrix.md",
+      "docs/specs/universal-agent-api/contract.md",
+      "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/specs/universal-agent-api/extensions-spec.md",
+      "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "docs/specs/universal-agent-api/run-protocol-spec.md"
+    ],
+    "definition_of_concrete": "A statement is concrete when an implementer can write code and tests from it without making assumptions about schemas, mappings, failure modes, or verification artifacts."
+  },
+  "issues": [
+    {
+      "id": "CA-0001",
+      "severity": "blocker",
+      "category": "contract",
+      "title": "Codex fork flow lacks a concrete add-dir transport or rejection contract",
+      "file_path": "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "location": {
+        "start_line": 109,
+        "end_line": 117
+      },
+      "excerpt": "Optional (subset used/pinned here): cwd, approvalPolicy, sandbox, persistExtendedHistory.",
+      "problem": "The canonical Codex fork transport does not define any request field that can carry the accepted add-dir set, yet the universal extension spec requires fork flows to honor that set or fail safely. Without a pinned transport field or pinned rejection boundary, implementers must guess how Codex fork is supposed to satisfy add_dirs.",
+      "required_to_be_concrete": [
+        "Specify the exact Codex fork/turn request field or transport mechanism that carries accepted add_dirs, or explicitly state that Codex fork rejects add_dirs before the run handle is returned.",
+        "If rejection is the intended behavior, pin the exact layer that raises the error and whether it is pre-spawn UnsupportedCapability, pre-spawn InvalidRequest, or post-acceptance Backend.",
+        "State whether turn/start, thread/fork, or both must receive the effective add-dir set when fork support exists.",
+        "Align the Codex transport contract with the universal add_dirs fork requirement so tests can target one concrete truth."
+      ],
+      "suggested_evidence_order": [
+        "codebase",
+        "docs",
+        "external",
+        "decision"
+      ],
+      "cross_references": [
+        {
+          "file_path": "docs/specs/universal-agent-api/extensions-spec.md",
+          "location": {
+            "start_line": 245,
+            "end_line": 247
+          }
+        },
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+          "location": {
+            "start_line": 113,
+            "end_line": 114
+          }
+        }
+      ],
+      "notes": "This is the highest-risk concrete gap because it blocks a deterministic implementation and conformance test plan for Codex fork parity."
+    },
+    {
+      "id": "CA-0002",
+      "severity": "major",
+      "category": "language",
+      "title": "InvalidRequest error requirements remain too loose for stable add-dir tests",
+      "file_path": "docs/specs/universal-agent-api/extensions-spec.md",
+      "location": {
+        "start_line": 281,
+        "end_line": 284
+      },
+      "excerpt": "InvalidRequest messages ... MUST be safe-by-default ... Backends SHOULD use stable, testable messages that identify the failing field/index.",
+      "problem": "The pack and test seam expect stable InvalidRequest behavior, but the canonical spec only says stable/testable messages are a SHOULD and does not pin the message family, field/index format, or whether tests assert strings versus structure. Two compliant implementations could therefore emit materially different safe messages and both claim conformance.",
+      "required_to_be_concrete": [
+        "Pin whether add_dir validation tests assert exact message strings, a finite message-id set, or structured error metadata instead of free-form text.",
+        "If message text is part of the contract, define the stable templates or the allowed message variants for each validation failure class.",
+        "Define how the failing field/index is represented so backends do not invent incompatible formats.",
+        "State whether different validation failures may share one safe generic message or must remain distinguishable."
+      ],
+      "suggested_evidence_order": [
+        "codebase",
+        "docs",
+        "external",
+        "decision"
+      ],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-add-dirs/seam-2-shared-agent-api-normalizer.md",
+          "location": {
+            "start_line": 61,
+            "end_line": 74
+          }
+        },
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+          "location": {
+            "start_line": 23,
+            "end_line": 27
+          }
+        },
+        {
+          "file_path": "docs/adr/0021-universal-agent-api-add-dirs.md",
+          "location": {
+            "start_line": 206,
+            "end_line": 212
+          }
+        }
+      ]
+    },
+    {
+      "id": "CA-0003",
+      "severity": "critical",
+      "category": "contract",
+      "title": "Claude resume/fork argv contract does not pin where add-dir appears",
+      "file_path": "docs/specs/claude-code-session-mapping-contract.md",
+      "location": {
+        "start_line": 92,
+        "end_line": 123
+      },
+      "excerpt": "Resume/fork mappings pin ordered subsequences for --continue, --fork-session, --resume, --verbose, and final PROMPT, but never mention --add-dir.",
+      "problem": "The plan requires Claude Code to map accepted add_dirs into one variadic --add-dir group for new, resume, and fork flows, but the canonical Claude session contract never states where that group must appear relative to the pinned session flags and the final prompt token. Deterministic argv tests therefore still require implementer guesswork.",
+      "required_to_be_concrete": [
+        "Pin the exact placement of the single --add-dir <DIR...> group for selector=last and selector=id in both resume and fork flows.",
+        "State whether the add-dir group must appear before or after session-selection flags such as --continue, --resume, and --fork-session.",
+        "State the absence behavior explicitly in the Claude backend contract so tests know the canonical argv when the extension is omitted.",
+        "Update the Claude backend-owned contract examples so the add_dirs mapping is testable without inferring placement from wrapper code."
+      ],
+      "suggested_evidence_order": [
+        "codebase",
+        "docs",
+        "external",
+        "decision"
+      ],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+          "location": {
+            "start_line": 14,
+            "end_line": 15
+          }
+        },
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+          "location": {
+            "start_line": 63,
+            "end_line": 68
+          }
+        },
+        {
+          "file_path": "docs/specs/universal-agent-api/extensions-spec.md",
+          "location": {
+            "start_line": 289,
+            "end_line": 292
+          }
+        }
+      ]
+    },
+    {
+      "id": "CA-0004",
+      "severity": "major",
+      "category": "testing",
+      "title": "Capability advertisement completion criteria omit the canonical generated artifact",
+      "file_path": "docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "location": {
+        "start_line": 61,
+        "end_line": 65
+      },
+      "excerpt": "Verification only names cargo test -p agent_api, make test, and make preflight.",
+      "problem": "The pack says done means both built-in backends advertise add_dirs, and the canonical Universal Agent API docs publish that support in the generated capability matrix. The verification plan never says whether that artifact must change, how it is regenerated, or which command proves the documentation surface matches the implementation.",
+      "required_to_be_concrete": [
+        "State whether docs/specs/universal-agent-api/capability-matrix.md must be updated in the same change that lands add_dirs support.",
+        "Name the exact command that regenerates the matrix and the expected artifact delta for this feature.",
+        "Tie the feature’s acceptance criteria to the canonical matrix row so advertisement is verified at the published surface, not only in local unit tests."
+      ],
+      "suggested_evidence_order": [
+        "codebase",
+        "docs",
+        "external",
+        "decision"
+      ],
+      "cross_references": [
+        {
+          "file_path": "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+          "location": {
+            "start_line": 85,
+            "end_line": 86
+          }
+        },
+        {
+          "file_path": "docs/specs/universal-agent-api/README.md",
+          "location": {
+            "start_line": 18,
+            "end_line": 19
+          }
+        },
+        {
+          "file_path": "docs/specs/universal-agent-api/capability-matrix.md",
+          "location": {
+            "start_line": 23,
+            "end_line": 27
+          }
+        }
+      ]
+    }
+  ]
+}

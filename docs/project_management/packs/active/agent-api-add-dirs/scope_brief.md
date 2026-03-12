@@ -27,14 +27,17 @@ set through `agent_api`, Codex, and Claude Code without backend drift or session
   - `dirs` bounds,
   - trim + resolve + lexical normalize + dedup,
   - pre-spawn existence and directory checks,
-  - safe/redacted `InvalidRequest` messages.
-- Preserve the same effective add-dir set across:
+  - stable safe `InvalidRequest` messages.
+- Preserve deterministic session-flow behavior across:
   - new-session runs,
   - resume flows,
   - fork flows.
 - Map the normalized directories into both built-in backends:
   - Codex: repeated `--add-dir <DIR>`
   - Claude Code: one variadic `--add-dir <DIR...>` group
+- Pin the backend-owned contract docs that make session behavior testable:
+  - `docs/specs/codex-app-server-jsonrpc-contract.md`
+  - `docs/specs/claude-code-session-mapping-contract.md`
 
 ## Out-of-scope
 
@@ -67,7 +70,10 @@ set through `agent_api`, Codex, and Claude Code without backend drift or session
   - Codex repeated flag pairs
   - Claude Code single variadic flag group
 - Session compatibility:
-  - new, resume, and fork must honor the same accepted directory set or fail safely
+  - new/resume must honor the accepted directory set
+  - Claude fork must honor the accepted directory set
+  - current Codex fork behavior is the pinned safe backend rejection path from
+    `docs/specs/codex-app-server-jsonrpc-contract.md`
 
 ## Required invariants (must not regress)
 
@@ -77,18 +83,25 @@ set through `agent_api`, Codex, and Claude Code without backend drift or session
 - **No containment rule**: valid directories outside the effective working directory remain legal.
 - **Same normalization contract for both backends**: the wrapper decides the effective directory
   set before backend argv mapping.
-- **Session parity**: accepted add-dir inputs are not silently dropped for resume or fork flows.
+- **Session parity**: accepted add-dir inputs are not silently dropped for resume or fork flows;
+  the only allowed exception path is the pinned Codex fork rejection contract.
 - **Safe errors**: `InvalidRequest` and runtime backend errors do not echo raw path values.
 
 ## Success criteria
 
 - A caller can send `extensions["agent_api.exec.add_dirs.v1"]` through `AgentWrapperRunRequest`
-  and both built-in backends advertise and honor the key.
+  and both built-in backends advertise deterministic behavior for the key.
 - Relative and absolute directory inputs resolve deterministically from the effective working
   directory and backend defaults already in use.
 - Duplicate directories collapse deterministically after normalization.
 - Missing or non-directory paths fail before spawn.
-- Resume/fork flows either apply the accepted directory set or fail with a safe backend error.
+- Claude resume/fork flows apply the accepted directory set with the pinned variadic argv
+  placement.
+- Codex fork rejects accepted add-dir inputs before app-server requests with the pinned safe
+  backend message.
+- The capability inventory change is published by regenerating
+  `docs/specs/universal-agent-api/capability-matrix.md` via
+  `cargo run -p xtask -- capability-matrix` in the same change.
 
 ## Constraints
 
@@ -107,11 +120,16 @@ set through `agent_api`, Codex, and Claude Code without backend drift or session
   - `crates/agent_api/src/backends/session_selectors.rs`
   - `crates/agent_api/src/backends/codex/**`
   - `crates/agent_api/src/backends/claude_code/**`
+- Canonical backend mapping docs:
+  - `docs/specs/codex-app-server-jsonrpc-contract.md`
+  - `docs/specs/claude-code-session-mapping-contract.md`
+  - `docs/specs/universal-agent-api/capability-matrix.md`
 
 ## Known unknowns / risks
 
-- **Codex fork transport parity**: the fork/app-server path must either accept the same add-dir
-  set as exec/resume or fail closed with a backend-owned error.
+- **Codex fork transport parity**: resolved for the current v1 contract as a pinned pre-handle
+  backend rejection (`"add_dirs unsupported for codex fork"`) until the app-server schema exposes
+  a dedicated add-dir field.
 - **Effective working directory handoff**: add-dir normalization must use the same effective
   working directory a backend run will actually use, not a parallel approximation.
 - **No path leaks in errors**: filesystem validation is easy to implement incorrectly by echoing
@@ -122,7 +140,7 @@ set through `agent_api`, Codex, and Claude Code without backend drift or session
 - The `extensions-spec.md` section for `agent_api.exec.add_dirs.v1` is the authoritative v1
   contract; this pack is for implementation decomposition, not semantic invention.
 - The current wrapper crates already expose sufficient backend primitives for add-dir argv
-  emission, so most implementation risk is in `agent_api` validation/plumbing and session-path
-  parity.
+  emission, so most implementation risk is in `agent_api` validation/plumbing, Codex fork
+  rejection wiring, and keeping the backend contract docs aligned.
 - Built-in backends should advertise `agent_api.exec.add_dirs.v1` unconditionally once the
   implementation is landed, independent of the per-run path contents.

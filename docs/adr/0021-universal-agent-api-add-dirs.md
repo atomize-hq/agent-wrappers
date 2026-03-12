@@ -38,7 +38,7 @@ This ADR corresponds to backlog item `uaa-0003` (`bucket=agent_api.exec`, `type=
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: f9cbd67176f8073b836cce2ab77b9b635236ac181b8ae685838951b7f88597d9
+ADR_BODY_SHA256: 0a933dc79d13633c29671844a7c8ada8bcfd1e0182cf396aa32196ffa5281856
 
 ### Decision (draft)
 
@@ -77,7 +77,8 @@ ADR_BODY_SHA256: f9cbd67176f8073b836cce2ab77b9b635236ac181b8ae685838951b7f88597d
   - Claude Code: one variadic `--add-dir <DIR...>` group in normalized order
 - Session compatibility:
   - the key is valid for new-session, resume, and fork flows
-  - accepted add-dir inputs MUST NOT be silently ignored for resume/fork
+  - a selected session flow MUST either apply the accepted normalized directory set unchanged or
+    take a pinned safe backend-rejection path; it MUST NOT silently ignore accepted add-dir inputs
 
 ### Why
 
@@ -186,17 +187,27 @@ CLI/backend mapping.
 - Implementation seams:
   - `crates/codex/src/builder/mod.rs` (`CodexClientBuilder::{add_dir,...}`)
   - `crates/codex/src/capabilities/guard.rs` (`guard_add_dir`)
+- Fork-flow contract:
+  - `docs/specs/codex-app-server-jsonrpc-contract.md`
+  - current pinned truth: Codex fork has no add-dir transport field on `thread/fork` or
+    `turn/start`, so accepted add-dir inputs are rejected before any app-server request with
+    `AgentWrapperError::Backend { message: "add_dirs unsupported for codex fork" }`
 
 #### Claude Code
 
 - CLI form: `claude --print --add-dir <DIR...>`
 - Implementation seam:
   - `crates/claude_code/src/commands/print.rs` (`ClaudePrintRequest::add_dirs(...)`)
+- Resume/fork argv contract:
+  - `docs/specs/claude-code-session-mapping-contract.md`
+  - pinned placement: one variadic add-dir group before `--continue` / `--fork-session` /
+    `--resume`, and before the final prompt token
 
 ### Capability advertising
 
-- A backend MUST advertise `agent_api.exec.add_dirs.v1` only when it can deterministically map the
-  key to its underlying CLI/backend surface.
+- A backend MUST advertise `agent_api.exec.add_dirs.v1` only when it has a deterministic contract
+  for every run surface it exposes for this key: either a pinned mapping that honors the accepted
+  directory list or a pinned backend-owned safe rejection path.
 - For the current built-in backends, advertising is expected to be unconditional once
   implementation lands.
 - Capability advertising is about support for the request surface, not per-run path contents.
@@ -208,13 +219,20 @@ Before spawn:
 - If the value is not an object, if `dirs` is missing, if unknown keys are present, if bounds are
   violated, or if any resolved path does not exist / is not a directory, fail with
   `AgentWrapperError::InvalidRequest`.
-- InvalidRequest messages for this key SHOULD be stable/testable and MUST NOT echo raw path values.
+- InvalidRequest messages for this key MUST be safe, MUST NOT echo raw path values, and MUST use
+  one of these exact templates:
+  - `invalid agent_api.exec.add_dirs.v1`
+  - `invalid agent_api.exec.add_dirs.v1.dirs`
+  - `invalid agent_api.exec.add_dirs.v1.dirs[<i>]`
+- `<i>` is the zero-based decimal index of the failing `dirs[i]` entry.
 
 After spawn:
 - If the key passed R0 capability gating and pre-spawn validation, but the backend later determines
   that the requested directories cannot be honored by the installed CLI/runtime/selected flow, the
   backend MUST fail as `AgentWrapperError::Backend` with a safe/redacted message.
 - This includes resume/fork flows that cannot deterministically apply the accepted add-dir set.
+- If the backend can determine that inability before spawning its backend surface, it MUST return
+  the backend error without returning an `AgentWrapperRunHandle`.
 - If this occurs after an event stream has been returned and the stream is still open, the backend
   MUST emit exactly one terminal `AgentWrapperEventKind::Error` event with the same safe/redacted
   message before closing the stream.
@@ -239,14 +257,17 @@ After spawn:
 
 - Additive only.
 - Existing backend wrapper support lowers the implementation risk; the main remaining work is
-  universal validation, capability advertising, and test coverage.
-- The key is intended to remain usable with resume/fork flows; backends must either honor it there
-  or fail safely, but must not silently drop it.
+  universal validation, capability advertising, backend-contract updates, and test coverage.
+- The key remains usable with resume/fork flows under one deterministic rule: Claude maps the
+  accepted list directly, while the current Codex fork contract fails before app-server requests
+  with the pinned safe backend message instead of silently dropping the list.
 
 ## Validation Plan (Authoritative for this ADR once Accepted)
 
 - `make adr-check ADR=docs/adr/0021-universal-agent-api-add-dirs.md`
 - Land the owner-doc semantics in `docs/specs/universal-agent-api/extensions-spec.md`.
+- Regenerate the canonical capability artifact with:
+  - `cargo run -p xtask -- capability-matrix`
 - Add backend tests proving:
   - unsupported key fails before spawn,
   - invalid shape / bounds fail before spawn,
@@ -257,7 +278,13 @@ After spawn:
   - lexical normalization/dedup behaves deterministically without requiring canonicalization,
   - Codex emits repeated `--add-dir <dir>` pairs in order,
   - Claude Code emits one variadic `--add-dir <dir...>` group in order, and
-  - accepted add-dir inputs are honored or safely rejected for resume/fork flows.
+  - Claude resume/fork place that variadic group before session-selector flags and before the final
+    prompt token,
+  - Codex fork rejects accepted add-dir inputs before `thread/list` / `thread/fork` /
+    `turn/start` with `AgentWrapperError::Backend { message: "add_dirs unsupported for codex fork" }`, and
+  - `docs/specs/universal-agent-api/capability-matrix.md` gains the
+    `agent_api.exec.add_dirs.v1` row for both built-in backends in the same change that lands the
+    capability.
 
 ## Decision Summary
 

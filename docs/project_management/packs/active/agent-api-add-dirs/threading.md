@@ -23,16 +23,21 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
   - **Type**: policy
   - **Owner seam**: SEAM-1
   - **Consumers**: SEAM-2/3/4/5
-  - **Definition**: `InvalidRequest` messages for this key are stable/testable and MUST NOT echo
-    raw path values; runtime failures surface as safe/redacted backend errors.
+  - **Definition**: `InvalidRequest` messages for this key MUST use one of the exact safe
+    templates `invalid agent_api.exec.add_dirs.v1`,
+    `invalid agent_api.exec.add_dirs.v1.dirs`, or
+    `invalid agent_api.exec.add_dirs.v1.dirs[<i>]`, where `<i>` is the zero-based failing entry
+    index. Runtime failures surface as safe/redacted backend errors.
 
 - **AD-C04 — Session-flow parity**
   - **Type**: integration
   - **Owner seam**: SEAM-1
   - **Consumers**: SEAM-3/4/5
   - **Definition**: accepted add-dir inputs are valid for new-session, resume, and fork flows.
-    A backend must honor the same effective add-dir set or fail safely; it must not silently
-    ignore accepted inputs for session-based flows.
+    Claude applies the same effective add-dir set on fork flows. The current Codex fork contract
+    uses the pinned pre-handle backend rejection path from
+    `docs/specs/codex-app-server-jsonrpc-contract.md`. No session-based flow may silently ignore
+    accepted inputs.
 
 - **AD-C05 — Codex argv mapping**
   - **Type**: integration
@@ -60,18 +65,18 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 - `SEAM-1 blocks SEAM-2` because: the shared normalizer must implement the already-pinned v1
   schema, normalization, and safe-error rules.
 - `SEAM-2 blocks SEAM-3` because: Codex support should consume the shared normalized directory set
-  instead of inventing backend-local path semantics.
+  and the pinned Codex fork rejection contract instead of inventing backend-local path semantics.
 - `SEAM-2 blocks SEAM-4` because: Claude Code support should consume the same shared normalized
   directory set instead of inventing backend-local path semantics.
 - `SEAM-3 blocks SEAM-5` because: tests must pin Codex capability advertising, argv order, and
-  session-flow behavior.
+  session-flow behavior, including the fork rejection boundary.
 - `SEAM-4 blocks SEAM-5` because: tests must pin Claude Code capability advertising, argv order,
-  and session-flow behavior.
+  add-dir placement, and session-flow behavior.
 
 ## Critical path
 
-`SEAM-1 (contract)` → `SEAM-2 (shared normalizer)` → `SEAM-3/SEAM-4 (backend mapping)` →
-`SEAM-5 (tests)`
+`SEAM-1 (contract)` → `SEAM-2 (shared normalizer)` → `SEAM-3 (Codex mapping + fork rejection)` /
+`SEAM-4 (Claude mapping + argv placement)` → `SEAM-5 (tests + capability artifact)`
 
 ## Integration points
 
@@ -80,9 +85,16 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 - **Effective working directory handoff**: the shared normalizer and each backend’s spawn path
   must agree on the same working directory source.
 - **Session selectors**: resume/fork parsing stays orthogonal, but accepted add-dir inputs must
-  survive into those flows.
+  survive into those flows. The one pinned exception is Codex fork, which rejects before any
+  app-server request using the backend-owned safe message.
 - **Wrapper crate parity**: `codex::CodexClientBuilder` and `claude_code::ClaudePrintRequest`
   already expose add-dir surfaces; backend seams wire the normalized list into them.
+- **Canonical backend docs**: SEAM-3 and SEAM-4 are not done until
+  `docs/specs/codex-app-server-jsonrpc-contract.md` and
+  `docs/specs/claude-code-session-mapping-contract.md` reflect the exact mapping/rejection truth.
+- **Capability publication**: SEAM-5 must regenerate
+  `docs/specs/universal-agent-api/capability-matrix.md` with
+  `cargo run -p xtask -- capability-matrix` once the backend capability ids change.
 
 ## Parallelization notes / conflict-safe workstreams
 
@@ -90,7 +102,8 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 - **WS-NORMALIZE**: SEAM-2 (shared normalizer + reusable validation/resolution helpers).
 - **WS-CODEX**: SEAM-3 (Codex capability + policy + exec/resume/fork mapping).
 - **WS-CLAUDE**: SEAM-4 (Claude capability + policy + print/resume/fork mapping).
-- **WS-TESTS**: SEAM-5 (shared normalizer tests plus backend capability/mapping/session tests).
+- **WS-TESTS**: SEAM-5 (shared normalizer tests plus backend capability/mapping/session tests and
+  capability-matrix regeneration).
 - **WS-INT (Integration)**: end-to-end validation and `make preflight` after the seams land.
 
 ## Pinned decisions / resolved threads

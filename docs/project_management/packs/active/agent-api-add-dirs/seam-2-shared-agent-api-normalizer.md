@@ -40,7 +40,9 @@
 
 - The shared helper is the only place that decides trimming, path resolution, normalization, and
   dedup behavior.
-- Errors identify the failing field or index, but never the raw path text.
+- Errors identify the failing field or index using the exact templates
+  `invalid agent_api.exec.add_dirs.v1`, `invalid agent_api.exec.add_dirs.v1.dirs`, or
+  `invalid agent_api.exec.add_dirs.v1.dirs[<i>]`, and never the raw path text.
 - The helper must not create a new working-directory precedence ladder that diverges from actual
   backend execution behavior.
 
@@ -71,7 +73,7 @@
   - lexical normalization,
   - dedup order preservation,
   - missing/non-directory path rejection,
-  - no raw path leakage in errors.
+  - exact safe InvalidRequest template selection with no raw path leakage in errors.
 
 ## Risks / unknowns
 

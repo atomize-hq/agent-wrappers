@@ -1,0 +1,253 @@
+{
+  "meta": {
+    "tool": "cohesion-audit",
+    "generated_at": "2026-03-12T19:34:17Z",
+    "files": [
+      "docs/project_management/packs/active/agent-api-add-dirs/README.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam_map.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-1-add-dir-contract-and-normalization.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-2-shared-agent-api-normalizer.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "docs/adr/0006-agent-wrappers-workspace.md",
+      "docs/adr/0007-wrapper-events-ingestion-contract.md",
+      "docs/adr/0008-claude-stream-json-parser-api.md",
+      "docs/adr/0009-universal-agent-api.md",
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "docs/adr/0013-agent-api-backend-harness.md",
+      "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "docs/adr/0018-universal-mcp-management-commands.md",
+      "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "docs/adr/0020-universal-agent-api-model-selection.md",
+      "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "docs/specs/claude-code-session-mapping-contract.md",
+      "docs/specs/claude-stream-json-parser-contract.md",
+      "docs/specs/claude-stream-json-parser-scenarios-v1.md",
+      "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "docs/specs/codex-external-sandbox-mapping-contract.md",
+      "docs/specs/codex-streaming-exec-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+      "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "docs/specs/wrapper-events-ingestion-contract.md",
+      "docs/specs/universal-agent-api/README.md",
+      "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "docs/specs/universal-agent-api/capability-matrix.md",
+      "docs/specs/universal-agent-api/contract.md",
+      "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/specs/universal-agent-api/extensions-spec.md",
+      "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "docs/specs/universal-agent-api/run-protocol-spec.md"
+    ],
+    "scan": {
+      "used": false,
+      "output": null
+    },
+    "notes": [
+      "Local fallback run because the audit-trio worker orchestration did not emit report files in this environment."
+    ]
+  },
+  "issues": [
+    {
+      "id": "CH-0001",
+      "severity": "major",
+      "confidence": "high",
+      "type": "verification_gap",
+      "subject": "Capability advertisement verification for agent_api.exec.add_dirs.v1",
+      "locations": [
+        {
+          "file": "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+          "line_start": 85,
+          "line_end": 91,
+          "excerpt": "both built-in backends advertise and honor the key",
+          "role": "primary"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+          "line_start": 61,
+          "line_end": 65,
+          "excerpt": "Targeted runs while iterating: cargo test -p agent_api ... Full gate before merge: make test, make preflight",
+          "role": "dependent"
+        },
+        {
+          "file": "docs/specs/universal-agent-api/capability-matrix.md",
+          "line_start": 23,
+          "line_end": 27,
+          "excerpt": "## agent_api.exec ... only agent_api.exec.non_interactive is present",
+          "role": "reference"
+        },
+        {
+          "file": "docs/specs/universal-agent-api/README.md",
+          "line_start": 18,
+          "line_end": 19,
+          "excerpt": "Generated artifact: docs/specs/universal-agent-api/capability-matrix.md",
+          "role": "reference"
+        }
+      ],
+      "analysis": {
+        "what_breaks": "The pack defines capability advertisement as a success criterion, but the verification seam never threads that requirement into the canonical generated artifact that records supported capabilities. An implementation could pass local unit tests yet leave the canonical capability inventory stale, which breaks the documentation chain from code to published support surface.",
+        "missing_links": [
+          "No seam or task explicitly regenerates docs/specs/universal-agent-api/capability-matrix.md.",
+          "No acceptance criterion says the new capability row must appear in the generated matrix for both backends.",
+          "No verification step names the generator command that keeps the canonical artifact aligned with the backend capability set."
+        ],
+        "required_to_be_cohesive": [
+          "Add a verification/task step that regenerates the capability matrix and records the expected add_dirs row for Codex and Claude Code.",
+          "Tie the matrix refresh command to SEAM-5 or WS-INT so capability advertisement is verified in the same thread as backend support.",
+          "Make the pack’s acceptance criteria refer to the canonical capability artifact, not only to backend tests."
+        ]
+      },
+      "suggested_evidence_order": [
+        "docs",
+        "codebase",
+        "git-history",
+        "decision"
+      ],
+      "related_issues": [
+        "CA-0004"
+      ]
+    },
+    {
+      "id": "CH-0002",
+      "severity": "critical",
+      "confidence": "high",
+      "type": "traceability_gap",
+      "subject": "Canonical backend mapping docs for add_dirs",
+      "locations": [
+        {
+          "file": "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+          "line_start": 35,
+          "line_end": 37,
+          "excerpt": "Map the normalized directories into both built-in backends",
+          "role": "primary"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+          "line_start": 53,
+          "line_end": 62,
+          "excerpt": "Touch surface lists only Codex code files and crates/codex/src/builder/mod.rs",
+          "role": "dependent"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+          "line_start": 53,
+          "line_end": 60,
+          "excerpt": "Touch surface lists only Claude code files and crates/claude_code/src/commands/print.rs",
+          "role": "dependent"
+        },
+        {
+          "file": "docs/specs/claude-code-session-mapping-contract.md",
+          "line_start": 82,
+          "line_end": 123,
+          "excerpt": "Resume/fork subsequences are pinned, but no add-dir mapping appears anywhere in the backend-owned Claude contract.",
+          "role": "reference"
+        },
+        {
+          "file": "docs/specs/codex-app-server-jsonrpc-contract.md",
+          "line_start": 105,
+          "line_end": 137,
+          "excerpt": "Codex fork/turn transport pins cwd and policy fields only; no add-dir field is described.",
+          "role": "reference"
+        }
+      ],
+      "analysis": {
+        "what_breaks": "The pack assigns backend mapping work to code seams but does not thread those changes into the canonical backend-owned contracts that currently define Claude resume/fork argv and Codex app-server fork transport. That leaves the implementation plan disconnected from the docs that downstream readers rely on to know what the backends actually do.",
+        "missing_links": [
+          "SEAM-3 does not include the Codex contract doc that must explain fork-path add-dir behavior or safe rejection.",
+          "SEAM-4 does not include the Claude backend mapping contract that must pin argv placement when add_dirs is present.",
+          "No seam states which canonical backend docs will be updated alongside the code changes."
+        ],
+        "required_to_be_cohesive": [
+          "Extend the backend seams to name the canonical backend mapping docs they must update.",
+          "State which doc owns Codex fork add-dir transport or rejection semantics and which doc owns Claude resume/fork argv placement.",
+          "Make the acceptance path require doc/code alignment for those backend contracts before the feature is considered done."
+        ]
+      },
+      "suggested_evidence_order": [
+        "docs",
+        "codebase",
+        "git-history",
+        "decision"
+      ],
+      "related_issues": [
+        "CX-0001",
+        "CA-0001",
+        "CA-0003"
+      ]
+    },
+    {
+      "id": "CH-0003",
+      "severity": "major",
+      "confidence": "high",
+      "type": "missing_bridge_step",
+      "subject": "Codex fork parity risk resolution",
+      "locations": [
+        {
+          "file": "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+          "line_start": 111,
+          "line_end": 118,
+          "excerpt": "Codex fork transport parity is called out as a known risk.",
+          "role": "primary"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+          "line_start": 71,
+          "line_end": 85,
+          "excerpt": "Critical path runs straight from shared normalizer to backend mapping; no explicit fork-transport decision step exists.",
+          "role": "dependent"
+        },
+        {
+          "file": "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+          "line_start": 72,
+          "line_end": 77,
+          "excerpt": "De-risk plan says spike the fork transport first, but that spike is not a named output, dependency, or acceptance gate.",
+          "role": "dependent"
+        },
+        {
+          "file": "docs/specs/codex-app-server-jsonrpc-contract.md",
+          "line_start": 105,
+          "line_end": 137,
+          "excerpt": "Current Codex fork contract has no add-dir transport hook.",
+          "role": "reference"
+        }
+      ],
+      "analysis": {
+        "what_breaks": "The pack already knows Codex fork parity is the highest integration risk, but the thread structure still treats SEAM-3 as a normal implementation seam rather than a decision point with an explicit handoff. That makes the critical path optimistic and hides the point where the team must decide between transport support and safe rejection.",
+        "missing_links": [
+          "No prerequisite decision artifact exists between the normalizer seam and the Codex fork implementation.",
+          "No workstream owns updating the Codex transport contract if the spike shows support is possible.",
+          "No acceptance gate names the exact rejection path if support is impossible."
+        ],
+        "required_to_be_cohesive": [
+          "Add an explicit bridge step or named output for the Codex fork transport decision before SEAM-3 is considered implementation-ready.",
+          "Thread the result of that decision into the backend contract docs, backend code seam, and test seam.",
+          "Update the critical path so fork parity is resolved intentionally rather than discovered late in backend implementation."
+        ]
+      },
+      "suggested_evidence_order": [
+        "docs",
+        "codebase",
+        "git-history",
+        "decision"
+      ],
+      "related_issues": [
+        "CX-0001",
+        "CA-0001"
+      ]
+    }
+  ]
+}

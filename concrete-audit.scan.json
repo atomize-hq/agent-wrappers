@@ -1,0 +1,1590 @@
+{
+  "meta": {
+    "paths": [
+      "docs/project_management/packs/active/agent-api-add-dirs/README.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam_map.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-1-add-dir-contract-and-normalization.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-2-shared-agent-api-normalizer.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "docs/adr/0006-agent-wrappers-workspace.md",
+      "docs/adr/0007-wrapper-events-ingestion-contract.md",
+      "docs/adr/0008-claude-stream-json-parser-api.md",
+      "docs/adr/0009-universal-agent-api.md",
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "docs/adr/0013-agent-api-backend-harness.md",
+      "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "docs/adr/0018-universal-mcp-management-commands.md",
+      "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "docs/adr/0020-universal-agent-api-model-selection.md",
+      "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "docs/specs/claude-code-session-mapping-contract.md",
+      "docs/specs/claude-stream-json-parser-contract.md",
+      "docs/specs/claude-stream-json-parser-scenarios-v1.md",
+      "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "docs/specs/codex-external-sandbox-mapping-contract.md",
+      "docs/specs/codex-streaming-exec-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+      "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "docs/specs/wrapper-events-ingestion-contract.md",
+      "docs/specs/universal-agent-api/README.md",
+      "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "docs/specs/universal-agent-api/capability-matrix.md",
+      "docs/specs/universal-agent-api/contract.md",
+      "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/specs/universal-agent-api/extensions-spec.md",
+      "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "docs/specs/universal-agent-api/run-protocol-spec.md"
+    ],
+    "extensions": [
+      ".md",
+      ".rst",
+      ".txt",
+      ".yaml",
+      ".yml",
+      ".json",
+      ".toml"
+    ],
+    "files_scanned": [
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0006-agent-wrappers-workspace.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0007-wrapper-events-ingestion-contract.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0008-claude-stream-json-parser-api.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0009-universal-agent-api.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0010-claude-code-live-stream-json.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0011-agent-api-codex-stream-exec.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0013-agent-api-backend-harness.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0014-agent-api-explicit-cancellation.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0015-universal-agent-api-session-extensions.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0018-universal-mcp-management-commands.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0020-universal-agent-api-model-selection.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/README.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam-1-add-dir-contract-and-normalization.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam-2-shared-agent-api-normalizer.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam_map.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/claude-code-session-mapping-contract.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/claude-stream-json-parser-contract.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/claude-stream-json-parser-scenarios-v1.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-app-server-jsonrpc-contract.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-external-sandbox-mapping-contract.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-streaming-exec-contract.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/README.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/capability-matrix.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/mcp-management-spec.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/wrapper-events-ingestion-contract.md"
+    ],
+    "match_count": 184
+  },
+  "matches": [
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 13,
+      "col": 62,
+      "kind": "vague_quantity",
+      "text": "around",
+      "line_text": "This repository provides a long-running Rust binding/wrapper around the OpenAI Codex CLI (`codex`)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 41,
+      "col": 186,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "We will implement an automated mechanism that, given a `codex` binary path, generates a structured “snapshot” of the CLI surface and behavior-relevant metadata. At minimum the snapshot should include:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 90,
+      "col": 99,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- `flags` (array of objects, optional): discovered options (short/long/value arity, repeatable; may include optional `stability`/`platforms` when derivable)"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 118,
+      "col": 186,
+      "kind": "unbounded",
+      "text": "as needed",
+      "line_text": "- **Removals/renames**: anything that disappears from help output is a high-signal potential breaking change → confirm via real-binary smoke tests and update wrapper surface/tests/docs as needed."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 132,
+      "col": 22,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "The nightly workflow should:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 146,
+      "col": 35,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "The maintainer-triggered workflow should accept inputs such as:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 152,
+      "col": 8,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "And it should:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 170,
+      "col": 15,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "These signals should drive investigation and planning, but the structured snapshot + real-binary tests remain the primary source of truth."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 174,
+      "col": 219,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "The audit discusses extending a manifest/diff approach to other agent CLIs (e.g., Claude/Gemini). This ADR is intentionally scoped to **Codex CLI parity maintenance** for this repo. If we later add additional CLIs, we should create a separate ADR rather than broadening this one."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 224,
+      "col": 7,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "These should still be tracked in the CLI snapshot/manifest so changes are visible and decisions are explicit."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 238,
+      "col": 5,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "- a minimal E2E smoke test (real binary) or a documented reason it remains live-only."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0001-codex-cli-parity-maintenance.md",
+      "line": 242,
+      "col": 38,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "Real-binary smoke tests and examples should be:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 16,
+      "col": 47,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "Note: feature stages in `codex features list` may include `deprecated` and `removed` in addition to `stable|beta|experimental`. We record the stage string to support proactive planning before surfaces disappear."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 75,
+      "col": 153,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- `intentionally_unsupported`: we deliberately choose not to support the surface (policy/safety/maintenance reasons); must include a rationale note and should not create perpetual churn in reports."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 89,
+      "col": 24,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- The union snapshot may normalize away per-command duplicates of global flags (same canonical flag key), since the effective flag model is `root.flags ∪ command.flags`."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 111,
+      "col": 22,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- To avoid churn, CI should set timestamps deterministically (or omit them where allowed) for committed artifacts."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 150,
+      "col": 85,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "3. CI reruns snapshot/coverage/validation; when requirements are met, the agent/bot may push commits back to the same PR branch (never to mainline branches) and advance `versions/<version>.json.status` accordingly."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 170,
+      "col": 17,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- Pointer files should always exist for every expected target; use `none` until a value is known."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 182,
+      "col": 81,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Apply `supplement/commands.json` per-target (before union merge). Supplements may be platform-scoped; the union must reflect availability only on the targets the supplement applied to."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 194,
+      "col": 99,
+      "kind": "vague",
+      "text": "sometimes",
+      "line_text": "Some upstream surfaces are platform-gated (or behave differently) across Linux/macOS/Windows (and sometimes by architecture). To make drift detection robust:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 206,
+      "col": 21,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "Concrete CI matrix (minimal; can be expanded later):"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 234,
+      "col": 4,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "We should reuse this capability snapshot as an input to automation (metadata + sanity checks), while keeping the wrapper coverage manifest as a deterministic, generator-produced inventory keyed to upstream `path`/flag/arg identities."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 263,
+      "col": 93,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- Keep narrative notes separate from key identity whenever possible (notes are helpful, but should not churn diffs)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 266,
+      "col": 29,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Multiple coverage entries may share the same `path` as long as their `scope` sets are disjoint."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 271,
+      "col": 163,
+      "kind": "hedge",
+      "text": "best effort",
+      "line_text": "- If more than one entry matches for the same unit (command path, flag key, or arg name), the wrapper coverage manifest is invalid and comparison must error (no “best effort” guessing)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 319,
+      "col": 93,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- Upstream help output is not a perfect source of truth; snapshots are “best available” and should be reconciled with real-binary behavior and fixtures."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "line": 320,
+      "col": 17,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Some surfaces may be intentionally unsupported for safety/policy reasons and must be tracked as such to avoid perpetual churn."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "line": 65,
+      "col": 20,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- IU subtree roots may be nested; in that case the nearest (longest-prefix) root is used."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "line": 81,
+      "col": 24,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "- If scope differences would cause a unit to be IU on some relevant targets but not others in the same report run, that is treated as invalid/inconsistent (the report must fail rather than emit nondeterministic mixed classification)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "line": 150,
+      "col": 63,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "This ADR does not introduce new report fields; it widens what may appear in `deltas.intentionally_unsupported` so it can represent IU flags/args as well as commands."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "line": 163,
+      "col": 11,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Reports may include large `intentionally_unsupported` lists for waived subtrees. This is acceptable because:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "line": 8,
+      "col": 52,
+      "kind": "vague_quantity",
+      "text": "around",
+      "line_text": "The `crates/codex` crate provides an async wrapper around the Codex CLI, including:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "line": 64,
+      "col": 39,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- Changes in accepted upstream shapes should be handled by extending normalization and/or adding aliases, not by breaking downstream callers."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "line": 86,
+      "col": 87,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "- Rejected: normalization and context inference are exactly the hard parts callers would otherwise re-implement."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "line": 109,
+      "col": 136,
+      "kind": "unbounded",
+      "text": "as needed",
+      "line_text": "- Implement the public parser as a thin wrapper around the existing normalization logic (refactor internal normalization/context types as needed)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "line": 109,
+      "col": 49,
+      "kind": "vague_quantity",
+      "text": "around",
+      "line_text": "- Implement the public parser as a thin wrapper around the existing normalization logic (refactor internal normalization/context types as needed)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0006-agent-wrappers-workspace.md",
+      "line": 8,
+      "col": 58,
+      "kind": "vague_quantity",
+      "text": "around",
+      "line_text": "This repository started as a single-purpose Rust wrapper around one upstream CLI agent (Codex)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0007-wrapper-events-ingestion-contract.md",
+      "line": 15,
+      "col": 44,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- raw retention off by default (raw output may contain secrets)"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0007-wrapper-events-ingestion-contract.md",
+      "line": 34,
+      "col": 4,
+      "kind": "vague_quantity",
+      "text": "Minimal",
+      "line_text": "4. Minimal normalized event types (`NormalizedWrapperEvent`) for consumers that want a unified view."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0009-universal-agent-api.md",
+      "line": 120,
+      "col": 32,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "The event stream is a unified, minimal contract:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0009-universal-agent-api.md",
+      "line": 207,
+      "col": 34,
+      "kind": "unbounded",
+      "text": "where applicable",
+      "line_text": "by wrapper examples/fixtures where applicable)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0011-agent-api-codex-stream-exec.md",
+      "line": 207,
+      "col": 91,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- `agent_api` MUST NOT use `ExecStreamError::to_string()` as an emitted message when it may"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "line": 62,
+      "col": 19,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- different packs may define different defaults/absence semantics for the same core key,"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0013-agent-api-backend-harness.md",
+      "line": 59,
+      "col": 58,
+      "kind": "vague_quantity",
+      "text": "around",
+      "line_text": "- behavior can drift subtly between backends (especially around validation and safety invariants)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0013-agent-api-backend-harness.md",
+      "line": 150,
+      "col": 12,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- Refactor should be “no behavior change” at the spec level:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0014-agent-api-explicit-cancellation.md",
+      "line": 118,
+      "col": 80,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "- If cancellation is requested before `completion` resolves (i.e., before it would resolve as `Ok(...)` or `Err(...)`),"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0014-agent-api-explicit-cancellation.md",
+      "line": 121,
+      "col": 58,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "This MUST override any backend error completion that would otherwise occur after cancellation is requested."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0014-agent-api-explicit-cancellation.md",
+      "line": 130,
+      "col": 32,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "in which case completion MAY resolve after process exit without waiting for stream finality)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 46,
+      "col": 12,
+      "kind": "vague",
+      "text": "generally",
+      "line_text": "CLI agents generally expose “session” or “thread” semantics:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 57,
+      "col": 46,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "Session/thread operations fit this model and should be standardized as core extension keys under a"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 94,
+      "col": 50,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "- avoids creating a single “session object” that would require backends to implement all session sub-features at once."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 104,
+      "col": 14,
+      "kind": "vague_quantity",
+      "text": "around",
+      "line_text": "- designed around a single “turn” with JSONL streaming (`--json`)"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0015-universal-agent-api-session-extensions.md",
+      "line": 187,
+      "col": 78,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "This ADR introduces `agent_api.session.*` as a first-class bucket and pins a minimal set of"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 13,
+      "col": 46,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "This ADR defines how the Universal Agent API should expose *configuration/flag surfaces* from"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 52,
+      "col": 49,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Everything else remains backend-specific, but may still be surfaced via **bounded pass-through**"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 86,
+      "col": 76,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "While these are “explicit” flags, naive exposure as raw CLI pass-through would still create an"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 143,
+      "col": 50,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "represent open-ended or path-based surfaces that should only be exposed with strict bounds."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 219,
+      "col": 32,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "- `effort` (string enum): `minimal | low | medium | high`"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "line": 290,
+      "col": 35,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "- Keeps core `agent_api.config.*` minimal and stable."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 119,
+      "col": 60,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "`AgentWrapperEvent.data` and `AgentWrapperCompletion.data` MAY carry backend-specific structured"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 165,
+      "col": 49,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "breaks round-tripping for resume-by-id) and SHOULD emit a safe/redacted `Status` warning."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 171,
+      "col": 12,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Backends SHOULD store the captured id as run-local state so it can be reused for:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 196,
+      "col": 35,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Rejected: streaming consumers may need the id before completion (and completion may not exist"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 196,
+      "col": 85,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Rejected: streaming consumers may need the id before completion (and completion may not exist"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 199,
+      "col": 80,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "- Rejected: consumers who intentionally drop `events` and await `completion` would miss the id."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "line": 204,
+      "col": 41,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- For built-in backends, the capability should be advertised only once both:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0018-universal-mcp-management-commands.md",
+      "line": 13,
+      "col": 12,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "Define a **minimal, universal** MCP management surface across built-in backends:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0018-universal-mcp-management-commands.md",
+      "line": 52,
+      "col": 25,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "- Universalize only the minimal common command set: `add/get/list/remove`."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0018-universal-mcp-management-commands.md",
+      "line": 61,
+      "col": 65,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- These commands read/write persistent tool configuration and may surface secrets."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0018-universal-mcp-management-commands.md",
+      "line": 66,
+      "col": 23,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Built-in backends SHOULD support isolated homes (e.g., `codex_home`, `claude_home`) so"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0018-universal-mcp-management-commands.md",
+      "line": 74,
+      "col": 5,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "- A minimal common surface avoids prematurely standardizing backend-specific MCP features while"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0018-universal-mcp-management-commands.md",
+      "line": 96,
+      "col": 13,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "- Provide a minimal, stable, capability-gated MCP management surface in `agent_api`."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0018-universal-mcp-management-commands.md",
+      "line": 137,
+      "col": 97,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "MCP management commands are **operator-grade**: they interact with persistent configuration and may"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0018-universal-mcp-management-commands.md",
+      "line": 143,
+      "col": 12,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Backends SHOULD support isolated “home” layouts so test/automation flows can be safely isolated."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "line": 45,
+      "col": 23,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- built-in backends SHOULD NOT advertise it by default; hosts must opt in explicitly via backend"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "line": 50,
+      "col": 35,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "sandboxing, permissions) that would otherwise block unattended automation."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "line": 79,
+      "col": 84,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "orchestrators). For these hosts, internal approvals/sandbox/permissions guardrails may be both:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 98,
+      "col": 66,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "The remaining design question is how much semantic validation v1 should attempt. A universal enum"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 99,
+      "col": 33,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "or wrapper-owned model registry would be brittle because:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 103,
+      "col": 20,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- the wrapper repo should not need constant catalog churn just to preserve a stable request field."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0020-universal-agent-api-model-selection.md",
+      "line": 108,
+      "col": 19,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "- Keep the schema minimal and stable."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 64,
+      "col": 13,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- entries MAY be absolute or relative"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 86,
+      "col": 34,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "paths to the working directory would defeat many legitimate use cases."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 97,
+      "col": 9,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "backend may use for file reads, indexing, or tool access beyond the primary working directory."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 101,
+      "col": 3,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- should paths be absolute only,"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 102,
+      "col": 3,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- should relative paths be allowed,"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 103,
+      "col": 7,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- and should the wrapper enforce containment to the effective working directory?"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 121,
+      "col": 59,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- Defining a sandbox or security policy for what the host should allow."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 123,
+      "col": 28,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "access”; individual CLIs may still differ in exact internal indexing behavior."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 169,
+      "col": 53,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Callers that need predictable relative resolution SHOULD set `AgentWrapperRunRequest.working_dir`,"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 170,
+      "col": 43,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "because the effective working directory may otherwise be backend-defaulted."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 211,
+      "col": 40,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- InvalidRequest messages for this key SHOULD be stable/testable and MUST NOT echo raw path values."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/adr/0021-universal-agent-api-add-dirs.md",
+      "line": 266,
+      "col": 90,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "working directory, and the wrapper intentionally does not impose a containment rule that would"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "line": 127,
+      "col": 21,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- Built-in backends should advertise `agent_api.exec.add_dirs.v1` unconditionally once the"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam-1-add-dir-contract-and-normalization.md",
+      "line": 28,
+      "col": 18,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- each entry may be absolute or relative"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam-2-shared-agent-api-normalizer.md",
+      "line": 78,
+      "col": 42,
+      "kind": "hedge",
+      "text": "could",
+      "line_text": "- **Risk**: resolving add-dirs too early could use the wrong working directory source."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam-2-shared-agent-api-normalizer.md",
+      "line": 84,
+      "col": 17,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- Shared helper should be introduced first so backend seams can consume one pinned implementation."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "line": 74,
+      "col": 44,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- **Risk**: the Codex fork/app-server flow may not accept add-dir state the same way exec/resume"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "line": 72,
+      "col": 51,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- **Risk**: Claude’s session-oriented print flags may accept add-dir differently for resume/fork"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "line": 69,
+      "col": 19,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- **Risk**: tests may accidentally pin backend-local implementation details instead of the shared"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "line": 71,
+      "col": 36,
+      "kind": "vague_quantity",
+      "text": "around",
+      "line_text": "- **De-risk plan**: organize tests around the contract registry in `threading.md`, with backend"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "line": 62,
+      "col": 49,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- `SEAM-2 blocks SEAM-3` because: Codex support should consume the shared normalized directory set"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "line": 64,
+      "col": 55,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "- `SEAM-2 blocks SEAM-4` because: Claude Code support should consume the same shared normalized"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/claude-code-session-mapping-contract.md",
+      "line": 10,
+      "col": 78,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "This document uses RFC 2119-style requirement keywords (`MUST`, `MUST NOT`, `SHOULD`)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/claude-stream-json-parser-contract.md",
+      "line": 105,
+      "col": 67,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "For unknown outer types, session id extraction is best-effort and may be `None`."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 13,
+      "col": 61,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "Normative language: RFC 2119 keywords (`MUST`, `MUST NOT`, `SHOULD`)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 55,
+      "col": 39,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- `capabilities.experimentalApi=true` SHOULD be set for deterministic availability of fork/list"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 172,
+      "col": 3,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- MAY be ignored or mapped to `AgentWrapperEventKind::Unknown` / `Status`,"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 185,
+      "col": 68,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "- The goal is to prevent server-initiated approval requests (which would otherwise hang an"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 203,
+      "col": 41,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "All other fields are server-defined and MAY be ignored by clients. Clients MUST NOT embed the raw"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 222,
+      "col": 21,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- Approval requests MAY occur during `thread/fork`, `turn/start`, or both."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 235,
+      "col": 1,
+      "kind": "vague_quantity",
+      "text": "Minimal",
+      "line_text": "Minimal, deterministic sequence (one JSON object per line):"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-app-server-jsonrpc-contract.md",
+      "line": 296,
+      "col": 11,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Clients SHOULD terminate by sending `exit` (notification) and closing stdio:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-external-sandbox-mapping-contract.md",
+      "line": 9,
+      "col": 78,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "This document uses RFC 2119-style requirement keywords (`MUST`, `MUST NOT`, `SHOULD`)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-streaming-exec-contract.md",
+      "line": 8,
+      "col": 78,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "This document uses RFC 2119-style requirement keywords (`MUST`, `MUST NOT`, `SHOULD`)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-streaming-exec-contract.md",
+      "line": 13,
+      "col": 14,
+      "kind": "vague_quantity",
+      "text": "around",
+      "line_text": "specifically around:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-streaming-exec-contract.md",
+      "line": 64,
+      "col": 67,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- If the consumer continues polling `events`, the `events` stream SHOULD reach finality (`None`)"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "line": 173,
+      "col": 31,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- On failure, the error value SHOULD retain the original line content when possible (existing"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "line": 176,
+      "col": 51,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "If a downstream tool needs a “raw log viewer”, it should read the file directly or wrap the reader"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "line": 183,
+      "col": 38,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Accepting new upstream JSON shapes SHOULD be handled by extending normalization and/or adding"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "line": 194,
+      "col": 42,
+      "kind": "vague_quantity",
+      "text": "around",
+      "line_text": "expressible as a deterministic wrapper around the tolerant iterator."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+      "line": 113,
+      "col": 31,
+      "kind": "vague",
+      "text": "typically",
+      "line_text": "- an error outcome for (2) (typically `ExecStreamError::Parse` from typed deserialization),"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "line": 179,
+      "col": 44,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "- Keys are recorded exactly as the wrapper would emit them in argv."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "line": 95,
+      "col": 46,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "because additional wrapper-default flags may be present (see Scenarios 0–2)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "line": 151,
+      "col": 31,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "`--output-schema <PATH>`) may be present per Scenarios 0–2."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "line": 169,
+      "col": 48,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- `CodexClient::apply` and `CodexClient::diff` may read `CODEX_TASK_ID` as a convenience when callers do not supply a task id explicitly."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "line": 9,
+      "col": 61,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "This document is normative and uses RFC 2119 keywords (MUST/SHOULD/MUST NOT)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "line": 57,
+      "col": 25,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- New universal buckets SHOULD be introduced in this spec before shipping new `agent_api.*` ids."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "line": 64,
+      "col": 76,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Backend-specific capability ids are stable per backend once shipped, but may be added over time."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "line": 84,
+      "col": 44,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Config-conditional standard capabilities may therefore be absent from the matrix when safe defaults leave them off; for"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "line": 85,
+      "col": 75,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "example, `agent_api.tools.mcp.add.v1` / `agent_api.tools.mcp.remove.v1` may be absent because built-in backends default"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 10,
+      "col": 92,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "Normative language: this contract uses RFC 2119 requirement keywords (`MUST`, `MUST NOT`, `SHOULD`)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 160,
+      "col": 19,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "/// A backend may populate `final_text` when it can deterministically extract it."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 257,
+      "col": 15,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- `message` SHOULD be `Some`."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 264,
+      "col": 15,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- `message` MAY be `Some` (safe/redacted) for operator-facing summaries, but SHOULD be `None` by default."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 264,
+      "col": 80,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- `message` MAY be `Some` (safe/redacted) for operator-facing summaries, but SHOULD be `None` by default."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 267,
+      "col": 3,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- MAY be present for any kind."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 398,
+      "col": 15,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- the backend MAY include `agent_api.tools.mcp.add.v1` and"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 427,
+      "col": 22,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "3) Else, the backend MAY use an internal default (including inheriting the parent process working directory or using a temporary directory)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/contract.md",
+      "line": 474,
+      "col": 97,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- If `AgentWrapperRunRequest.working_dir` is absent: backend-specific default applies (wrappers may use temp dirs). See \"Working directory resolution (effective working directory)\" for how the effective working directory is derived."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "line": 9,
+      "col": 61,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "This document is normative and uses RFC 2119 keywords (MUST/SHOULD/MUST NOT)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "line": 39,
+      "col": 5,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- MAY contain backend-specific structured payloads when safe and bounded"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "line": 48,
+      "col": 39,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "This MUST apply even when the backend would otherwise omit `data`: for `ToolCall` and `ToolResult`"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "line": 52,
+      "col": 7,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "facet would exceed the 64 KiB serialized `data` bound, the backend MUST apply the baseline oversize"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "line": 121,
+      "col": 42,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "round-tripping for resume-by-id) and SHOULD emit a safe `Status` warning."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 15,
+      "col": 73,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "Normative language: RFC 2119 requirement keywords (`MUST`, `MUST NOT`, `SHOULD`)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 77,
+      "col": 67,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- Backend extension keys are stable per backend once shipped, but may be added over time."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 91,
+      "col": 8,
+      "kind": "hedge",
+      "text": "could",
+      "line_text": "that could hang automation (approvals/permissions prompts)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 92,
+      "col": 27,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- When `false`, a backend MAY allow interactive behavior, but MUST remain deterministic with"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 116,
+      "col": 80,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "backend relax/disable internal approvals/sandbox/permissions guardrails that would otherwise"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 241,
+      "col": 11,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- Entries MAY be absolute or relative."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 283,
+      "col": 12,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Backends SHOULD use stable, testable messages that identify the failing field/index without"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 338,
+      "col": 76,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Callers that need to discover a usable backend-defined session/thread id SHOULD observe the"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 341,
+      "col": 41,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Callers that use `selector == \"last\"` SHOULD provide a stable `AgentWrapperRunRequest.working_dir`."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 343,
+      "col": 10,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "(which may be ephemeral, e.g. a temp dir)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 371,
+      "col": 14,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Backends SHOULD validate selection before spawning any long-lived backend process when the"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 411,
+      "col": 76,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Callers that need to discover a usable backend-defined session/thread id SHOULD observe the"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 414,
+      "col": 41,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Callers that use `selector == \"last\"` SHOULD provide a stable `AgentWrapperRunRequest.working_dir`."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 416,
+      "col": 10,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "(which may be ephemeral, e.g. a temp dir)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/extensions-spec.md",
+      "line": 450,
+      "col": 38,
+      "kind": "hedge",
+      "text": "should",
+      "line_text": "3) Update any built-in backends that should support the key:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 7,
+      "col": 23,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "This spec defines a **minimal, universal, non-run** API for managing MCP (Model Context Protocol)"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 10,
+      "col": 91,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "This document is normative once approved and uses RFC 2119 keywords (`MUST`, `MUST NOT`, `SHOULD`)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 37,
+      "col": 58,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- Capability advertising is **per backend instance** and MAY vary based on environment and configuration."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 263,
+      "col": 24,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "3) Else, the backend MAY use an internal default (including inheriting the parent process working directory or using a"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 271,
+      "col": 24,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "3) Else, the backend MAY use an internal default (or no timeout)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 356,
+      "col": 73,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "MCP management commands interact with persistent tool configuration and may read/write sensitive"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 362,
+      "col": 12,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "- Backends SHOULD support isolated homes so automation can run against a dedicated state root."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 381,
+      "col": 54,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- For built-in backends, `allow_mcp_write == true` MAY enable advertising only when the pinned"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 385,
+      "col": 29,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "a configured MCP server may do during a normal run."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 425,
+      "col": 96,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "`allow_mcp_write` defaults to `false`, `docs/specs/universal-agent-api/capability-matrix.md` may"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/mcp-management-spec.md",
+      "line": 489,
+      "col": 29,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- Optional live smoke tests MAY target real installed upstream binaries, but MUST be opt-in and MUST NOT run in CI by"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 9,
+      "col": 61,
+      "kind": "hedge",
+      "text": "SHOULD",
+      "line_text": "This document is normative and uses RFC 2119 keywords (MUST/SHOULD/MUST NOT)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 29,
+      "col": 72,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- If a backend does not include `agent_api.events.live`, the backend MAY buffer and emit events"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 32,
+      "col": 8,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- it may buffer events and emit them post-hoc (after the underlying process exits)"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 49,
+      "col": 63,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- If the consumer opts out by dropping `events`, `completion` MAY resolve after (1) without waiting for (2)."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 68,
+      "col": 22,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "signal. Backends MAY attempt to terminate the underlying process, but are not required to do so."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 97,
+      "col": 84,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- Events already successfully forwarded before the backend observes cancellation MAY still be received."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 105,
+      "col": 80,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "- If cancellation is requested before `completion` resolves (i.e., before it would resolve as `Ok(...)` or `Err(...)`),"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 108,
+      "col": 58,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "This MUST override any backend error completion that would otherwise occur after cancellation is requested."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/universal-agent-api/run-protocol-spec.md",
+      "line": 151,
+      "col": 5,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "- MAY be populated when the backend can deterministically extract a “final” text response."
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/wrapper-events-ingestion-contract.md",
+      "line": 131,
+      "col": 46,
+      "kind": "hedge",
+      "text": "MAY",
+      "line_text": "fn full_details(&self) -> String;     // MAY include raw"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/wrapper-events-ingestion-contract.md",
+      "line": 173,
+      "col": 5,
+      "kind": "hedge",
+      "text": "may",
+      "line_text": "- may be present even if adapter parsing fails later"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/wrapper-events-ingestion-contract.md",
+      "line": 183,
+      "col": 16,
+      "kind": "hedge",
+      "text": "would",
+      "line_text": "When a capture would exceed remaining budget:"
+    },
+    {
+      "file_path": "/Users/spensermcconnell/__Active_Code/codex-wrapper/docs/specs/wrapper-events-ingestion-contract.md",
+      "line": 196,
+      "col": 25,
+      "kind": "vague_quantity",
+      "text": "minimal",
+      "line_text": "The crate MUST define a minimal normalized envelope:"
+    }
+  ]
+}

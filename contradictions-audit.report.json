@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "tool": "contradictions-audit",
+    "generated_at": "2026-03-12T19:34:17Z",
+    "files": [
+      "docs/project_management/packs/active/agent-api-add-dirs/README.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/scope_brief.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam_map.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/threading.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-1-add-dir-contract-and-normalization.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-2-shared-agent-api-normalizer.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-3-codex-mapping.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-4-claude-code-mapping.md",
+      "docs/project_management/packs/active/agent-api-add-dirs/seam-5-tests.md",
+      "docs/adr/0001-codex-cli-parity-maintenance.md",
+      "docs/adr/0002-codex-cli-parity-coverage-mapping.md",
+      "docs/adr/0003-wrapper-coverage-auto-generation.md",
+      "docs/adr/0004-wrapper-coverage-iu-subtree-inheritance.md",
+      "docs/adr/0005-codex-jsonl-log-parser-api.md",
+      "docs/adr/0006-agent-wrappers-workspace.md",
+      "docs/adr/0007-wrapper-events-ingestion-contract.md",
+      "docs/adr/0008-claude-stream-json-parser-api.md",
+      "docs/adr/0009-universal-agent-api.md",
+      "docs/adr/0010-claude-code-live-stream-json.md",
+      "docs/adr/0011-agent-api-codex-stream-exec.md",
+      "docs/adr/0012-universal-agent-api-extensions-registry-and-cli-agent-onboarding-charter.md",
+      "docs/adr/0013-agent-api-backend-harness.md",
+      "docs/adr/0014-agent-api-explicit-cancellation.md",
+      "docs/adr/0015-universal-agent-api-session-extensions.md",
+      "docs/adr/0016-universal-agent-api-bounded-backend-config-pass-through.md",
+      "docs/adr/0017-universal-agent-api-session-thread-id-surfacing.md",
+      "docs/adr/0018-universal-mcp-management-commands.md",
+      "docs/adr/0019-universal-agent-api-external-sandbox-exec-policy.md",
+      "docs/adr/0020-universal-agent-api-model-selection.md",
+      "docs/adr/0021-universal-agent-api-add-dirs.md",
+      "docs/specs/claude-code-session-mapping-contract.md",
+      "docs/specs/claude-stream-json-parser-contract.md",
+      "docs/specs/claude-stream-json-parser-scenarios-v1.md",
+      "docs/specs/codex-app-server-jsonrpc-contract.md",
+      "docs/specs/codex-external-sandbox-mapping-contract.md",
+      "docs/specs/codex-streaming-exec-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-contract.md",
+      "docs/specs/codex-thread-event-jsonl-parser-scenarios-v1.md",
+      "docs/specs/codex-wrapper-coverage-generator-contract.md",
+      "docs/specs/codex-wrapper-coverage-scenarios-v1.md",
+      "docs/specs/wrapper-events-ingestion-contract.md",
+      "docs/specs/universal-agent-api/README.md",
+      "docs/specs/universal-agent-api/capabilities-schema-spec.md",
+      "docs/specs/universal-agent-api/capability-matrix.md",
+      "docs/specs/universal-agent-api/contract.md",
+      "docs/specs/universal-agent-api/event-envelope-schema-spec.md",
+      "docs/specs/universal-agent-api/extensions-spec.md",
+      "docs/specs/universal-agent-api/mcp-management-spec.md",
+      "docs/specs/universal-agent-api/run-protocol-spec.md"
+    ],
+    "scan": {
+      "used": false,
+      "output": null
+    },
+    "notes": [
+      "Local fallback run because the audit-trio worker orchestration did not emit report files in this environment."
+    ]
+  },
+  "issues": [
+    {
+      "id": "CX-0001",
+      "severity": "blocker",
+      "confidence": "high",
+      "type": "api",
+      "subject": "Codex fork transport for agent_api.exec.add_dirs.v1",
+      "scope": {
+        "environment": "all",
+        "version": "v1",
+        "feature_flag": "none",
+        "timeline": "current"
+      },
+      "statement_a": {
+        "file": "docs/specs/universal-agent-api/extensions-spec.md",
+        "line_start": 245,
+        "line_end": 247,
+        "excerpt": "Backends MUST honor the same effective add-dir set for new-session, resume, and forked runs, and MUST NOT silently ignore an accepted add-dir request for session-based flows."
+      },
+      "statement_b": {
+        "file": "docs/specs/codex-app-server-jsonrpc-contract.md",
+        "line_start": 109,
+        "line_end": 117,
+        "excerpt": "thread/fork params pin only threadId plus optional cwd, approvalPolicy, sandbox, and persistExtendedHistory."
+      },
+      "analysis": {
+        "why_conflict": "The universal extension contract says accepted add-dir inputs remain valid for fork flows, but the canonical Codex fork transport contract does not expose any request field that can carry those directories into thread/fork or the follow-up turn/start. As written, the Codex backend cannot both accept add_dirs for fork and satisfy the pinned transport contract.",
+        "possible_reconciliations": [
+          "Add an explicit add-dir transport field to the Codex app-server fork/turn contract.",
+          "Or scope Codex fork out by pinning an explicit safe rejection path before the backend advertises or accepts the capability for forked runs."
+        ],
+        "what_must_be_true": [
+          "The canon must define exactly how accepted add_dirs reach Codex fork flows, or exactly where Codex rejects the request instead of silently dropping it.",
+          "The planning pack, ADR, and backend-owned Codex transport docs must all say the same fork behavior."
+        ]
+      },
+      "suggested_evidence_order": [
+        "codebase",
+        "tests",
+        "other-docs",
+        "decision"
+      ],
+      "related_issues": [
+        "CH-0002",
+        "CH-0003",
+        "CA-0001"
+      ]
+    }
+  ]
+}
