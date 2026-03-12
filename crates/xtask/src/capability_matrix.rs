@@ -16,6 +16,7 @@ use serde::Deserialize;
 
 const CODEX_MANIFEST_PATH: &str = "cli_manifests/codex/current.json";
 const CLAUDE_MANIFEST_PATH: &str = "cli_manifests/claude_code/current.json";
+const DEFAULT_OUT_PATH: &str = "docs/specs/universal-agent-api/capability-matrix.md";
 const CODEX_CANONICAL_TARGET: &str = "x86_64-unknown-linux-musl";
 const CLAUDE_CANONICAL_TARGET: &str = "linux-x64";
 
@@ -26,18 +27,16 @@ const CAPABILITY_MCP_REMOVE_V1: &str = "agent_api.tools.mcp.remove.v1";
 
 #[derive(Debug, Parser)]
 pub struct Args {
-    /// Write the generated markdown to this path.
-    #[arg(
-        long,
-        default_value = "docs/specs/universal-agent-api/capability-matrix.md"
-    )]
-    pub out: PathBuf,
+    /// Write the generated markdown to this path. Defaults to the workspace-root capability matrix path when omitted.
+    #[arg(long)]
+    pub out: Option<PathBuf>,
 }
 
 pub fn run(args: Args) -> Result<(), String> {
     let backends = collect_builtin_backend_capabilities()?;
     let markdown = render_matrix(&backends);
-    write_file(&args.out, &markdown)?;
+    let out = resolve_output_path(args.out.as_deref());
+    write_file(&out, &markdown)?;
     Ok(())
 }
 
@@ -204,8 +203,10 @@ fn bucket_order(backend_ids: &[String]) -> Vec<String> {
 fn apply_canonical_builtin_target_profile(
     backends: &mut BTreeMap<String, AgentWrapperCapabilities>,
 ) -> Result<(), String> {
-    let codex_manifest = read_union_manifest(Path::new(CODEX_MANIFEST_PATH))?;
-    let claude_manifest = read_union_manifest(Path::new(CLAUDE_MANIFEST_PATH))?;
+    let codex_manifest =
+        read_union_manifest(&resolve_workspace_path(Path::new(CODEX_MANIFEST_PATH)))?;
+    let claude_manifest =
+        read_union_manifest(&resolve_workspace_path(Path::new(CLAUDE_MANIFEST_PATH)))?;
 
     let codex_caps = backends
         .get_mut("codex")
@@ -279,6 +280,25 @@ fn command_available_on_target(manifest: &UnionManifest, path: &[&str], target: 
                 .eq(path.iter().copied())
         })
         .is_some_and(|command| command.available_on.iter().any(|item| item == target))
+}
+
+fn resolve_output_path(explicit: Option<&Path>) -> PathBuf {
+    match explicit {
+        Some(path) => path.to_path_buf(),
+        None => resolve_workspace_path(Path::new(DEFAULT_OUT_PATH)),
+    }
+}
+
+fn resolve_workspace_path(path: &Path) -> PathBuf {
+    workspace_root().join(path)
+}
+
+fn workspace_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("CARGO_MANIFEST_DIR has crates/xtask parent structure")
+        .to_path_buf()
 }
 
 fn read_union_manifest(path: &Path) -> Result<UnionManifest, String> {
@@ -361,5 +381,25 @@ mod tests {
         assert!(capabilities.contains(CAPABILITY_MCP_GET_V1));
         assert!(!capabilities.contains(CAPABILITY_MCP_ADD_V1));
         assert!(!capabilities.contains(CAPABILITY_MCP_REMOVE_V1));
+    }
+
+    #[test]
+    fn resolve_output_path_defaults_to_workspace_root() {
+        assert_eq!(
+            resolve_output_path(None),
+            workspace_root().join(DEFAULT_OUT_PATH)
+        );
+    }
+
+    #[test]
+    fn resolve_output_path_preserves_absolute_path() {
+        let absolute = std::env::temp_dir().join("capability-matrix-absolute.md");
+        assert_eq!(resolve_output_path(Some(absolute.as_path())), absolute);
+    }
+
+    #[test]
+    fn resolve_output_path_preserves_explicit_relative_path() {
+        let relative = Path::new("tmp/capability-matrix.md");
+        assert_eq!(resolve_output_path(Some(relative)), relative);
     }
 }
