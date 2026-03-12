@@ -25,6 +25,8 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
     - trimmed value non-empty,
     - trimmed value length `<= 128` UTF-8 bytes.
     Failures resolve as `AgentWrapperError::InvalidRequest`.
+  - **Pinned InvalidRequest message**: pre-spawn failures for this key MUST use the exact safe template
+    `invalid agent_api.config.model.v1` and MUST NOT echo the raw model id.
   - **Owner seam**: SEAM-1
   - **Consumers**: SEAM-2/3/4/5
 
@@ -44,6 +46,15 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
     For v1, that is expected to be unconditional once the implementation lands.
   - **Owner seam**: SEAM-2
   - **Consumers**: SEAM-3/4/5
+
+- **MS-C08 — Capability-matrix publication handoff**
+  - **Type**: release/integration
+  - **Definition**: SEAM-2 owns regenerating `docs/specs/universal-agent-api/capability-matrix.md` in the same
+    change that updates built-in advertising for `agent_api.config.model.v1`. SEAM-5 consumes that artifact for
+    regression assertions, and WS-INT reruns `cargo run -p xtask -- capability-matrix`; any stale matrix diff blocks
+    merge.
+  - **Owner seam**: SEAM-2
+  - **Consumers**: SEAM-5, WS-INT
 
 - **MS-C06 — Codex mapping contract**
   - **Type**: integration
@@ -66,28 +77,31 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 
 ## Dependency graph (text)
 
-- `SEAM-1 blocks SEAM-2` because: backend advertising and normalization need the final schema, trimming, and absence semantics.
-- `SEAM-1 blocks SEAM-3` because: Codex mapping needs the pinned distinction between pre-spawn validation and backend-owned runtime rejection.
-- `SEAM-1 blocks SEAM-4` because: Claude mapping needs the pinned distinction between `--model` mapping and excluded secondary knobs.
+- `SEAM-1 gates SEAM-2/3/4` because: backend work starts after the SEAM-1 verification pass confirms there is no unresolved canonical-doc delta. The normative schema itself is already pinned in `docs/specs/universal-agent-api/extensions-spec.md`.
 - `SEAM-2 blocks SEAM-3` because: Codex run wiring must consume the shared effective model-id contract, not ad hoc raw extension parsing.
 - `SEAM-2 blocks SEAM-4` because: Claude run wiring must consume the shared effective model-id contract, not ad hoc raw extension parsing.
-- `SEAM-2 blocks SEAM-5` because: tests must pin capability advertising and normalization behavior, including R0 ordering.
-- `SEAM-3 blocks SEAM-5` because: tests must verify the final Codex mapping and backend-error translation behavior.
-- `SEAM-4 blocks SEAM-5` because: tests must verify the final Claude mapping and exclusion of `--fallback-model`.
+- `SEAM-1 blocks SEAM-5A` because: pre-mapping validation tests need the pinned InvalidRequest and runtime-rejection posture.
+- `SEAM-2 blocks SEAM-5B` because: backend/matrix tests must verify the shared normalization helper and capability publication handoff.
+- `SEAM-3 blocks SEAM-5B` because: Codex tests must verify the final mapping and backend-error translation behavior.
+- `SEAM-4 blocks SEAM-5B` because: Claude tests must verify the final mapping and exclusion of `--fallback-model`.
 
 ## Critical path
 
-`SEAM-1 (contract)` → `SEAM-2 (advertising + normalization)` → `SEAM-3/SEAM-4 (backend mapping)` → `SEAM-5 (tests)`
+`SEAM-1 (verification/sync)` → `SEAM-2 (advertising + normalization + matrix publication)` → `SEAM-3/SEAM-4 (backend mapping)` → `SEAM-5B (backend/runtime tests)`
 
 ## Parallelization notes / conflict-safe workstreams
 
 - **WS-SPEC**: SEAM-1 docs-first contract alignment under `docs/specs/universal-agent-api/`.
-- **WS-NORMALIZE**: SEAM-2 capability advertising + normalization extraction in `crates/agent_api/src/backends/**`.
+- **WS-NORMALIZE**: SEAM-2 capability advertising plus the shared normalization helper in
+  `crates/agent_api/src/backend_harness/normalize.rs`, with backend adapters consuming that helper.
 - **WS-CODEX**: SEAM-3 Codex request mapping and runtime error translation.
 - **WS-CLAUDE**: SEAM-4 Claude Code request mapping and runtime error translation.
-- **WS-TESTS**: SEAM-5 regression coverage; can start with R0 + schema-validation harness tests once SEAM-1 is stable.
-- **WS-INT (Integration)**: run `cargo run -p xtask -- capability-matrix`, `make test`, and `make preflight`;
-  validate advertised capabilities, and confirm no raw stderr leakage in backend failures.
+- **WS-TESTS**:
+  - SEAM-5A covers R0 + schema-validation harness tests and may start once SEAM-1 verification is complete.
+  - SEAM-5B covers backend mapping, runtime rejection, and capability-matrix assertions after SEAM-2/3/4 land.
+- **WS-INT (Integration)**: rerun `cargo run -p xtask -- capability-matrix`, `make test`, and `make preflight`;
+  treat any stale capability-matrix diff as blocking, validate advertised capabilities, and confirm no raw stderr
+  leakage in backend failures.
 
 ## Pinned decisions / resolved threads
 
@@ -95,3 +109,5 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 - **Absence means backend default**: missing key never synthesizes a model override. See MS-C02.
 - **No secondary routing by implication**: this key cannot imply fallback-model, reasoning tuning, or policy changes. See MS-C06/MS-C07.
 - **Runtime unknown-model handling stays backend-owned**: safe `Backend` error translation is required, but a universal rejection string is not. See MS-C04.
+- **InvalidRequest message contract**: pre-spawn validation failures use the single safe template
+  `invalid agent_api.config.model.v1`; raw model ids must not appear in that message. See MS-C03.

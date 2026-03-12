@@ -4,6 +4,10 @@
 - **Type**: integration
 - **Goal / user value**: Pin one stable universal request contract for model selection so callers can rely on a single
   key without wrapper-defined model registries or backend-specific branching.
+- **Status**:
+  - canonical owner-spec text is already landed in `docs/specs/universal-agent-api/extensions-spec.md`
+  - remaining work is limited to ADR-0020 sync, drift verification across related universal specs, and any resulting
+    canonical-doc clarification patches
 - **Scope**
   - In:
     - normative definition of `agent_api.config.model.v1`
@@ -20,12 +24,15 @@
     - `AgentWrapperRunRequest.extensions["agent_api.config.model.v1"]`
     - canonical spec docs under `docs/specs/universal-agent-api/`
   - Outputs:
-    - pinned schema and semantics in `docs/specs/universal-agent-api/extensions-spec.md`
-    - clarified error/run-lifecycle language in related universal specs if needed
+    - verification that the pinned schema and semantics in `docs/specs/universal-agent-api/extensions-spec.md` remain
+      the source of truth
+    - clarified error/run-lifecycle language in related universal specs only if the verification pass finds drift
 - **Key invariants / rules**:
   - R0 capability gating runs before shape validation.
   - Effective value is the trimmed string.
   - Trimmed UTF-8 byte length is `1..=128`.
+  - pre-spawn `InvalidRequest` failures use the exact safe template `invalid agent_api.config.model.v1`
+    and MUST NOT echo the raw model id.
   - Absence preserves backend default behavior.
   - Runtime “unknown/unavailable/unauthorized model” outcomes remain backend-owned errors.
 - **Dependencies**
@@ -52,4 +59,4 @@
     - doc-first reconciliation pass before backend code changes; if conflicts surface, resolve in the owner spec and update the ADR/body hash together
 - **Rollout / safety**:
   - land contract text before enabling backend advertising
-  - avoid advertising or testing against semantics that are not yet pinned
+  - downstream seams may proceed once the SEAM-1 verification pass records "no unresolved canonical-doc delta"

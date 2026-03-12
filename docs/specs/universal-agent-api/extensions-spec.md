@@ -192,11 +192,18 @@ Meaning:
 
 Validation rules:
 - Value MUST be a string; otherwise the backend MUST fail before spawn with
-  `AgentWrapperError::InvalidRequest`.
+  `AgentWrapperError::InvalidRequest { message: "invalid agent_api.config.model.v1" }`.
 - After trimming, the value MUST be non-empty; otherwise the backend MUST fail before spawn with
-  `AgentWrapperError::InvalidRequest`.
+  `AgentWrapperError::InvalidRequest { message: "invalid agent_api.config.model.v1" }`.
 - The trimmed value MUST be no more than 128 UTF-8 bytes; otherwise the backend MUST fail before
-  spawn with `AgentWrapperError::InvalidRequest`.
+  spawn with `AgentWrapperError::InvalidRequest { message: "invalid agent_api.config.model.v1" }`.
+
+Error message posture (v1, pinned):
+- InvalidRequest messages for this key MUST use the single exact safe template:
+  - `invalid agent_api.config.model.v1`
+- InvalidRequest messages for this key MUST NOT echo the raw model id.
+- Backends MUST reuse that exact template for non-string, empty-after-trim, and oversize failures;
+  they MUST NOT invent a more specific InvalidRequest message shape for this key in v1.
 
 Mapping requirements:
 - The backend MUST pass the trimmed value, not the raw untrimmed value, to its underlying

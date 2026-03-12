@@ -48,13 +48,16 @@
   - session argv tests prove `--model <trimmed-id>` appears before any `--add-dir` group,
     `--continue` / `--fork-session` / `--resume`, and `--fallback-model`
   - regression tests prove the universal key never emits `--fallback-model`
+  - runtime-rejection coverage uses `crates/agent_api/src/bin/fake_claude_stream_json_agent_api.rs` with a dedicated
+    `model_runtime_rejection_after_init` scenario that emits `system init` before the terminal failure
   - runtime rejection tests prove completion resolves as safe `Backend` error and event stream closes with one terminal
-    `Error` event when applicable
+    `Error` event when applicable, using the same safe message in both surfaces and no raw model-id/stderr leakage
 - **Risks / unknowns**
   - Risk:
     - Claude already exposes a separate fallback-model knob, which creates drift risk if the universal key is wired too
       loosely into print request construction
   - De-risk plan:
-    - pin dedicated negative tests proving the universal key affects only `--model`
+    - pin dedicated negative tests proving the universal key affects only `--model`, and drive runtime rejection
+      through the fake-claude post-init failure scenario rather than live model catalogs
 - **Rollout / safety**:
   - do not advertise the capability until the print mapping and exclusion tests both pass

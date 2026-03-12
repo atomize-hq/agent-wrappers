@@ -50,12 +50,16 @@
   - absence tests prove no `--model` is emitted
   - fork tests prove accepted model-selection inputs are rejected before `thread/list` / `thread/fork` /
     `turn/start` with the pinned safe backend message
+  - runtime-rejection coverage uses
+    `crates/agent_api/src/bin/fake_codex_stream_exec_scenarios_agent_api.rs` with a dedicated
+    `model_runtime_rejection_after_thread_started` scenario that emits `thread.started` before the failure
   - runtime rejection tests prove completion resolves as safe `Backend` error and event stream closes with one terminal
-    `Error` event when applicable
+    `Error` event when applicable, using the same safe message in both surfaces and no raw model-id/stderr leakage
 - **Risks / unknowns**
   - Risk:
     - Codex may reject a syntactically valid model late in the run path, after stream setup
   - De-risk plan:
-    - pin translation + terminal-event behavior in tests using spawn-failure/runtime-failure harness cases
+    - pin translation + terminal-event behavior in tests using the dedicated fake-codex midstream runtime-rejection
+      scenario rather than live CLI catalogs
 - **Rollout / safety**:
   - merge only with end-to-end tests covering both exec-only and stream-open failure paths that can observe safe error translation

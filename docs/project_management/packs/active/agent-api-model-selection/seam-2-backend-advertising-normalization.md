@@ -7,9 +7,10 @@
 - **Scope**
   - In:
     - add `agent_api.config.model.v1` to built-in backend capability sets once deterministic support exists
-    - choose the normalization locus for extracting the effective trimmed model id before spawn
+    - implement the normalization locus for extracting the effective trimmed model id before spawn
     - keep R0 gating ahead of model parsing/validation
     - make the normalized result available to backend mapping seams
+    - regenerate `docs/specs/universal-agent-api/capability-matrix.md` in the same change that flips advertising
   - Out:
     - actual Codex/Claude argv insertion details
     - backend-specific runtime rejection translation
@@ -20,12 +21,15 @@
     - backend harness / request mapping code that currently reads `request.extensions`
   - Outputs:
     - deterministic built-in advertising of `agent_api.config.model.v1`
-    - shared or mirrored parser returning the effective trimmed model id (or absence / InvalidRequest)
+    - one shared parser in `crates/agent_api/src/backend_harness/normalize.rs` returning the effective trimmed model id
+      (or absence / `AgentWrapperError::InvalidRequest { message: "invalid agent_api.config.model.v1" }`)
 - **Key invariants / rules**:
   - unsupported key still fails as `UnsupportedCapability` before parser logic runs
   - normalization is trim-first and uses the same bounds on both backends
   - absence is represented explicitly so downstream mapping can omit `--model`
   - normalization must be cheap/local and require no remote lookup
+  - backend-local mirrored parsers are not permitted for this key; both built-in backends consume the shared helper in
+    `crates/agent_api/src/backend_harness/normalize.rs`
 - **Dependencies**
   - Blocks:
     - SEAM-3
@@ -44,12 +48,15 @@
   - both built-in capability sets advertise the key once implementation is present
   - R0 ordering tests prove unsupported key fails before model parsing
   - parser tests prove non-string / empty / oversize cases fail deterministically
+  - parser tests prove all invalid cases use the exact safe template `invalid agent_api.config.model.v1`
   - valid trimmed values flow to mapping seams without exposing raw untrimmed values
+  - capability-matrix regeneration occurs in the same change as advertising changes
 - **Risks / unknowns**
   - Risk:
-    - duplicated parser logic across backends can drift on whitespace, byte-counting, or error messages
+    - advertising could drift from the published capability matrix if regeneration is left to a later seam
   - De-risk plan:
-    - prefer one shared helper or tightly mirrored test suite covering both backends through the same cases
+    - require one shared helper in `crates/agent_api/src/backend_harness/normalize.rs` and treat stale
+      `capability-matrix.md` output as merge-blocking in WS-INT
 - **Rollout / safety**:
   - land advertising only alongside working normalization
-  - if a shared helper is introduced, keep it backend-neutral and limited to extension parsing
+  - keep the shared helper backend-neutral and limited to extension parsing

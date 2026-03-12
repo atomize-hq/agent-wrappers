@@ -37,7 +37,7 @@ This ADR corresponds to backlog item `uaa-0002` (`bucket=agent_api.config`, `typ
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 160b19d018ea0b8b4ddef87d382e197f5fea82b8beefc6efe0c4c56e602f5c49
+ADR_BODY_SHA256: d572edd4a303eee6512f0be1dfff15ea3cfb011c95fe7125c36cc106b735002c
 
 ### Decision (draft)
 
@@ -64,6 +64,8 @@ ADR_BODY_SHA256: 160b19d018ea0b8b4ddef87d382e197f5fea82b8beefc6efe0c4c56e602f5c4
   - R0 capability gating applies first.
   - v1 performs syntax/bounds validation before spawn, but does not require wrappers to ship or
     maintain an authoritative local model catalog.
+  - pre-spawn `InvalidRequest` failures use the exact safe template
+    `invalid agent_api.config.model.v1` and MUST NOT echo raw model ids.
   - If the provided identifier is syntactically valid but unknown/unavailable to the backend CLI,
     the backend MUST fail as a safe `AgentWrapperError::Backend` translation.
 
@@ -151,7 +153,9 @@ Meaning:
 Before spawn:
 - If the capability id is unsupported, fail per R0 with `AgentWrapperError::UnsupportedCapability`.
 - If the JSON value is not a string, or the trimmed string is empty, or the bound is exceeded, fail
-  with `AgentWrapperError::InvalidRequest`.
+  with `AgentWrapperError::InvalidRequest { message: "invalid agent_api.config.model.v1" }`.
+- InvalidRequest messages for this key MUST use exactly `invalid agent_api.config.model.v1` and
+  MUST NOT echo the raw model id.
 - The backend MUST pass the trimmed value, not the raw untrimmed value, to the underlying CLI
   mapping.
 
@@ -233,7 +237,8 @@ runtime model availability.
 - Land the owner-doc semantics in `docs/specs/universal-agent-api/extensions-spec.md`.
 - Add backend tests proving:
   - unsupported key fails before spawn,
-  - non-string / empty / oversize values fail before spawn,
+  - non-string / empty / oversize values fail before spawn with the exact safe template
+    `invalid agent_api.config.model.v1`,
   - surrounding whitespace is trimmed before validation and argv/builder mapping,
   - supported valid requests emit the expected `--model <id>` argv/builder mapping for Codex
     exec/resume and Claude Code session flows, and
@@ -241,7 +246,13 @@ runtime model availability.
   - Codex fork rejects accepted model-selection inputs before any app-server request with the
     pinned safe backend message, and
   - backend runtime rejection of an accepted model id resolves as `AgentWrapperError::Backend`
-    (with terminal `Error` event emission when a stream is open).
+    (with terminal `Error` event emission when a stream is open), and
+  - post-handle runtime-rejection tests use dedicated fake backend scenarios rather than live model
+    catalogs:
+    - Codex: `fake_codex_stream_exec_scenarios_agent_api` scenario
+      `model_runtime_rejection_after_thread_started`
+    - Claude Code: `fake_claude_stream_json_agent_api` scenario
+      `model_runtime_rejection_after_init`
 
 ## Decision Summary
 

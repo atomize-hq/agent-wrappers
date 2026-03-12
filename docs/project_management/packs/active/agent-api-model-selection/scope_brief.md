@@ -37,7 +37,8 @@ shape, validation posture, capability advertising, and backend mapping so orches
   - Claude Code `--model <trimmed-id>`
 - Error posture:
   - unsupported capability fails per R0 before spawn,
-  - invalid shape/bounds fail as `AgentWrapperError::InvalidRequest`,
+  - invalid shape/bounds fail as `AgentWrapperError::InvalidRequest { message: "invalid agent_api.config.model.v1" }`,
+  - InvalidRequest messages for this key MUST NOT echo the raw model id,
   - runtime backend rejection of a syntactically valid model id fails as safe `AgentWrapperError::Backend`.
 - Regression coverage for validation ordering, trimmed mapping, absence behavior, backend runtime rejection, and
   terminal error-event emission when a stream is open.
@@ -57,7 +58,8 @@ shape, validation posture, capability advertising, and backend mapping so orches
   - R0 allowlist/capability gate occurs before backend-specific parsing,
   - value must be JSON string,
   - trimming occurs before emptiness and length checks,
-  - trimmed value is what reaches backend argv/builder mapping.
+  - trimmed value is what reaches backend argv/builder mapping, and
+  - invalid requests use the single exact safe template `invalid agent_api.config.model.v1`.
 - Backend mapping responsibilities:
   - absent key preserves default backend model behavior,
   - present valid key emits exactly one `--model <trimmed-id>` mapping,
@@ -93,7 +95,8 @@ shape, validation posture, capability advertising, and backend mapping so orches
   message.
 - Invalid requests fail before spawn with stable `InvalidRequest` behavior.
 - Absent requests preserve current backend defaults with no emitted `--model`.
-- Capability publication includes regenerating `docs/specs/universal-agent-api/capability-matrix.md` via
+- Capability publication is owned by SEAM-2: any change that flips built-in advertising for
+  `agent_api.config.model.v1` MUST regenerate `docs/specs/universal-agent-api/capability-matrix.md` via
   `cargo run -p xtask -- capability-matrix` in the same change.
 - Runtime backend rejection stays backend-owned and safe, without introducing raw stderr leakage or fake universal errors.
 
@@ -120,12 +123,28 @@ shape, validation posture, capability advertising, and backend mapping so orches
   - `docs/specs/codex-app-server-jsonrpc-contract.md`
   - `docs/specs/claude-code-session-mapping-contract.md`
 
-## Known unknowns / risks
+## Pinned execution decisions
+
+- **SEAM-1 start condition**: canonical owner-spec text is already pinned. SEAM-1 is complete once the pack and
+  ADR-0020 are synchronized and no unresolved delta remains in related universal specs; downstream seams do not wait
+  on a fresh schema decision.
+- **Normalization locus**: v1 normalization MUST be implemented as one shared helper in
+  `crates/agent_api/src/backend_harness/normalize.rs`. Backend-local mirrored parsers are not permitted for this key.
+- **Capability-matrix handoff**: SEAM-2 owns matrix regeneration in the same change that updates built-in capability
+  advertising. SEAM-5 consumes that artifact for regression assertions, and WS-INT reruns
+  `cargo run -p xtask -- capability-matrix`; a stale diff is merge-blocking.
+- **Runtime-rejection fixtures**:
+  - Codex uses `crates/agent_api/src/bin/fake_codex_stream_exec_scenarios_agent_api.rs` with a dedicated
+    `model_runtime_rejection_after_thread_started` scenario that emits `thread.started` before the terminal failure.
+  - Claude Code uses `crates/agent_api/src/bin/fake_claude_stream_json_agent_api.rs` with a dedicated
+    `model_runtime_rejection_after_init` scenario that emits `system init` before the terminal failure.
+  - Both backend tests MUST assert the same safe message in completion and in the final
+    `AgentWrapperEventKind::Error` event, and MUST prove that raw model ids/stdout/stderr do not leak.
+
+## Risks
 
 - **Runtime rejection string variability**: built-in CLIs may reject unknown or unauthorized model ids with unstable raw
   stderr wording. v1 therefore pins only safe/redacted backend error translation, not a universal user-facing message.
-- **Validation locus**: the repo must choose a stable normalization point so both backends enforce the same trim/bounds
-  semantics without duplicating drift-prone logic.
 - **Advertising timing**: if capability ids are advertised before the mapping is fully wired, callers can observe false
   positives; advertising must land alongside working normalization + mapping.
 - **Codex fork transport gap**: the current app-server fork subset exposes no model field, so fork support depends on

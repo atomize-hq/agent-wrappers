@@ -11,6 +11,12 @@ Note: ADR-0020 is currently **Draft**, but the model-selection semantics are alr
 This pack treats the spec + ADR pair as the implementation target; any contract drift should be resolved in the canonical specs first,
 then reflected here.
 
+SEAM-1 status: the canonical owner-spec semantics are already landed in
+`docs/specs/universal-agent-api/extensions-spec.md`. Remaining SEAM-1 work in this pack is limited to
+ADR-0020 sync, drift verification against related universal specs, and pack updates if a canonical-doc delta is
+opened. SEAM-2 through SEAM-5 may begin once that verification pass records "no unresolved canonical-doc delta";
+they are not waiting on a new model-selection design decision.
+
 - Start here: `scope_brief.md`
 - Seam overview: `seam_map.md`
 - Threading (contracts + dependencies + workstreams): `threading.md`
