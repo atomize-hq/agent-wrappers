@@ -708,7 +708,7 @@ mod tests {
             AgentWrapperMcpAddRequest {
                 name: "  example  ".to_string(),
                 transport: AgentWrapperMcpAddTransport::Url {
-                    url: format!("relative/{secret}"),
+                    url: format!("https:{secret}.example.com"),
                     bearer_token_env_var: None,
                 },
                 context: AgentWrapperMcpCommandContext::default(),

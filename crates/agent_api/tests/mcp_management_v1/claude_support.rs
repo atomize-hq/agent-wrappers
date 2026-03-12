@@ -28,10 +28,32 @@ pub(crate) fn claude_gateway(
     AgentWrapperGateway,
     AgentWrapperKind,
 ) {
+    claude_gateway_with_home(
+        sandbox,
+        sandbox.claude_home().to_path_buf(),
+        allow_mcp_write,
+        env,
+        default_working_dir,
+        default_timeout,
+    )
+}
+
+pub(crate) fn claude_gateway_with_home(
+    sandbox: &McpTestSandbox,
+    claude_home: PathBuf,
+    allow_mcp_write: bool,
+    env: BTreeMap<String, String>,
+    default_working_dir: Option<PathBuf>,
+    default_timeout: Option<Duration>,
+) -> (
+    Arc<ClaudeCodeBackend>,
+    AgentWrapperGateway,
+    AgentWrapperKind,
+) {
     let binary = sandbox.install_fake_claude().expect("install fake claude");
     let backend = Arc::new(ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
         binary: Some(binary),
-        claude_home: Some(sandbox.claude_home().to_path_buf()),
+        claude_home: Some(claude_home),
         default_timeout,
         default_working_dir,
         env,

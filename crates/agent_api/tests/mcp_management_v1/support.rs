@@ -1,7 +1,9 @@
 use std::{
     collections::BTreeMap,
+    ffi::OsString,
     fs, io,
     path::{Path, PathBuf},
+    sync::{Mutex, OnceLock},
 };
 
 use serde_json::Value;
@@ -95,6 +97,40 @@ impl McpTestSandbox {
             count => Err(invalid_data(format!(
                 "expected exactly one invocation record, found {count}"
             ))),
+        }
+    }
+}
+
+pub(crate) fn process_env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+pub(crate) struct EnvGuard {
+    key: &'static str,
+    previous: Option<OsString>,
+}
+
+impl EnvGuard {
+    pub(crate) fn set(key: &'static str, value: impl Into<OsString>) -> Self {
+        let previous = std::env::var_os(key);
+        std::env::set_var(key, value.into());
+        Self { key, previous }
+    }
+
+    pub(crate) fn unset(key: &'static str) -> Self {
+        let previous = std::env::var_os(key);
+        std::env::remove_var(key);
+        Self { key, previous }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        if let Some(value) = self.previous.take() {
+            std::env::set_var(self.key, value);
+        } else {
+            std::env::remove_var(self.key);
         }
     }
 }

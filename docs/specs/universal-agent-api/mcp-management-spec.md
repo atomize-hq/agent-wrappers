@@ -425,6 +425,9 @@ Notes:
   `allow_mcp_write` defaults to `false`, `docs/specs/universal-agent-api/capability-matrix.md` may
   omit `agent_api.tools.mcp.add.v1` and `agent_api.tools.mcp.remove.v1`; runtime truth remains the
   selected backend instance's `AgentWrapperCapabilities.ids`.
+- The committed capability matrix is generated against the repository's canonical built-in Linux
+  target profile (`codex=x86_64-unknown-linux-musl`, `claude_code=linux-x64`) so the artifact is
+  deterministic across developer hosts and CI runners.
 
 ### Built-in backend mappings (pinned)
 

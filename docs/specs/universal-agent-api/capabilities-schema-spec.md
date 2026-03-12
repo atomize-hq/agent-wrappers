@@ -74,9 +74,13 @@ Semantics (pinned):
 
 - The matrix lists only capability ids advertised by at least one built-in backend at generation time (it is a union of
   `AgentWrapperBackend::capabilities().ids` across built-in backends).
+- Generation is evaluated against the repository's canonical built-in target profile, not the host OS running the
+  generator. In v1 that profile is:
+  - `codex` -> `x86_64-unknown-linux-musl`
+  - `claude_code` -> `linux-x64`
 - The matrix is **not** an exhaustive registry of standard `agent_api.*` capability ids.
 - If a standard capability id defined in this spec is absent from the matrix, that means no built-in backend currently
-  advertises it under the generator's default built-in configs (not that the id is invalid or removed).
+  advertises it under the generator's default built-in configs for that canonical target profile (not that the id is invalid or removed).
 - Config-conditional standard capabilities may therefore be absent from the matrix when safe defaults leave them off; for
   example, `agent_api.tools.mcp.add.v1` / `agent_api.tools.mcp.remove.v1` may be absent because built-in backends default
   `allow_mcp_write` to `false`.

@@ -66,11 +66,10 @@ fn is_not_found_signal(text: &str) -> bool {
 }
 
 fn codex_mcp_supported_on_target() -> bool {
-    cfg!(all(
-        target_os = "linux",
-        target_arch = "x86_64",
-        target_env = "musl"
-    ))
+    // The pinned Codex MCP artifact is the Linux x86_64 musl binary, but it is intended to run
+    // on standard Linux hosts regardless of whether the wrapper itself is built against musl or
+    // glibc.
+    cfg!(all(target_os = "linux", target_arch = "x86_64"))
 }
 
 mod backend;

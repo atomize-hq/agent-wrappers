@@ -5,6 +5,7 @@ use std::{
     time::Duration,
 };
 
+use codex::CodexHomeLayout;
 use tokio::{
     io::{AsyncRead, AsyncReadExt},
     process::{Child, Command},
@@ -19,14 +20,10 @@ use crate::{
 
 use super::{
     backend_error, PINNED_CAPTURE_FAILURE, PINNED_MCP_RUNTIME_CONFLICT,
-    PINNED_PREPARE_CLAUDE_HOME_FAILURE, PINNED_SPAWN_FAILURE, PINNED_TIMEOUT_FAILURE,
-    PINNED_WAIT_FAILURE,
+    PINNED_PREPARE_CODEX_HOME_FAILURE, PINNED_SPAWN_FAILURE, PINNED_WAIT_FAILURE,
 };
 
-// Keep the captured bytes separate from final bounded strings so drift classification
-// can evolve without changing the runner entrypoint.
-#[derive(Debug)]
-pub(super) struct CapturedClaudeMcpCommandOutput {
+pub(super) struct CapturedCodexMcpCommandOutput {
     pub(super) status: ExitStatus,
     pub(super) stdout_bytes: Vec<u8>,
     pub(super) stdout_saw_more: bool,
@@ -34,18 +31,18 @@ pub(super) struct CapturedClaudeMcpCommandOutput {
     pub(super) stderr_saw_more: bool,
 }
 
-pub(super) async fn capture_claude_mcp_output(
-    resolved: &super::resolve::ResolvedClaudeMcpCommand,
+pub(super) async fn capture_codex_mcp_output(
+    resolved: &super::resolve::ResolvedCodexMcpCommand,
     argv: &[OsString],
-) -> Result<CapturedClaudeMcpCommandOutput, AgentWrapperError> {
+) -> Result<CapturedCodexMcpCommandOutput, AgentWrapperError> {
     if resolved.timeout == Some(Duration::ZERO) {
-        return Err(backend_error(PINNED_TIMEOUT_FAILURE));
+        return Err(backend_error(super::super::PINNED_TIMEOUT));
     }
 
-    if let Some(layout) = resolved.materialize_claude_home.as_ref() {
-        layout
+    if let Some(codex_home) = resolved.materialize_codex_home.as_ref() {
+        CodexHomeLayout::new(codex_home.clone())
             .materialize(true)
-            .map_err(|_| backend_error(PINNED_PREPARE_CLAUDE_HOME_FAILURE))?;
+            .map_err(|_| backend_error(PINNED_PREPARE_CODEX_HOME_FAILURE))?;
     }
 
     let mut command = Command::new(&resolved.binary_path);
@@ -90,7 +87,7 @@ pub(super) async fn capture_claude_mcp_output(
     let (stdout_bytes, stdout_saw_more) = join_capture_task(stdout_task).await?;
     let (stderr_bytes, stderr_saw_more) = join_capture_task(stderr_task).await?;
 
-    Ok(CapturedClaudeMcpCommandOutput {
+    Ok(CapturedCodexMcpCommandOutput {
         status,
         stdout_bytes,
         stdout_saw_more,
@@ -99,9 +96,9 @@ pub(super) async fn capture_claude_mcp_output(
     })
 }
 
-pub(super) fn finalize_claude_mcp_output(
+pub(super) fn finalize_codex_mcp_output(
     argv: &[OsString],
-    captured: CapturedClaudeMcpCommandOutput,
+    captured: CapturedCodexMcpCommandOutput,
 ) -> Result<AgentWrapperMcpCommandOutput, AgentWrapperError> {
     if !captured.status.success()
         && is_manifest_runtime_conflict(argv, &captured.stdout_bytes, &captured.stderr_bytes)
@@ -148,6 +145,7 @@ pub(super) fn classify_manifest_runtime_conflict_text(argv: &[OsString], text: &
     ]
     .iter()
     .any(|signal| text.contains(signal));
+
     if !unknown_signal {
         return false;
     }
@@ -163,14 +161,18 @@ pub(super) fn classify_manifest_runtime_conflict_text(argv: &[OsString], text: &
         return true;
     }
 
-    manifest_conflict_tokens(argv)
+    let subcommand_conflict = manifest_conflict_tokens(argv)
         .into_iter()
-        .any(|token| text.contains(token))
+        .any(|token| text.contains(token));
+    let json_flag_conflict = text.contains("--json")
+        && (text.contains("flag") || text.contains("option") || text.contains("argument"));
+
+    subcommand_conflict || json_flag_conflict
 }
 
 fn is_add_shape_conflict(argv: &[OsString], text: &str) -> bool {
     matches!(argv.get(1).and_then(|arg| arg.to_str()), Some("add"))
-        && ["--transport", "--env"]
+        && ["--env", "--url", "--bearer-token-env-var"]
             .iter()
             .any(|token| text.contains(token))
 }
@@ -199,7 +201,7 @@ async fn wait_for_exit(
                 Ok(Err(_)) => Err(backend_error(PINNED_WAIT_FAILURE)),
                 Err(_) => {
                     cleanup_child(child).await;
-                    Err(backend_error(PINNED_TIMEOUT_FAILURE))
+                    Err(backend_error(super::super::PINNED_TIMEOUT))
                 }
             }
         }

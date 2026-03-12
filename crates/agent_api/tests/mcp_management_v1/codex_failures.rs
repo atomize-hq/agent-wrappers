@@ -4,12 +4,13 @@ use agent_api::{
     backends::codex::{CodexBackend, CodexBackendConfig},
     mcp::{
         AgentWrapperMcpAddRequest, AgentWrapperMcpAddTransport, AgentWrapperMcpCommandContext,
-        AgentWrapperMcpListRequest, AgentWrapperMcpRemoveRequest,
+        AgentWrapperMcpGetRequest, AgentWrapperMcpListRequest, AgentWrapperMcpRemoveRequest,
     },
     AgentWrapperBackend, AgentWrapperError, AgentWrapperGateway, AgentWrapperKind,
 };
 
 use super::support::McpTestSandbox;
+use super::support::{process_env_lock, EnvGuard};
 
 const FAKE_CODEX_RECORD_PATH_ENV: &str = "FAKE_CODEX_MCP_RECORD_PATH";
 const FAKE_CODEX_RECORD_ENV_KEYS_ENV: &str = "FAKE_CODEX_MCP_RECORD_ENV_KEYS";
@@ -20,6 +21,10 @@ const MCP_OUTPUT_BOUND_BYTES: usize = 65_536;
 const TRUNCATION_SUFFIX: &str = "…(truncated)";
 const TIMEOUT_STDOUT_SENTINEL: &str = "fake_codex_mcp timeout stdout sentinel";
 const TIMEOUT_STDERR_SENTINEL: &str = "fake_codex_mcp timeout stderr sentinel";
+const FAST_EXIT_STDOUT_SENTINEL: &str = "fake_codex_mcp fast-exit stdout sentinel";
+const FAST_EXIT_STDERR_SENTINEL: &str = "fake_codex_mcp fast-exit stderr sentinel";
+const CODEX_BINARY_ENV: &str = "CODEX_BINARY";
+const PATH_ENV: &str = "PATH";
 
 #[tokio::test]
 async fn codex_mcp_nonzero_exit_returns_output_in_ok_result() {
@@ -183,6 +188,62 @@ async fn codex_mcp_zero_timeout_returns_backend_error_without_leaking_partial_ou
         message.contains("timeout"),
         "zero-timeout failures should stay redacted but mention timeout: {message}"
     );
+    assert!(
+        !sandbox.record_path().exists(),
+        "zero-timeout path must fail before spawning the fake codex binary"
+    );
+}
+
+#[tokio::test]
+async fn codex_mcp_zero_timeout_fast_exit_still_returns_timeout_error() {
+    if !codex_mcp_supported() {
+        return;
+    }
+
+    let sandbox = McpTestSandbox::new("codex_mcp_zero_timeout_fast_exit").expect("sandbox");
+    let (_backend, gateway, kind) = codex_gateway(
+        &sandbox,
+        false,
+        codex_config_env(
+            &sandbox,
+            [(
+                FAKE_CODEX_SCENARIO_ENV.to_string(),
+                "fast_exit_with_output".to_string(),
+            )],
+        ),
+        None,
+    );
+
+    let err = gateway
+        .mcp_list(
+            &kind,
+            AgentWrapperMcpListRequest {
+                context: AgentWrapperMcpCommandContext {
+                    timeout: Some(Duration::ZERO),
+                    ..Default::default()
+                },
+            },
+        )
+        .await
+        .expect_err("zero timeout should fail even for fast-exit commands");
+
+    let message = backend_error_message(err);
+    assert!(
+        !message.contains(FAST_EXIT_STDOUT_SENTINEL),
+        "zero-timeout error leaked fast-exit stdout sentinel: {message}"
+    );
+    assert!(
+        !message.contains(FAST_EXIT_STDERR_SENTINEL),
+        "zero-timeout error leaked fast-exit stderr sentinel: {message}"
+    );
+    assert!(
+        message.contains("timeout"),
+        "zero-timeout fast-exit failures should stay redacted but mention timeout: {message}"
+    );
+    assert!(
+        !sandbox.record_path().exists(),
+        "zero-timeout fast-exit path must fail before spawning the fake codex binary"
+    );
 }
 
 #[tokio::test]
@@ -254,6 +315,88 @@ async fn codex_mcp_drift_unknown_subcommand_returns_backend_error_without_mutati
 }
 
 #[tokio::test]
+async fn codex_mcp_drift_unknown_get_subcommand_returns_backend_error_without_mutating_capabilities(
+) {
+    if !codex_mcp_supported() {
+        return;
+    }
+
+    let sandbox = McpTestSandbox::new("codex_mcp_drift_get_subcommand").expect("sandbox");
+    let (backend, gateway, kind) = codex_gateway(
+        &sandbox,
+        false,
+        codex_config_env(
+            &sandbox,
+            [(
+                FAKE_CODEX_SCENARIO_ENV.to_string(),
+                "operation_subcommand_drift".to_string(),
+            )],
+        ),
+        None,
+    );
+    let before = backend.capabilities().ids.clone();
+
+    let err = gateway
+        .mcp_get(
+            &kind,
+            AgentWrapperMcpGetRequest {
+                name: "demo".to_string(),
+                context: AgentWrapperMcpCommandContext::default(),
+            },
+        )
+        .await
+        .expect_err("per-operation drift must fail closed");
+
+    let message = backend_error_message(err);
+    assert!(
+        !message.contains("unknown subcommand 'get'"),
+        "drift error leaked subprocess stderr: {message}"
+    );
+    assert_eq!(backend.capabilities().ids, before);
+}
+
+#[tokio::test]
+async fn codex_mcp_drift_unknown_remove_subcommand_returns_backend_error_without_mutating_capabilities(
+) {
+    if !codex_mcp_supported() {
+        return;
+    }
+
+    let sandbox = McpTestSandbox::new("codex_mcp_drift_remove_subcommand").expect("sandbox");
+    let (backend, gateway, kind) = codex_gateway(
+        &sandbox,
+        true,
+        codex_config_env(
+            &sandbox,
+            [(
+                FAKE_CODEX_SCENARIO_ENV.to_string(),
+                "operation_subcommand_drift".to_string(),
+            )],
+        ),
+        None,
+    );
+    let before = backend.capabilities().ids.clone();
+
+    let err = gateway
+        .mcp_remove(
+            &kind,
+            AgentWrapperMcpRemoveRequest {
+                name: "demo".to_string(),
+                context: AgentWrapperMcpCommandContext::default(),
+            },
+        )
+        .await
+        .expect_err("per-operation drift must fail closed");
+
+    let message = backend_error_message(err);
+    assert!(
+        !message.contains("unknown subcommand 'remove'"),
+        "drift error leaked subprocess stderr: {message}"
+    );
+    assert_eq!(backend.capabilities().ids, before);
+}
+
+#[tokio::test]
 async fn codex_mcp_add_legacy_usage_drift_returns_backend_error_without_mutating_capabilities() {
     if !codex_mcp_supported() {
         return;
@@ -265,7 +408,10 @@ async fn codex_mcp_add_legacy_usage_drift_returns_backend_error_without_mutating
         true,
         codex_config_env(
             &sandbox,
-            [(FAKE_CODEX_SCENARIO_ENV.to_string(), "legacy_add_drift".to_string())],
+            [(
+                FAKE_CODEX_SCENARIO_ENV.to_string(),
+                "legacy_add_drift".to_string(),
+            )],
         ),
         None,
     );
@@ -300,6 +446,54 @@ async fn codex_mcp_add_legacy_usage_drift_returns_backend_error_without_mutating
 }
 
 #[tokio::test]
+async fn codex_mcp_add_url_flag_drift_returns_backend_error_without_mutating_capabilities() {
+    if !codex_mcp_supported() {
+        return;
+    }
+
+    let sandbox = McpTestSandbox::new("codex_mcp_add_url_flag_drift").expect("sandbox");
+    let (backend, gateway, kind) = codex_gateway(
+        &sandbox,
+        true,
+        codex_config_env(
+            &sandbox,
+            [(
+                FAKE_CODEX_SCENARIO_ENV.to_string(),
+                "url_add_drift".to_string(),
+            )],
+        ),
+        None,
+    );
+    let before = backend.capabilities().ids.clone();
+
+    let err = gateway
+        .mcp_add(
+            &kind,
+            AgentWrapperMcpAddRequest {
+                name: "demo".to_string(),
+                transport: AgentWrapperMcpAddTransport::Url {
+                    url: "https://example.test/mcp".to_string(),
+                    bearer_token_env_var: Some("MY_TOKEN".to_string()),
+                },
+                context: AgentWrapperMcpCommandContext::default(),
+            },
+        )
+        .await
+        .expect_err("url add flag drift must fail closed");
+
+    let message = backend_error_message(err);
+    assert!(
+        !message.contains("unexpected argument '--url'"),
+        "drift error leaked subprocess stderr: {message}"
+    );
+    assert!(
+        !message.contains("unexpected argument '--bearer-token-env-var'"),
+        "drift error leaked subprocess stderr: {message}"
+    );
+    assert_eq!(backend.capabilities().ids, before);
+}
+
+#[tokio::test]
 async fn codex_mcp_missing_binary_returns_backend_error_without_writing_record() {
     if !codex_mcp_supported() {
         return;
@@ -329,6 +523,46 @@ async fn codex_mcp_missing_binary_returns_backend_error_without_writing_record()
     assert!(
         !sandbox.record_path().exists(),
         "spawn failure must not create an invocation record"
+    );
+}
+
+#[tokio::test]
+async fn codex_mcp_unresolved_default_binary_returns_backend_error_without_writing_record() {
+    if !codex_mcp_supported() {
+        return;
+    }
+
+    let _env_lock = process_env_lock().lock().expect("lock process env");
+    let sandbox = McpTestSandbox::new("codex_mcp_unresolved_default_binary").expect("sandbox");
+    let empty_path_dir = sandbox.root().join("empty-path");
+    std::fs::create_dir_all(&empty_path_dir).expect("create empty PATH dir");
+    let _ambient_path = EnvGuard::set(PATH_ENV, empty_path_dir.as_os_str().to_os_string());
+    let _codex_binary = EnvGuard::unset(CODEX_BINARY_ENV);
+
+    let backend = Arc::new(CodexBackend::new(CodexBackendConfig {
+        binary: None,
+        codex_home: Some(sandbox.codex_home().to_path_buf()),
+        env: codex_config_env(&sandbox, std::iter::empty()),
+        ..Default::default()
+    }));
+
+    let kind = backend.kind();
+    let mut gateway = AgentWrapperGateway::new();
+    gateway.register(backend).expect("register codex backend");
+
+    let err = gateway
+        .mcp_list(&kind, AgentWrapperMcpListRequest::default())
+        .await
+        .expect_err("unresolved default binary must fail with Backend");
+
+    let message = backend_error_message(err);
+    assert!(
+        message.contains("spawn"),
+        "spawn failures should mention spawn in the redacted backend error: {message}"
+    );
+    assert!(
+        !sandbox.record_path().exists(),
+        "pre-spawn resolution failure must not create an invocation record"
     );
 }
 
@@ -385,11 +619,7 @@ fn backend_error_message(err: AgentWrapperError) -> String {
 }
 
 fn codex_mcp_supported() -> bool {
-    cfg!(all(
-        target_os = "linux",
-        target_arch = "x86_64",
-        target_env = "musl"
-    ))
+    cfg!(all(target_os = "linux", target_arch = "x86_64"))
 }
 
 fn platform_binary_name(base: &str) -> String {

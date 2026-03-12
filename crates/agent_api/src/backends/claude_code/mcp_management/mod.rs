@@ -11,18 +11,11 @@ mod argv;
 mod resolve;
 mod runner;
 
-#[cfg(test)]
-use resolve::{resolve_claude_binary_path, resolve_claude_mcp_command_with_env};
-#[cfg(test)]
-use runner::{
-    capture_bounded, classify_manifest_runtime_conflict_text, effective_timeout_for_wait,
-    finalize_claude_mcp_output, CapturedClaudeMcpCommandOutput,
-};
-
 const CLAUDE_BINARY_ENV: &str = "CLAUDE_BINARY";
 const CLAUDE_HOME_ENV: &str = "CLAUDE_HOME";
 const DISABLE_AUTOUPDATER_ENV: &str = "DISABLE_AUTOUPDATER";
 const HOME_ENV: &str = "HOME";
+const PATH_ENV: &str = "PATH";
 const XDG_CACHE_HOME_ENV: &str = "XDG_CACHE_HOME";
 const XDG_CONFIG_HOME_ENV: &str = "XDG_CONFIG_HOME";
 const XDG_DATA_HOME_ENV: &str = "XDG_DATA_HOME";
@@ -71,7 +64,7 @@ pub(super) async fn run_claude_mcp(
     argv: Vec<OsString>,
     context: AgentWrapperMcpCommandContext,
 ) -> Result<AgentWrapperMcpCommandOutput, AgentWrapperError> {
-    let resolved = resolve::resolve_claude_mcp_command(&config, &context);
+    let resolved = resolve::resolve_claude_mcp_command(&config, &context)?;
     let captured = runner::capture_claude_mcp_output(&resolved, &argv).await?;
     runner::finalize_claude_mcp_output(&argv, captured)
 }

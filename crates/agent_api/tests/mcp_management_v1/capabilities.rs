@@ -260,11 +260,7 @@ mod codex {
     }
 
     fn codex_mcp_supported() -> bool {
-        cfg!(all(
-            target_os = "linux",
-            target_arch = "x86_64",
-            target_env = "musl"
-        ))
+        cfg!(all(target_os = "linux", target_arch = "x86_64"))
     }
 
     fn assert_unsupported_capability(

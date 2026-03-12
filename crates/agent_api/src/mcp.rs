@@ -172,9 +172,17 @@ fn normalize_url(url: String) -> Result<String, AgentWrapperError> {
 
     let parsed = url::Url::parse(url).map_err(|_| invalid_request(ERR_MCP_ADD_URL_INVALID))?;
     match parsed.scheme() {
-        "http" | "https" => Ok(url.to_string()),
+        "http" | "https" if has_http_authority_separator(url) => Ok(url.to_string()),
         _ => Err(invalid_request(ERR_MCP_ADD_URL_INVALID)),
     }
+}
+
+fn has_http_authority_separator(url: &str) -> bool {
+    url.get(..7)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("http://"))
+        || url
+            .get(..8)
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case("https://"))
 }
 
 fn normalize_bearer_token_env_var(
@@ -371,6 +379,9 @@ mod tests {
             format!("relative/{secret}"),
             format!("ftp://{secret}.example.com"),
             format!("http:// space/{secret}"),
+            format!("https:{secret}.example.com"),
+            format!("http:{secret}"),
+            format!("https:/{secret}.example.com"),
         ] {
             assert_invalid_request(
                 normalize_add_transport(AgentWrapperMcpAddTransport::Url {

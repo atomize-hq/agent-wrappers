@@ -98,31 +98,37 @@ async fn direct_codex_mcp_add_rejects_whitespace_stdio_command_without_spawning(
 }
 
 #[tokio::test]
-async fn direct_codex_mcp_add_rejects_relative_url_without_spawning() {
+async fn direct_codex_mcp_add_rejects_invalid_url_without_spawning() {
     if !codex_mcp_supported() {
         return;
     }
 
-    let sandbox = McpTestSandbox::new("direct_codex_mcp_add_invalid_url").expect("sandbox");
-    let backend = codex_backend(&sandbox, true);
+    for (label, raw) in [
+        ("relative", "/relative"),
+        ("missing_authority", "https:example.test/mcp"),
+    ] {
+        let sandbox = McpTestSandbox::new(&format!("direct_codex_mcp_add_invalid_url_{label}"))
+            .expect("sandbox");
+        let backend = codex_backend(&sandbox, true);
 
-    let err = backend
-        .mcp_add(AgentWrapperMcpAddRequest {
-            name: "demo".to_string(),
-            transport: AgentWrapperMcpAddTransport::Url {
-                url: "/relative".to_string(),
-                bearer_token_env_var: None,
-            },
-            context: AgentWrapperMcpCommandContext::default(),
-        })
-        .await
-        .expect_err("relative URLs must fail closed");
+        let err = backend
+            .mcp_add(AgentWrapperMcpAddRequest {
+                name: "demo".to_string(),
+                transport: AgentWrapperMcpAddTransport::Url {
+                    url: raw.to_string(),
+                    bearer_token_env_var: None,
+                },
+                context: AgentWrapperMcpCommandContext::default(),
+            })
+            .await
+            .expect_err("invalid URLs must fail closed");
 
-    assert_invalid_request(err, ERR_MCP_ADD_URL_INVALID, &["/relative"]);
-    assert!(
-        !sandbox.record_path().exists(),
-        "invalid direct mcp_add url request should not spawn the fake codex binary"
-    );
+        assert_invalid_request(err, ERR_MCP_ADD_URL_INVALID, &[raw]);
+        assert!(
+            !sandbox.record_path().exists(),
+            "invalid direct mcp_add url request should not spawn the fake codex binary"
+        );
+    }
 }
 
 #[tokio::test]
@@ -193,11 +199,7 @@ fn codex_config_env(sandbox: &McpTestSandbox) -> BTreeMap<String, String> {
 }
 
 fn codex_mcp_supported() -> bool {
-    cfg!(all(
-        target_os = "linux",
-        target_arch = "x86_64",
-        target_env = "musl"
-    ))
+    cfg!(all(target_os = "linux", target_arch = "x86_64"))
 }
 
 fn assert_invalid_request(

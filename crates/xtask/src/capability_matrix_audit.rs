@@ -18,7 +18,7 @@ const AGENT_API_ORTHOGONALITY_ALLOWLIST: [&str; 8] = [
 pub struct Args {}
 
 pub fn run(_args: Args) -> Result<(), String> {
-    let backends = crate::capability_matrix::collect_builtin_backend_capabilities();
+    let backends = crate::capability_matrix::collect_builtin_backend_capabilities()?;
     audit(&backends)
 }
 

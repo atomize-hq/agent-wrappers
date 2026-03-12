@@ -16,11 +16,14 @@ const CODEX_HOME_ENV: &str = "CODEX_HOME";
 const SENTINEL_DIR: &str = ".agent_api_fake_mcp";
 const OVERSIZED_OUTPUT_BYTES: usize = 65_536 + 128;
 const SLEEP_FOR_TIMEOUT_MS: u64 = 500;
+const FAST_EXIT_STDOUT_SENTINEL: &str = "fake_codex_mcp fast-exit stdout sentinel\n";
+const FAST_EXIT_STDERR_SENTINEL: &str = "fake_codex_mcp fast-exit stderr sentinel\n";
 
 // Test-only fake Codex MCP binary contract:
 // - Required env: FAKE_CODEX_MCP_RECORD_PATH
 // - Optional env: FAKE_CODEX_MCP_RECORD_ENV_KEYS (comma-separated), FAKE_CODEX_MCP_SCENARIO
-// - Scenarios: ok, oversized_output, nonzero_exit, sleep_for_timeout, drift, legacy_add_drift
+// - Scenarios: ok, oversized_output, nonzero_exit, sleep_for_timeout, fast_exit_with_output,
+//   drift, operation_subcommand_drift, legacy_add_drift, url_add_drift
 
 fn main() -> io::Result<()> {
     let record_path = match required_path_env(RECORD_PATH_ENV) {
@@ -65,6 +68,17 @@ fn main() -> io::Result<()> {
             thread::sleep(Duration::from_millis(SLEEP_FOR_TIMEOUT_MS));
             Ok(())
         }
+        "fast_exit_with_output" => {
+            write_payload(
+                &mut io::stdout().lock(),
+                FAST_EXIT_STDOUT_SENTINEL.as_bytes(),
+            )?;
+            write_payload(
+                &mut io::stderr().lock(),
+                FAST_EXIT_STDERR_SENTINEL.as_bytes(),
+            )?;
+            Ok(())
+        }
         "drift" => {
             let message = if args.iter().any(|arg| arg == "--json") {
                 "error: unexpected argument '--json' found\n"
@@ -74,9 +88,24 @@ fn main() -> io::Result<()> {
             write_payload(&mut io::stderr().lock(), message.as_bytes())?;
             std::process::exit(2);
         }
+        "operation_subcommand_drift" => {
+            let subcommand = invocation_subcommand(&args).unwrap_or("mcp");
+            let message = format!("error: unknown subcommand '{subcommand}'\n");
+            write_payload(&mut io::stderr().lock(), message.as_bytes())?;
+            std::process::exit(2);
+        }
         "legacy_add_drift" => {
             let message =
                 "error: unexpected argument '--env' found\n\nusage: codex mcp add <name> --url <url>\n";
+            write_payload(&mut io::stderr().lock(), message.as_bytes())?;
+            std::process::exit(2);
+        }
+        "url_add_drift" => {
+            let message = if args.iter().any(|arg| arg == "--bearer-token-env-var") {
+                "error: unexpected argument '--bearer-token-env-var' found\n"
+            } else {
+                "error: unexpected argument '--url' found\n"
+            };
             write_payload(&mut io::stderr().lock(), message.as_bytes())?;
             std::process::exit(2);
         }
@@ -171,8 +200,15 @@ fn invocation_subcommand(args: &[String]) -> Option<&str> {
 fn scenario_name() -> String {
     match env::var(SCENARIO_ENV) {
         Ok(value) => match value.as_str() {
-            "ok" | "oversized_output" | "nonzero_exit" | "sleep_for_timeout" | "drift"
-            | "legacy_add_drift" => value,
+            "ok"
+            | "oversized_output"
+            | "nonzero_exit"
+            | "sleep_for_timeout"
+            | "fast_exit_with_output"
+            | "drift"
+            | "operation_subcommand_drift"
+            | "legacy_add_drift"
+            | "url_add_drift" => value,
             _ => "ok".to_string(),
         },
         Err(_) => "ok".to_string(),

@@ -22,11 +22,14 @@ const OVERSIZED_OUTPUT_BYTES: usize = 65_536 + 128;
 const SLEEP_FOR_TIMEOUT_MS: u64 = 1_500;
 const TIMEOUT_STDOUT_SENTINEL: &str = "fake_claude_mcp timeout stdout sentinel\n";
 const TIMEOUT_STDERR_SENTINEL: &str = "fake_claude_mcp timeout stderr sentinel\n";
+const FAST_EXIT_STDOUT_SENTINEL: &str = "fake_claude_mcp fast-exit stdout sentinel\n";
+const FAST_EXIT_STDERR_SENTINEL: &str = "fake_claude_mcp fast-exit stderr sentinel\n";
 
 // Test-only fake Claude MCP binary contract:
 // - Required env: FAKE_CLAUDE_MCP_RECORD_PATH
 // - Optional env: FAKE_CLAUDE_MCP_RECORD_ENV_KEYS (comma-separated), FAKE_CLAUDE_MCP_SCENARIO
-// - Scenarios: ok, oversized_output, nonzero_exit, sleep_for_timeout, drift, add_flag_drift
+// - Scenarios: ok, oversized_output, nonzero_exit, sleep_for_timeout, fast_exit_with_output,
+//   drift, add_flag_drift
 
 fn main() -> io::Result<()> {
     let record_path = match required_path_env(RECORD_PATH_ENV) {
@@ -69,6 +72,17 @@ fn main() -> io::Result<()> {
             write_payload(&mut io::stdout().lock(), TIMEOUT_STDOUT_SENTINEL.as_bytes())?;
             write_payload(&mut io::stderr().lock(), TIMEOUT_STDERR_SENTINEL.as_bytes())?;
             thread::sleep(Duration::from_millis(SLEEP_FOR_TIMEOUT_MS));
+            Ok(())
+        }
+        "fast_exit_with_output" => {
+            write_payload(
+                &mut io::stdout().lock(),
+                FAST_EXIT_STDOUT_SENTINEL.as_bytes(),
+            )?;
+            write_payload(
+                &mut io::stderr().lock(),
+                FAST_EXIT_STDERR_SENTINEL.as_bytes(),
+            )?;
             Ok(())
         }
         "drift" => {
@@ -187,7 +201,12 @@ fn invocation_subcommand(args: &[String]) -> Option<&str> {
 fn scenario_name() -> String {
     match env::var(SCENARIO_ENV) {
         Ok(value) => match value.as_str() {
-            "ok" | "oversized_output" | "nonzero_exit" | "sleep_for_timeout" | "drift"
+            "ok"
+            | "oversized_output"
+            | "nonzero_exit"
+            | "sleep_for_timeout"
+            | "fast_exit_with_output"
+            | "drift"
             | "add_flag_drift" => value,
             _ => "ok".to_string(),
         },
