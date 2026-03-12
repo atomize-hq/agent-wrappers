@@ -1,0 +1,55 @@
+# SEAM-2 — Backend advertising + normalization hook
+
+- **Name**: Backend advertising + normalization hook
+- **Type**: integration
+- **Goal / user value**: Ensure both built-in backends expose the capability consistently and consume one effective
+  trimmed model id contract instead of duplicating drift-prone raw extension parsing.
+- **Scope**
+  - In:
+    - add `agent_api.config.model.v1` to built-in backend capability sets once deterministic support exists
+    - choose the normalization locus for extracting the effective trimmed model id before spawn
+    - keep R0 gating ahead of model parsing/validation
+    - make the normalized result available to backend mapping seams
+  - Out:
+    - actual Codex/Claude argv insertion details
+    - backend-specific runtime rejection translation
+- **Primary interfaces (contracts)**
+  - Inputs:
+    - canonical key semantics from SEAM-1
+    - backend capability sets in `crates/agent_api/src/backends/{codex,claude_code}/backend.rs`
+    - backend harness / request mapping code that currently reads `request.extensions`
+  - Outputs:
+    - deterministic built-in advertising of `agent_api.config.model.v1`
+    - shared or mirrored parser returning the effective trimmed model id (or absence / InvalidRequest)
+- **Key invariants / rules**:
+  - unsupported key still fails as `UnsupportedCapability` before parser logic runs
+  - normalization is trim-first and uses the same bounds on both backends
+  - absence is represented explicitly so downstream mapping can omit `--model`
+  - normalization must be cheap/local and require no remote lookup
+- **Dependencies**
+  - Blocks:
+    - SEAM-3
+    - SEAM-4
+    - SEAM-5
+  - Blocked by:
+    - SEAM-1
+- **Touch surface**:
+  - `crates/agent_api/src/backends/codex/backend.rs`
+  - `crates/agent_api/src/backends/claude_code/backend.rs`
+  - `crates/agent_api/src/backends/codex/harness.rs`
+  - `crates/agent_api/src/backends/claude_code/harness.rs`
+  - `crates/agent_api/src/backend_harness/normalize.rs`
+  - any new shared helper under `crates/agent_api/src/backends/` if extracted
+- **Verification**:
+  - both built-in capability sets advertise the key once implementation is present
+  - R0 ordering tests prove unsupported key fails before model parsing
+  - parser tests prove non-string / empty / oversize cases fail deterministically
+  - valid trimmed values flow to mapping seams without exposing raw untrimmed values
+- **Risks / unknowns**
+  - Risk:
+    - duplicated parser logic across backends can drift on whitespace, byte-counting, or error messages
+  - De-risk plan:
+    - prefer one shared helper or tightly mirrored test suite covering both backends through the same cases
+- **Rollout / safety**:
+  - land advertising only alongside working normalization
+  - if a shared helper is introduced, keep it backend-neutral and limited to extension parsing

@@ -1,0 +1,55 @@
+# SEAM-1 — Core extension key contract
+
+- **Name**: Core extension key contract
+- **Type**: integration
+- **Goal / user value**: Pin one stable universal request contract for model selection so callers can rely on a single
+  key without wrapper-defined model registries or backend-specific branching.
+- **Scope**
+  - In:
+    - normative definition of `agent_api.config.model.v1`
+    - trim-before-validate semantics
+    - absence semantics
+    - boundary between pre-spawn validation and backend-owned runtime rejection
+    - safe/redacted runtime error posture and terminal event requirement
+  - Out:
+    - implementation details of specific backend argv builders
+    - any universal model catalog or alias scheme
+    - standardizing `--fallback-model` or other secondary knobs
+- **Primary interfaces (contracts)**
+  - Inputs:
+    - `AgentWrapperRunRequest.extensions["agent_api.config.model.v1"]`
+    - canonical spec docs under `docs/specs/universal-agent-api/`
+  - Outputs:
+    - pinned schema and semantics in `docs/specs/universal-agent-api/extensions-spec.md`
+    - clarified error/run-lifecycle language in related universal specs if needed
+- **Key invariants / rules**:
+  - R0 capability gating runs before shape validation.
+  - Effective value is the trimmed string.
+  - Trimmed UTF-8 byte length is `1..=128`.
+  - Absence preserves backend default behavior.
+  - Runtime “unknown/unavailable/unauthorized model” outcomes remain backend-owned errors.
+- **Dependencies**
+  - Blocks:
+    - SEAM-2
+    - SEAM-3
+    - SEAM-4
+    - SEAM-5
+  - Blocked by:
+    - none
+- **Touch surface**:
+  - `docs/specs/universal-agent-api/extensions-spec.md`
+  - `docs/specs/universal-agent-api/contract.md`
+  - `docs/specs/universal-agent-api/run-protocol-spec.md`
+  - `docs/adr/0020-universal-agent-api-model-selection.md`
+- **Verification**:
+  - spec text exactly matches ADR intent on schema, bounds, absence semantics, and runtime rejection posture
+  - no contradictory language remains in related universal specs
+  - downstream implementation seams can reference a single canonical contract registry
+- **Risks / unknowns**
+  - Risk:
+    - drift between ADR rationale and owner-spec normative wording
+  - De-risk plan:
+    - doc-first reconciliation pass before backend code changes; if conflicts surface, resolve in the owner spec and update the ADR/body hash together
+- **Rollout / safety**:
+  - land contract text before enabling backend advertising
+  - avoid advertising or testing against semantics that are not yet pinned

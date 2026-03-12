@@ -1,0 +1,55 @@
+# SEAM-5 — Tests
+
+- **Name**: Tests
+- **Type**: risk
+- **Goal / user value**: Lock the universal model-selection behavior in place so future backend or spec churn cannot
+  silently regress validation ordering, trimmed mapping, or backend-error safety.
+- **Scope**
+  - In:
+    - R0 unsupported-capability ordering tests
+    - schema/bounds validation tests
+    - trim-before-map tests
+    - absence/no-argv tests
+    - Codex and Claude backend mapping tests
+    - runtime rejection and terminal error-event tests
+  - Out:
+    - end-to-end upstream CLI compatibility tests against live model catalogs
+    - speculative tests for future universal keys such as fallback-model
+- **Primary interfaces (contracts)**
+  - Inputs:
+    - SEAM-1 through SEAM-4 contracts
+    - backend harness normalize/runtime test utilities
+  - Outputs:
+    - regression suite covering the pinned v1 behavior
+    - stable failure cases for unsupported, invalid, and runtime-rejected model ids
+- **Key invariants / rules**:
+  - unsupported key must fail before `InvalidRequest`
+  - trimming must happen before emptiness and byte-length validation
+  - absence must preserve backend defaults
+  - runtime rejection messages stay safe/redacted
+  - stream-open failure path emits exactly one terminal `Error` event
+- **Dependencies**
+  - Blocks:
+    - none
+  - Blocked by:
+    - SEAM-1
+    - SEAM-2
+    - SEAM-3
+    - SEAM-4
+- **Touch surface**:
+  - `crates/agent_api/src/backend_harness/normalize/tests.rs`
+  - `crates/agent_api/src/backends/codex/tests/**`
+  - `crates/agent_api/src/backends/claude_code/tests/**`
+  - any shared runtime/error translation tests under `crates/agent_api/src/backend_harness/runtime/tests/**`
+- **Verification**:
+  - targeted `cargo test` runs cover all new cases
+  - `make test` passes for the workspace
+  - no existing extension-key tests regress in ordering or error type
+- **Risks / unknowns**
+  - Risk:
+    - tests only cover argv construction and miss post-stream runtime rejection behavior
+  - De-risk plan:
+    - add both pre-spawn validation tests and post-handle/runtime failure tests using existing harness helpers
+- **Rollout / safety**:
+  - treat test coverage as merge-blocking for capability advertising
+  - add focused cases before broad refactors so failures localize to one seam
