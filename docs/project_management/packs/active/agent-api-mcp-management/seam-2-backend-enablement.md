@@ -47,7 +47,9 @@
 This table is **derived guidance** for implementation and tests.
 
 Canonical source of truth (normative once approved):
+- `docs/specs/universal-agent-api/contract.md` → “MCP management write enablement (v1, normative)”
 - `docs/specs/universal-agent-api/mcp-management-spec.md` → “Built-in backend behavior” → “Default capability advertising posture”
+- `docs/specs/universal-agent-api/capabilities-schema-spec.md` → `agent_api.tools.mcp.{add,remove}.v1`
 
 Legend:
 - ✅ = advertised by default (when the upstream CLI subcommand is available on this target)
@@ -63,6 +65,12 @@ Notes:
   this target, the backend advertises the capability by default.
 - Write operations (`add/remove`) are *always* gated behind explicit backend config opt-in (see next section), even when
   the upstream CLI supports the subcommand.
+- The generated capability matrix is built from default built-in backend configs. Because
+  `allow_mcp_write` defaults to `false`, `docs/specs/universal-agent-api/capability-matrix.md` may
+  omit `agent_api.tools.mcp.add.v1` / `agent_api.tools.mcp.remove.v1`; runtime truth is the
+  selected backend instance's `capabilities().ids`.
+- `allow_mcp_write` governs only non-run MCP management config mutation. It does not change what an
+  MCP server can do during a normal run.
 
 ## Pinned backend config knobs (host-controlled)
 
@@ -71,6 +79,7 @@ Canonical host-facing config surface: `docs/specs/universal-agent-api/contract.m
 - Write enablement (v1):
   - `agent_api::backends::codex::CodexBackendConfig.allow_mcp_write: bool` (default: `false`)
   - `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write: bool` (default: `false`)
+  - This is the approved built-in write-enable mechanism in the canonical v1 contract.
   - When `false`, built-in backends MUST NOT advertise:
     - `agent_api.tools.mcp.add.v1`
     - `agent_api.tools.mcp.remove.v1`

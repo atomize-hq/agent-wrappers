@@ -1,5 +1,4 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
     future::Future,
     path::PathBuf,
     pin::Pin,
@@ -11,109 +10,29 @@ use std::{
 use codex::{CodexError, ExecStreamError, ThreadEvent};
 use futures_util::{stream, StreamExt};
 
-use super::session_selectors::{
-    parse_session_resume_v1, validate_resume_fork_mutual_exclusion, SessionSelectorV1,
-    EXT_SESSION_FORK_V1, EXT_SESSION_RESUME_V1,
+use super::{
+    mapping::{error_event, map_thread_event, status_event},
+    validate_and_extract_exec_policy, CodexBackendConfig, CAP_SESSION_HANDLE_V1,
+    PINNED_EXTERNAL_SANDBOX_WARNING, PINNED_NO_SESSION_FOUND, PINNED_SESSION_NOT_FOUND,
+    PINNED_TIMEOUT, SESSION_HANDLE_ID_BOUND_BYTES, SESSION_HANDLE_OVERSIZE_WARNING_MARKER,
+    SUPPORTED_EXTENSION_KEYS_DEFAULT, SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN,
 };
-
 use crate::{
     backend_harness::{
-        BackendDefaults, BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn,
+        BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn, DynBackendEventStream,
         NormalizedRequest,
     },
-    AgentWrapperBackend, AgentWrapperCapabilities, AgentWrapperCompletion, AgentWrapperError,
-    AgentWrapperEvent, AgentWrapperEventKind, AgentWrapperKind, AgentWrapperRunControl,
-    AgentWrapperRunHandle, AgentWrapperRunRequest,
+    AgentWrapperCompletion, AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind,
+    AgentWrapperKind, AgentWrapperRunRequest,
 };
 
-impl super::termination::TerminationHandle for codex::ExecTerminationHandle {
-    fn request_termination(&self) {
-        codex::ExecTerminationHandle::request_termination(self);
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct CodexBackendConfig {
-    pub binary: Option<PathBuf>,
-    pub codex_home: Option<PathBuf>,
-    pub default_timeout: Option<Duration>,
-    pub default_working_dir: Option<PathBuf>,
-    pub env: BTreeMap<String, String>,
-    pub allow_external_sandbox_exec: bool,
-}
-
-pub struct CodexBackend {
-    config: CodexBackendConfig,
-}
-
-impl CodexBackend {
-    pub fn new(config: CodexBackendConfig) -> Self {
-        Self { config }
-    }
-}
-
-const PINNED_APPROVAL_REQUIRED: &str = "approval required";
-const PINNED_TIMEOUT: &str = "codex backend error: timeout (details redacted when unsafe)";
-const PINNED_NO_SESSION_FOUND: &str = "no session found";
-const PINNED_SESSION_NOT_FOUND: &str = "session not found";
-const PINNED_EXTERNAL_SANDBOX_WARNING: &str =
-    "DANGEROUS: external sandbox exec policy enabled (agent_api.exec.external_sandbox.v1=true)";
-const PINNED_EXTERNAL_SANDBOX_FLAG_UNSUPPORTED: &str =
-    "codex backend error: installed codex does not support --dangerously-bypass-approvals-and-sandbox (details redacted)";
-
-fn pinned_selection_failure_message(selector: &SessionSelectorV1) -> &'static str {
-    match selector {
-        SessionSelectorV1::Last => PINNED_NO_SESSION_FOUND,
-        SessionSelectorV1::Id { .. } => PINNED_SESSION_NOT_FOUND,
-    }
-}
-
-fn is_not_found_signal(text: &str) -> bool {
-    let text = text.to_ascii_lowercase();
-
-    (text.contains("not found") && (text.contains("session") || text.contains("thread")))
-        || text.contains("no session")
-        || text.contains("no sessions")
-        || text.contains("unknown session")
-        || text.contains("no thread")
-        || text.contains("no threads")
-        || text.contains("unknown thread")
-}
-
-const CAP_TOOLS_STRUCTURED_V1: &str = "agent_api.tools.structured.v1";
-const CAP_TOOLS_RESULTS_V1: &str = "agent_api.tools.results.v1";
-const CAP_ARTIFACTS_FINAL_TEXT_V1: &str = "agent_api.artifacts.final_text.v1";
-const CAP_SESSION_HANDLE_V1: &str = "agent_api.session.handle.v1";
-
-const TOOLS_FACET_SCHEMA: &str = "agent_api.tools.structured.v1";
-
-const SESSION_HANDLE_ID_BOUND_BYTES: usize = 1024;
-const SESSION_HANDLE_OVERSIZE_WARNING_MARKER: &str = "session handle id oversize";
-
-#[path = "codex/mapping.rs"]
-mod mapping;
-
-#[path = "codex/exec.rs"]
-mod exec;
-
-#[path = "codex/fork.rs"]
-mod fork;
-
-#[path = "codex/policy.rs"]
-mod policy;
-
-use policy::{
-    validate_and_extract_exec_policy, CodexApprovalPolicy, CodexExecPolicy, CodexSandboxMode,
-    EXT_CODEX_APPROVAL_POLICY, EXT_CODEX_SANDBOX_MODE, EXT_EXTERNAL_SANDBOX_V1,
-    EXT_NON_INTERACTIVE, SUPPORTED_EXTENSION_KEYS_DEFAULT,
-    SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN,
+use super::super::session_selectors::{
+    parse_session_resume_v1, validate_resume_fork_mutual_exclusion, EXT_SESSION_RESUME_V1,
 };
 
-use mapping::{error_event, map_thread_event};
-
-enum CodexTerminationHandle {
+pub(super) enum CodexTerminationHandle {
     Exec(codex::ExecTerminationHandle),
-    AppServerTurn(fork::AppServerTurnCancelHandle),
+    AppServerTurn(super::fork::AppServerTurnCancelHandle),
 }
 
 impl std::fmt::Debug for CodexTerminationHandle {
@@ -127,17 +46,78 @@ impl std::fmt::Debug for CodexTerminationHandle {
     }
 }
 
-impl super::termination::TerminationHandle for CodexTerminationHandle {
+impl super::super::termination::TerminationHandle for CodexTerminationHandle {
     fn request_termination(&self) {
         match self {
             CodexTerminationHandle::Exec(handle) => {
                 codex::ExecTerminationHandle::request_termination(handle);
             }
             CodexTerminationHandle::AppServerTurn(handle) => {
-                super::termination::TerminationHandle::request_termination(handle);
+                super::super::termination::TerminationHandle::request_termination(handle);
             }
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub(super) struct CodexHarnessAdapter {
+    config: CodexBackendConfig,
+    run_start_cwd: Option<PathBuf>,
+    termination: Option<Arc<super::super::termination::TerminationState<CodexTerminationHandle>>>,
+    handle_state: Arc<Mutex<CodexHandleFacetState>>,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct CodexHandleFacetState {
+    pub(super) thread_id: Option<String>,
+    pub(super) handle_facet_emitted: bool,
+    pub(super) oversize_warning_emitted: bool,
+    pub(super) oversize_warning_len_bytes: Option<usize>,
+}
+
+#[derive(Debug)]
+pub(super) enum CodexBackendEvent {
+    ExternalSandboxWarning,
+    Thread(Box<ThreadEvent>),
+    AppServerNotification(codex::mcp::AppNotification),
+    NonZeroExit { status: ExitStatus },
+    TerminalError { message: String },
+}
+
+#[derive(Clone, Debug)]
+pub(super) struct CodexBackendCompletion {
+    pub(super) status: ExitStatus,
+    pub(super) final_text: Option<String>,
+    pub(super) selection_failure_message: Option<String>,
+}
+
+#[derive(Debug)]
+pub(super) enum CodexBackendError {
+    Exec(ExecStreamError),
+    AppServer(codex::mcp::McpError),
+    Timeout { timeout: Duration },
+    ForkSelectionEmpty,
+    ForkSessionNotFound,
+    CompletionTaskDropped,
+    WorkingDirectoryUnresolved,
+}
+
+pub(super) fn new_harness_adapter(
+    config: CodexBackendConfig,
+    run_start_cwd: Option<PathBuf>,
+    termination: Option<Arc<super::super::termination::TerminationState<CodexTerminationHandle>>>,
+) -> CodexHarnessAdapter {
+    CodexHarnessAdapter {
+        config,
+        run_start_cwd,
+        termination,
+        handle_state: Arc::new(Mutex::new(CodexHandleFacetState::default())),
+    }
+}
+
+#[cfg(test)]
+pub(super) fn new_test_adapter(config: CodexBackendConfig) -> CodexHarnessAdapter {
+    new_harness_adapter(config, None, None)
 }
 
 fn codex_error_kind(err: &CodexError) -> &'static str {
@@ -175,7 +155,7 @@ fn codex_error_kind(err: &CodexError) -> &'static str {
     }
 }
 
-fn redact_exec_stream_error(err: &ExecStreamError) -> String {
+pub(super) fn redact_exec_stream_error(err: &ExecStreamError) -> String {
     match err {
         ExecStreamError::Parse { source, line } => format!(
             "codex stream parse error (redacted): {source} (line_bytes={})",
@@ -216,70 +196,24 @@ fn render_backend_error_message(err: &CodexBackendError) -> String {
     }
 }
 
-fn startup_failure_spawn(
+pub(super) fn startup_failure_spawn(
     err: CodexBackendError,
     emit_external_sandbox_warning: bool,
 ) -> BackendSpawn<CodexBackendEvent, CodexBackendCompletion, CodexBackendError> {
     let message = render_backend_error_message(&err);
-    let events: crate::backend_harness::DynBackendEventStream<
-        CodexBackendEvent,
-        CodexBackendError,
-    > = if emit_external_sandbox_warning {
-        Box::pin(stream::iter(vec![
-            Ok(CodexBackendEvent::ExternalSandboxWarning),
-            Ok(CodexBackendEvent::TerminalError { message }),
-        ]))
-    } else {
-        Box::pin(stream::once(async move {
-            Ok(CodexBackendEvent::TerminalError { message })
-        }))
-    };
+    let events: DynBackendEventStream<CodexBackendEvent, CodexBackendError> =
+        if emit_external_sandbox_warning {
+            Box::pin(stream::iter(vec![
+                Ok(CodexBackendEvent::ExternalSandboxWarning),
+                Ok(CodexBackendEvent::TerminalError { message }),
+            ]))
+        } else {
+            Box::pin(stream::once(async move {
+                Ok(CodexBackendEvent::TerminalError { message })
+            }))
+        };
     let completion = Box::pin(async move { Err(err) });
     BackendSpawn { events, completion }
-}
-
-#[derive(Clone, Debug)]
-struct CodexHarnessAdapter {
-    config: CodexBackendConfig,
-    run_start_cwd: Option<PathBuf>,
-    termination:
-        Option<std::sync::Arc<super::termination::TerminationState<CodexTerminationHandle>>>,
-    handle_state: Arc<Mutex<CodexHandleFacetState>>,
-}
-
-#[derive(Debug, Default)]
-struct CodexHandleFacetState {
-    thread_id: Option<String>,
-    handle_facet_emitted: bool,
-    oversize_warning_emitted: bool,
-    oversize_warning_len_bytes: Option<usize>,
-}
-
-#[derive(Debug)]
-enum CodexBackendEvent {
-    ExternalSandboxWarning,
-    Thread(Box<ThreadEvent>),
-    AppServerNotification(codex::mcp::AppNotification),
-    NonZeroExit { status: ExitStatus },
-    TerminalError { message: String },
-}
-
-#[derive(Clone, Debug)]
-struct CodexBackendCompletion {
-    status: ExitStatus,
-    final_text: Option<String>,
-    selection_failure_message: Option<String>,
-}
-
-#[derive(Debug)]
-enum CodexBackendError {
-    Exec(ExecStreamError),
-    AppServer(codex::mcp::McpError),
-    Timeout { timeout: Duration },
-    ForkSelectionEmpty,
-    ForkSessionNotFound,
-    CompletionTaskDropped,
-    WorkingDirectoryUnresolved,
 }
 
 fn session_handle_facet(thread_id: &str) -> serde_json::Value {
@@ -302,7 +236,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         }
     }
 
-    type Policy = CodexExecPolicy;
+    type Policy = super::CodexExecPolicy;
 
     fn validate_and_extract_policy(
         &self,
@@ -316,11 +250,11 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
             .map(parse_session_resume_v1)
             .transpose()?;
 
-        let fork = fork::extract_fork_selector_v1(request)?;
+        let fork = super::fork::extract_fork_selector_v1(request)?;
 
         validate_resume_fork_mutual_exclusion(&request.extensions)?;
 
-        Ok(CodexExecPolicy {
+        Ok(super::CodexExecPolicy {
             resume,
             fork,
             ..exec_policy
@@ -352,8 +286,8 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         let config = self.config.clone();
         let run_start_cwd = self.run_start_cwd.clone();
         let termination = self.termination.clone();
-        let handle_state = self.handle_state.clone();
-        let CodexExecPolicy {
+        let handle_state = Arc::clone(&self.handle_state);
+        let super::CodexExecPolicy {
             non_interactive,
             external_sandbox,
             approval_policy,
@@ -368,7 +302,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
 
         Box::pin(async move {
             let spawned = match if let Some(selector) = fork {
-                fork::spawn_fork_v1_flow(fork::ForkFlowRequest {
+                super::fork::spawn_fork_v1_flow(super::fork::ForkFlowRequest {
                     selector,
                     prompt,
                     working_dir,
@@ -385,7 +319,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                 })
                 .await
             } else {
-                exec::spawn_exec_or_resume_flow(exec::ExecFlowRequest {
+                super::exec::spawn_exec_or_resume_flow(super::exec::ExecFlowRequest {
                     config,
                     run_start_cwd,
                     termination,
@@ -422,9 +356,11 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
 
     fn map_event(&self, event: Self::BackendEvent) -> Vec<AgentWrapperEvent> {
         match event {
-            CodexBackendEvent::ExternalSandboxWarning => vec![mapping::status_event(Some(
-                PINNED_EXTERNAL_SANDBOX_WARNING.to_string(),
-            ))],
+            CodexBackendEvent::ExternalSandboxWarning => {
+                vec![status_event(Some(
+                    PINNED_EXTERNAL_SANDBOX_WARNING.to_string(),
+                ))]
+            }
             CodexBackendEvent::Thread(ev) => {
                 let mut emit_oversize_warning_len: Option<usize> = None;
 
@@ -458,7 +394,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
 
                 if let Some(thread_id) = emit_handle_facet.as_deref() {
                     let mut attached = false;
-                    for event in mapped.iter_mut() {
+                    for event in &mut mapped {
                         if event.kind == AgentWrapperEventKind::Status && event.data.is_none() {
                             event.data = Some(session_handle_facet(thread_id));
                             attached = true;
@@ -467,14 +403,14 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                     }
 
                     if !attached {
-                        let mut event = mapping::status_event(None);
+                        let mut event = status_event(None);
                         event.data = Some(session_handle_facet(thread_id));
                         mapped.push(event);
                     }
                 }
 
                 if let Some(len) = emit_oversize_warning_len {
-                    mapped.push(mapping::status_event(Some(format!(
+                    mapped.push(status_event(Some(format!(
                         "{SESSION_HANDLE_OVERSIZE_WARNING_MARKER}: len_bytes={len}"
                     ))));
                 }
@@ -484,7 +420,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
             CodexBackendEvent::AppServerNotification(notification) => {
                 let mut mapped = match notification {
                     codex::mcp::AppNotification::Raw { method, params } => {
-                        fork::map_app_server_notification(&method, &params)
+                        super::fork::map_app_server_notification(&method, &params)
                             .into_iter()
                             .collect()
                     }
@@ -506,7 +442,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
 
                 if let Some(thread_id) = emit_handle_facet.as_deref() {
                     let mut attached = false;
-                    for event in mapped.iter_mut() {
+                    for event in &mut mapped {
                         if event.kind == AgentWrapperEventKind::Status && event.data.is_none() {
                             event.data = Some(session_handle_facet(thread_id));
                             attached = true;
@@ -515,7 +451,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                     }
 
                     if !attached {
-                        let mut event = mapping::status_event(None);
+                        let mut event = status_event(None);
                         event.data = Some(session_handle_facet(thread_id));
                         mapped.push(event);
                     }
@@ -528,7 +464,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                     .and_then(|mut state| state.oversize_warning_len_bytes.take());
 
                 if let Some(len) = emit_oversize_warning_len {
-                    mapped.push(mapping::status_event(Some(format!(
+                    mapped.push(status_event(Some(format!(
                         "{SESSION_HANDLE_OVERSIZE_WARNING_MARKER}: len_bytes={len}"
                     ))));
                 }
@@ -543,7 +479,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                     .ok()
                     .and_then(|mut state| state.oversize_warning_len_bytes.take())
                 {
-                    mapped.push(mapping::status_event(Some(format!(
+                    mapped.push(status_event(Some(format!(
                         "{SESSION_HANDLE_OVERSIZE_WARNING_MARKER}: len_bytes={len}"
                     ))));
                 }
@@ -560,7 +496,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                     .ok()
                     .and_then(|mut state| state.oversize_warning_len_bytes.take())
                 {
-                    mapped.push(mapping::status_event(Some(format!(
+                    mapped.push(status_event(Some(format!(
                         "{SESSION_HANDLE_OVERSIZE_WARNING_MARKER}: len_bytes={len}"
                     ))));
                 }
@@ -602,109 +538,3 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         render_backend_error_message(err)
     }
 }
-
-impl AgentWrapperBackend for CodexBackend {
-    fn kind(&self) -> AgentWrapperKind {
-        AgentWrapperKind("codex".to_string())
-    }
-
-    fn capabilities(&self) -> AgentWrapperCapabilities {
-        let mut ids = BTreeSet::new();
-        ids.insert("agent_api.run".to_string());
-        ids.insert("agent_api.events".to_string());
-        ids.insert("agent_api.events.live".to_string());
-        ids.insert(crate::CAPABILITY_CONTROL_CANCEL_V1.to_string());
-        ids.insert(CAP_TOOLS_STRUCTURED_V1.to_string());
-        ids.insert(CAP_TOOLS_RESULTS_V1.to_string());
-        ids.insert(CAP_ARTIFACTS_FINAL_TEXT_V1.to_string());
-        ids.insert(CAP_SESSION_HANDLE_V1.to_string());
-        ids.insert("backend.codex.exec_stream".to_string());
-        ids.insert(EXT_NON_INTERACTIVE.to_string());
-        ids.insert(EXT_CODEX_APPROVAL_POLICY.to_string());
-        ids.insert(EXT_CODEX_SANDBOX_MODE.to_string());
-        ids.insert(EXT_SESSION_RESUME_V1.to_string());
-        ids.insert(EXT_SESSION_FORK_V1.to_string());
-        if self.config.allow_external_sandbox_exec {
-            ids.insert(EXT_EXTERNAL_SANDBOX_V1.to_string());
-        }
-        AgentWrapperCapabilities { ids }
-    }
-
-    fn run(
-        &self,
-        request: AgentWrapperRunRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<AgentWrapperRunHandle, AgentWrapperError>> + Send + '_>>
-    {
-        let config = self.config.clone();
-        Box::pin(async move {
-            let run_start_cwd = std::env::current_dir().ok();
-            let adapter = Arc::new(CodexHarnessAdapter {
-                config: config.clone(),
-                run_start_cwd,
-                termination: None,
-                handle_state: Arc::new(Mutex::new(CodexHandleFacetState::default())),
-            });
-
-            let defaults = BackendDefaults {
-                env: config.env,
-                default_timeout: config.default_timeout,
-            };
-
-            crate::backend_harness::run_harnessed_backend(adapter, defaults, request)
-        })
-    }
-
-    fn run_control(
-        &self,
-        request: AgentWrapperRunRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<AgentWrapperRunControl, AgentWrapperError>> + Send + '_>>
-    {
-        if !self
-            .capabilities()
-            .contains(crate::CAPABILITY_CONTROL_CANCEL_V1)
-        {
-            let agent_kind = self.kind().as_str().to_string();
-            return Box::pin(async move {
-                Err(AgentWrapperError::UnsupportedCapability {
-                    agent_kind,
-                    capability: crate::CAPABILITY_CONTROL_CANCEL_V1.to_string(),
-                })
-            });
-        }
-
-        let config = self.config.clone();
-        Box::pin(async move {
-            let termination_state: Arc<
-                super::termination::TerminationState<CodexTerminationHandle>,
-            > = Arc::new(super::termination::TerminationState::new());
-            let request_termination: Option<Arc<dyn Fn() + Send + Sync + 'static>> = Some({
-                let termination_state = Arc::clone(&termination_state);
-                Arc::new(move || termination_state.request())
-            });
-
-            let run_start_cwd = std::env::current_dir().ok();
-            let adapter = Arc::new(CodexHarnessAdapter {
-                config: config.clone(),
-                run_start_cwd,
-                termination: Some(termination_state),
-                handle_state: Arc::new(Mutex::new(CodexHandleFacetState::default())),
-            });
-
-            let defaults = BackendDefaults {
-                env: config.env,
-                default_timeout: config.default_timeout,
-            };
-
-            crate::backend_harness::run_harnessed_backend_control(
-                adapter,
-                defaults,
-                request,
-                request_termination,
-            )
-        })
-    }
-}
-
-#[cfg(test)]
-#[path = "codex/tests.rs"]
-mod tests;

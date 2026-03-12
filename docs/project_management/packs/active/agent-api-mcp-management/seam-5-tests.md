@@ -36,7 +36,9 @@
 ## Key invariants / rules
 
 - Tests must verify MCP management outputs are not emitted as run events.
-- Tests must verify default advertising posture stays safe (write ops off unless enabled).
+- Tests must verify default advertising posture stays safe:
+  `allow_mcp_write=false` keeps `add/remove` unadvertised, while `allow_mcp_write=true` enables
+  them only when the pinned target-availability rules permit advertising.
 - Tests must verify pinned manifest drift handling: runtime mismatch fails as `Err(Backend)` and does not silently mutate
   advertised capabilities.
 
@@ -44,6 +46,9 @@
 
 - Spec + mapping truth: `docs/specs/universal-agent-api/mcp-management-spec.md`
 - Capability gating + error taxonomy: `docs/specs/universal-agent-api/contract.md`
+- Advertising assertions MUST use the backend instance's `AgentWrapperCapabilities.ids`; the
+  generated `docs/specs/universal-agent-api/capability-matrix.md` may omit default-off write
+  capabilities because it is built from default configs.
 
 ## Dependencies
 

@@ -11,7 +11,9 @@ Primary axis: **integration-first (risk-first)** — cross-backend MCP managemen
      - implementation in `crates/agent_api` (new `agent_api::mcp` module + trait/gateway hooks)
 
 2) **SEAM-2 — Backend enablement + safe default advertising**
-   - Owns: safe-by-default posture for built-in backends (write ops require explicit enablement) and isolated home support.
+   - Owns: safe-by-default posture for built-in backends, including the public
+     `CodexBackendConfig.allow_mcp_write` / `ClaudeCodeBackendConfig.allow_mcp_write` fields
+     (default `false`), safe default advertising, and isolated home support.
    - Outputs:
      - `docs/project_management/packs/active/agent-api-mcp-management/seam-2-backend-enablement.md`
      - updates to `crates/agent_api/src/backends/{codex,claude_code}.rs`
@@ -29,9 +31,9 @@ Primary axis: **integration-first (risk-first)** — cross-backend MCP managemen
      - updates to `crates/agent_api/src/backends/claude_code.rs` (+ wrapper surface if needed)
 
 5) **SEAM-5 — Tests**
-   - Owns: regression coverage for capability gating, request validation, output truncation, safe default advertising, and
-     backend mapping (with isolated homes).
+   - Owns: regression coverage for capability gating, request validation, output truncation,
+     default `allow_mcp_write=false` / opt-in `true` behavior, and backend mapping (with isolated
+     homes).
    - Outputs:
      - `docs/project_management/packs/active/agent-api-mcp-management/seam-5-tests.md`
      - updates/additions to tests under `crates/agent_api/src/**` (and optionally wrapper crates if gaps exist)
-

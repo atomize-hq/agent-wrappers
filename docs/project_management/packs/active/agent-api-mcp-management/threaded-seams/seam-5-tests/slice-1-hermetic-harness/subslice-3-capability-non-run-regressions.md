@@ -12,8 +12,12 @@
     - Any tests requiring a real networked MCP server.
 - **Acceptance criteria**:
   - Advertising assertions match `docs/specs/universal-agent-api/mcp-management-spec.md` table:
-    - Codex: `list/get` by default; `add/remove` only with `allow_mcp_write=true`.
-    - Claude: `list` by default; `get` only on `win32-x64`; `add/remove` only on `win32-x64` and with `allow_mcp_write=true`.
+    - Codex: `list/get` by default; `add/remove` only with `CodexBackendConfig.allow_mcp_write=true`.
+    - Claude: `list` by default; `get` only on `win32-x64`; `add/remove` only on `win32-x64`
+      and with `ClaudeCodeBackendConfig.allow_mcp_write=true`.
+  - Advertising assertions use backend instance `capabilities().ids`; the generated default
+    capability matrix may omit `agent_api.tools.mcp.add.v1` / `.remove.v1` because default configs
+    leave `allow_mcp_write=false`.
   - Non-run boundary: `extensions["agent_api.tools.mcp.list.v1"]` (and peers) must be rejected as
     `UnsupportedCapability` without spawning any subprocess.
 - **Dependencies**:

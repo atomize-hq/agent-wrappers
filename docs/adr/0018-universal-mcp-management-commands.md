@@ -43,7 +43,7 @@ This ADR explicitly covers **non-run** operations: these are CLI subcommands, no
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: d8047107a5b0ac46eabb1e34bd2761e0b521a6823dc1eedb2867daaab88f6105
+ADR_BODY_SHA256: ed679f96b44845b497542edce8863b7f050691adbae79d05a5f41bc5478db457
 
 ### Decision (draft)
 
@@ -60,7 +60,10 @@ ADR_BODY_SHA256: d8047107a5b0ac46eabb1e34bd2761e0b521a6823dc1eedb2867daaab88f610
 - Enforce **safe-by-default** posture:
   - These commands read/write persistent tool configuration and may surface secrets.
   - Built-in backends MUST NOT advertise write capabilities (`add/remove`) unless explicitly enabled
-    via backend config, and SHOULD support isolated homes (e.g., `codex_home`, `claude_home`) so
+    via the public backend config fields:
+    - `agent_api::backends::codex::CodexBackendConfig.allow_mcp_write: bool` (default `false`)
+    - `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write: bool` (default `false`)
+  - Built-in backends SHOULD support isolated homes (e.g., `codex_home`, `claude_home`) so
     programmatic usage does not mutate user state by default.
 
 ### Why
@@ -140,8 +143,9 @@ Requirements:
 - Backends SHOULD support isolated “home” layouts so test/automation flows can be safely isolated.
 - Outputs MUST be bounded (stdout/stderr truncation) and MUST NOT be automatically emitted as run
   events (no accidental logging via the run event pipeline).
-- Write operations (`add/remove`) MUST require explicit enablement (backend config); otherwise the
-  backend MUST NOT advertise the write capabilities.
+- Write operations (`add/remove`) MUST require explicit enablement via the public backend config
+  fields `CodexBackendConfig.allow_mcp_write` / `ClaudeCodeBackendConfig.allow_mcp_write`
+  (default `false`); otherwise the backend MUST NOT advertise the write capabilities.
 
 ## Backend Mapping (draft)
 

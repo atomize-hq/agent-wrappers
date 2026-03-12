@@ -74,9 +74,16 @@ Semantics (pinned):
 
 - The matrix lists only capability ids advertised by at least one built-in backend at generation time (it is a union of
   `AgentWrapperBackend::capabilities().ids` across built-in backends).
+- Generation is evaluated against the repository's canonical built-in target profile, not the host OS running the
+  generator. In v1 that profile is:
+  - `codex` -> `x86_64-unknown-linux-musl`
+  - `claude_code` -> `linux-x64`
 - The matrix is **not** an exhaustive registry of standard `agent_api.*` capability ids.
 - If a standard capability id defined in this spec is absent from the matrix, that means no built-in backend currently
-  advertises it (not that the id is invalid or removed).
+  advertises it under the generator's default built-in configs for that canonical target profile (not that the id is invalid or removed).
+- Config-conditional standard capabilities may therefore be absent from the matrix when safe defaults leave them off; for
+  example, `agent_api.tools.mcp.add.v1` / `agent_api.tools.mcp.remove.v1` may be absent because built-in backends default
+  `allow_mcp_write` to `false`.
 - Runtime availability checks MUST use `AgentWrapperCapabilities.ids` from the selected backend; the matrix is a
   maintenance/overview artifact, not a runtime truth source.
 
@@ -123,15 +130,21 @@ This section defines stable universal capability ids and their minimum semantics
     (see `docs/specs/universal-agent-api/mcp-management-spec.md`).
   - This capability MUST NOT be advertised unless write enablement is explicitly configured (see
     `docs/specs/universal-agent-api/mcp-management-spec.md`).
-    - For built-in backends, the approved v1 contract does not define a host-facing
-      `allow_mcp_write` config field (see `docs/specs/universal-agent-api/contract.md`).
+    - For built-in backends, this means the public config field
+      `agent_api::backends::codex::CodexBackendConfig.allow_mcp_write` or
+      `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write` is `true` (both
+      default to `false`), and the pinned CLI manifest snapshot shows the required subcommand is
+      available on the current target.
 - `agent_api.tools.mcp.remove.v1`:
   - The backend supports removing an MCP server entry by name via the non-run MCP management API
     (see `docs/specs/universal-agent-api/mcp-management-spec.md`).
   - This capability MUST NOT be advertised unless write enablement is explicitly configured (see
     `docs/specs/universal-agent-api/mcp-management-spec.md`).
-    - For built-in backends, the approved v1 contract does not define a host-facing
-      `allow_mcp_write` config field (see `docs/specs/universal-agent-api/contract.md`).
+    - For built-in backends, this means the public config field
+      `agent_api::backends::codex::CodexBackendConfig.allow_mcp_write` or
+      `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write` is `true` (both
+      default to `false`), and the pinned CLI manifest snapshot shows the required subcommand is
+      available on the current target.
 - `agent_api.artifacts.final_text.v1`:
   - The backend can deterministically populate `AgentWrapperCompletion.final_text` when full
     assistant message text blocks are observed in the supported flow; `final_text=None` is valid

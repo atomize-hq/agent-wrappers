@@ -50,9 +50,14 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 
 - **MM-C06 — Safe default advertising (write ops)**
   - **Type**: permission
-  - **Definition**: built-in backends MUST NOT advertise write capabilities (`add/remove`) unless explicitly enabled via backend
-    configuration (`allow_mcp_write`, pinned in SEAM-2 and the canonical contract spec). Read operations (`list/get`) are
-    advertised by default when supported on the current target (pinned table in the MCP management spec).
+  - **Definition**: the canonical built-in write-enable mechanism is the public config fields
+    `agent_api::backends::codex::CodexBackendConfig.allow_mcp_write` and
+    `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write`, both defaulting
+    to `false`. Built-in backends MUST NOT advertise write capabilities (`add/remove`) unless the
+    relevant field is `true` and the pinned CLI manifest snapshot says the subcommand exists on the
+    current target. Read operations (`list/get`) are advertised by default when supported on the
+    current target. The generated capability matrix may omit default-off write capabilities; runtime
+    truth is the backend instance's `capabilities().ids`.
   - **Owner seam**: SEAM-2
   - **Consumers**: SEAM-3/4/5
 

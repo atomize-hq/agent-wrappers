@@ -11,10 +11,11 @@
         - `Stdio` → `codex mcp add <name> [--env KEY=VALUE]* -- <argv...>`
         - `Url` → `codex mcp add <name> --url <url> [--bearer-token-env-var <ENV_VAR>]`
     - Enforce fail-closed gating:
-      - if `agent_api.tools.mcp.{add,remove}.v1` is not advertised (including `allow_mcp_write=false`), return `UnsupportedCapability`.
+      - if `agent_api.tools.mcp.{add,remove}.v1` is not advertised (including
+        `CodexBackendConfig.allow_mcp_write=false`), return `UnsupportedCapability`.
     - Reuse S1 runner for context precedence + bounded output + timeout behavior.
   - Out:
-    - Capability advertising + `allow_mcp_write` enablement (SEAM-2).
+    - Capability advertising + `CodexBackendConfig.allow_mcp_write` enablement (SEAM-2).
     - Cross-backend hermetic fake-binary integration tests (SEAM-5).
 - **Acceptance criteria**:
   - `mcp_remove` invokes `codex mcp remove <name>` and returns bounded `AgentWrapperMcpCommandOutput`.
@@ -29,12 +30,14 @@
     - return `Err(Backend)` only on spawn/wait/timeout/capture failures or manifest/runtime conflicts (pinned).
 - **Dependencies**:
   - SEAM-1: typed add transport + transport validation helper + output enforcement helper (MM-C05/MM-C04).
-  - SEAM-2: `allow_mcp_write` gating + isolated homes (`codex_home`) + write capability advertising (MM-C06/MM-C07).
+  - SEAM-2: `CodexBackendConfig.allow_mcp_write` gating + isolated homes (`codex_home`) + write
+    capability advertising (MM-C06/MM-C07).
   - S1: bounded runner and capture primitive.
 - **Verification**:
   - `cargo test -p agent_api --features codex` (unit tests for argv composition + gating)
 - **Rollout/safety**:
-  - Safe-by-default: write ops remain unreachable unless enabled via backend config (SEAM-2).
+  - Safe-by-default: write ops remain unreachable while
+    `CodexBackendConfig.allow_mcp_write == false` (the default) (SEAM-2).
   - Isolated homes reduce user-state mutation risk; request env overrides can defeat isolation by design (pinned).
 
 ## Atomic Tasks
@@ -68,7 +71,8 @@ Checklist:
 
 - **Outcome**: Codex backend supports MCP write operations with pinned gating + execution semantics.
 - **Inputs/outputs**:
-  - Input: SEAM-2 write advertising (`allow_mcp_write`) + SEAM-1 hook signatures + validation helper
+  - Input: SEAM-2 write advertising (`CodexBackendConfig.allow_mcp_write`) + SEAM-1 hook
+    signatures + validation helper
   - Output:
     - `crates/agent_api/src/backends/codex.rs`: add MCP hook methods and forward to Codex MCP helper module
     - `crates/agent_api/src/backends/codex/mcp_management.rs`: hook implementations using the S1 runner
@@ -80,9 +84,12 @@ Checklist:
     - `Stdio.env` maps to repeated `--env KEY=VALUE` args,
     - `request.context.env` maps to the *CLI process environment* only.
 - **Acceptance criteria**:
-  - When `allow_mcp_write=false` (default), `mcp_add/remove` are fail-closed (`UnsupportedCapability`) even if invoked directly.
+  - When `CodexBackendConfig.allow_mcp_write=false` (default), `mcp_add/remove` are fail-closed
+    (`UnsupportedCapability`) even if invoked directly.
   - When enabled + advertised, hooks spawn the pinned argv and return bounded `Ok(output)` regardless of exit status.
 - **Test notes**:
+  - Assert write-capability presence/absence via backend `capabilities().ids`, not the generated
+    capability matrix.
   - Unit tests can assert gating + argv composition; hermetic fake binary execution is owned by SEAM-5.
 - **Risk/rollback notes**:
   - Behavior is gated behind explicit enablement; rollback is removing/disable the hooks.
@@ -118,4 +125,3 @@ Checklist:
 
 - SEAM-5 will pin end-to-end behavior with a fake `codex` binary that records argv + env and writes state beneath the
   injected isolated home directory to assert writes are localized.
-

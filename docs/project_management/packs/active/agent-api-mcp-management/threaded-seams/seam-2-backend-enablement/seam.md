@@ -6,6 +6,7 @@ Inputs:
 - Seam brief: `docs/project_management/packs/active/agent-api-mcp-management/seam-2-backend-enablement.md`
 - Threading (authoritative): `docs/project_management/packs/active/agent-api-mcp-management/threading.md`
 - Canonical spec (normative once approved): `docs/specs/universal-agent-api/mcp-management-spec.md`
+- Canonical core contract (normative): `docs/specs/universal-agent-api/contract.md`
 
 ## Seam Brief (Restated)
 
@@ -18,7 +19,9 @@ Inputs:
 - **Scope**
   - In:
     - Define host-provided backend config knobs that control MCP management capability advertising:
-      - `allow_mcp_write` (default: `false`) gates `add/remove`.
+      - `agent_api::backends::codex::CodexBackendConfig.allow_mcp_write` (default: `false`)
+      - `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write` (default: `false`)
+      - these fields gate `add/remove`.
     - Implement capability advertising logic for built-in backends that follows pinned precedence:
       - upstream target availability (from pinned CLI manifests) → config enablement → advertise.
     - Support isolated homes via backend config (`codex_home` / `claude_home`) so state mutations can be confined to a
@@ -64,8 +67,10 @@ early so backend mapping seams can implement hooks without re-litigating safety 
 ## Threading Alignment (mandatory)
 
 - **Contracts produced (owned)**:
-  - `MM-C06 — Safe default advertising (write ops)`: `allow_mcp_write` gates `add/remove`, and built-in backends MUST NOT
-    advertise write capability ids unless explicitly enabled (produced by S1).
+  - `MM-C06 — Safe default advertising (write ops)`: the public built-in config fields
+    `CodexBackendConfig.allow_mcp_write` / `ClaudeCodeBackendConfig.allow_mcp_write` (default
+    `false`) gate `add/remove`, and built-in backends MUST NOT advertise write capability ids
+    unless explicitly enabled (produced by S1).
   - `MM-C07 — Isolated home support`: built-in backends support per-backend isolated homes via config:
     `CodexBackendConfig.codex_home` and `ClaudeCodeBackendConfig.claude_home` (produced by S2).
 - **Contracts consumed**:

@@ -180,4 +180,3 @@ mod claude_code {
         assert!(matches!(err, AgentWrapperError::InvalidRequest { .. }));
     }
 }
-

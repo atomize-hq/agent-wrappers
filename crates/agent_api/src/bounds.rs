@@ -4,6 +4,11 @@ pub(crate) const CHANNEL_BOUND_BYTES: usize = 128;
 pub(crate) const TEXT_BOUND_BYTES: usize = 65_536;
 pub(crate) const MESSAGE_BOUND_BYTES: usize = 4_096;
 pub(crate) const DATA_BOUND_BYTES: usize = 65_536;
+#[allow(dead_code)]
+pub(crate) const MCP_STDOUT_BOUND_BYTES: usize = TEXT_BOUND_BYTES;
+#[allow(dead_code)]
+pub(crate) const MCP_STDERR_BOUND_BYTES: usize = TEXT_BOUND_BYTES;
+pub(crate) const TRUNCATION_SUFFIX: &str = "…(truncated)";
 
 pub(crate) fn enforce_event_bounds(event: AgentWrapperEvent) -> Vec<AgentWrapperEvent> {
     let mut event = event;
@@ -47,17 +52,29 @@ pub(crate) fn enforce_final_text_bound(text: Option<String>) -> Option<String> {
         return Some(text);
     }
 
-    const SUFFIX: &str = "…(truncated)";
-    let suffix_bytes = SUFFIX.len();
-    if TEXT_BOUND_BYTES <= suffix_bytes {
-        return Some(utf8_truncate_to_bytes("…", TEXT_BOUND_BYTES).to_string());
-    }
+    Some(truncate_text_with_suffix(&text, TEXT_BOUND_BYTES))
+}
 
-    let prefix = utf8_truncate_to_bytes(&text, TEXT_BOUND_BYTES - suffix_bytes);
-    let mut out = String::with_capacity(TEXT_BOUND_BYTES);
-    out.push_str(prefix);
-    out.push_str(SUFFIX);
-    Some(out)
+/// Enforces the pinned MM-C04 UTF-8-safe output bound used by MCP command stdout/stderr.
+///
+/// Backend mappings should pass the bounded captured bytes plus their `saw_more_bytes` signal
+/// here instead of re-implementing truncation semantics locally.
+#[allow(dead_code)]
+pub(crate) fn enforce_mcp_output_bound(
+    bytes: &[u8],
+    saw_more_bytes: bool,
+    bound_bytes: usize,
+) -> (String, bool) {
+    let decoded = String::from_utf8_lossy(bytes);
+    let truncated = saw_more_bytes || decoded.len() > bound_bytes;
+    if truncated {
+        (
+            truncate_text_with_suffix(decoded.as_ref(), bound_bytes),
+            true,
+        )
+    } else {
+        (decoded.into_owned(), false)
+    }
 }
 
 fn enforce_channel_bound(channel: Option<String>) -> Option<String> {
@@ -74,17 +91,7 @@ fn enforce_message_bound(message: String) -> String {
         return message;
     }
 
-    const SUFFIX: &str = "…(truncated)";
-    let suffix_bytes = SUFFIX.len();
-    if MESSAGE_BOUND_BYTES > suffix_bytes {
-        let prefix = utf8_truncate_to_bytes(&message, MESSAGE_BOUND_BYTES - suffix_bytes);
-        let mut out = String::with_capacity(MESSAGE_BOUND_BYTES);
-        out.push_str(prefix);
-        out.push_str(SUFFIX);
-        out
-    } else {
-        utf8_truncate_to_bytes("…", MESSAGE_BOUND_BYTES).to_string()
-    }
+    truncate_text_with_suffix(&message, MESSAGE_BOUND_BYTES)
 }
 
 fn enforce_data_bound(data: serde_json::Value) -> serde_json::Value {
@@ -125,6 +132,19 @@ fn split_utf8_chunks(text: &str, bound_bytes: usize) -> Vec<String> {
         start = end;
     }
     out
+}
+
+fn truncate_text_with_suffix(text: &str, bound_bytes: usize) -> String {
+    let suffix_bytes = TRUNCATION_SUFFIX.len();
+    if bound_bytes > suffix_bytes {
+        let prefix = utf8_truncate_to_bytes(text, bound_bytes - suffix_bytes);
+        let mut out = String::with_capacity(bound_bytes);
+        out.push_str(prefix);
+        out.push_str(TRUNCATION_SUFFIX);
+        out
+    } else {
+        utf8_truncate_to_bytes("…", bound_bytes).to_string()
+    }
 }
 
 fn utf8_truncate_to_bytes(s: &str, bound_bytes: usize) -> &str {
@@ -185,7 +205,7 @@ mod tests {
         assert_eq!(out.len(), 1);
         let message = out[0].message.as_deref().expect("message");
         assert!(message.len() <= MESSAGE_BOUND_BYTES);
-        assert!(message.ends_with("…(truncated)"));
+        assert!(message.ends_with(TRUNCATION_SUFFIX));
     }
 
     #[test]
@@ -253,6 +273,74 @@ mod tests {
 
         let out = enforce_final_text_bound(Some(text)).expect("final_text present");
         assert!(out.len() <= TEXT_BOUND_BYTES);
-        assert!(out.ends_with("…(truncated)"));
+        assert!(out.ends_with(TRUNCATION_SUFFIX));
+    }
+
+    #[test]
+    fn mcp_output_under_bound_is_not_truncated() {
+        let (out, truncated) = enforce_mcp_output_bound(b"plain output", false, 32);
+        assert_eq!(out, "plain output");
+        assert!(!truncated);
+    }
+
+    #[test]
+    fn mcp_output_over_bound_is_truncated_with_suffix() {
+        let bytes = vec![b'a'; TEXT_BOUND_BYTES + 1];
+        let (out, truncated) = enforce_mcp_output_bound(&bytes, false, MCP_STDOUT_BOUND_BYTES);
+
+        assert!(truncated);
+        assert!(out.len() <= MCP_STDOUT_BOUND_BYTES);
+        assert!(out.ends_with(TRUNCATION_SUFFIX));
+        assert!(std::str::from_utf8(out.as_bytes()).is_ok());
+    }
+
+    #[test]
+    fn mcp_output_truncation_preserves_utf8_boundaries() {
+        let bytes = "💖".repeat(10).into_bytes();
+        let (out, truncated) = enforce_mcp_output_bound(&bytes, false, 20);
+
+        assert!(truncated);
+        assert_eq!(out, format!("💖{TRUNCATION_SUFFIX}"));
+        assert!(std::str::from_utf8(out.as_bytes()).is_ok());
+    }
+
+    #[test]
+    fn mcp_output_uses_lossy_decode_for_invalid_utf8() {
+        let bytes = [b'a', 0xff, 0xfe, b'b'];
+        let (out, truncated) = enforce_mcp_output_bound(&bytes, false, 32);
+
+        assert!(!truncated);
+        assert_eq!(out, "a��b");
+        assert!(out.contains('\u{FFFD}'));
+        assert!(std::str::from_utf8(out.as_bytes()).is_ok());
+    }
+
+    #[test]
+    fn mcp_output_lossy_decode_can_trigger_truncation_without_saw_more_bytes() {
+        let bytes = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+        let (out, truncated) = enforce_mcp_output_bound(&bytes, false, 20);
+
+        assert!(truncated);
+        assert_eq!(out, format!("��{TRUNCATION_SUFFIX}"));
+        assert!(out.contains('\u{FFFD}'));
+        assert!(out.len() <= 20);
+        assert!(std::str::from_utf8(out.as_bytes()).is_ok());
+    }
+
+    #[test]
+    fn mcp_output_saw_more_bytes_forces_truncation_even_when_decoded_text_is_under_bound() {
+        let (out, truncated) = enforce_mcp_output_bound(b"ok", true, 20);
+
+        assert!(truncated);
+        assert_eq!(out, format!("ok{TRUNCATION_SUFFIX}"));
+        assert!(out.len() <= 20);
+    }
+
+    #[test]
+    fn mcp_output_falls_back_to_truncated_ellipsis_when_bound_is_too_small_for_suffix() {
+        let (out, truncated) = enforce_mcp_output_bound(b"abcdef", true, 3);
+
+        assert!(truncated);
+        assert_eq!(out, "…");
     }
 }

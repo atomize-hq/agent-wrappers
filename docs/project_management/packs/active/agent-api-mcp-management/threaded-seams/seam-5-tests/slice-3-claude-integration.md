@@ -12,7 +12,9 @@
       `win32-x64` only.
     - Tests pinning Claude-specific `Url.bearer_token_env_var` behavior:
       - `bearer_token_env_var: Some(_)` MUST be rejected as `InvalidRequest` (fail closed; no spawn).
-    - Tests pinning safe-by-default write posture (`allow_mcp_write`) and isolated home semantics (`claude_home`).
+    - Tests pinning safe-by-default write posture
+      (`ClaudeCodeBackendConfig.allow_mcp_write`, default `false`) and isolated home semantics
+      (`claude_home`).
   - Out:
     - Backend mapping implementation itself (SEAM-4).
     - Real-network or non-hermetic Claude MCP tests (must remain opt-in).
@@ -21,7 +23,8 @@
   - `Url.bearer_token_env_var: Some(_)` is rejected as `InvalidRequest` for Claude (no spawn; pinned).
   - Capability advertising is target-aware and safe-by-default:
     - on non-`win32-x64`: `get/add/remove` are not advertised, and invoking them yields `UnsupportedCapability`.
-    - on `win32-x64`: `get` may be advertised; `add/remove` require `allow_mcp_write=true`.
+    - on `win32-x64`: `get` may be advertised; `add/remove` require
+      `ClaudeCodeBackendConfig.allow_mcp_write=true` (default remains `false`).
   - Isolated home behavior is pinned:
     - with `claude_home: Some(path)`, fake binary writes sentinels under that root;
     - request env overrides win over injected isolation env (MM-C03/MM-C07).
@@ -29,7 +32,8 @@
   - Drift simulation returns `Err(Backend)` and does not mutate capability advertising (pinned).
 - **Dependencies**:
   - SEAM-1: validation + output bounds helper (MM-C03/MM-C04/MM-C05).
-  - SEAM-2: advertising + `allow_mcp_write` + isolated home config (MM-C06/MM-C07).
+  - SEAM-2: advertising + `ClaudeCodeBackendConfig.allow_mcp_write` + isolated home config
+    (MM-C06/MM-C07).
   - SEAM-4: Claude MCP mapping + drift behavior + bearer-token rejection (MM-C09).
 - **Verification**:
   - `cargo test -p agent_api --features codex,claude_code --test c5_mcp_management_v1 -- --nocapture`
@@ -54,7 +58,15 @@
   - Assert:
     - always: `list` advertised,
     - non-`win32-x64`: `get/add/remove` not advertised and gateway returns `UnsupportedCapability` without spawning,
-    - `win32-x64`: `get` advertised by default; `add/remove` require `allow_mcp_write=true`.
+    - `win32-x64`: `get` advertised by default; `add/remove` require
+      `ClaudeCodeBackendConfig.allow_mcp_write=true`.
+  - Split write assertions into the same two cases used by Codex:
+    1) `ClaudeCodeBackendConfig.allow_mcp_write=false` (default) -> `add/remove` stay unadvertised
+       and fail closed.
+    2) `ClaudeCodeBackendConfig.allow_mcp_write=true` -> `add/remove` can be advertised and
+       invoked only on pinned `win32-x64`.
+  - Assert capability presence/absence via backend `capabilities().ids`, not the generated
+    capability matrix.
 - **Acceptance criteria**:
   - Tests pass under `--all-features` on all supported targets.
 - **Test notes**:
@@ -152,4 +164,3 @@ Checklist:
 - Test: local opt-in only.
 - Validate: no network required; no user-state mutation.
 - Cleanup: keep separate from default test module paths.
-

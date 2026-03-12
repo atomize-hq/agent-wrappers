@@ -24,6 +24,8 @@
     - Claude: `list` advertised by default when available on this target; `get/add/remove` are `win32-x64` only and
       `add/remove` are additionally gated by `allow_mcp_write`.
   - Capability advertising is deterministic and does not depend on runtime probing of the upstream binary.
+  - The generated default capability matrix may omit `agent_api.tools.mcp.add.v1` /
+    `agent_api.tools.mcp.remove.v1`; assertions use runtime `capabilities().ids` instead.
 - **Dependencies**:
   - SEAM-1: capability id strings (MM-C01) and gateway capability gating surface.
 - **Verification**:
@@ -39,11 +41,13 @@
 - **Outcome**: Both built-in backends expose an explicit, host-controlled enablement knob that defaults safe.
 - **Inputs/outputs**:
   - Input: `docs/specs/universal-agent-api/mcp-management-spec.md` (“Safety posture” + “Default capability advertising posture”)
+  - Input: `docs/specs/universal-agent-api/contract.md` (“MCP management write enablement (v1, normative)”)
   - Output:
     - `crates/agent_api/src/backends/codex.rs`: `CodexBackendConfig.allow_mcp_write: bool`
     - `crates/agent_api/src/backends/claude_code.rs`: `ClaudeCodeBackendConfig.allow_mcp_write: bool`
 - **Implementation notes**:
   - Keep defaults pinned (`false`).
+  - This is an approved v1 public contract field, not a private implementation-only knob.
   - Treat this as a host-provided knob only (no request-level override).
 - **Acceptance criteria**:
   - Existing construction sites compile unchanged (defaulted field), and the default remains safe.
@@ -121,6 +125,7 @@ Checklist:
     - default `allow_mcp_write=false` → no `add/remove` advertised,
     - `allow_mcp_write=true` → `add/remove` advertised only when target-available,
     - Claude `get/add/remove` only on `win32-x64` (target-gated assertions).
+  - Assert against backend instance `capabilities().ids`, not the generated capability matrix.
   - Keep tests pure (no subprocess spawning).
 - **Acceptance criteria**:
   - Tests cover both backends and enforce the pinned table.

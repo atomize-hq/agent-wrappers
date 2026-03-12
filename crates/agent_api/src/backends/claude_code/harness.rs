@@ -1,124 +1,54 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
     future::Future,
-    path::PathBuf,
     pin::Pin,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
 use claude_code::{ClaudeOutputFormat, ClaudePrintRequest};
-use futures_util::stream;
-use futures_util::StreamExt;
+use futures_util::{stream, StreamExt};
 use tokio::sync::{oneshot, OnceCell};
 
-use super::session_selectors::{
+use super::{
+    mapping::{
+        error_event, extract_assistant_message_final_text, map_stream_json_event,
+        session_handle_facet, status_event,
+    },
+    util::{
+        generic_non_zero_exit_message, json_contains_not_found_signal, parse_bool,
+        preflight_allow_flag_support,
+    },
+    ClaudeCodeBackendConfig, AGENT_KIND, CLAUDE_EXEC_POLICY_PREFIX, EXT_EXTERNAL_SANDBOX_V1,
+    EXT_NON_INTERACTIVE, PINNED_EXTERNAL_SANDBOX_WARNING, SESSION_HANDLE_ID_BOUND_BYTES,
+    SESSION_HANDLE_OVERSIZE_WARNING, SUPPORTED_EXTENSION_KEYS_DEFAULT,
+    SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN,
+};
+use crate::{
+    backend_harness::{
+        BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn, DynBackendEventStream,
+        NormalizedRequest,
+    },
+    AgentWrapperCompletion, AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind,
+    AgentWrapperKind, AgentWrapperRunRequest,
+};
+
+use super::super::session_selectors::{
     parse_session_fork_v1, parse_session_resume_v1, validate_resume_fork_mutual_exclusion,
     SessionSelectorV1, EXT_SESSION_FORK_V1, EXT_SESSION_RESUME_V1,
 };
 
-use crate::{
-    backend_harness::{
-        BackendDefaults, BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn,
-        NormalizedRequest,
-    },
-    AgentWrapperBackend, AgentWrapperCapabilities, AgentWrapperCompletion, AgentWrapperError,
-    AgentWrapperEvent, AgentWrapperEventKind, AgentWrapperKind, AgentWrapperRunControl,
-    AgentWrapperRunHandle, AgentWrapperRunRequest,
-};
-
-impl super::termination::TerminationHandle for claude_code::ClaudeTerminationHandle {
-    fn request_termination(&self) {
-        claude_code::ClaudeTerminationHandle::request_termination(self);
-    }
-}
-
-const AGENT_KIND: &str = "claude_code";
-const CHANNEL_ASSISTANT: &str = "assistant";
-const CHANNEL_TOOL: &str = "tool";
-
-const EXT_NON_INTERACTIVE: &str = "agent_api.exec.non_interactive";
-const EXT_EXTERNAL_SANDBOX_V1: &str = "agent_api.exec.external_sandbox.v1";
-const CLAUDE_EXEC_POLICY_PREFIX: &str = "backend.claude_code.exec.";
-
-const SUPPORTED_EXTENSION_KEYS_DEFAULT: &[&str] = &[
-    EXT_NON_INTERACTIVE,
-    EXT_SESSION_RESUME_V1,
-    EXT_SESSION_FORK_V1,
-];
-
-const SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN: &[&str] = &[
-    EXT_NON_INTERACTIVE,
-    EXT_SESSION_RESUME_V1,
-    EXT_SESSION_FORK_V1,
-    EXT_EXTERNAL_SANDBOX_V1,
-];
-
-const CAP_TOOLS_STRUCTURED_V1: &str = "agent_api.tools.structured.v1";
-const CAP_TOOLS_RESULTS_V1: &str = "agent_api.tools.results.v1";
-const CAP_ARTIFACTS_FINAL_TEXT_V1: &str = "agent_api.artifacts.final_text.v1";
-const CAP_SESSION_HANDLE_V1: &str = "agent_api.session.handle.v1";
-
-const SESSION_HANDLE_ID_BOUND_BYTES: usize = 1024;
-const SESSION_HANDLE_OVERSIZE_WARNING: &str = "session handle omitted: id exceeds 1024 bytes";
-const PINNED_EXTERNAL_SANDBOX_WARNING: &str =
-    "DANGEROUS: external sandbox exec policy enabled (agent_api.exec.external_sandbox.v1=true)";
-
-#[path = "claude_code/util.rs"]
-mod util;
-
-use util::{
-    generic_non_zero_exit_message, json_contains_not_found_signal, parse_bool,
-    preflight_allow_flag_support,
-};
-
-#[path = "claude_code/mapping.rs"]
-mod mapping;
-
-use mapping::{
-    error_event, extract_assistant_message_final_text, map_stream_json_event, session_handle_facet,
-    status_event,
-};
-
-#[cfg(test)]
-use mapping::{map_assistant_message, map_stream_event};
-
-#[derive(Clone, Debug, Default)]
-pub struct ClaudeCodeBackendConfig {
-    pub binary: Option<PathBuf>,
-    pub claude_home: Option<PathBuf>,
-    pub default_timeout: Option<Duration>,
-    pub default_working_dir: Option<PathBuf>,
-    pub env: BTreeMap<String, String>,
-    pub allow_external_sandbox_exec: bool,
-}
-
-pub struct ClaudeCodeBackend {
-    config: ClaudeCodeBackendConfig,
-    allow_flag_preflight: Arc<OnceCell<bool>>,
-}
-
-impl ClaudeCodeBackend {
-    pub fn new(config: ClaudeCodeBackendConfig) -> Self {
-        Self {
-            config,
-            allow_flag_preflight: Arc::new(OnceCell::new()),
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
-struct ClaudeHarnessAdapter {
+pub(super) struct ClaudeHarnessAdapter {
     config: ClaudeCodeBackendConfig,
     termination: Option<
-        std::sync::Arc<super::termination::TerminationState<claude_code::ClaudeTerminationHandle>>,
+        Arc<super::super::termination::TerminationState<claude_code::ClaudeTerminationHandle>>,
     >,
     handle_state: Arc<Mutex<ClaudeHandleFacetState>>,
     allow_flag_preflight: Arc<OnceCell<bool>>,
 }
 
 #[derive(Clone, Debug)]
-struct ClaudeExecPolicy {
+pub(super) struct ClaudeExecPolicy {
     non_interactive: bool,
     external_sandbox: bool,
     resume: Option<SessionSelectorV1>,
@@ -126,10 +56,10 @@ struct ClaudeExecPolicy {
 }
 
 #[derive(Clone, Debug)]
-struct ClaudeBackendCompletion {
-    status: std::process::ExitStatus,
-    final_text: Option<String>,
-    selection_failure_message: Option<String>,
+pub(super) struct ClaudeBackendCompletion {
+    pub(super) status: std::process::ExitStatus,
+    pub(super) final_text: Option<String>,
+    pub(super) selection_failure_message: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -141,7 +71,7 @@ struct ClaudeStreamState {
 }
 
 #[derive(Debug)]
-enum ClaudeBackendEvent {
+pub(super) enum ClaudeBackendEvent {
     ExternalSandboxWarning,
     Stream(claude_code::ClaudeStreamJsonEvent),
     TerminalError { message: String },
@@ -155,11 +85,31 @@ struct ClaudeHandleFacetState {
 }
 
 #[derive(Debug)]
-enum ClaudeBackendError {
+pub(super) enum ClaudeBackendError {
     Spawn(claude_code::ClaudeCodeError),
     StreamParse(claude_code::ClaudeStreamJsonParseError),
     Completion(claude_code::ClaudeCodeError),
     ExternalSandboxPreflight { message: String },
+}
+
+pub(super) fn new_harness_adapter(
+    config: ClaudeCodeBackendConfig,
+    termination: Option<
+        Arc<super::super::termination::TerminationState<claude_code::ClaudeTerminationHandle>>,
+    >,
+    allow_flag_preflight: Arc<OnceCell<bool>>,
+) -> ClaudeHarnessAdapter {
+    ClaudeHarnessAdapter {
+        config,
+        termination,
+        handle_state: Arc::new(Mutex::new(ClaudeHandleFacetState::default())),
+        allow_flag_preflight,
+    }
+}
+
+#[cfg(test)]
+pub(super) fn new_test_adapter(config: ClaudeCodeBackendConfig) -> ClaudeHarnessAdapter {
+    new_harness_adapter(config, None, Arc::new(OnceCell::new()))
 }
 
 fn render_backend_error_message(err: &ClaudeBackendError) -> String {
@@ -172,24 +122,22 @@ fn render_backend_error_message(err: &ClaudeBackendError) -> String {
     }
 }
 
-fn startup_failure_spawn(
+pub(super) fn startup_failure_spawn(
     err: ClaudeBackendError,
     emit_external_sandbox_warning: bool,
 ) -> BackendSpawn<ClaudeBackendEvent, ClaudeBackendCompletion, ClaudeBackendError> {
     let message = render_backend_error_message(&err);
-    let events: crate::backend_harness::DynBackendEventStream<
-        ClaudeBackendEvent,
-        ClaudeBackendError,
-    > = if emit_external_sandbox_warning {
-        Box::pin(stream::iter(vec![
-            Ok(ClaudeBackendEvent::ExternalSandboxWarning),
-            Ok(ClaudeBackendEvent::TerminalError { message }),
-        ]))
-    } else {
-        Box::pin(stream::once(async move {
-            Ok(ClaudeBackendEvent::TerminalError { message })
-        }))
-    };
+    let events: DynBackendEventStream<ClaudeBackendEvent, ClaudeBackendError> =
+        if emit_external_sandbox_warning {
+            Box::pin(stream::iter(vec![
+                Ok(ClaudeBackendEvent::ExternalSandboxWarning),
+                Ok(ClaudeBackendEvent::TerminalError { message }),
+            ]))
+        } else {
+            Box::pin(stream::once(async move {
+                Ok(ClaudeBackendEvent::TerminalError { message })
+            }))
+        };
     let completion = Box::pin(async move { Err(err) });
     BackendSpawn { events, completion }
 }
@@ -319,7 +267,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
             };
             builder = builder.timeout(timeout);
 
-            for (k, v) in req.env.iter() {
+            for (k, v) in &req.env {
                 builder = builder.env(k.clone(), v.clone());
             }
 
@@ -403,121 +351,119 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                 (None, None)
             };
 
-            let events: crate::backend_harness::DynBackendEventStream<
-                ClaudeBackendEvent,
-                ClaudeBackendError,
-            > = Box::pin(stream::unfold(
-                (
-                    handle.events,
-                    stream_state.clone(),
-                    Some(events_done_tx),
-                    tail_rx,
-                    selection_selector.clone(),
-                    false,
-                ),
-                |(
-                    mut events,
-                    stream_state,
-                    mut events_done_tx,
-                    mut tail_rx,
-                    selection_selector,
-                    tail_emitted,
-                )| async move {
-                    loop {
-                        match events.next().await {
-                            Some(Ok(ev)) => {
-                                if let claude_code::ClaudeStreamJsonEvent::AssistantMessage {
-                                    raw,
-                                    ..
-                                } = &ev
-                                {
-                                    if let Ok(mut state) = stream_state.lock() {
-                                        state.saw_assistant_message = true;
-                                        if let Some(text) =
-                                            extract_assistant_message_final_text(raw)
-                                        {
-                                            state.last_assistant_text = Some(text);
-                                        }
-                                    }
-                                }
-
-                                if selection_selector.is_some()
-                                    && matches!(
-                                        ev,
-                                        claude_code::ClaudeStreamJsonEvent::ResultError { .. }
-                                    )
-                                {
-                                    if let claude_code::ClaudeStreamJsonEvent::ResultError {
+            let events: DynBackendEventStream<ClaudeBackendEvent, ClaudeBackendError> =
+                Box::pin(stream::unfold(
+                    (
+                        handle.events,
+                        Arc::clone(&stream_state),
+                        Some(events_done_tx),
+                        tail_rx,
+                        selection_selector.clone(),
+                        false,
+                    ),
+                    |(
+                        mut events,
+                        stream_state,
+                        mut events_done_tx,
+                        mut tail_rx,
+                        selection_selector,
+                        tail_emitted,
+                    )| async move {
+                        loop {
+                            match events.next().await {
+                                Some(Ok(ev)) => {
+                                    if let claude_code::ClaudeStreamJsonEvent::AssistantMessage {
                                         raw,
                                         ..
                                     } = &ev
                                     {
-                                        if json_contains_not_found_signal(raw) {
-                                            if let Ok(mut state) = stream_state.lock() {
-                                                state.saw_not_found_signal = true;
+                                        if let Ok(mut state) = stream_state.lock() {
+                                            state.saw_assistant_message = true;
+                                            if let Some(text) =
+                                                extract_assistant_message_final_text(raw)
+                                            {
+                                                state.last_assistant_text = Some(text);
                                             }
                                         }
                                     }
-                                    continue;
+
+                                    if selection_selector.is_some()
+                                        && matches!(
+                                            ev,
+                                            claude_code::ClaudeStreamJsonEvent::ResultError { .. }
+                                        )
+                                    {
+                                        if let claude_code::ClaudeStreamJsonEvent::ResultError {
+                                            raw,
+                                            ..
+                                        } = &ev
+                                        {
+                                            if json_contains_not_found_signal(raw) {
+                                                if let Ok(mut state) = stream_state.lock() {
+                                                    state.saw_not_found_signal = true;
+                                                }
+                                            }
+                                        }
+                                        continue;
+                                    }
+
+                                    return Some((
+                                        Ok(ClaudeBackendEvent::Stream(ev)),
+                                        (
+                                            events,
+                                            stream_state,
+                                            events_done_tx,
+                                            tail_rx,
+                                            selection_selector,
+                                            tail_emitted,
+                                        ),
+                                    ));
                                 }
+                                Some(Err(err)) => {
+                                    if let Ok(mut state) = stream_state.lock() {
+                                        state.saw_stream_error = true;
+                                    }
 
-                                return Some((
-                                    Ok(ClaudeBackendEvent::Stream(ev)),
-                                    (
-                                        events,
-                                        stream_state,
-                                        events_done_tx,
-                                        tail_rx,
-                                        selection_selector,
-                                        tail_emitted,
-                                    ),
-                                ));
-                            }
-                            Some(Err(err)) => {
-                                if let Ok(mut state) = stream_state.lock() {
-                                    state.saw_stream_error = true;
+                                    return Some((
+                                        Err(ClaudeBackendError::StreamParse(err)),
+                                        (
+                                            events,
+                                            stream_state,
+                                            events_done_tx,
+                                            tail_rx,
+                                            selection_selector,
+                                            tail_emitted,
+                                        ),
+                                    ));
                                 }
+                                None => {
+                                    if let Some(tx) = events_done_tx.take() {
+                                        let _ = tx.send(());
+                                    }
 
-                                return Some((
-                                    Err(ClaudeBackendError::StreamParse(err)),
-                                    (
-                                        events,
-                                        stream_state,
-                                        events_done_tx,
-                                        tail_rx,
-                                        selection_selector,
-                                        tail_emitted,
-                                    ),
-                                ));
-                            }
-                            None => {
-                                if let Some(tx) = events_done_tx.take() {
-                                    let _ = tx.send(());
+                                    if tail_emitted {
+                                        return None;
+                                    }
+
+                                    let rx = tail_rx.take()?;
+                                    let message = rx.await.ok().flatten()?;
+
+                                    return Some((
+                                        Ok(ClaudeBackendEvent::TerminalError { message }),
+                                        (
+                                            events,
+                                            stream_state,
+                                            events_done_tx,
+                                            tail_rx,
+                                            selection_selector,
+                                            true,
+                                        ),
+                                    ));
                                 }
-
-                                if tail_emitted {
-                                    return None;
-                                }
-
-                                let rx = tail_rx.take()?;
-                                let message = rx.await.ok().flatten()?;
-
-                                return Some((
-                                    Ok(ClaudeBackendEvent::TerminalError { message }),
-                                    (
-                                        events,
-                                        stream_state,
-                                        events_done_tx,
-                                        tail_rx,
-                                        selection_selector,
-                                        true,
-                                    ),
-                                ));
                             }
                         }
-                    }
-                },
-            ));
+                    },
+                ));
 
             let events = if req.policy.external_sandbox {
                 Box::pin(
@@ -632,7 +578,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
 
         if let Some(session_id) = emit_handle_facet.as_deref() {
             let mut attached = false;
-            for event in mapped.iter_mut() {
+            for event in &mut mapped {
                 if event.kind == AgentWrapperEventKind::Status && event.data.is_none() {
                     event.data = Some(session_handle_facet(session_id));
                     attached = true;
@@ -687,103 +633,3 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
         }
     }
 }
-
-impl AgentWrapperBackend for ClaudeCodeBackend {
-    fn kind(&self) -> AgentWrapperKind {
-        AgentWrapperKind(AGENT_KIND.to_string())
-    }
-
-    fn capabilities(&self) -> AgentWrapperCapabilities {
-        let mut ids = BTreeSet::new();
-        ids.insert("agent_api.run".to_string());
-        ids.insert("agent_api.events".to_string());
-        ids.insert("agent_api.events.live".to_string());
-        ids.insert(crate::CAPABILITY_CONTROL_CANCEL_V1.to_string());
-        ids.insert(CAP_TOOLS_STRUCTURED_V1.to_string());
-        ids.insert(CAP_TOOLS_RESULTS_V1.to_string());
-        ids.insert(CAP_ARTIFACTS_FINAL_TEXT_V1.to_string());
-        ids.insert(CAP_SESSION_HANDLE_V1.to_string());
-        ids.insert("backend.claude_code.print_stream_json".to_string());
-        ids.insert(EXT_NON_INTERACTIVE.to_string());
-        ids.insert(EXT_SESSION_RESUME_V1.to_string());
-        ids.insert(EXT_SESSION_FORK_V1.to_string());
-        if self.config.allow_external_sandbox_exec {
-            ids.insert(EXT_EXTERNAL_SANDBOX_V1.to_string());
-        }
-        AgentWrapperCapabilities { ids }
-    }
-
-    fn run(
-        &self,
-        request: AgentWrapperRunRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<AgentWrapperRunHandle, AgentWrapperError>> + Send + '_>>
-    {
-        let config = self.config.clone();
-        let allow_flag_preflight = Arc::clone(&self.allow_flag_preflight);
-        Box::pin(async move {
-            let adapter = Arc::new(ClaudeHarnessAdapter {
-                config: config.clone(),
-                termination: None,
-                handle_state: Arc::new(Mutex::new(ClaudeHandleFacetState::default())),
-                allow_flag_preflight,
-            });
-            let defaults = BackendDefaults {
-                env: config.env,
-                default_timeout: config.default_timeout,
-            };
-
-            crate::backend_harness::run_harnessed_backend(adapter, defaults, request)
-        })
-    }
-
-    fn run_control(
-        &self,
-        request: AgentWrapperRunRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<AgentWrapperRunControl, AgentWrapperError>> + Send + '_>>
-    {
-        if !self
-            .capabilities()
-            .contains(crate::CAPABILITY_CONTROL_CANCEL_V1)
-        {
-            let agent_kind = self.kind().as_str().to_string();
-            return Box::pin(async move {
-                Err(AgentWrapperError::UnsupportedCapability {
-                    agent_kind,
-                    capability: crate::CAPABILITY_CONTROL_CANCEL_V1.to_string(),
-                })
-            });
-        }
-
-        let config = self.config.clone();
-        let allow_flag_preflight = Arc::clone(&self.allow_flag_preflight);
-        Box::pin(async move {
-            let termination_state = Arc::new(super::termination::TerminationState::new());
-            let request_termination: Option<Arc<dyn Fn() + Send + Sync + 'static>> = Some({
-                let termination_state = Arc::clone(&termination_state);
-                Arc::new(move || termination_state.request())
-            });
-
-            let adapter = Arc::new(ClaudeHarnessAdapter {
-                config: config.clone(),
-                termination: Some(termination_state),
-                handle_state: Arc::new(Mutex::new(ClaudeHandleFacetState::default())),
-                allow_flag_preflight,
-            });
-            let defaults = BackendDefaults {
-                env: config.env,
-                default_timeout: config.default_timeout,
-            };
-
-            crate::backend_harness::run_harnessed_backend_control(
-                adapter,
-                defaults,
-                request,
-                request_termination,
-            )
-        })
-    }
-}
-
-#[cfg(test)]
-#[path = "claude_code/tests.rs"]
-mod tests;

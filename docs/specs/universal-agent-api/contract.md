@@ -308,6 +308,7 @@ pub mod backends {
             pub default_working_dir: Option<PathBuf>,
             pub env: BTreeMap<String, String>,
             pub allow_external_sandbox_exec: bool,
+            pub allow_mcp_write: bool,
         }
 
         pub struct CodexBackend { /* private */ }
@@ -341,6 +342,7 @@ pub mod backends {
             pub default_working_dir: Option<PathBuf>,
             pub env: BTreeMap<String, String>,
             pub allow_external_sandbox_exec: bool,
+            pub allow_mcp_write: bool,
         }
 
         pub struct ClaudeCodeBackend { /* private */ }
@@ -378,15 +380,30 @@ When `allow_external_sandbox_exec == true` for a backend instance:
 
 ### MCP management write enablement (v1, normative)
 
-No built-in backend config field for MCP management write enablement is part of the approved v1
-public API surface. In particular:
+`agent_api.tools.mcp.add.v1` and `agent_api.tools.mcp.remove.v1` mutate persistent MCP
+configuration and MUST remain safe-by-default for built-in backends. Concretely:
 
-- `agent_api::backends::codex::CodexBackendConfig` MUST NOT expose `allow_mcp_write` in v1.
-- `agent_api::backends::claude_code::ClaudeCodeBackendConfig` MUST NOT expose `allow_mcp_write`
-  in v1.
+- `agent_api::backends::codex::CodexBackendConfig.allow_mcp_write` MUST exist and MUST default to
+  `false`.
+- `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write` MUST exist and MUST
+  default to `false`.
 
-Any future MCP management write-enablement knob for built-in backends MUST be introduced by a
-subsequent contract revision rather than backfilled into the approved v1 pinned type shapes above.
+When `allow_mcp_write == false` for a built-in backend instance:
+- `capabilities().ids` MUST NOT include `agent_api.tools.mcp.add.v1`,
+- `capabilities().ids` MUST NOT include `agent_api.tools.mcp.remove.v1`, and
+- calls to the non-run `mcp_add` / `mcp_remove` API MUST fail closed as
+  `AgentWrapperError::UnsupportedCapability`.
+
+When `allow_mcp_write == true` for a built-in backend instance:
+- the backend MAY include `agent_api.tools.mcp.add.v1` and
+  `agent_api.tools.mcp.remove.v1` in `capabilities().ids` only when the pinned CLI manifest
+  snapshot shows the required upstream subcommand is available on the current target, and
+- the backend MUST accept those operations for further validation/mapping under the pinned MCP
+  management rules.
+
+This enablement applies only to non-run MCP management config mutation. It does not grant or imply
+any additional permission for what an MCP server can do during a normal run. Read operations
+(`list/get`) are unchanged.
 
 ### Config and request precedence (v1, normative)
 

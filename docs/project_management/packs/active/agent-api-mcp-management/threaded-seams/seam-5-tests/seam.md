@@ -7,6 +7,7 @@ Inputs:
 - Threading (authoritative): `docs/project_management/packs/active/agent-api-mcp-management/threading.md`
 - Canonical spec (normative once approved): `docs/specs/universal-agent-api/mcp-management-spec.md`
 - Canonical core contract (normative): `docs/specs/universal-agent-api/contract.md`
+- Capabilities semantics + matrix caveat: `docs/specs/universal-agent-api/capabilities-schema-spec.md`
 
 ## Seam Brief (Restated)
 
@@ -71,12 +72,14 @@ Inputs:
   - `MM-C03 — Process context contract` (SEAM-1): tests pin working_dir/timeout/env precedence in spawned management commands.
   - `MM-C04 — Output bounds contract` (SEAM-1): tests pin 65,536-byte stdout/stderr budgets + suffix + flags end-to-end.
   - `MM-C05 — Add transport typing (no argv pass-through)` (SEAM-1): tests pin typed transports for `mcp_add` (no extra args).
-  - `MM-C06 — Safe default advertising (write ops)` (SEAM-2): tests pin default posture and `allow_mcp_write` gating.
+  - `MM-C06 — Safe default advertising (write ops)` (SEAM-2): tests pin default
+    `allow_mcp_write=false`, opt-in `true`, and target-gated advertising/invocation.
   - `MM-C07 — Isolated home support` (SEAM-2): tests pin isolated-home behavior + request env overrides winning.
   - `MM-C08 — Codex MCP mapping contract` (SEAM-3): tests pin Codex argv mapping + drift behavior.
   - `MM-C09 — Claude MCP mapping contract` (SEAM-4): tests pin Claude argv mapping + target gating + bearer-token rejection.
 - **Dependency edges honored**:
-  - `SEAM-2 blocks SEAM-5`: S1 pins safe advertising + isolation behavior; S2/S3 assume enablement exists.
+  - `SEAM-2 blocks SEAM-5`: S1 pins safe advertising + isolation behavior; S2/S3 assume the
+    public `allow_mcp_write` fields exist and default safe.
   - `SEAM-3 blocks SEAM-5`: S2 pins Codex mapping after the mapping seam lands.
   - `SEAM-4 blocks SEAM-5`: S3 pins Claude mapping after the mapping seam lands.
 - **Parallelization notes**:
@@ -90,4 +93,3 @@ Inputs:
 
 - After S1–S3 land, WS-INT should run `make preflight` per `threading.md` critical path.
 - If adding live smoke tests, keep them `#[ignore]` + gated by `AGENT_API_MCP_LIVE=1` so CI remains offline/deterministic.
-

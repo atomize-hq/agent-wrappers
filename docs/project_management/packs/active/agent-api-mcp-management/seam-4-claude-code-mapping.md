@@ -41,7 +41,9 @@
 
 - Must not emit stdout/stderr as run events.
 - Must not mutate parent env; request env overrides apply only to spawned Claude process.
-- `add/remove` support must respect write enablement and capability advertising (SEAM-2).
+- `add/remove` support must respect the public
+  `agent_api::backends::claude_code::ClaudeCodeBackendConfig.allow_mcp_write` field (default
+  `false`) and capability advertising (SEAM-2).
 - Manifest snapshot drift handling is pinned in the canonical spec: if runtime upstream behavior conflicts with the pinned
   CLI manifest snapshot, the operation MUST fail as `Err(AgentWrapperError::Backend { .. })` and MUST NOT silently mutate
   advertised capabilities at runtime (remediation is a follow-up repo update to manifests + mapping).
@@ -52,7 +54,7 @@
   - SEAM-5 (tests pin mapping behavior)
 - **Blocked by**:
   - SEAM-1 (types + hooks + bounds)
-  - SEAM-2 (write enablement + isolated homes, for `add/remove`)
+  - SEAM-2 (`ClaudeCodeBackendConfig.allow_mcp_write` + isolated homes, for `add/remove`)
 
 ## Touch surface
 
@@ -81,4 +83,7 @@
 
 ## Rollout / safety
 
-- `add/remove` capabilities remain disabled by default and only become reachable under explicit enablement (SEAM-2).
+- `add/remove` capabilities remain disabled by default because
+  `ClaudeCodeBackendConfig.allow_mcp_write` defaults to `false`; they become reachable only when
+  that field is explicitly enabled, the operation is advertised, and the pinned `win32-x64`
+  target-gating rules allow it (SEAM-2).

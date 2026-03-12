@@ -33,7 +33,8 @@ Inputs:
       - `Err(Backend)` only for spawn/wait/timeout/capture failures and manifest/runtime conflicts.
   - Out:
     - Universal type surface + gateway/hooks + shared validation/bounds helpers (SEAM-1).
-    - Capability advertising + `allow_mcp_write` + isolated homes wiring (SEAM-2).
+    - Capability advertising + public `CodexBackendConfig.allow_mcp_write` (default `false`) +
+      isolated homes wiring (SEAM-2).
     - Cross-backend hermetic fake-binary integration tests (SEAM-5).
 - **Touch surface**:
   - `crates/agent_api/src/backends/codex.rs` (backend hook implementation; minimal wiring)
@@ -79,12 +80,14 @@ Inputs:
   - `MM-C03 — Process context contract` (SEAM-1): S1/S2 compute effective working_dir/timeout/env with pinned precedence.
   - `MM-C04 — Output bounds contract` (SEAM-1): S1 implements bounded streaming capture + calls SEAM-1 enforcement helper.
   - `MM-C05 — Add transport typing (no argv pass-through)` (SEAM-1): S2 maps typed transports only; no extra-args escape hatch.
-  - `MM-C06 — Safe default advertising (write ops)` (SEAM-2): S2 write hooks fail-closed when unadvertised / disabled.
+  - `MM-C06 — Safe default advertising (write ops)` (SEAM-2): S2 write hooks fail-closed when
+    unadvertised / disabled, including when `CodexBackendConfig.allow_mcp_write == false`.
   - `MM-C07 — Isolated home support` (SEAM-2): S1/S2 honor `CodexBackendConfig.codex_home` injection, while allowing
     request env overrides to win (pinned).
 - **Dependency edges honored**:
   - `SEAM-1 blocks SEAM-3`: S1/S2 assume the final request types + validation helper + output enforcement helper.
-  - `SEAM-2 blocks SEAM-3`: S2 assumes `allow_mcp_write` + isolated-home config exist and capability advertising is authoritative.
+  - `SEAM-2 blocks SEAM-3`: S2 assumes `CodexBackendConfig.allow_mcp_write` + isolated-home config
+    exist and capability advertising is authoritative.
   - `SEAM-3 blocks SEAM-5`: S1/S2 deliver the concrete Codex mapping that tests will pin with fake binaries.
 - **Parallelization notes**:
   - What can proceed now:
@@ -97,4 +100,3 @@ Inputs:
 
 - Once S1/S2 land, WS-TESTS can pin Codex mapping behavior using hermetic fake `codex` binaries and isolated homes, then
   WS-INT should run `make preflight` per `threading.md`.
-

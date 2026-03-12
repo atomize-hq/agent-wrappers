@@ -26,7 +26,8 @@
   - `mcp_add` mapping is pinned:
     - `Stdio` → `codex mcp add <name> [--env KEY=VALUE]* -- <argv...>`
     - `Url` → `codex mcp add <name> --url <url> [--bearer-token-env-var <ENV_VAR>]`
-  - `add/remove` are not advertised by default, and are only invocable when `allow_mcp_write=true` (MM-C06).
+  - `add/remove` are not advertised while `CodexBackendConfig.allow_mcp_write=false` (default),
+    and are only invocable when `CodexBackendConfig.allow_mcp_write=true` (MM-C06).
   - `request.context.env` keys win over isolated-home injection (MM-C03/MM-C07), and transport env (`Stdio.env`) is passed
     only via `--env KEY=VALUE` argv (not as CLI process env).
   - Over-bound stdout/stderr are truncated to 65,536 bytes with suffix `…(truncated)` and flags set (MM-C04).
@@ -34,7 +35,8 @@
     advertising (pinned).
 - **Dependencies**:
   - SEAM-1: validation + output-bounds helper (MM-C03/MM-C04/MM-C05).
-  - SEAM-2: advertising + `allow_mcp_write` + isolated home injection (MM-C06/MM-C07).
+  - SEAM-2: advertising + `CodexBackendConfig.allow_mcp_write` + isolated home injection
+    (MM-C06/MM-C07).
   - SEAM-3: Codex MCP argv mapping + drift classifier (MM-C08).
 - **Verification**:
   - `cargo test -p agent_api --features codex,claude_code --test c5_mcp_management_v1 -- --nocapture`
@@ -78,7 +80,7 @@ Checklist:
 #### S2.T2 — Add Codex write-op integration tests (`add/remove`) + write gating (`allow_mcp_write`)
 
 - **Outcome**: Tests that pin:
-  - safe-by-default advertising (write ops off),
+  - safe-by-default advertising (`CodexBackendConfig.allow_mcp_write=false` keeps write ops off),
   - typed transport mapping for `mcp_add` (stdio + url),
   - isolated-home state mutation (sentinel files under `codex_home`),
   - and `mcp_remove` argv mapping.
@@ -87,11 +89,12 @@ Checklist:
     - `crates/agent_api/tests/mcp_management_v1/codex_write_ops.rs`
   - Inputs:
     - spec: `docs/specs/universal-agent-api/mcp-management-spec.md` (“Add transport typing” + “Codex mapping (pinned)”)
-    - contract: `docs/specs/universal-agent-api/contract.md` (“allow_mcp_write”)
+    - contract: `docs/specs/universal-agent-api/contract.md` (`CodexBackendConfig.allow_mcp_write`, default `false`)
 - **Implementation notes**:
   - Split into two cases:
-    1) `allow_mcp_write=false` → `mcp_add/remove` return `UnsupportedCapability` without spawning.
-    2) `allow_mcp_write=true` → operations spawn fake binary and produce record + sentinel writes.
+    1) `CodexBackendConfig.allow_mcp_write=false` → `mcp_add/remove` return `UnsupportedCapability` without spawning.
+    2) `CodexBackendConfig.allow_mcp_write=true` → operations spawn fake binary and produce record + sentinel writes.
+  - Assert capability presence/absence via backend `capabilities().ids`, not the generated capability matrix.
   - Pin the “transport env vs CLI env” distinction:
     - include a `Stdio.env` pair like `("MCP_SERVER_ENV", "1")` and assert:
       - record `args` contains `--env MCP_SERVER_ENV=1`,
@@ -100,7 +103,7 @@ Checklist:
     - set `bearer_token_env_var=Some("MY_TOKEN")` with `request.context.env["MY_TOKEN"]="SECRET"` and assert argv contains
       `--bearer-token-env-var MY_TOKEN` and does not contain `SECRET`.
 - **Acceptance criteria**:
-  - `mcp_add`/`mcp_remove` are gated by `allow_mcp_write`.
+  - `mcp_add`/`mcp_remove` are gated by `CodexBackendConfig.allow_mcp_write`.
   - Sentinels are written beneath the injected isolated home root for write ops.
   - No argv pass-through exists: only typed transports appear in argv.
 - **Test notes**:
@@ -143,4 +146,3 @@ Checklist:
 - Test: repeated targeted runs locally to catch flake.
 - Validate: ensure timeout tests cannot hang the test runner (kill + bounded wait).
 - Cleanup: keep sentinel strings unique and asserted absent from error messages.
-
