@@ -107,20 +107,27 @@ without backend drift or session-flow gaps.
   placement.
 - Codex fork rejects accepted add-dir inputs before app-server requests with the pinned safe
   backend message.
-- The capability inventory change is published by:
-  - Confirming `agent_api.exec.add_dirs.v1` is present in the canonical capability id registry
-    `docs/specs/universal-agent-api/capabilities-schema-spec.md` (expected to already be present),
-  - Regenerating `docs/specs/universal-agent-api/capability-matrix.md` via
-    `cargo run -p xtask -- capability-matrix` in the same change, with the
+- Capability publication is owned by the implementation change that flips built-in advertising for
+  `agent_api.exec.add_dirs.v1`:
+  - the canonical capability id registry
+    `docs/specs/universal-agent-api/capabilities-schema-spec.md` is expected to already contain the
+    stable id, and
+  - the same change that lands built-in advertising MUST regenerate
+    `docs/specs/universal-agent-api/capability-matrix.md` via
+    `cargo run -p xtask -- capability-matrix`, with the
     `agent_api.exec.add_dirs.v1` row showing ✅ for both `claude_code` and `codex`.
+  Until that implementation change lands, omission from the generated matrix remains the current
+  canonical truth for the built-in target profile: no built-in backend advertises
+  `agent_api.exec.add_dirs.v1` yet.
 
 ## Ownership + verification
 
 - Canonical capability id registry: `docs/specs/universal-agent-api/capabilities-schema-spec.md`
   (owned by universal-agent-api spec maintainers).
 - Generated overview: `docs/specs/universal-agent-api/capability-matrix.md` (regen required).
-- Reviewers MUST verify that `agent_api.exec.add_dirs.v1` appears in the canonical registry and the
-  regenerated matrix for the same change.
+- Reviewers MUST verify that `agent_api.exec.add_dirs.v1` appears in the canonical registry.
+- Reviewers MUST expect the regenerated matrix row only in the same change that actually lands
+  built-in advertising for the key.
 
 ## Constraints
 
@@ -151,7 +158,13 @@ without backend drift or session-flow gaps.
   backend rejection (`"add_dirs unsupported for codex fork"`) until the app-server schema exposes
   a dedicated add-dir field.
 - **Effective working directory handoff**: add-dir normalization must use the same effective
-  working directory a backend run will actually use, not a parallel approximation.
+  working directory a backend run will actually use, not a parallel approximation. For this pack,
+  the concrete computation locus is backend policy extraction:
+  `CodexHarnessAdapter::validate_and_extract_policy(...)` and
+  `ClaudeHarnessAdapter::validate_and_extract_policy(...)` MUST resolve working-directory
+  precedence before calling the shared normalizer, and Claude's backend run entrypoints MUST mirror
+  Codex by capturing run-start `current_dir()` so the backend-internal fallback is explicit before
+  add-dir validation.
 - **No path leaks in errors**: filesystem validation is easy to implement incorrectly by echoing
   rejected path text in user-visible messages.
 
@@ -169,3 +182,15 @@ without backend drift or session-flow gaps.
   implementation is landed, independent of the per-run path contents.
 - SEAM-2 owns a shared `backend_harness::normalize::normalize_add_dirs_v1(...)` helper that
   returns the backend-consumed `Vec<PathBuf>` normalized directory list.
+- The shared helper MUST be called as
+  `normalize_add_dirs_v1(request.extensions.get("agent_api.exec.add_dirs.v1"), effective_working_dir)`.
+  When the key is absent, the helper MUST return `Ok(Vec::new())`, and backends MUST emit no
+  `--add-dir` argv.
+- Backend policy extraction, not backend spawn code, owns effective-working-directory resolution
+  for add-dir validation. Codex uses request `working_dir` → backend `default_working_dir` →
+  captured `run_start_cwd`; Claude uses request `working_dir` → backend `default_working_dir` →
+  captured `run_start_cwd`.
+- Backend policy structs carry the resulting `Vec<PathBuf>` forward. Downstream backend mapping and
+  spawn layers MUST NOT reread `AgentWrapperRunRequest.extensions["agent_api.exec.add_dirs.v1"]`.
+- `exists && is_dir` validation remains inside the shared helper; no backend-local pre-spawn
+  filesystem validation step exists outside SEAM-2 for this key.

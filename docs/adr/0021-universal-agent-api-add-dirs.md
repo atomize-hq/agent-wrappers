@@ -43,7 +43,7 @@ This ADR corresponds to backlog item `uaa-0003` (`bucket=agent_api.exec`, `type=
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 5c67a5c423ac5db29e4bcd925c7cd6dcf5ce22b1eb02728eac884f0091d841c1
+ADR_BODY_SHA256: acd077a303b70c170ef62f6ba264a9ea9b749850d7380a49163987c677bbf8ff
 
 ### Decision (draft)
 
@@ -107,11 +107,16 @@ Both supported CLI agents expose `--add-dir`, and both wrapper crates already mo
 This feature is needed to give a caller one cross-agent way to expand the set of directories the
 backend may use for file reads, indexing, or tool access beyond the primary working directory.
 
-The unresolved design question from ADR-0016 is path semantics:
+ADR-0016 is historical context for why this feature needed a dedicated follow-up, but path
+semantics are no longer open for `agent_api.exec.add_dirs.v1` in this ADR. The resolved v1 rules
+are:
 
-- should paths be absolute only,
-- should relative paths be allowed,
-- and should the wrapper enforce containment to the effective working directory?
+- paths MAY be absolute or relative,
+- relative paths resolve against the run's effective working directory, and
+- v1 intentionally does not enforce containment to the effective working directory.
+
+No path-semantics follow-up remains open inside this feature. Any future change to those rules would
+require a new ADR/spec revision rather than reinterpretation of ADR-0016.
 
 Containment is the wrong default here. The point of “extra context roots” is to allow intentional
 access to additional directories, including sibling repos, shared docs trees, or checked-out assets
@@ -304,10 +309,36 @@ After spawn:
   - lexical normalization/dedup behaves deterministically without requiring canonicalization,
   - Codex emits repeated `--add-dir <dir>` pairs in order after any accepted `--model` pair,
   - Claude Code emits one variadic `--add-dir <dir...>` group in order, and
-  - Claude resume/fork place that variadic group after any accepted `--model` pair and before
-    session-selector flags, the final `--verbose` token, and the final prompt token,
-  - Codex fork rejects accepted add-dir inputs before `thread/list` / `thread/fork` /
-    `turn/start` with `AgentWrapperError::Backend { message: "add_dirs unsupported for codex fork" }`, and
+  - Claude resume selector `"last"` places that variadic group before `--continue`, the final
+    `--verbose` token, and the final prompt token,
+  - Claude resume selector `"id"` places that variadic group before `--resume <id>`, the final
+    `--verbose` token, and the final prompt token,
+  - Claude fork selector `"last"` places that variadic group before `--continue --fork-session`,
+    the final `--verbose` token, and the final prompt token,
+  - Claude fork selector `"id"` places that variadic group before `--fork-session --resume <id>`,
+    the final `--verbose` token, and the final prompt token,
+  - Codex fork rejects accepted add-dir inputs for selector `"last"` and selector `"id"` before
+    `thread/list` / `thread/fork` / `turn/start` with
+    `AgentWrapperError::Backend { message: "add_dirs unsupported for codex fork" }`,
+  - invalid fork + add-dir payloads fail as `AgentWrapperError::InvalidRequest` before the
+    Codex-specific backend rejection path and before any `thread/list` / `thread/fork` /
+    `turn/start` request,
+  - any handle-returning surface that later cannot honor the accepted add-dir set emits exactly one
+    terminal `AgentWrapperEventKind::Error` event whose safe/redacted message exactly matches the
+    `AgentWrapperError::Backend { message }` surfaced through completion, and
+  - deterministic runtime-rejection parity uses only
+    `crates/agent_api/src/bin/fake_codex_stream_exec_scenarios_agent_api.rs` scenarios
+    `add_dirs_runtime_rejection_exec`, `add_dirs_runtime_rejection_resume_last`, and
+    `add_dirs_runtime_rejection_resume_id`, plus
+    `crates/agent_api/src/bin/fake_claude_stream_json_agent_api.rs` scenarios
+    `add_dirs_runtime_rejection_fresh`, `add_dirs_runtime_rejection_resume_last`,
+    `add_dirs_runtime_rejection_resume_id`, `add_dirs_runtime_rejection_fork_last`, and
+    `add_dirs_runtime_rejection_fork_id`,
+  - each runtime-rejection fixture emits at least one pre-failure event before the safe message
+    `add_dirs rejected by runtime`, and
+  - the parity assertions explicitly prove no `ADD_DIR_RAW_PATH_SECRET`,
+    `ADD_DIR_STDOUT_SECRET`, or `ADD_DIR_STDERR_SECRET` leak through user-visible events or the
+    completion error, and
   - `docs/specs/universal-agent-api/capability-matrix.md` gains the
     `agent_api.exec.add_dirs.v1` row for both built-in backends in the same change that lands the
     capability.

@@ -38,7 +38,8 @@
   - **Inputs**:
     - accepted add-dir list on new run, resume, or fork
   - **Outputs**:
-    - the same effective set is honored on new run, resume, and fork
+    - the same effective set is honored on new run, resume selector `"last"`, resume selector
+      `"id"`, fork selector `"last"`, and fork selector `"id"`
 
 ## Key invariants / rules
 
@@ -48,6 +49,9 @@
 - If the installed CLI/runtime cannot honor accepted add-dir inputs for a supported run surface,
   the backend MUST take the owner-doc runtime rejection path (`AgentWrapperError::Backend { message }`)
   with a safe/redacted message.
+- If that runtime rejection occurs after a run handle and still-open events stream already exist,
+  the backend MUST emit exactly one terminal `AgentWrapperEventKind::Error` event with the same
+  safe/redacted message later surfaced through completion.
 - The backend must emit one variadic group, not repeated `--add-dir` flags.
 - The variadic group must appear after any accepted `--model` pair and before `--continue`,
   `--fork-session`, `--resume`, the final `--verbose` token, and the final prompt token.
@@ -75,8 +79,28 @@
   - the add-dir group appears after any accepted `--model` pair and before `--continue`,
     `--fork-session`, `--resume`, the final `--verbose` token, and the final prompt token
   - relative paths resolve against the effective working directory actually used by Claude Code
-- Resume/fork tests prove accepted add-dir inputs are honored with the same effective directory set
-  used for a fresh run.
+- Resume selector `"last"` tests prove the argv contains `--continue` after the variadic add-dir
+  group and before the final `--verbose` token/prompt.
+- Resume selector `"id"` tests prove the argv contains `--resume <ID>` after the variadic add-dir
+  group and before the final `--verbose` token/prompt.
+- Fork selector `"last"` tests prove the argv contains `--continue --fork-session` after the
+  variadic add-dir group and before the final `--verbose` token/prompt.
+- Fork selector `"id"` tests prove the argv contains `--fork-session --resume <ID>` after the
+  variadic add-dir group and before the final `--verbose` token/prompt.
+- Runtime rejection parity tests prove any supported Claude surface that returns a handle and later
+  cannot honor the accepted add-dir set emits exactly one terminal `AgentWrapperEventKind::Error`
+  event with the same safe/redacted message carried by completion.
+- Post-handle add-dir runtime rejection for Claude is owned only by
+  `crates/agent_api/src/bin/fake_claude_stream_json_agent_api.rs`. The add-dir parity scenarios in
+  that file MUST be `add_dirs_runtime_rejection_fresh`,
+  `add_dirs_runtime_rejection_resume_last`, `add_dirs_runtime_rejection_resume_id`,
+  `add_dirs_runtime_rejection_fork_last`, and `add_dirs_runtime_rejection_fork_id`.
+- Each add-dir runtime-rejection scenario MUST emit at least the first `system_init` fixture line
+  before the failure so the handle-returning precondition is observable, then terminate on the
+  backend-owned safe message `add_dirs rejected by runtime`.
+- The existing `resume_*_generic_error` and `fork_*_generic_error` scenarios remain evidence for
+  generic non-zero exit redaction only; they MUST NOT be reused for add-dir parity because they do
+  not satisfy the required `AgentWrapperError::Backend { message }` completion contract.
 
 ## Risks / unknowns
 

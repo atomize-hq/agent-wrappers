@@ -23,16 +23,23 @@ the specs win.
   - **Type**: config
   - **Owner seam (pack)**: SEAM-2
   - **Consumers**: SEAM-3/4/5
-  - **Definition**: the wrapper computes one effective directory list by trimming leading/trailing
-    Unicode whitespace (per the owner doc),
-    resolving relatives against the run's effective working directory (per
-    `docs/specs/universal-agent-api/contract.md` "Working directory resolution (effective working directory)"),
-    lexically normalizing,
-    verifying `exists && is_dir`, and deduplicating while preserving first occurrence order. This
-    list is exported as `Vec<PathBuf>` from
+  - **Definition**: the backend adapter layer computes one effective directory list by first
+    resolving the effective working directory inside
+    `crates/agent_api/src/backends/codex/harness.rs::CodexHarnessAdapter::validate_and_extract_policy(...)`
+    or
+    `crates/agent_api/src/backends/claude_code/harness.rs::ClaudeHarnessAdapter::validate_and_extract_policy(...)`,
+    then passing
+    `request.extensions.get("agent_api.exec.add_dirs.v1")`
+    plus that already-selected directory into
     `backend_harness::normalize::normalize_add_dirs_v1(...)`.
-    The backend adapter layer MUST determine the effective working directory per `contract.md` and
-    pass it into `normalize_add_dirs_v1(...)` unchanged.
+    Request defaults, backend config defaults, and backend-internal fallbacks MUST be resolved
+    before calling the helper. The helper MUST return `Ok(Vec::new())` when the key is absent;
+    otherwise it trims leading/trailing Unicode whitespace (per the owner doc), resolves relatives
+    against the run's effective working directory (per
+    `docs/specs/universal-agent-api/contract.md` "Working directory resolution (effective working directory)"),
+    lexically normalizes, verifies `exists && is_dir`, and deduplicates while preserving first
+    occurrence order. This list is exported as `Vec<PathBuf>` and attached to the backend policy
+    consumed by SEAM-3/4. No downstream code may reread the raw extension payload.
 
 - **AD-C03 — Safe error posture**
   - **Type**: policy
@@ -56,7 +63,11 @@ the specs win.
     same accepted effective add-dir set across new-session, resume, and fork decision-making, and
     MUST NOT silently ignore accepted inputs. Claude applies the accepted set on fork flows. The
     current Codex fork contract uses the pinned pre-handle backend rejection path from
-    `docs/specs/codex-app-server-jsonrpc-contract.md`. (Normative: see
+    `docs/specs/codex-app-server-jsonrpc-contract.md`. Pack-level verification obligations are:
+    Claude resume selector `"last"`, Claude resume selector `"id"`, Claude fork selector `"last"`,
+    and Claude fork selector `"id"` each get their own argv-placement assertion; Codex fork
+    selector `"last"` and selector `"id"` each prove the same pre-request rejection boundary for
+    accepted add-dir inputs. (Normative: see
     `docs/specs/universal-agent-api/extensions-spec.md` `agent_api.exec.add_dirs.v1`.)
 
 - **AD-C05 — Codex argv mapping**
@@ -82,6 +93,17 @@ the specs win.
   - **Definition**: when the key is absent, no backend synthesizes extra directories and no
     `--add-dir` argv is emitted.
 
+- **AD-C08 — Codex fork validation-vs-rejection precedence**
+  - **Type**: integration
+  - **Owner seam**: SEAM-3
+  - **Consumers**: SEAM-5
+  - **Definition**: the Codex-specific backend rejection
+    `AgentWrapperError::Backend { message: "add_dirs unsupported for codex fork" }` applies only
+    after `agent_api.exec.add_dirs.v1` passes R0 capability gating and pre-spawn validation. If the
+    add-dir payload is malformed, out of bounds, missing, or resolves to a missing/non-directory
+    path, the run MUST fail earlier as `InvalidRequest`. Neither the invalid-input path nor the
+    accepted-input fork rejection path may send `thread/list`, `thread/fork`, or `turn/start`.
+
 ## Dependency graph (text)
 
 - `SEAM-1 blocks SEAM-2` because: the shared normalizer must implement the already-pinned v1
@@ -93,14 +115,16 @@ the specs win.
   `Vec<PathBuf>` output from `backend_harness::normalize::normalize_add_dirs_v1(...)` instead of
   inventing backend-local path semantics.
 - `SEAM-3 blocks SEAM-5` because: tests must pin Codex capability advertising, argv order, and
-  session-flow behavior, including the fork rejection boundary.
+  session-flow behavior, including the fork rejection boundary and the invalid-input precedence
+  rule.
 - `SEAM-4 blocks SEAM-5` because: tests must pin Claude Code capability advertising, argv order,
-  add-dir placement, and session-flow behavior.
+  add-dir placement, selector-branch coverage, and runtime rejection parity.
 
 ## Critical path
 
 `SEAM-1 (contract)` → `SEAM-2 (shared normalizer)` → `SEAM-3 (Codex mapping + fork rejection)` /
-`SEAM-4 (Claude mapping + argv placement)` → `SEAM-5 (tests + capability artifact)`
+`SEAM-4 (Claude mapping + argv placement)` →
+`SEAM-5 (tests + capability artifact + folded integration closeout)`
 
 ## Integration points
 
@@ -109,10 +133,33 @@ the specs win.
 - **Effective working directory handoff**: the shared normalizer and each backend’s spawn path
   must agree on the same working directory source. Effective working directory is defined in
   `docs/specs/universal-agent-api/contract.md` ("Working directory resolution (effective working directory)"),
-  and backend adapters MUST pass that selected value into `normalize_add_dirs_v1(...)` unchanged.
+  and the concrete add-dir resolution locus is backend policy extraction, not spawn:
+  `CodexHarnessAdapter::validate_and_extract_policy(...)` and
+  `ClaudeHarnessAdapter::validate_and_extract_policy(...)` MUST compute the effective working
+  directory, call `normalize_add_dirs_v1(...)`, and store the resulting `Vec<PathBuf>` on the
+  backend policy before any spawn-specific argv/app-server mapping happens.
 - **Session selectors**: resume/fork parsing stays orthogonal, but accepted add-dir inputs must
-  survive into those flows. The one pinned exception is Codex fork, which rejects before any
-  app-server request using the backend-owned safe message.
+  survive into those flows. SEAM-4 and SEAM-5 MUST separately verify Claude resume selector
+  `"last"`, Claude resume selector `"id"`, Claude fork selector `"last"`, and Claude fork selector
+  `"id"` because the canonical argv subsequences differ by branch. The one pinned exception is
+  Codex fork: for accepted add-dir inputs, selector `"last"` and selector `"id"` both reject before
+  any `thread/list`, `thread/fork`, or `turn/start` request using the backend-owned safe message.
+- **Fork rejection precedence**: Codex fork-specific backend rejection happens only after accepted
+  add-dir inputs clear capability gating and pre-spawn validation. Invalid fork + add-dir
+  combinations MUST fail earlier as `InvalidRequest`, so SEAM-3/5 must verify that invalid-input
+  failures win before the fork-specific backend rejection path.
+- **Runtime rejection parity**: handle-returning surfaces that later discover they cannot honor an
+  accepted add-dir set MUST emit exactly one terminal `AgentWrapperEventKind::Error` event with the
+  same safe/redacted message later surfaced through `AgentWrapperError::Backend { message }`.
+  SEAM-4/5 own the explicit coverage for Claude fresh-run/resume/fork surfaces; Codex fork is
+  excluded because its pinned contract rejects before a run handle is returned.
+- **Runtime rejection fixtures**: deterministic post-handle add-dir rejection is owned only by
+  `crates/agent_api/src/bin/fake_codex_stream_exec_scenarios_agent_api.rs` (Codex exec/resume) and
+  `crates/agent_api/src/bin/fake_claude_stream_json_agent_api.rs` (Claude fresh/resume/fork).
+  Dedicated `add_dirs_runtime_rejection_*` scenario ids MUST be added there and MUST NOT reuse the
+  existing generic non-zero/session-selector fixtures, because the add-dir parity contract requires
+  `AgentWrapperError::Backend { message }` plus an identical terminal `Error` event rather than the
+  generic non-success completion path.
 - **Wrapper crate parity**: `codex::CodexClientBuilder` and `claude_code::ClaudePrintRequest`
   already expose add-dir surfaces; backend seams wire the normalized list into them.
 - **Shared normalizer anchor**: SEAM-2 owns `backend_harness::normalize::normalize_add_dirs_v1(...)`
@@ -131,9 +178,9 @@ the specs win.
 - **WS-NORMALIZE**: SEAM-2 (shared normalizer + reusable validation/resolution helpers).
 - **WS-CODEX**: SEAM-3 (Codex capability + policy + exec/resume/fork mapping).
 - **WS-CLAUDE**: SEAM-4 (Claude capability + policy + print/resume/fork mapping).
-- **WS-TESTS**: SEAM-5 (shared normalizer tests plus backend capability/mapping/session tests and
-  capability-matrix regeneration).
-- **WS-INT (Integration)**: end-to-end validation and `make preflight` after the seams land.
+- **WS-TESTS / WS-INT**: SEAM-5 (shared normalizer tests, backend capability/mapping/session
+  tests, selector-branch verification, runtime rejection parity, capability-matrix regeneration,
+  and final `make preflight` integration closeout).
 
 ## Pinned decisions / resolved threads
 

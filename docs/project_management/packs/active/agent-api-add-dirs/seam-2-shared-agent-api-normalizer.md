@@ -19,7 +19,16 @@
     - returns safe/testable errors without path leaks.
   - Define one shared normalizer entrypoint in
     `crates/agent_api/src/backend_harness/normalize.rs`:
-    `normalize_add_dirs_v1(...) -> Result<Vec<PathBuf>, AgentWrapperError>`.
+    `normalize_add_dirs_v1(raw: Option<&serde_json::Value>, effective_working_dir: &Path) -> Result<Vec<PathBuf>, AgentWrapperError>`.
+    The helper MUST return `Ok(Vec::new())` when
+    `request.extensions.get("agent_api.exec.add_dirs.v1")` is `None`.
+  - Require backend adapters to compute the effective working directory before invoking the shared
+    helper. The concrete call sites are
+    `crates/agent_api/src/backends/codex/harness.rs::CodexHarnessAdapter::validate_and_extract_policy(...)`
+    and
+    `crates/agent_api/src/backends/claude_code/harness.rs::ClaudeHarnessAdapter::validate_and_extract_policy(...)`.
+    Those functions own working-directory precedence resolution; the helper itself MUST NOT read
+    backend config defaults, request `working_dir`, or backend-internal fallbacks directly.
   - Export exactly `Vec<PathBuf>` as the normalized unique directory list consumed by backend
     policy extraction and spawn layers.
 - Out:
@@ -30,22 +39,28 @@
 
 - **Normalizer input contract**
   - **Inputs**:
-    - raw extension value
-    - effective working directory (per `docs/specs/universal-agent-api/contract.md` "Working directory resolution (effective working directory)")
+    - `request.extensions.get("agent_api.exec.add_dirs.v1")` as `Option<&serde_json::Value>`
+    - the already-resolved effective working directory (per
+      `docs/specs/universal-agent-api/contract.md` "Working directory resolution (effective
+      working directory)")
   - **Outputs**:
-    - normalized unique directory list or `InvalidRequest`
+    - `Ok(Vec::new())` when the key is absent
+    - otherwise, the normalized unique directory list or `InvalidRequest`
 
 - **Backend-consumption contract**
   - **Inputs**:
-    - normalized directory list
+    - normalized directory list attached to the backend policy struct during
+      `validate_and_extract_policy(...)`
   - **Outputs**:
     - backend policy/spawn layers receive `Vec<PathBuf>` and map it without re-validating
       schema/path semantics
+    - downstream code MUST NOT reread the raw `AgentWrapperRunRequest.extensions` payload for this
+      key
 
 - **Shared helper entrypoint**
   - **Inputs**:
-    - `extensions["agent_api.exec.add_dirs.v1"]`
-    - effective working directory selected for the run (selected by the backend adapter layer per `contract.md`)
+    - `request.extensions.get("agent_api.exec.add_dirs.v1")`
+    - effective working directory selected for the run by the backend adapter layer before spawn
   - **Outputs**:
     - `Result<Vec<PathBuf>, AgentWrapperError>` from
       `backend_harness::normalize::normalize_add_dirs_v1(...)`
@@ -54,6 +69,13 @@
 
 - The shared helper is the only place that decides trimming, path resolution, normalization, and
   dedup behavior.
+- The shared helper MUST be invoked exactly once per run surface after capability gating and
+  session-selector parsing, even when the add-dir key is absent.
+- Backend config defaults and backend-internal working-directory fallbacks MUST be resolved before
+  entering `normalize_add_dirs_v1(...)`; the helper MUST receive only the already-selected
+  effective working directory.
+- Pre-spawn filesystem validation for this feature (`exists && is_dir`) happens inside
+  `normalize_add_dirs_v1(...)`; backend policy/spawn layers MUST NOT repeat it elsewhere.
 - Backend-specific policy structs may carry the resulting `Vec<PathBuf>`, but they MUST treat it as
   an already-normalized value and MUST NOT duplicate schema or filesystem validation.
 - Errors identify the failing field or index using the exact templates

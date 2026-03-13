@@ -44,8 +44,12 @@
     - accepted add-dir list on new run, resume, or fork
   - **Outputs**:
     - exec/resume honor the same effective set
-    - fork fails before `thread/list` / `thread/fork` / `turn/start` with
+    - for accepted add-dir inputs, fork selector `"last"` and selector `"id"` both fail before
+      `thread/list` / `thread/fork` / `turn/start` with
       `AgentWrapperError::Backend { message: "add_dirs unsupported for codex fork" }`
+    - invalid add-dir payloads on fork fail earlier as `AgentWrapperError::InvalidRequest`, so the
+      fork-specific backend rejection path applies only after R0 capability gating and pre-spawn
+      validation succeed
 
 ## Key invariants / rules
 
@@ -56,6 +60,10 @@
 - Resume must not silently ignore accepted directories.
 - Fork must not silently ignore accepted directories; the only allowed behavior in the current
   contract is the pinned pre-handle backend rejection path.
+- The fork-specific backend rejection is post-validation only: malformed shape, bounds failures, and
+  missing/non-directory paths MUST stop earlier as `InvalidRequest`.
+- Because the fork rejection happens before selector-specific app-server branching, both selector
+  `"last"` and selector `"id"` share the same no-request boundary.
 - Ordering after dedup must be preserved in argv emission.
 
 ## Dependencies
@@ -83,8 +91,12 @@
   - present key emits repeated `--add-dir <DIR>` pairs in order for exec/resume
   - exec/resume keep any accepted `--model` pair before the first emitted `--add-dir`
   - relative paths resolve against the effective working directory actually used by Codex
-- Fork tests prove accepted add-dir inputs are rejected before `thread/list` / `thread/fork` /
-  `turn/start` with the pinned safe backend message.
+- Fork tests prove accepted add-dir inputs on selector `"last"` and selector `"id"` are both
+  rejected before `thread/list` / `thread/fork` / `turn/start` with the pinned safe backend
+  message.
+- Fork tests prove malformed/out-of-bounds/missing/non-directory add-dir payloads fail as
+  `InvalidRequest` before the fork-specific backend rejection path and before any
+  `thread/list` / `thread/fork` / `turn/start` request.
 
 ## Risks / unknowns
 
