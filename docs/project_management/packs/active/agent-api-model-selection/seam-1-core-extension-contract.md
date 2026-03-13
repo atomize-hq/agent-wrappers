@@ -45,13 +45,46 @@
     - none
 - **Touch surface**:
   - `docs/specs/universal-agent-api/extensions-spec.md`
+  - `docs/specs/universal-agent-api/capabilities-schema-spec.md`
   - `docs/specs/universal-agent-api/contract.md`
   - `docs/specs/universal-agent-api/run-protocol-spec.md`
   - `docs/adr/0020-universal-agent-api-model-selection.md`
 - **Verification**:
-  - spec text exactly matches ADR intent on schema, bounds, absence semantics, and runtime rejection posture
-  - no contradictory language remains in related universal specs
-  - downstream implementation seams can reference a single canonical contract registry
+  - the SEAM-1 owner MUST run a repeatable drift check across:
+    - `docs/specs/universal-agent-api/extensions-spec.md` (`### agent_api.config.model.v1`)
+    - `docs/specs/universal-agent-api/capabilities-schema-spec.md` (`agent_api.config.model.v1`)
+    - generic inherited baselines from:
+      - `docs/specs/universal-agent-api/contract.md` (`AgentWrapperError`, `AgentWrapperBackend::run`, and
+        `AgentWrapperEventKind::Error` / `AgentWrapperEvent.message`)
+      - `docs/specs/universal-agent-api/run-protocol-spec.md` (`Capability validation timing` and
+        `Error event emission for post-spawn unsupported operations (backend fault)`)
+    - `docs/adr/0020-universal-agent-api-model-selection.md` sections
+      `Canonical authority + sync workflow`, `Decision (draft)`, `Validation and error model`,
+      `Backend mapping`, and `Capability advertising`
+    - this pack's `README.md`, `scope_brief.md`, and `threading.md` restatements for SEAM-1-owned rules
+  - the pass MUST confirm the compared sources agree on:
+    - capability id + `agent_api.config.*` bucket placement
+    - trim-before-validate behavior and trimmed byte bound `1..=128`
+    - absence semantics
+    - exact pre-spawn InvalidRequest template `invalid agent_api.config.model.v1`
+    - backend-owned runtime rejection posture, including the inherited run-protocol rule for a terminal
+      `AgentWrapperEventKind::Error` when a post-spawn failure occurs while the stream remains open
+    - built-in backend mapping boundaries and capability-advertising posture
+  - `no unresolved canonical-doc delta` means zero open mismatches remain after that comparison. If a mismatch is
+    found, the owner MUST update the canonical specs first, then sync ADR-0020 and this pack in the same change before
+    re-running the pass.
+  - if a new mismatch appears after a passing run, SEAM-1 reverts to blocked status immediately and downstream seams
+    MUST NOT claim the gate is satisfied again until a newer passing record replaces the stale one.
+  - downstream implementation seams can reference a single canonical contract registry only after the latest recorded
+    pass is `pass: no unresolved canonical-doc delta`
+- **Verification record**:
+  - the latest pass/fail result for this seam MUST be appended under `Rollout / safety` in this file
+  - each record MUST include:
+    - verification date
+    - verifier name/role
+    - compared sources
+    - result (`pass: no unresolved canonical-doc delta` or `fail: canonical-doc delta opened`)
+    - commit or PR reference for the synchronized change set
 - **Risks / unknowns**
   - Risk:
     - drift between ADR rationale and owner-spec normative wording
@@ -59,4 +92,6 @@
     - doc-first reconciliation pass before backend code changes; if conflicts surface, resolve in the owner spec and update the ADR/body hash together
 - **Rollout / safety**:
   - land contract text before enabling backend advertising
-  - downstream seams may proceed once the SEAM-1 verification pass records "no unresolved canonical-doc delta"
+  - downstream seams may proceed once the SEAM-1 verification pass records `pass: no unresolved canonical-doc delta`
+  - verification record:
+    - append the most recent SEAM-1 pass/fail entry here so SEAM-2/3/4/5 owners can cite one bounded source of truth

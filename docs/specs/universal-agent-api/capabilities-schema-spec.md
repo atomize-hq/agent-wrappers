@@ -156,6 +156,33 @@ This section defines stable universal capability ids and their minimum semantics
     - `AgentWrapperCompletion.data` whenever a completion is produced and the id is known,
     per `event-envelope-schema-spec.md` ("Session handle facet (handle.v1)").
   - A backend that does not implement this MUST NOT advertise the capability.
+- `agent_api.config.model.v1`:
+  - Bucket: `agent_api.config.*`.
+  - This is the stable capability id and R0 gate for the universal model-selection extension key.
+  - Schema, trimming behavior, absence semantics, runtime-rejection posture, and backend mapping
+    requirements are owned by `docs/specs/universal-agent-api/extensions-spec.md`.
+  - For this capability, "deterministically honor the owner-doc semantics for a run flow" means
+    the flow has exactly one pinned outcome after R0 gating and pre-spawn validation:
+    either apply the accepted effective trimmed model id unchanged to the backend transport for that
+    flow, or take a pinned backend-owned safe rejection path for that flow. A flow that silently
+    drops, rewrites, or conditionally ignores an accepted model id does not satisfy this
+    requirement.
+  - A backend that advertises this capability MUST accept the same string key in
+    `AgentWrapperRunRequest.extensions`, apply the owner-doc v1 semantics unchanged, and advertise
+    the id only when it can deterministically honor those semantics for the targeted run flow.
+  - `AgentWrapperCapabilities.ids` is a backend-global capability set, not a per-request or
+    per-flow response. A backend that exposes multiple run flows MAY advertise this capability
+    globally only when every exposed flow has one of the pinned deterministic outcomes above.
+  - A backend that cannot deterministically honor the owner-doc semantics for one of its exposed
+    run flows MUST either stop advertising this capability entirely or narrow its exposed flow set;
+    it MUST NOT keep advertising while leaving that flow ambiguous.
+  - Built-in backend posture for v1:
+    - `codex` MAY advertise globally once exec/resume apply `--model <trimmed-id>` and fork keeps
+      the pinned pre-handle safe rejection path from
+      `docs/specs/codex-app-server-jsonrpc-contract.md`.
+    - `claude_code` MAY advertise globally once its print exec/resume/fork flows all emit exactly
+      one `--model <trimmed-id>` pair per
+      `docs/specs/claude-code-session-mapping-contract.md`.
 
 ## Extension keys (v1, normative)
 

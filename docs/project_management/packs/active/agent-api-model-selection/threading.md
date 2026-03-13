@@ -41,9 +41,26 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 
 - **MS-C05 — Built-in advertising contract**
   - **Type**: permission
-  - **Definition**: built-in Codex and Claude Code backends advertise `agent_api.config.model.v1` exactly when the
-    implementation can deterministically normalize the value and map it to the underlying CLI `--model <id>` surface.
-    For v1, that is expected to be unconditional once the implementation lands.
+  - **Definition**: built-in backends advertise `agent_api.config.model.v1` only when every run flow they expose has a
+    deterministic v1 outcome after R0 gating and pre-spawn validation: either the flow applies the accepted effective
+    trimmed model id unchanged to its underlying transport/CLI, or it takes a pinned backend-owned safe rejection path.
+    A flow that silently drops, rewrites, or conditionally ignores an accepted model id is not deterministic support.
+    Because `AgentWrapperCapabilities.ids` is backend-global rather than per-flow, built-in advertising can remain
+    unconditional only when every exposed flow meets one of those two outcomes. For v1 this means Codex may advertise
+    globally once exec/resume map to `--model <trimmed-id>` and fork preserves the pinned pre-handle safe rejection
+    path from `docs/specs/codex-app-server-jsonrpc-contract.md`; Claude Code may advertise globally once print
+    exec/resume/fork all emit exactly one `--model <trimmed-id>` pair per
+    `docs/specs/claude-code-session-mapping-contract.md`.
+  - **Owner seam**: SEAM-2
+  - **Consumers**: SEAM-3/4/5
+
+- **MS-C09 — Shared model-normalizer handoff**
+  - **Type**: integration
+  - **Definition**: SEAM-2 owns one shared helper in `backend_harness::normalize.rs` that reads
+    `request.extensions["agent_api.config.model.v1"]` only after R0 gating and exports
+    `Result<Option<String>, AgentWrapperError>`, where `None` means absent, `Some(trimmed_model_id)` means valid, and
+    `InvalidRequest { message: "invalid agent_api.config.model.v1" }` covers every invalid input shape/bounds case.
+    SEAM-3 and SEAM-4 consume only that typed output and MUST NOT parse the raw extension payload again.
   - **Owner seam**: SEAM-2
   - **Consumers**: SEAM-3/4/5
 
@@ -78,16 +95,30 @@ This section makes coupling explicit: contracts/interfaces, dependency edges, an
 ## Dependency graph (text)
 
 - `SEAM-1 gates SEAM-2/3/4` because: backend work starts after the SEAM-1 verification pass confirms there is no unresolved canonical-doc delta. The normative schema itself is already pinned in `docs/specs/universal-agent-api/extensions-spec.md`.
-- `SEAM-2 blocks SEAM-3` because: Codex run wiring must consume the shared effective model-id contract, not ad hoc raw extension parsing.
-- `SEAM-2 blocks SEAM-4` because: Claude run wiring must consume the shared effective model-id contract, not ad hoc raw extension parsing.
+- `SEAM-2 blocks SEAM-3` because: Codex run wiring must consume the shared `Result<Option<String>, AgentWrapperError>` output, not ad hoc raw extension parsing.
+- `SEAM-2 blocks SEAM-4` because: Claude run wiring must consume the shared `Result<Option<String>, AgentWrapperError>` output, not ad hoc raw extension parsing.
 - `SEAM-1 blocks SEAM-5A` because: pre-mapping validation tests need the pinned InvalidRequest and runtime-rejection posture.
-- `SEAM-2 blocks SEAM-5B` because: backend/matrix tests must verify the shared normalization helper and capability publication handoff.
+- `SEAM-2 blocks SEAM-5B` because: backend/matrix tests must verify the shared normalization helper, the no-second-parser rule, and capability publication handoff.
 - `SEAM-3 blocks SEAM-5B` because: Codex tests must verify the final mapping and backend-error translation behavior.
 - `SEAM-4 blocks SEAM-5B` because: Claude tests must verify the final mapping and exclusion of `--fallback-model`.
 
 ## Critical path
 
 `SEAM-1 (verification/sync)` → `SEAM-2 (advertising + normalization + matrix publication)` → `SEAM-3/SEAM-4 (backend mapping)` → `SEAM-5B (backend/runtime tests)`
+
+## Integration points
+
+- **Run extension gate**: `backend_harness::normalize_request()` MUST fail closed on unsupported keys before the shared
+  model helper inspects `agent_api.config.model.v1`.
+- **Shared helper anchor**: SEAM-2 owns the only raw-extension parse site in
+  `crates/agent_api/src/backend_harness/normalize.rs`; downstream backend policy layers consume only the normalized
+  `Option<String>` result.
+- **Wrapper crate parity**: `codex::CodexClientBuilder` and `claude_code::ClaudePrintRequest` already expose
+  `.model(...)`; SEAM-3/4 reuse those APIs and inherit the canonical argv-order rules instead of emitting `--model`
+  manually.
+- **Single-parser enforcement**: SEAM-2/3/4 verification is incomplete until shared-helper unit tests, backend argv
+  tests, and diff review all confirm there is no new direct parse of `agent_api.config.model.v1` outside
+  `backend_harness::normalize.rs`.
 
 ## Parallelization notes / conflict-safe workstreams
 

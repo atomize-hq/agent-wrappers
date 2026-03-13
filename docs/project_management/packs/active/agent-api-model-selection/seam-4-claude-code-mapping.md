@@ -46,7 +46,12 @@
   - argv/request tests prove trimmed valid input maps to Claude `--model`
   - absence tests prove no `--model` is emitted
   - session argv tests prove `--model <trimmed-id>` appears before any `--add-dir` group,
-    `--continue` / `--fork-session` / `--resume`, and `--fallback-model`
+    `--continue` / `--fork-session` / `--resume`, any `--fallback-model`, and the final
+    `--verbose` token, matching the pinned placement rules in
+    `docs/specs/claude-code-session-mapping-contract.md`
+  - regression coverage spans fresh print, resume, and fork session argv flows so any
+    implementation that moves `--model <trimmed-id>` to the right of the final `--verbose` token
+    fails before SEAM-5 consumes the mapping
   - regression tests prove the universal key never emits `--fallback-model`
   - runtime-rejection coverage uses `crates/agent_api/src/bin/fake_claude_stream_json_agent_api.rs` with a dedicated
     `model_runtime_rejection_after_init` scenario that emits `system init` before the terminal failure

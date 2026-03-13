@@ -114,6 +114,31 @@ Placement rules (pinned):
 - The pair MUST appear before any `--fallback-model` flag/value.
 - The pair MUST appear before the final `--verbose` token that precedes the prompt.
 
+Verification requirements (pinned):
+
+- Regression coverage MUST assert this ordering in fresh print argv construction and in the
+  resume/fork session argv subsequences defined below.
+- The verification surface MUST fail if `--model <trimmed-id>` drifts to the right of the final
+  `--verbose` token or any forbidden flag region listed above.
+
+Runtime rejection parity (pinned):
+
+- If an accepted `agent_api.config.model.v1` value is rejected after the Claude backend has already
+  returned a run handle and the consumer-visible events stream is still open, the backend MUST:
+  - fail the run as `AgentWrapperError::Backend { message }`,
+  - emit exactly one terminal `AgentWrapperEventKind::Error` event carrying that same safe/redacted
+    `message`, and
+  - close the stream after emitting that terminal error event.
+- The safe/redacted `message` in the terminal error event MUST exactly match the safe/redacted
+  `message` surfaced through the completion error so downstream consumers can compare them
+  deterministically.
+- This event/completion parity requirement is owned by
+  `docs/specs/universal-agent-api/extensions-spec.md`
+  (`agent_api.config.model.v1`, "Runtime rejection behavior (v1, normative)").
+
+Implementation note (non-normative): the active verification plan for this contract clause lives in
+`docs/project_management/packs/active/agent-api-model-selection/seam-4-claude-code-mapping.md`.
+
 ## `agent_api.session.resume.v1` mapping (pinned)
 
 The resume extension key is owned by `docs/specs/universal-agent-api/extensions-spec.md`. This

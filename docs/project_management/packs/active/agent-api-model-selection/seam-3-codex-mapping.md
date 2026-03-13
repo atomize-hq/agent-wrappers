@@ -47,6 +47,9 @@
   - `docs/specs/codex-app-server-jsonrpc-contract.md`
 - **Verification**:
   - argv/builder tests prove trimmed valid input maps to Codex `--model`
+  - argv layout tests prove the placement rule from `docs/specs/codex-streaming-exec-contract.md`:
+    wrapper-owned CLI overrides are applied before `--model <trimmed-id>`, and any accepted capability-guarded
+    `--add-dir` emission appears only after that `--model` pair for both exec and resume flows
   - absence tests prove no `--model` is emitted
   - fork tests prove accepted model-selection inputs are rejected before `thread/list` / `thread/fork` /
     `turn/start` with the pinned safe backend message

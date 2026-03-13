@@ -4,7 +4,7 @@
 # after editing to update the ADR_BODY_SHA256 drift guard.
 
 ## Status
-- Status: Draft (implementation plan; normative semantics are pinned in the Universal Agent API specs)
+- Status: Draft (rationale + rollout ADR; canonical semantics are already approved in the Universal Agent API specs and this ADR must stay synchronized to them)
 - Date (UTC): 2026-03-12
 - Owner(s): spensermcconnell
 
@@ -35,9 +35,22 @@ This ADR corresponds to backlog item `uaa-0002` (`bucket=agent_api.config`, `typ
   - `crates/codex/src/builder/mod.rs`
   - `crates/claude_code/src/commands/print.rs`
 
+## Canonical authority + sync workflow
+
+- Normative authority for `agent_api.config.model.v1` lives in:
+  - `docs/specs/universal-agent-api/extensions-spec.md` for schema, trimming, absence semantics, runtime-rejection posture, and backend mapping requirements
+  - `docs/specs/universal-agent-api/capabilities-schema-spec.md` for the stable capability id registry entry, bucket placement, and capability-advertising posture
+- ADR-0020 remains the rationale and rollout record until the implementation is accepted; it is not the owner doc for normative semantics.
+- Reconciliation workflow when model-selection semantics change:
+  - update the canonical spec docs first (`extensions-spec.md`, `capabilities-schema-spec.md`, and any affected backend contract doc)
+  - update this ADR in the same change so its rationale, rollout notes, and related-doc pointers match the canonical spec state
+  - run `make adr-fix ADR=docs/adr/0020-universal-agent-api-model-selection.md` before merging so the drift guard records the synchronized ADR body
+- Sync ownership:
+  - the ADR owner(s) above own keeping this ADR, the feature pack README, and the canonical specs aligned whenever `agent_api.config.model.v1` semantics or advertising rules change
+
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: d572edd4a303eee6512f0be1dfff15ea3cfb011c95fe7125c36cc106b735002c
+ADR_BODY_SHA256: 322fec918477662219b319497611b0c8348d911d977cba626ed896ccb3149ef7
 
 ### Decision (draft)
 
@@ -235,6 +248,9 @@ runtime model availability.
 
 - `make adr-check ADR=docs/adr/0020-universal-agent-api-model-selection.md`
 - Land the owner-doc semantics in `docs/specs/universal-agent-api/extensions-spec.md`.
+- When built-in advertising changes, run `cargo run -p xtask -- capability-matrix` in the same change and verify that
+  `docs/specs/universal-agent-api/capability-matrix.md` publishes the expected `agent_api.config.model.v1` entry for
+  the enabled built-in backends.
 - Add backend tests proving:
   - unsupported key fails before spawn,
   - non-string / empty / oversize values fail before spawn with the exact safe template

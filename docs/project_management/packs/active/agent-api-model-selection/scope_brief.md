@@ -54,6 +54,10 @@ shape, validation posture, capability advertising, and backend mapping so orches
 
 - Capability id:
   - `agent_api.config.model.v1`
+  - canonical registry entry:
+    `docs/specs/universal-agent-api/capabilities-schema-spec.md` (`agent_api.config.*` bucket; stable capability id)
+  - canonical owner doc for schema/defaults/mapping:
+    `docs/specs/universal-agent-api/extensions-spec.md`
 - Validation responsibilities:
   - R0 allowlist/capability gate occurs before backend-specific parsing,
   - value must be JSON string,
@@ -97,7 +101,10 @@ shape, validation posture, capability advertising, and backend mapping so orches
 - Absent requests preserve current backend defaults with no emitted `--model`.
 - Capability publication is owned by SEAM-2: any change that flips built-in advertising for
   `agent_api.config.model.v1` MUST regenerate `docs/specs/universal-agent-api/capability-matrix.md` via
-  `cargo run -p xtask -- capability-matrix` in the same change.
+  `cargo run -p xtask -- capability-matrix` in the same change. Until that implementation change lands, the
+  generated matrix may legitimately have no `agent_api.config.model.v1` row; reviewers MUST treat
+  `docs/specs/universal-agent-api/capabilities-schema-spec.md` as the canonical registry anchor and only expect a
+  matrix row in the change set that actually enables built-in advertising.
 - Runtime backend rejection stays backend-owned and safe, without introducing raw stderr leakage or fake universal errors.
 
 ## Constraints
@@ -130,9 +137,33 @@ shape, validation posture, capability advertising, and backend mapping so orches
   on a fresh schema decision.
 - **Normalization locus**: v1 normalization MUST be implemented as one shared helper in
   `crates/agent_api/src/backend_harness/normalize.rs`. Backend-local mirrored parsers are not permitted for this key.
+- **Shared helper interface**:
+  - SEAM-2 owns one backend-neutral entrypoint in `crates/agent_api/src/backend_harness/normalize.rs` that reads only
+    `request.extensions.get("agent_api.config.model.v1")` after the R0 allowlist/capability gate has accepted the key.
+  - The helper contract is `Result<Option<String>, AgentWrapperError>` with these pinned outcomes:
+    - `Ok(None)` when the key is absent.
+    - `Ok(Some(trimmed_model_id))` when the JSON value is a string whose trimmed UTF-8 byte length is `1..=128`.
+    - `Err(AgentWrapperError::InvalidRequest { message: "invalid agent_api.config.model.v1" })` when the value is
+      present but non-string, empty after trimming, or longer than 128 UTF-8 bytes after trimming.
+  - The returned `String` is already trimmed and is the only value backend seams may forward downstream; backend code
+    MUST NOT re-trim, re-parse, or read the raw extension payload again.
+- **Builder/request consumption order**:
+  - Codex policy extraction consumes `Some(trimmed_model_id)` by calling `CodexClientBuilder::model(trimmed_model_id)`;
+    `None` means no `.model(...)` call.
+  - Claude policy extraction consumes `Some(trimmed_model_id)` by calling `ClaudePrintRequest::model(trimmed_model_id)`;
+    `None` means no `.model(...)` call.
+  - Existing builder/request argv implementations remain the only place that emits `--model`; backend seams MUST reuse
+    those surfaces instead of hand-writing a second `--model` mapping from raw `request.extensions`.
 - **Capability-matrix handoff**: SEAM-2 owns matrix regeneration in the same change that updates built-in capability
   advertising. SEAM-5 consumes that artifact for regression assertions, and WS-INT reruns
   `cargo run -p xtask -- capability-matrix`; a stale diff is merge-blocking.
+- **Single-parser enforcement**:
+  - SEAM-2 MUST land shared helper tests in `backend_harness/normalize.rs` for absence, non-string, whitespace-only,
+    oversize-after-trim, and trimmed-success cases.
+  - SEAM-3/4 tests MUST prove the backend wiring consumes the helper output unchanged and emits `--model` through the
+    existing builder/argv order documented by the canonical backend specs.
+  - Code review for SEAM-2/3/4 is incomplete until the diff shows no new direct parsing of
+    `agent_api.config.model.v1` outside `crates/agent_api/src/backend_harness/normalize.rs`.
 - **Runtime-rejection fixtures**:
   - Codex uses `crates/agent_api/src/bin/fake_codex_stream_exec_scenarios_agent_api.rs` with a dedicated
     `model_runtime_rejection_after_thread_started` scenario that emits `thread.started` before the terminal failure.

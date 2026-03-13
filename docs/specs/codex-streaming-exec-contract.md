@@ -40,12 +40,35 @@ Placement rules (pinned):
 - Resume runs MUST preserve the same effective model id that a fresh exec run would emit; the
   wrapper MUST NOT silently drop an accepted model id on `stream_resume`.
 
+Verification linkage (pinned):
+
+- The SEAM-3 Codex mapping verification plan MUST include an argv-layout assertion proving these
+  placement rules end to end:
+  wrapper-owned CLI overrides first, then exactly one `--model <trimmed-id>` pair, then any accepted
+  capability-guarded `--add-dir` emission.
+- That verification MUST cover both fresh exec and resume flows so a resume-specific reordering or
+  omission cannot drift from the normative contract.
+
 Exclusion rules (pinned):
 
 - This key MUST NOT, by itself, authorize any additional Codex CLI override beyond `--model`.
 - Runtime rejection of the accepted model id remains backend-owned and MUST follow the safe
   `AgentWrapperError::Backend` translation requirements from
   `docs/specs/universal-agent-api/extensions-spec.md`.
+
+Runtime rejection parity (pinned):
+
+- If an accepted `agent_api.config.model.v1` value is rejected after the Codex streaming wrapper
+  has already returned a run handle and the consumer-visible events stream is still open, the
+  driver MUST emit exactly one terminal `AgentWrapperEventKind::Error` event carrying the same
+  safe/redacted `message` that later appears in
+  `AgentWrapperError::Backend { message }`, then close the stream.
+- The completion error payload and the terminal error event MUST therefore carry byte-for-byte
+  identical safe/redacted text for the rejection so downstream orchestrators can compare them
+  deterministically.
+- This event/completion parity requirement is owned by
+  `docs/specs/universal-agent-api/extensions-spec.md`
+  (`agent_api.config.model.v1`, "Runtime rejection behavior (v1, normative)").
 
 ## `agent_api.exec.add_dirs.v1` mapping (pinned)
 
