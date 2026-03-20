@@ -116,6 +116,18 @@ fn assert_external_sandbox_warning_before_session_handle_facet(seen: &[AgentWrap
     );
 }
 
+fn handle_facet_index(events: &[AgentWrapperEvent]) -> Option<usize> {
+    events.iter().position(|event| {
+        event.kind == AgentWrapperEventKind::Status
+            && event
+                .data
+                .as_ref()
+                .and_then(|data| data.get("schema"))
+                .and_then(serde_json::Value::as_str)
+                == Some("agent_api.session.handle.v1")
+    })
+}
+
 #[tokio::test]
 async fn resume_last_maps_to_exec_json_resume_last_dash_and_stdin_prompt() {
     let prompt = "hello world";
@@ -710,4 +722,157 @@ async fn resume_id_with_model_preserves_add_dir_flags_in_order() {
         .expect("completion resolves")
         .unwrap();
     assert!(completion.status.success());
+}
+
+#[tokio::test]
+async fn resume_last_add_dirs_runtime_rejection_emits_handle_before_backend_error() {
+    let prompt = "hello world";
+    let temp = tempdir().expect("tempdir");
+    let dir_a = temp.path().join("alpha");
+    let dir_b = temp.path().join("beta");
+    fs::create_dir_all(&dir_a).expect("alpha dir");
+    fs::create_dir_all(&dir_b).expect("beta dir");
+    let add_dirs = vec![dir_a, dir_b];
+
+    let mut env = base_env();
+    env.insert(
+        "FAKE_CODEX_SCENARIO".to_string(),
+        "add_dirs_runtime_rejection_resume_last".to_string(),
+    );
+    env.insert("FAKE_CODEX_EXPECT_PROMPT".to_string(), prompt.to_string());
+    env.extend(add_dir_expectations(&add_dirs));
+
+    let backend = CodexBackend::new(CodexBackendConfig {
+        binary: Some(fake_codex_binary()),
+        env,
+        ..Default::default()
+    });
+
+    let handle = backend
+        .run(AgentWrapperRunRequest {
+            prompt: prompt.to_string(),
+            extensions: [
+                (
+                    "agent_api.exec.add_dirs.v1".to_string(),
+                    json!({"dirs": add_dirs.iter().map(|dir| dir.display().to_string()).collect::<Vec<_>>() }),
+                ),
+                (
+                    "agent_api.session.resume.v1".to_string(),
+                    json!({"selector": "last"}),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    let mut events = handle.events;
+    let completion = handle.completion;
+
+    let seen = drain_to_none(events.as_mut(), Duration::from_secs(2)).await;
+    let handle_idx = handle_facet_index(&seen).expect("expected session handle facet");
+    let error_idx = seen
+        .iter()
+        .position(|event| event.kind == AgentWrapperEventKind::Error)
+        .expect("expected backend error event");
+    assert!(
+        handle_idx < error_idx,
+        "expected handle facet status event before backend error"
+    );
+    assert_eq!(
+        seen[error_idx].message.as_deref(),
+        Some("add_dirs rejected by runtime")
+    );
+
+    let err = tokio::time::timeout(Duration::from_secs(2), completion)
+        .await
+        .expect("completion resolves")
+        .unwrap_err();
+    match err {
+        AgentWrapperError::Backend { message } => {
+            assert_eq!(message, "add_dirs rejected by runtime");
+        }
+        other => panic!("expected Backend error, got: {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn resume_id_add_dirs_runtime_rejection_emits_handle_before_backend_error() {
+    let prompt = "hello world";
+    let resume_id = "thread-123";
+    let temp = tempdir().expect("tempdir");
+    let dir_a = temp.path().join("alpha");
+    let dir_b = temp.path().join("beta");
+    fs::create_dir_all(&dir_a).expect("alpha dir");
+    fs::create_dir_all(&dir_b).expect("beta dir");
+    let add_dirs = vec![dir_a, dir_b];
+
+    let mut env = base_env();
+    env.insert(
+        "FAKE_CODEX_SCENARIO".to_string(),
+        "add_dirs_runtime_rejection_resume_id".to_string(),
+    );
+    env.insert("FAKE_CODEX_EXPECT_PROMPT".to_string(), prompt.to_string());
+    env.insert(
+        "FAKE_CODEX_EXPECT_RESUME_ID".to_string(),
+        resume_id.to_string(),
+    );
+    env.extend(add_dir_expectations(&add_dirs));
+
+    let backend = CodexBackend::new(CodexBackendConfig {
+        binary: Some(fake_codex_binary()),
+        env,
+        ..Default::default()
+    });
+
+    let handle = backend
+        .run(AgentWrapperRunRequest {
+            prompt: prompt.to_string(),
+            extensions: [
+                (
+                    "agent_api.exec.add_dirs.v1".to_string(),
+                    json!({"dirs": add_dirs.iter().map(|dir| dir.display().to_string()).collect::<Vec<_>>() }),
+                ),
+                (
+                    "agent_api.session.resume.v1".to_string(),
+                    json!({"selector": "id", "id": resume_id}),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    let mut events = handle.events;
+    let completion = handle.completion;
+
+    let seen = drain_to_none(events.as_mut(), Duration::from_secs(2)).await;
+    let handle_idx = handle_facet_index(&seen).expect("expected session handle facet");
+    let error_idx = seen
+        .iter()
+        .position(|event| event.kind == AgentWrapperEventKind::Error)
+        .expect("expected backend error event");
+    assert!(
+        handle_idx < error_idx,
+        "expected handle facet status event before backend error"
+    );
+    assert_eq!(
+        seen[error_idx].message.as_deref(),
+        Some("add_dirs rejected by runtime")
+    );
+
+    let err = tokio::time::timeout(Duration::from_secs(2), completion)
+        .await
+        .expect("completion resolves")
+        .unwrap_err();
+    match err {
+        AgentWrapperError::Backend { message } => {
+            assert_eq!(message, "add_dirs rejected by runtime");
+        }
+        other => panic!("expected Backend error, got: {other:?}"),
+    }
 }

@@ -85,3 +85,20 @@ fn redact_exec_stream_error_does_not_leak_raw_jsonl_line() {
     assert!(!redacted.contains(secret));
     assert!(redacted.contains("line_bytes="));
 }
+
+#[test]
+fn codex_add_dirs_runtime_rejection_classifier_requires_exact_safe_message_match() {
+    assert!(super::super::is_add_dirs_runtime_rejection_signal(
+        super::super::PINNED_ADD_DIRS_RUNTIME_REJECTION
+    ));
+}
+
+#[test]
+fn codex_add_dirs_runtime_rejection_classifier_does_not_match_generic_or_prefixed_messages() {
+    assert!(!super::super::is_add_dirs_runtime_rejection_signal(
+        "codex generic failure"
+    ));
+    assert!(!super::super::is_add_dirs_runtime_rejection_signal(
+        "prefix add_dirs rejected by runtime"
+    ));
+}

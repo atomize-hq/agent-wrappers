@@ -89,6 +89,7 @@ pub(super) enum CodexBackendEvent {
 pub(super) struct CodexBackendCompletion {
     pub(super) status: ExitStatus,
     pub(super) final_text: Option<String>,
+    pub(super) backend_error_message: Option<String>,
     pub(super) selection_failure_message: Option<String>,
 }
 
@@ -563,8 +564,13 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         let CodexBackendCompletion {
             status,
             final_text,
+            backend_error_message,
             selection_failure_message,
         } = completion;
+
+        if let Some(message) = backend_error_message {
+            return Err(AgentWrapperError::Backend { message });
+        }
 
         if let Some(message) = selection_failure_message {
             return Err(AgentWrapperError::Backend { message });

@@ -5,6 +5,11 @@ use std::{
     time::Duration,
 };
 
+const ADD_DIRS_RUNTIME_REJECTION_MESSAGE: &str = "add_dirs rejected by runtime";
+const ADD_DIR_RAW_PATH_SECRET: &str = "ADD_DIR_RAW_PATH_SECRET";
+const ADD_DIR_STDOUT_SECRET: &str = "ADD_DIR_STDOUT_SECRET";
+const ADD_DIR_STDERR_SECRET: &str = "ADD_DIR_STDERR_SECRET";
+
 fn write_line(out: &mut impl Write, line: &str) -> io::Result<()> {
     out.write_all(line.as_bytes())?;
     out.flush()?;
@@ -270,6 +275,21 @@ fn assert_stdin_prompt(
     Ok(false)
 }
 
+fn emit_add_dirs_runtime_rejection(out: &mut impl Write) -> io::Result<()> {
+    emit_jsonl(
+        out,
+        &format!(
+            r#"{{"type":"error","message":"{ADD_DIRS_RUNTIME_REJECTION_MESSAGE}","code":"add_dirs_runtime_rejection","details":{{"raw_path":"{ADD_DIR_RAW_PATH_SECRET}","stdout":"{ADD_DIR_STDOUT_SECRET}","stderr":"{ADD_DIR_STDERR_SECRET}"}}}}"#
+        ),
+    )?;
+    {
+        let mut err = io::stderr().lock();
+        writeln!(err, "{ADD_DIR_STDERR_SECRET}")?;
+        err.flush()?;
+    }
+    Ok(())
+}
+
 fn main() -> io::Result<()> {
     // Cross-platform test binary used by `agent_api` tests.
     //
@@ -411,6 +431,30 @@ fn main() -> io::Result<()> {
                 r#"{"type":"thread.resumed","thread_id":"thread-1"}"#,
             )?;
         }
+        "add_dirs_runtime_rejection_resume_last" => {
+            let expected_prompt = require_env_var(&mut out, "FAKE_CODEX_EXPECT_PROMPT")?;
+
+            let ok =
+                contains_ordered_subsequence(&args, &["exec", "--json", "resume", "--last", "-"]);
+            if !ok {
+                emit_jsonl(
+                    &mut out,
+                    r#"{"type":"error","message":"missing argv subsequence: exec --json resume --last -"}"#,
+                )?;
+                std::process::exit(1);
+            }
+
+            if !assert_stdin_prompt(&mut out, &expected_prompt, Duration::from_secs(1))? {
+                std::process::exit(1);
+            }
+
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.resumed","thread_id":"thread-1"}"#,
+            )?;
+            emit_add_dirs_runtime_rejection(&mut out)?;
+            std::process::exit(1);
+        }
         "resume_id_assert" => {
             let expected_prompt = require_env_var(&mut out, "FAKE_CODEX_EXPECT_PROMPT")?;
             let expected_id = require_env_var(&mut out, "FAKE_CODEX_EXPECT_RESUME_ID")?;
@@ -435,6 +479,33 @@ fn main() -> io::Result<()> {
                 &mut out,
                 r#"{"type":"thread.resumed","thread_id":"thread-1"}"#,
             )?;
+        }
+        "add_dirs_runtime_rejection_resume_id" => {
+            let expected_prompt = require_env_var(&mut out, "FAKE_CODEX_EXPECT_PROMPT")?;
+            let expected_id = require_env_var(&mut out, "FAKE_CODEX_EXPECT_RESUME_ID")?;
+
+            let ok = contains_ordered_subsequence(
+                &args,
+                &["exec", "--json", "resume", expected_id.as_str(), "-"],
+            );
+            if !ok {
+                emit_jsonl(
+                    &mut out,
+                    r#"{"type":"error","message":"missing argv subsequence: exec --json resume <ID> -"}"#,
+                )?;
+                std::process::exit(1);
+            }
+
+            if !assert_stdin_prompt(&mut out, &expected_prompt, Duration::from_secs(1))? {
+                std::process::exit(1);
+            }
+
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.resumed","thread_id":"thread-1"}"#,
+            )?;
+            emit_add_dirs_runtime_rejection(&mut out)?;
+            std::process::exit(1);
         }
         "resume_last_not_found" => {
             let expected_prompt = require_env_var(&mut out, "FAKE_CODEX_EXPECT_PROMPT")?;
@@ -616,6 +687,14 @@ fn main() -> io::Result<()> {
             )?;
             eprintln!("RAW-STDERR-SECRET");
             std::process::exit(3);
+        }
+        "add_dirs_runtime_rejection_exec" => {
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+            emit_add_dirs_runtime_rejection(&mut out)?;
+            std::process::exit(1);
         }
         _ => {
             emit_jsonl(

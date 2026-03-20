@@ -30,6 +30,7 @@ impl CodexBackend {
 
 const PINNED_APPROVAL_REQUIRED: &str = "approval required";
 const PINNED_ADD_DIRS_UNSUPPORTED_FOR_FORK: &str = "add_dirs unsupported for codex fork";
+const PINNED_ADD_DIRS_RUNTIME_REJECTION: &str = "add_dirs rejected by runtime";
 const PINNED_TIMEOUT: &str = "codex backend error: timeout (details redacted when unsafe)";
 const PINNED_NO_SESSION_FOUND: &str = "no session found";
 const PINNED_SESSION_NOT_FOUND: &str = "session not found";
@@ -53,6 +54,10 @@ fn pinned_selection_failure_message(selector: &SessionSelectorV1) -> &'static st
         SessionSelectorV1::Last => PINNED_NO_SESSION_FOUND,
         SessionSelectorV1::Id { .. } => PINNED_SESSION_NOT_FOUND,
     }
+}
+
+fn is_add_dirs_runtime_rejection_signal(text: &str) -> bool {
+    text == PINNED_ADD_DIRS_RUNTIME_REJECTION
 }
 
 fn is_not_found_signal(text: &str) -> bool {

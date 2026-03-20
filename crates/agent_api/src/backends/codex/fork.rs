@@ -471,6 +471,7 @@ pub(super) async fn spawn_fork_v1_flow(
                             let _ = completion_tx.send(Ok(CodexBackendCompletion {
                                 status: synthetic_success_exit_status(),
                                 final_text: None,
+                                backend_error_message: None,
                                 selection_failure_message,
                             }));
                             return;
@@ -522,6 +523,7 @@ pub(super) async fn spawn_fork_v1_flow(
                                 let _ = completion_tx.send(Ok(CodexBackendCompletion {
                                     status: synthetic_success_exit_status(),
                                     final_text: None,
+                                    backend_error_message: None,
                                     selection_failure_message,
                                 }));
                                 return;
