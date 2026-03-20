@@ -17,7 +17,7 @@ use std::path::{Component, Prefix};
 fn ad_c02_absent_key_returns_empty_vec() {
     let fixtures = AddDirFixtures::new();
 
-    let normalized = normalize_add_dirs_v1(None, fixtures.effective_working_dir())
+    let normalized = normalize_add_dirs_v1(None, Some(fixtures.effective_working_dir()))
         .expect("absent key normalizes");
 
     assert!(normalized.is_empty());
@@ -31,7 +31,7 @@ fn ad_c02_non_object_payload_uses_safe_root_message_without_leakage() {
 
     assert_invalid_message(
         Some(&payload),
-        fixtures.effective_working_dir(),
+        Some(fixtures.effective_working_dir()),
         "invalid agent_api.exec.add_dirs.v1",
         &[secret],
     );
@@ -47,7 +47,7 @@ fn ad_c02_unknown_key_uses_safe_root_message_without_leakage() {
 
     assert_invalid_message(
         Some(&payload),
-        fixtures.effective_working_dir(),
+        Some(fixtures.effective_working_dir()),
         "invalid agent_api.exec.add_dirs.v1",
         &[secret],
     );
@@ -60,7 +60,7 @@ fn ad_c02_missing_dirs_uses_safe_root_message() {
 
     assert_invalid_message(
         Some(&payload),
-        fixtures.effective_working_dir(),
+        Some(fixtures.effective_working_dir()),
         "invalid agent_api.exec.add_dirs.v1",
         &[],
     );
@@ -74,7 +74,7 @@ fn ad_c02_non_array_dirs_uses_safe_container_message_without_leakage() {
 
     assert_invalid_message(
         Some(&payload),
-        fixtures.effective_working_dir(),
+        Some(fixtures.effective_working_dir()),
         "invalid agent_api.exec.add_dirs.v1.dirs",
         &[secret],
     );
@@ -87,7 +87,7 @@ fn ad_c02_empty_dirs_uses_safe_container_message() {
 
     assert_invalid_message(
         Some(&payload),
-        fixtures.effective_working_dir(),
+        Some(fixtures.effective_working_dir()),
         "invalid agent_api.exec.add_dirs.v1.dirs",
         &[],
     );
@@ -108,7 +108,7 @@ fn ad_c02_too_many_dirs_uses_safe_container_message_without_leakage() {
 
     assert_invalid_message(
         Some(&payload),
-        fixtures.effective_working_dir(),
+        Some(fixtures.effective_working_dir()),
         "invalid agent_api.exec.add_dirs.v1.dirs",
         oversized
             .iter()
@@ -127,7 +127,7 @@ fn ad_c02_non_string_entry_uses_safe_indexed_message_without_leakage() {
 
     assert_invalid_message(
         Some(&payload),
-        fixtures.effective_working_dir(),
+        Some(fixtures.effective_working_dir()),
         "invalid agent_api.exec.add_dirs.v1.dirs[0]",
         &["5"],
     );
@@ -141,7 +141,7 @@ fn ad_c02_trimmed_empty_entry_uses_safe_indexed_message_without_leakage() {
 
     assert_invalid_message(
         Some(&payload),
-        fixtures.effective_working_dir(),
+        Some(fixtures.effective_working_dir()),
         "invalid agent_api.exec.add_dirs.v1.dirs[0]",
         &[raw],
     );
@@ -155,7 +155,7 @@ fn ad_c02_over_byte_limit_entry_uses_safe_indexed_message_without_leakage() {
 
     assert_invalid_message(
         Some(&payload),
-        fixtures.effective_working_dir(),
+        Some(fixtures.effective_working_dir()),
         "invalid agent_api.exec.add_dirs.v1.dirs[0]",
         &[&"a".repeat(64)],
     );
@@ -171,7 +171,7 @@ fn ad_c02_missing_directory_uses_safe_indexed_message_without_leakage() {
 
     assert_invalid_message(
         Some(&payload),
-        fixtures.effective_working_dir(),
+        Some(fixtures.effective_working_dir()),
         "invalid agent_api.exec.add_dirs.v1.dirs[0]",
         &[&missing],
     );
@@ -186,7 +186,7 @@ fn ad_c02_non_directory_path_uses_safe_indexed_message_without_leakage() {
 
     assert_invalid_message(
         Some(&payload),
-        fixtures.effective_working_dir(),
+        Some(fixtures.effective_working_dir()),
         "invalid agent_api.exec.add_dirs.v1.dirs[0]",
         &[&file_path.to_string_lossy()],
     );
@@ -195,16 +195,44 @@ fn ad_c02_non_directory_path_uses_safe_indexed_message_without_leakage() {
 // Success-path normalization
 
 #[test]
-fn ad_c02_accepts_absolute_directory_entries() {
+fn ad_c02_accepts_absolute_directory_entries_without_effective_working_dir() {
     let fixtures = AddDirFixtures::new();
     let absolute_dir = fixtures.create_root_dir("absolute");
     let absolute_text = absolute_dir.to_string_lossy().to_string();
     let payload = add_dirs_payload(vec![json!(absolute_text)]);
 
-    let normalized =
-        normalize_add_dirs_v1(Some(&payload), fixtures.effective_working_dir()).expect("normalize");
+    let normalized = normalize_add_dirs_v1(Some(&payload), None).expect("normalize");
 
     assert_eq!(normalized, vec![absolute_dir]);
+}
+
+#[test]
+fn ad_c02_relative_entries_without_effective_working_dir_use_safe_indexed_message() {
+    let payload = add_dirs_payload(vec![json!("docs")]);
+
+    assert_invalid_message(
+        Some(&payload),
+        None,
+        "invalid agent_api.exec.add_dirs.v1.dirs[0]",
+        &["docs"],
+    );
+}
+
+#[test]
+fn ad_c02_mixed_absolute_and_relative_entries_without_effective_working_dir_fail_on_relative_entry()
+{
+    let fixtures = AddDirFixtures::new();
+    let absolute_dir = fixtures.create_root_dir("absolute");
+    let absolute_text = absolute_dir.to_string_lossy().to_string();
+    let relative_text = "docs";
+    let payload = add_dirs_payload(vec![json!(absolute_text), json!(relative_text)]);
+
+    assert_invalid_message(
+        Some(&payload),
+        None,
+        "invalid agent_api.exec.add_dirs.v1.dirs[1]",
+        &[&absolute_text, relative_text],
+    );
 }
 
 #[test]
@@ -213,8 +241,8 @@ fn ad_c02_trims_unicode_whitespace_before_relative_resolution() {
     let docs = fixtures.create_effective_dir("docs");
     let payload = add_dirs_payload(vec![json!("\u{2003}docs\u{2002}")]);
 
-    let normalized =
-        normalize_add_dirs_v1(Some(&payload), fixtures.effective_working_dir()).expect("normalize");
+    let normalized = normalize_add_dirs_v1(Some(&payload), Some(fixtures.effective_working_dir()))
+        .expect("normalize");
 
     assert_eq!(normalized, vec![docs]);
 }
@@ -226,8 +254,8 @@ fn ad_c02_resolves_relative_entries_from_effective_working_dir_only() {
     let decoy_root = fixtures.create_root_dir("docs");
     let payload = add_dirs_payload(vec![json!("docs")]);
 
-    let normalized =
-        normalize_add_dirs_v1(Some(&payload), fixtures.effective_working_dir()).expect("normalize");
+    let normalized = normalize_add_dirs_v1(Some(&payload), Some(fixtures.effective_working_dir()))
+        .expect("normalize");
 
     assert_eq!(normalized, vec![docs]);
     assert_ne!(normalized, vec![decoy_root]);
@@ -243,15 +271,15 @@ fn ad_c02_resolves_drive_relative_entries_from_effective_working_dir_only() {
         .to_string_lossy()
         .to_string())]);
 
-    let normalized =
-        normalize_add_dirs_v1(Some(&payload), fixtures.effective_working_dir()).expect("normalize");
+    let normalized = normalize_add_dirs_v1(Some(&payload), Some(fixtures.effective_working_dir()))
+        .expect("normalize");
 
     assert_eq!(normalized, vec![docs]);
 }
 
 #[cfg(windows)]
 #[test]
-fn ad_c02_rejects_mismatched_drive_relative_entries_instead_of_rebasing_them() {
+fn ad_c02_rejects_mismatched_drive_relative_entries_before_filesystem_probe() {
     let fixtures = AddDirFixtures::new();
     fixtures.create_effective_dir("docs");
     let drive_relative_docs =
@@ -262,7 +290,7 @@ fn ad_c02_rejects_mismatched_drive_relative_entries_instead_of_rebasing_them() {
 
     assert_invalid_message(
         Some(&payload),
-        fixtures.effective_working_dir(),
+        Some(fixtures.effective_working_dir()),
         "invalid agent_api.exec.add_dirs.v1.dirs[0]",
         &[&drive_relative_docs.to_string_lossy()],
     );
@@ -279,8 +307,8 @@ fn ad_c02_lexically_normalizes_and_deduplicates_while_preserving_first_order() {
         json!("./other/../other"),
     ]);
 
-    let normalized =
-        normalize_add_dirs_v1(Some(&payload), fixtures.effective_working_dir()).expect("normalize");
+    let normalized = normalize_add_dirs_v1(Some(&payload), Some(fixtures.effective_working_dir()))
+        .expect("normalize");
 
     assert_eq!(normalized, vec![first, second]);
 }
@@ -291,8 +319,8 @@ fn ad_c02_allows_resolved_directories_outside_effective_working_dir() {
     let outside = fixtures.create_root_dir("shared");
     let payload = add_dirs_payload(vec![json!("../shared")]);
 
-    let normalized =
-        normalize_add_dirs_v1(Some(&payload), fixtures.effective_working_dir()).expect("normalize");
+    let normalized = normalize_add_dirs_v1(Some(&payload), Some(fixtures.effective_working_dir()))
+        .expect("normalize");
 
     assert_eq!(normalized, vec![outside]);
 }
@@ -333,7 +361,7 @@ fn windows_drive_relative_on_other_drive(relative: &str, absolute_path: &Path) -
 
 fn assert_invalid_message(
     raw: Option<&Value>,
-    effective_working_dir: &Path,
+    effective_working_dir: Option<&Path>,
     expected_message: &str,
     leaked_texts: &[&str],
 ) {

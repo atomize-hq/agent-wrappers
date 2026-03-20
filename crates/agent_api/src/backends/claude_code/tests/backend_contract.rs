@@ -121,7 +121,7 @@ fn claude_harness_extracts_add_dirs_exactly_once_and_carries_policy_state_forwar
     );
     assert_eq!(
         SOURCE
-            .matches("normalize_add_dirs_v1(Some(raw), effective_working_dir)")
+            .matches("normalize_add_dirs_v1(Some(raw), resolved_working_dir.as_deref())")
             .count(),
         1,
         "expected Claude harness to normalize add-dir payloads exactly once"

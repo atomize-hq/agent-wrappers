@@ -6,6 +6,8 @@ use std::{
 };
 
 use serde_json::Value;
+#[cfg(windows)]
+use std::path::Prefix;
 
 use super::{BackendDefaults, BackendHarnessAdapter, NormalizedRequest};
 use crate::backends::spawn_path::resolve_relative_path_from_base;
@@ -51,7 +53,7 @@ fn derive_effective_timeout(
 
 pub(crate) fn normalize_add_dirs_v1(
     raw: Option<&Value>,
-    effective_working_dir: &Path,
+    effective_working_dir: Option<&Path>,
 ) -> Result<Vec<PathBuf>, AgentWrapperError> {
     let Some(raw) = raw else {
         return Ok(Vec::new());
@@ -154,7 +156,7 @@ fn parse_ext_string_enum<'a>(
 fn normalize_add_dir_entry(
     value: &Value,
     index: usize,
-    effective_working_dir: &Path,
+    effective_working_dir: Option<&Path>,
 ) -> Result<PathBuf, AgentWrapperError> {
     let raw = value
         .as_str()
@@ -165,7 +167,15 @@ fn normalize_add_dir_entry(
     }
 
     let candidate = Path::new(trimmed);
-    let resolved = resolve_relative_path_from_base(effective_working_dir, candidate);
+    let resolved = if candidate.is_absolute() {
+        candidate.to_path_buf()
+    } else {
+        let effective_working_dir =
+            effective_working_dir.ok_or_else(|| invalid_add_dirs_entry(index))?;
+        #[cfg(windows)]
+        reject_cross_drive_windows_add_dir(candidate, effective_working_dir, index)?;
+        resolve_relative_path_from_base(effective_working_dir, candidate)
+    };
     let normalized = lexical_normalize_path(&resolved);
 
     if !normalized.exists() || !normalized.is_dir() {
@@ -173,6 +183,58 @@ fn normalize_add_dir_entry(
     }
 
     Ok(normalized)
+}
+
+#[cfg(windows)]
+fn reject_cross_drive_windows_add_dir(
+    candidate: &Path,
+    effective_working_dir: &Path,
+    index: usize,
+) -> Result<(), AgentWrapperError> {
+    let Some(candidate_drive) = windows_drive_relative_prefix(candidate) else {
+        return Ok(());
+    };
+    let Some(effective_drive) = windows_disk_prefix(effective_working_dir) else {
+        return Ok(());
+    };
+
+    if candidate_drive == effective_drive {
+        return Ok(());
+    }
+
+    Err(invalid_add_dirs_entry(index))
+}
+
+#[cfg(windows)]
+fn windows_drive_relative_prefix(path: &Path) -> Option<u8> {
+    let mut components = path.components();
+    let Component::Prefix(prefix) = components.next()? else {
+        return None;
+    };
+
+    let drive = match prefix.kind() {
+        Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => drive.to_ascii_lowercase(),
+        _ => return None,
+    };
+
+    for component in components {
+        if matches!(component, Component::RootDir) {
+            return None;
+        }
+    }
+
+    Some(drive)
+}
+
+#[cfg(windows)]
+fn windows_disk_prefix(path: &Path) -> Option<u8> {
+    path.components().find_map(|component| match component {
+        Component::Prefix(prefix) => match prefix.kind() {
+            Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => Some(drive.to_ascii_lowercase()),
+            _ => None,
+        },
+        _ => None,
+    })
 }
 
 fn lexical_normalize_path(path: &Path) -> PathBuf {

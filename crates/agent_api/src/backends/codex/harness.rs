@@ -286,7 +286,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         )? {
             Some(effective_working_dir) => normalize_add_dirs_v1(
                 request.extensions.get(EXT_ADD_DIRS_V1),
-                effective_working_dir.as_path(),
+                Some(effective_working_dir.as_path()),
             )?,
             None => Vec::new(),
         };

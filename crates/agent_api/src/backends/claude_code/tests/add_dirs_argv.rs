@@ -55,7 +55,7 @@ async fn run_claude_assertion_with_adapter(
     prompt: &str,
     scenario: &str,
     mut config: ClaudeCodeBackendConfig,
-    run_start_cwd: PathBuf,
+    run_start_cwd: Option<PathBuf>,
     request_working_dir: Option<PathBuf>,
     extensions: BTreeMap<String, JsonValue>,
 ) {
@@ -67,7 +67,7 @@ async fn run_claude_assertion_with_adapter(
         .insert("FAKE_CLAUDE_EXPECT_PROMPT".to_string(), prompt.to_string());
     let adapter = Arc::new(new_adapter_with_config_and_run_start_cwd(
         config.clone(),
-        Some(run_start_cwd),
+        run_start_cwd,
     ));
     let defaults = crate::backend_harness::BackendDefaults {
         env: config.env.clone(),
@@ -118,6 +118,29 @@ async fn fresh_run_emits_one_variadic_add_dir_group_before_verbose() {
     .collect();
 
     run_claude_assertion(prompt, "fresh_assert", env, extensions).await;
+}
+
+#[tokio::test]
+async fn fresh_run_accepts_absolute_add_dirs_without_effective_working_dir() {
+    let prompt = "hello world";
+    let temp = tempdir().expect("tempdir");
+    let absolute_dir = temp.path().join("shared-context");
+    fs::create_dir_all(&absolute_dir).expect("absolute dir");
+
+    let env = expected_add_dirs_env(std::slice::from_ref(&absolute_dir));
+    let config = ClaudeCodeBackendConfig {
+        binary: Some(fake_claude_binary()),
+        env,
+        ..Default::default()
+    };
+    let extensions = [(
+        "agent_api.exec.add_dirs.v1".to_string(),
+        add_dirs_json(std::slice::from_ref(&absolute_dir)),
+    )]
+    .into_iter()
+    .collect();
+
+    run_claude_assertion_with_adapter(prompt, "fresh_assert", config, None, None, extensions).await;
 }
 
 #[tokio::test]
@@ -281,7 +304,7 @@ async fn fresh_run_resolves_relative_request_working_dir_before_add_dirs_and_spa
         prompt,
         "fresh_assert",
         config,
-        run_start_cwd,
+        Some(run_start_cwd),
         Some(PathBuf::from("repo")),
         extensions,
     )
@@ -321,7 +344,7 @@ async fn fresh_run_resolves_relative_default_working_dir_before_add_dirs_and_spa
         prompt,
         "fresh_assert",
         config,
-        run_start_cwd,
+        Some(run_start_cwd),
         None,
         extensions,
     )

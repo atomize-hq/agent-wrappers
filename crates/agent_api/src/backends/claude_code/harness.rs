@@ -205,14 +205,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
         validate_resume_fork_mutual_exclusion(&request.extensions)?;
 
         let add_dirs = match request.extensions.get(EXT_ADD_DIRS_V1) {
-            Some(raw) => {
-                let effective_working_dir = resolved_working_dir.as_deref().ok_or_else(|| {
-                    AgentWrapperError::InvalidRequest {
-                        message: "working_dir must be provided or configured".to_string(),
-                    }
-                })?;
-                normalize_add_dirs_v1(Some(raw), effective_working_dir)?
-            }
+            Some(raw) => normalize_add_dirs_v1(Some(raw), resolved_working_dir.as_deref())?,
             None => Vec::new(),
         };
 

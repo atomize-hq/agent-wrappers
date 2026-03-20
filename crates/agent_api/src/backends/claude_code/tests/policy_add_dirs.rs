@@ -139,7 +139,32 @@ fn claude_policy_add_dirs_run_start_cwd_is_final_fallback() {
 }
 
 #[test]
-fn claude_policy_add_dirs_requires_working_dir_when_key_is_present() {
+fn claude_policy_add_dirs_accepts_absolute_entries_without_effective_working_dir() {
+    let temp = tempdir().expect("tempdir");
+    let absolute_docs = temp.path().join("shared-context");
+    fs::create_dir_all(&absolute_docs).expect("create absolute add-dir");
+    let absolute_docs_text = absolute_docs.to_string_lossy().into_owned();
+    let request = AgentWrapperRunRequest {
+        prompt: "hello".to_string(),
+        extensions: [(
+            EXT_ADD_DIRS_V1.to_string(),
+            add_dirs_payload(&[absolute_docs_text.as_str()]),
+        )]
+        .into_iter()
+        .collect(),
+        ..Default::default()
+    };
+
+    let policy = new_adapter()
+        .validate_and_extract_policy(&request)
+        .expect("policy extraction should succeed");
+
+    assert_eq!(policy.add_dirs, vec![absolute_docs]);
+    assert_eq!(policy.resolved_working_dir, None);
+}
+
+#[test]
+fn claude_policy_add_dirs_relative_entries_without_effective_working_dir_fail_safely() {
     let request = AgentWrapperRunRequest {
         prompt: "hello".to_string(),
         extensions: [(EXT_ADD_DIRS_V1.to_string(), add_dirs_payload(&["docs"]))]
@@ -151,7 +176,7 @@ fn claude_policy_add_dirs_requires_working_dir_when_key_is_present() {
     let err = adapter_error(new_adapter().validate_and_extract_policy(&request));
     match &err {
         AgentWrapperError::InvalidRequest { message } => {
-            assert_eq!(message, "working_dir must be provided or configured");
+            assert_eq!(message, "invalid agent_api.exec.add_dirs.v1.dirs[0]");
         }
         other => panic!("expected InvalidRequest, got: {other:?}"),
     }
