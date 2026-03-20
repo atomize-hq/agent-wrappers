@@ -162,12 +162,18 @@ fn ad_c02_over_byte_limit_entry_uses_safe_indexed_message_without_leakage() {
 }
 
 #[test]
-fn ad_c02_over_utf8_byte_limit_entry_with_sub_1024_chars_uses_safe_indexed_message_without_leakage(
-) {
+fn ad_c02_over_utf8_byte_limit_entry_with_sub_1024_chars_uses_safe_indexed_message_without_leakage()
+{
     let fixtures = AddDirFixtures::new();
     let oversized = "é".repeat(600);
-    assert!(oversized.chars().count() < 1024, "test requires sub-1024 chars");
-    assert!(oversized.len() > 1024, "test requires over-1024 UTF-8 bytes");
+    assert!(
+        oversized.chars().count() < 1024,
+        "test requires sub-1024 chars"
+    );
+    assert!(
+        oversized.len() > 1024,
+        "test requires over-1024 UTF-8 bytes"
+    );
     let payload = add_dirs_payload(vec![json!(oversized)]);
 
     assert_invalid_message(

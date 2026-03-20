@@ -275,11 +275,8 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
     ) -> Result<Self::Policy, AgentWrapperError> {
         let mut exec_policy = validate_and_extract_exec_policy(request)?;
 
-        let effective_working_dir = effective_working_dir_for_add_dirs(
-            &self.config,
-            self.run_start_cwd.as_ref(),
-            request,
-        )?;
+        let effective_working_dir =
+            effective_working_dir_for_add_dirs(&self.config, self.run_start_cwd.as_ref(), request)?;
         exec_policy.add_dirs = normalize_add_dirs_v1(
             request.extensions.get(EXT_ADD_DIRS_V1),
             effective_working_dir.as_deref(),
