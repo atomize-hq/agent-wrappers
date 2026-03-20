@@ -299,8 +299,10 @@ fn resolve_codex_mcp_command_resolves_relative_request_path_from_request_working
     config.binary = None;
     config.default_working_dir = Some(default_dir.clone());
 
-    let mut context = AgentWrapperMcpCommandContext::default();
-    context.working_dir = Some(request_dir.clone());
+    let mut context = AgentWrapperMcpCommandContext {
+        working_dir: Some(request_dir.clone()),
+        ..Default::default()
+    };
     context.env.insert(PATH_ENV.to_string(), "bin".to_string());
 
     let resolved = resolve_codex_mcp_command(&config, &context).expect("resolve");
