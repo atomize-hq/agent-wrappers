@@ -69,6 +69,7 @@ fn claude_downstream_mapping_surfaces_do_not_reopen_raw_add_dirs_parsing() {
     const BACKEND_SOURCE: &str = include_str!("../backend.rs");
     const HARNESS_SOURCE: &str = include_str!("../harness.rs");
     const MAPPING_SOURCE: &str = include_str!("../mapping.rs");
+    const UTIL_SOURCE: &str = include_str!("../util.rs");
     const MCP_ARGV_SOURCE: &str = include_str!("../mcp_management/argv.rs");
     const MCP_RESOLVE_SOURCE: &str = include_str!("../mcp_management/resolve.rs");
     const MCP_RUNNER_SOURCE: &str = include_str!("../mcp_management/runner.rs");
@@ -98,8 +99,12 @@ fn claude_downstream_mapping_surfaces_do_not_reopen_raw_add_dirs_parsing() {
         "expected harness.rs to keep add-dir normalization on the shared helper path"
     );
     assert!(
-        HARNESS_SOURCE.contains(".add_dirs("),
-        "expected harness.rs to map normalized add dirs into ClaudePrintRequest"
+        HARNESS_SOURCE.contains("build_fresh_run_print_request("),
+        "expected harness.rs to route normalized add-dir mapping through the focused print-request helper"
+    );
+    assert!(
+        UTIL_SOURCE.contains(".add_dirs("),
+        "expected util.rs to map normalized add dirs into ClaudePrintRequest"
     );
 }
 

@@ -1,5 +1,8 @@
 use std::{collections::BTreeMap, fs, path::PathBuf, pin::Pin, time::Duration};
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 use agent_api::{
     backends::codex::{CodexBackend, CodexBackendConfig},
     AgentWrapperCompletion, AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind,
@@ -22,6 +25,20 @@ pub(super) const STREAM_TIMEOUT: Duration = Duration::from_secs(2);
 pub(super) struct AddDirsFixture {
     _temp: TempDir,
     pub(super) dirs: Vec<PathBuf>,
+}
+
+#[cfg(unix)]
+#[derive(Copy, Clone)]
+pub(super) enum AddDirProbeMode {
+    Unsupported,
+    Unknown,
+}
+
+#[cfg(unix)]
+pub(super) struct ProbeOnlyCodexFixture {
+    _temp: TempDir,
+    pub(super) exec_log: PathBuf,
+    pub(super) backend: CodexBackend,
 }
 
 pub(super) fn fake_codex_binary() -> PathBuf {
@@ -101,6 +118,31 @@ pub(super) fn build_backend(
         model: model.map(ToOwned::to_owned),
         ..Default::default()
     })
+}
+
+#[cfg(unix)]
+pub(super) fn build_probe_only_backend(
+    mode: AddDirProbeMode,
+    env: BTreeMap<String, String>,
+    model: Option<&str>,
+    allow_external_sandbox_exec: bool,
+) -> ProbeOnlyCodexFixture {
+    let temp = tempdir().expect("tempdir");
+    let exec_log = temp.path().join("exec.log");
+    let binary = write_probe_only_codex(temp.path(), mode, &exec_log);
+    let backend = CodexBackend::new(CodexBackendConfig {
+        allow_external_sandbox_exec,
+        binary: Some(binary),
+        env,
+        model: model.map(ToOwned::to_owned),
+        ..Default::default()
+    });
+
+    ProbeOnlyCodexFixture {
+        _temp: temp,
+        exec_log,
+        backend,
+    }
 }
 
 pub(super) fn run_request(
@@ -226,4 +268,51 @@ pub(super) fn assert_no_add_dir_sentinel_leaks_in_events(events: &[AgentWrapperE
             "expected add-dir runtime rejection sentinel {sentinel} to stay backend-private"
         );
     }
+}
+
+#[cfg(unix)]
+fn write_probe_only_codex(
+    dir: &std::path::Path,
+    mode: AddDirProbeMode,
+    exec_log_path: &std::path::Path,
+) -> PathBuf {
+    let (json_probe, text_probe, help_output) = match mode {
+        AddDirProbeMode::Unsupported => (
+            r#"echo '{"features":["output_schema"]}'"#,
+            r#"echo "output_schema""#,
+            r#"echo "Usage: codex exec""#,
+        ),
+        AddDirProbeMode::Unknown => (
+            r#"echo "feature list unavailable" >&2; exit 1"#,
+            r#"echo "feature list unavailable" >&2; exit 1"#,
+            r#"echo "Usage: codex exec""#,
+        ),
+    };
+    let script = format!(
+        r#"#!/bin/bash
+log="{log}"
+if [[ "$1" == "--version" ]]; then
+  echo "codex 0.9.0"
+elif [[ "$1" == "features" && "$2" == "list" && "$3" == "--json" ]]; then
+  {json_probe}
+elif [[ "$1" == "features" && "$2" == "list" ]]; then
+  {text_probe}
+elif [[ "$1" == "--help" ]]; then
+  {help_output}
+elif [[ "$1" == "exec" ]]; then
+  echo "$@" >> "$log"
+  exit 99
+fi
+"#,
+        log = exec_log_path.display(),
+        json_probe = json_probe,
+        text_probe = text_probe,
+        help_output = help_output,
+    );
+    let binary = dir.join("fake-probe-only-codex.sh");
+    fs::write(&binary, script).expect("write fake codex script");
+    let mut perms = fs::metadata(&binary).expect("metadata").permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&binary, perms).expect("set permissions");
+    binary
 }

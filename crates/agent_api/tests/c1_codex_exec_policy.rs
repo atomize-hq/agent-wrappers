@@ -2,6 +2,11 @@
 
 use std::{collections::BTreeMap, fs, path::PathBuf, pin::Pin, time::Duration};
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+#[cfg(unix)]
+use std::path::Path;
+
 use agent_api::{
     backends::codex::{CodexBackend, CodexBackendConfig},
     AgentWrapperBackend, AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind,
@@ -38,6 +43,50 @@ fn fake_codex_binary() -> PathBuf {
     PathBuf::from(env!(
         "CARGO_BIN_EXE_fake_codex_stream_exec_scenarios_agent_api"
     ))
+}
+
+#[cfg(unix)]
+#[derive(Copy, Clone)]
+enum AddDirProbeMode {
+    Unsupported,
+}
+
+#[cfg(unix)]
+fn write_probe_only_codex(dir: &Path, mode: AddDirProbeMode, exec_log_path: &Path) -> PathBuf {
+    let (json_probe, text_probe, help_output) = match mode {
+        AddDirProbeMode::Unsupported => (
+            r#"echo '{"features":["output_schema"]}'"#,
+            r#"echo "output_schema""#,
+            r#"echo "Usage: codex exec""#,
+        ),
+    };
+    let script = format!(
+        r#"#!/bin/bash
+log="{log}"
+if [[ "$1" == "--version" ]]; then
+  echo "codex 0.9.0"
+elif [[ "$1" == "features" && "$2" == "list" && "$3" == "--json" ]]; then
+  {json_probe}
+elif [[ "$1" == "features" && "$2" == "list" ]]; then
+  {text_probe}
+elif [[ "$1" == "--help" ]]; then
+  {help_output}
+elif [[ "$1" == "exec" ]]; then
+  echo "$@" >> "$log"
+  exit 99
+fi
+"#,
+        log = exec_log_path.display(),
+        json_probe = json_probe,
+        text_probe = text_probe,
+        help_output = help_output,
+    );
+    let binary = dir.join("fake-probe-only-codex.sh");
+    fs::write(&binary, script).expect("write fake codex script");
+    let mut perms = fs::metadata(&binary).expect("metadata").permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&binary, perms).expect("set permissions");
+    binary
 }
 
 fn base_env() -> BTreeMap<String, String> {
@@ -370,6 +419,63 @@ async fn codex_exec_with_add_dirs_emits_repeated_flags_in_order() {
         .expect("completion resolves")
         .unwrap();
     assert!(completion.status.success());
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn codex_exec_with_add_dirs_rejects_before_spawn_when_probe_cannot_confirm_support() {
+    let temp = tempdir().expect("tempdir");
+    let dir_a = temp.path().join("alpha");
+    let dir_b = temp.path().join("beta");
+    let exec_log = temp.path().join("exec.log");
+    fs::create_dir_all(&dir_a).expect("alpha dir");
+    fs::create_dir_all(&dir_b).expect("beta dir");
+    let add_dirs = vec![dir_a, dir_b];
+    let binary = write_probe_only_codex(temp.path(), AddDirProbeMode::Unsupported, &exec_log);
+
+    let backend = CodexBackend::new(CodexBackendConfig {
+        binary: Some(binary),
+        env: base_env(),
+        ..Default::default()
+    });
+
+    let handle = backend
+        .run(AgentWrapperRunRequest {
+            prompt: "hello".to_string(),
+            extensions: [(
+                "agent_api.exec.add_dirs.v1".to_string(),
+                json!({"dirs": add_dirs.iter().map(|dir| dir.display().to_string()).collect::<Vec<_>>() }),
+            )]
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        })
+        .await
+        .expect("preflight rejection still returns a terminal handle");
+
+    let mut events = handle.events;
+    let seen = drain_to_none(events.as_mut(), Duration::from_secs(2)).await;
+    assert_eq!(seen.len(), 1, "expected exactly one terminal error event");
+    assert_eq!(seen[0].kind, AgentWrapperEventKind::Error);
+    assert_eq!(
+        seen[0].message.as_deref(),
+        Some("add_dirs rejected by runtime")
+    );
+
+    let err = tokio::time::timeout(Duration::from_secs(2), handle.completion)
+        .await
+        .expect("completion resolves")
+        .unwrap_err();
+    match err {
+        AgentWrapperError::Backend { message } => {
+            assert_eq!(message, "add_dirs rejected by runtime");
+        }
+        other => panic!("expected Backend error, got: {other:?}"),
+    }
+    assert!(
+        !exec_log.exists(),
+        "preflight rejection should not invoke codex exec"
+    );
 }
 
 #[tokio::test]

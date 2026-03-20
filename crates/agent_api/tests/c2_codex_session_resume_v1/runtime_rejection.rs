@@ -8,6 +8,9 @@ use super::support::{
     STREAM_TIMEOUT,
 };
 
+#[cfg(unix)]
+use super::support::{build_probe_only_backend, AddDirProbeMode};
+
 async fn assert_runtime_rejection_case(
     scenario: &str,
     resume_extension: (String, serde_json::Value),
@@ -73,6 +76,51 @@ async fn assert_runtime_rejection_case(
     }
 }
 
+#[cfg(unix)]
+async fn assert_preflight_rejection_case(
+    mode: AddDirProbeMode,
+    resume_extension: (String, serde_json::Value),
+    extra_env: impl IntoIterator<Item = (String, String)>,
+) {
+    let fixture = add_dirs_fixture();
+    let mut env = base_env();
+    env.extend(extra_env);
+
+    let fixture_backend = build_probe_only_backend(mode, env, None, false);
+    let handle = fixture_backend
+        .backend
+        .run(run_request(
+            "hello world",
+            [add_dirs_extension(&fixture.dirs), resume_extension],
+        ))
+        .await
+        .expect("preflight rejection still returns a terminal handle");
+
+    let mut events = handle.events;
+    let seen = drain_to_none(events.as_mut(), STREAM_TIMEOUT).await;
+    assert_eq!(seen.len(), 1, "expected exactly one terminal error event");
+    assert_eq!(seen[0].kind, AgentWrapperEventKind::Error);
+    assert_eq!(
+        seen[0].message.as_deref(),
+        Some(ADD_DIRS_RUNTIME_REJECTION_MESSAGE)
+    );
+
+    let err = tokio::time::timeout(STREAM_TIMEOUT, handle.completion)
+        .await
+        .expect("completion resolves")
+        .unwrap_err();
+    match err {
+        AgentWrapperError::Backend { message } => {
+            assert_eq!(message, ADD_DIRS_RUNTIME_REJECTION_MESSAGE);
+        }
+        other => panic!("expected Backend error, got: {other:?}"),
+    }
+    assert!(
+        !fixture_backend.exec_log.exists(),
+        "preflight rejection should not invoke codex exec"
+    );
+}
+
 #[tokio::test]
 async fn resume_last_add_dirs_runtime_rejection_emits_handle_before_backend_error() {
     assert_runtime_rejection_case(
@@ -97,6 +145,38 @@ async fn resume_id_add_dirs_runtime_rejection_emits_handle_before_backend_error(
             json!({"selector": "id", "id": resume_id}),
         ),
         "hello world",
+        [(
+            "FAKE_CODEX_EXPECT_RESUME_ID".to_string(),
+            resume_id.to_string(),
+        )],
+    )
+    .await;
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn resume_last_add_dirs_preflight_rejects_when_probe_reports_unknown() {
+    assert_preflight_rejection_case(
+        AddDirProbeMode::Unknown,
+        (
+            "agent_api.session.resume.v1".to_string(),
+            json!({"selector": "last"}),
+        ),
+        std::iter::empty(),
+    )
+    .await;
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn resume_id_add_dirs_preflight_rejects_when_probe_reports_unknown() {
+    let resume_id = "thread-123";
+    assert_preflight_rejection_case(
+        AddDirProbeMode::Unsupported,
+        (
+            "agent_api.session.resume.v1".to_string(),
+            json!({"selector": "id", "id": resume_id}),
+        ),
         [(
             "FAKE_CODEX_EXPECT_RESUME_ID".to_string(),
             resume_id.to_string(),

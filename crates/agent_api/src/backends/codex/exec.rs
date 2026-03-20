@@ -149,6 +149,15 @@ pub(super) async fn spawn_exec_or_resume_flow(
     builder = builder.add_dirs(add_dirs);
 
     let client = builder.build();
+    if has_add_dirs
+        && !client
+            .probe_capabilities()
+            .await
+            .guard_add_dir()
+            .is_supported()
+    {
+        return Err(super::CodexBackendError::AddDirsRejectedByRuntime);
+    }
 
     let resume_selector = resume.clone();
     let suppress_transport_errors = resume_selector.is_some();

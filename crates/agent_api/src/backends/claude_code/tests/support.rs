@@ -1,7 +1,7 @@
 use claude_code::{ClaudeStreamJsonEvent, ClaudeStreamJsonParser};
 use futures_core::Stream;
 use serde_json::json;
-use std::{collections::BTreeMap, path::PathBuf, pin::Pin, time::Duration};
+use std::{collections::BTreeMap, fs, path::PathBuf, pin::Pin, time::Duration};
 
 pub(super) use super::super::harness::ClaudeBackendEvent;
 pub(super) use super::super::*;
@@ -145,7 +145,10 @@ pub(super) fn new_adapter_with_config_and_run_start_cwd(
 
 pub(super) fn fake_claude_binary() -> PathBuf {
     if let Some(path) = std::env::var_os("CARGO_BIN_EXE_fake_claude_stream_json_agent_api") {
-        return PathBuf::from(path);
+        let path = PathBuf::from(path);
+        if path.exists() {
+            return path;
+        }
     }
 
     let current_exe = std::env::current_exe().expect("resolve current test binary path");
@@ -157,7 +160,32 @@ pub(super) fn fake_claude_binary() -> PathBuf {
     if cfg!(windows) {
         binary.set_extension("exe");
     }
-    binary
+    if binary.exists() {
+        return binary;
+    }
+
+    let deps_dir = target_dir.join("deps");
+    let mut candidates = fs::read_dir(&deps_dir)
+        .unwrap_or_else(|err| panic!("read deps dir {deps_dir:?}: {err}"))
+        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .filter(|path| {
+            let Some(file_name) = path.file_name().and_then(|value| value.to_str()) else {
+                return false;
+            };
+            if cfg!(windows) {
+                file_name.starts_with("fake_claude_stream_json_agent_api-")
+                    && path.extension().is_some_and(|ext| ext == "exe")
+            } else {
+                file_name.starts_with("fake_claude_stream_json_agent_api-")
+                    && path.extension().is_none()
+                    && path.is_file()
+            }
+        })
+        .collect::<Vec<_>>();
+    candidates.sort();
+    candidates
+        .pop()
+        .unwrap_or_else(|| panic!("resolve fake Claude binary from {target_dir:?}"))
 }
 
 pub(super) fn expected_add_dirs_env(dirs: &[PathBuf]) -> BTreeMap<String, String> {

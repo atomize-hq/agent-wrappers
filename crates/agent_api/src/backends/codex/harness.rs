@@ -99,6 +99,7 @@ pub(super) enum CodexBackendError {
     Exec(ExecStreamError),
     AppServer(codex::mcp::McpError),
     Timeout { timeout: Duration },
+    AddDirsRejectedByRuntime,
     ForkSelectionEmpty,
     ForkSessionNotFound,
     CompletionTaskDropped,
@@ -218,6 +219,9 @@ fn render_backend_error_message(err: &CodexBackendError) -> String {
         }
         CodexBackendError::AppServer(_) => "codex app-server rpc error".to_string(),
         CodexBackendError::Timeout { timeout: _timeout } => PINNED_TIMEOUT.to_string(),
+        CodexBackendError::AddDirsRejectedByRuntime => {
+            super::PINNED_ADD_DIRS_RUNTIME_REJECTION.to_string()
+        }
         CodexBackendError::ForkSelectionEmpty => PINNED_NO_SESSION_FOUND.to_string(),
         CodexBackendError::ForkSessionNotFound => PINNED_SESSION_NOT_FOUND.to_string(),
         CodexBackendError::CompletionTaskDropped => "codex completion task dropped".to_string(),

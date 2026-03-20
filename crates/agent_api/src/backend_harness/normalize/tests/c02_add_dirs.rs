@@ -9,7 +9,7 @@ use tempfile::{tempdir, TempDir};
 use super::super::normalize_add_dirs_v1;
 use crate::AgentWrapperError;
 #[cfg(windows)]
-use std::path::Component;
+use std::path::{Component, Prefix};
 
 // Top-level shape
 
@@ -249,6 +249,25 @@ fn ad_c02_resolves_drive_relative_entries_from_effective_working_dir_only() {
     assert_eq!(normalized, vec![docs]);
 }
 
+#[cfg(windows)]
+#[test]
+fn ad_c02_rejects_mismatched_drive_relative_entries_instead_of_rebasing_them() {
+    let fixtures = AddDirFixtures::new();
+    fixtures.create_effective_dir("docs");
+    let drive_relative_docs =
+        windows_drive_relative_on_other_drive("docs", fixtures.effective_working_dir());
+    let payload = add_dirs_payload(vec![json!(drive_relative_docs
+        .to_string_lossy()
+        .to_string())]);
+
+    assert_invalid_message(
+        Some(&payload),
+        fixtures.effective_working_dir(),
+        "invalid agent_api.exec.add_dirs.v1.dirs[0]",
+        &[&drive_relative_docs.to_string_lossy()],
+    );
+}
+
 #[test]
 fn ad_c02_lexically_normalizes_and_deduplicates_while_preserving_first_order() {
     let fixtures = AddDirFixtures::new();
@@ -292,6 +311,24 @@ fn windows_drive_relative(relative: &str, absolute_path: &Path) -> PathBuf {
         })
         .expect("absolute windows path should include a prefix");
     PathBuf::from(format!("{prefix}{relative}"))
+}
+
+#[cfg(windows)]
+fn windows_drive_relative_on_other_drive(relative: &str, absolute_path: &Path) -> PathBuf {
+    let current_drive = absolute_path
+        .components()
+        .find_map(|component| match component {
+            Component::Prefix(value) => match value.kind() {
+                Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => {
+                    Some(drive.to_ascii_lowercase())
+                }
+                _ => None,
+            },
+            _ => None,
+        })
+        .expect("absolute windows path should include a disk prefix");
+    let alternate_drive = if current_drive == b'c' { 'd' } else { 'c' };
+    PathBuf::from(format!("{alternate_drive}:{relative}"))
 }
 
 fn assert_invalid_message(

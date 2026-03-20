@@ -53,8 +53,12 @@ pub(crate) fn resolve_relative_path_from_base(base: &Path, path: &Path) -> PathB
     }
 
     #[cfg(windows)]
-    if let Some(relative_tail) = windows_drive_relative_tail(path) {
-        return base.join(relative_tail);
+    if let Some((path_drive, relative_tail)) = windows_drive_relative_parts(path) {
+        if windows_drive_prefix(base).is_some_and(|base_drive| base_drive == path_drive) {
+            return base.join(relative_tail);
+        }
+
+        return path.to_path_buf();
     }
 
     base.join(path)
@@ -98,15 +102,16 @@ fn resolve_run_start_cwd(run_start_cwd: Option<&Path>) -> Option<PathBuf> {
 }
 
 #[cfg(windows)]
-fn windows_drive_relative_tail(path: &Path) -> Option<PathBuf> {
+fn windows_drive_relative_parts(path: &Path) -> Option<(u8, PathBuf)> {
     let mut components = path.components();
     let Component::Prefix(prefix) = components.next()? else {
         return None;
     };
 
-    if !matches!(prefix.kind(), Prefix::Disk(_) | Prefix::VerbatimDisk(_)) {
-        return None;
-    }
+    let drive = match prefix.kind() {
+        Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => drive.to_ascii_lowercase(),
+        _ => return None,
+    };
 
     let mut relative_tail = PathBuf::new();
     for component in components {
@@ -116,7 +121,18 @@ fn windows_drive_relative_tail(path: &Path) -> Option<PathBuf> {
         relative_tail.push(component.as_os_str());
     }
 
-    Some(relative_tail)
+    Some((drive, relative_tail))
+}
+
+#[cfg(windows)]
+fn windows_drive_prefix(path: &Path) -> Option<u8> {
+    path.components().find_map(|component| match component {
+        Component::Prefix(prefix) => match prefix.kind() {
+            Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => Some(drive.to_ascii_lowercase()),
+            _ => None,
+        },
+        _ => None,
+    })
 }
 
 fn find_binary_on_path(
@@ -201,6 +217,8 @@ mod tests {
 
     use super::resolve_binary_path_for_spawn;
     use super::resolve_effective_working_dir;
+    #[cfg(windows)]
+    use super::resolve_relative_path_from_base;
     #[cfg(windows)]
     use std::path::Component;
 
@@ -363,6 +381,32 @@ mod tests {
         assert_eq!(resolved, run_start.path().join("repo"));
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn preserves_mismatched_drive_relative_request_working_dir_prefix() {
+        let run_start = TempDir::new().expect("run start dir");
+        let relative = windows_drive_relative_on_other_drive("repo", run_start.path());
+
+        let resolved =
+            resolve_effective_working_dir(Some(relative.as_path()), None, Some(run_start.path()))
+                .expect("working dir should resolve");
+
+        assert_eq!(resolved, relative);
+        assert_ne!(resolved, run_start.path().join("repo"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn preserves_mismatched_drive_relative_path_when_resolving_from_base() {
+        let run_start = TempDir::new().expect("run start dir");
+        let relative = windows_drive_relative_on_other_drive("repo", run_start.path());
+
+        let resolved = resolve_relative_path_from_base(run_start.path(), relative.as_path());
+
+        assert_eq!(resolved, relative);
+        assert_ne!(resolved, run_start.path().join("repo"));
+    }
+
     #[test]
     fn falls_back_to_run_start_cwd_when_request_and_default_are_absent() {
         let run_start = TempDir::new().expect("run start dir");
@@ -416,6 +460,14 @@ mod tests {
             })
             .expect("absolute windows path should include a prefix");
         PathBuf::from(format!("{prefix}{relative}"))
+    }
+
+    #[cfg(windows)]
+    fn windows_drive_relative_on_other_drive(relative: &str, absolute_path: &Path) -> PathBuf {
+        let current_drive = super::windows_drive_prefix(absolute_path)
+            .expect("absolute windows path should include a disk prefix");
+        let alternate_drive = if current_drive == b'c' { 'd' } else { 'c' };
+        PathBuf::from(format!("{alternate_drive}:{relative}"))
     }
 
     #[cfg(unix)]
