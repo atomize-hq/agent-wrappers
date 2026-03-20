@@ -177,8 +177,10 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
         let config = self.config.clone();
         let allow_flag_preflight = Arc::clone(&self.allow_flag_preflight);
         Box::pin(async move {
+            let run_start_cwd = std::env::current_dir().ok();
             let adapter = Arc::new(new_harness_adapter(
                 config.clone(),
+                run_start_cwd,
                 None,
                 allow_flag_preflight,
             ));
@@ -214,9 +216,11 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
                 let termination_state = Arc::clone(&termination_state);
                 Arc::new(move || termination_state.request())
             });
+            let run_start_cwd = std::env::current_dir().ok();
 
             let adapter = Arc::new(new_harness_adapter(
                 config.clone(),
+                run_start_cwd,
                 Some(termination_state),
                 allow_flag_preflight,
             ));

@@ -60,7 +60,7 @@ mod util;
 use super::session_selectors::{EXT_SESSION_FORK_V1, EXT_SESSION_RESUME_V1};
 
 #[cfg(test)]
-use harness::{new_test_adapter, ClaudeHarnessAdapter};
+use harness::{new_test_adapter, new_test_adapter_with_run_start_cwd, ClaudeHarnessAdapter};
 #[cfg(test)]
 use mapping::{map_assistant_message, map_stream_event};
 

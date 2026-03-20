@@ -1,4 +1,6 @@
 use claude_code::{ClaudeStreamJsonEvent, ClaudeStreamJsonParser};
+use serde_json::json;
+use std::path::PathBuf;
 
 pub(super) use super::super::harness::ClaudeBackendEvent;
 pub(super) use super::super::*;
@@ -125,6 +127,25 @@ pub(super) fn new_adapter() -> ClaudeHarnessAdapter {
 
 pub(super) fn new_adapter_with_config(config: ClaudeCodeBackendConfig) -> ClaudeHarnessAdapter {
     new_test_adapter(config)
+}
+
+pub(super) fn new_adapter_with_run_start_cwd(
+    run_start_cwd: Option<PathBuf>,
+) -> ClaudeHarnessAdapter {
+    new_test_adapter_with_run_start_cwd(ClaudeCodeBackendConfig::default(), run_start_cwd)
+}
+
+pub(super) fn new_adapter_with_config_and_run_start_cwd(
+    config: ClaudeCodeBackendConfig,
+    run_start_cwd: Option<PathBuf>,
+) -> ClaudeHarnessAdapter {
+    new_test_adapter_with_run_start_cwd(config, run_start_cwd)
+}
+
+pub(super) fn add_dirs_payload(dirs: &[impl AsRef<str>]) -> JsonValue {
+    json!({
+        "dirs": dirs.iter().map(|dir| dir.as_ref()).collect::<Vec<_>>()
+    })
 }
 
 pub(super) fn parse_single_line(line: &str) -> ClaudeStreamJsonEvent {
