@@ -91,6 +91,27 @@ fn assert_env_overrides(out: &mut impl Write) -> io::Result<bool> {
     Ok(true)
 }
 
+fn assert_current_dir(out: &mut impl Write) -> io::Result<bool> {
+    let Ok(expected_cwd) = env::var("FAKE_CODEX_EXPECT_CWD") else {
+        return Ok(true);
+    };
+    let got = env::current_dir()?;
+    let expected = std::fs::canonicalize(&expected_cwd)
+        .unwrap_or_else(|_| std::path::PathBuf::from(&expected_cwd));
+    let got_canonical = std::fs::canonicalize(&got).unwrap_or(got.clone());
+    if got_canonical == expected {
+        return Ok(true);
+    }
+
+    let msg = format!(
+        "expected cwd={}, got {}",
+        expected.display(),
+        got_canonical.display()
+    );
+    emit_jsonl(out, &format!(r#"{{"type":"error","message":"{msg}"}}"#))?;
+    Ok(false)
+}
+
 fn assert_add_dirs(out: &mut impl Write, args: &[String]) -> io::Result<bool> {
     let Ok(expected_count_raw) = env::var("FAKE_CODEX_EXPECT_ADD_DIR_COUNT") else {
         return Ok(true);
@@ -335,6 +356,9 @@ fn main() -> io::Result<()> {
         std::process::exit(1);
     }
     if !require_flag_present(&mut out, &args, "--skip-git-repo-check")? {
+        std::process::exit(1);
+    }
+    if !assert_current_dir(&mut out)? {
         std::process::exit(1);
     }
     if !assert_add_dirs(&mut out, &args)? {

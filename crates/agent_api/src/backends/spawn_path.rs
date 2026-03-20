@@ -30,6 +30,21 @@ pub(super) fn resolve_binary_path_for_spawn(
     find_binary_on_path(&binary_path, ambient_path_env, effective_working_dir)
 }
 
+pub(crate) fn resolve_effective_working_dir(
+    request_working_dir: Option<&Path>,
+    default_working_dir: Option<&Path>,
+    run_start_cwd: Option<&Path>,
+) -> Option<PathBuf> {
+    let selected = request_working_dir.or(default_working_dir);
+    let run_start_cwd = resolve_run_start_cwd(run_start_cwd);
+
+    match selected {
+        Some(path) if path.is_absolute() => Some(path.to_path_buf()),
+        Some(path) => run_start_cwd.map(|base| base.join(path)),
+        None => run_start_cwd,
+    }
+}
+
 fn resolve_path_qualified_binary(binary_path: PathBuf, invocation_cwd: Option<&Path>) -> PathBuf {
     if binary_path.is_absolute() {
         return binary_path;
@@ -54,6 +69,14 @@ fn effective_base_dir(base_dir: Option<&Path>) -> Option<PathBuf> {
         Some(path) if path.is_absolute() => Some(path.to_path_buf()),
         Some(path) => env::current_dir().ok().map(|cwd| cwd.join(path)),
         None => env::current_dir().ok(),
+    }
+}
+
+fn resolve_run_start_cwd(run_start_cwd: Option<&Path>) -> Option<PathBuf> {
+    match run_start_cwd {
+        Some(path) if path.is_absolute() => Some(path.to_path_buf()),
+        Some(path) => env::current_dir().ok().map(|cwd| cwd.join(path)),
+        None => None,
     }
 }
 
@@ -138,6 +161,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::resolve_binary_path_for_spawn;
+    use super::resolve_effective_working_dir;
 
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
@@ -238,6 +262,48 @@ mod tests {
             resolved,
             std::fs::canonicalize(&binary_path).expect("canonicalize binary")
         );
+    }
+
+    #[test]
+    fn resolves_relative_request_working_dir_against_run_start_cwd() {
+        let run_start = TempDir::new().expect("run start dir");
+
+        let resolved =
+            resolve_effective_working_dir(Some(Path::new("repo")), None, Some(run_start.path()))
+                .expect("working dir should resolve");
+
+        assert_eq!(resolved, run_start.path().join("repo"));
+    }
+
+    #[test]
+    fn resolves_relative_default_working_dir_against_relative_run_start_cwd() {
+        let current_dir = TempDir::new().expect("current dir");
+        let run_start_root = current_dir.path().join("run-start");
+        let expected_working_dir = run_start_root.join("repo");
+        std::fs::create_dir_all(&expected_working_dir).expect("create expected working dir");
+        let _guard = CurrentDirGuard::set(current_dir.path());
+
+        let resolved = resolve_effective_working_dir(
+            None,
+            Some(Path::new("repo")),
+            Some(Path::new("run-start")),
+        )
+        .expect("working dir should resolve");
+
+        assert_eq!(
+            std::fs::canonicalize(&resolved).expect("canonicalize resolved working dir"),
+            std::fs::canonicalize(expected_working_dir).expect("canonicalize expected working dir")
+        );
+    }
+
+    #[test]
+    fn falls_back_to_run_start_cwd_when_request_and_default_are_absent() {
+        let run_start = TempDir::new().expect("run start dir");
+
+        let resolved =
+            resolve_effective_working_dir(None, None, Some(run_start.path())).expect("fallback");
+
+        assert_eq!(resolved, run_start.path());
     }
 
     #[test]

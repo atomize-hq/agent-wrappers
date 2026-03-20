@@ -23,6 +23,7 @@ use crate::{
         normalize_add_dirs_v1, BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn,
         DynBackendEventStream, NormalizedRequest,
     },
+    backends::spawn_path::resolve_effective_working_dir,
     AgentWrapperCompletion, AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind,
     AgentWrapperKind, AgentWrapperRunRequest,
 };
@@ -139,16 +140,15 @@ fn effective_working_dir_for_add_dirs(
         return Ok(None);
     }
 
-    request
-        .working_dir
-        .as_deref()
-        .or(config.default_working_dir.as_deref())
-        .or(run_start_cwd.map(PathBuf::as_path))
-        .map(PathBuf::from)
-        .map(Some)
-        .ok_or_else(|| AgentWrapperError::InvalidRequest {
-            message: "working_dir must be provided or configured".to_string(),
-        })
+    resolve_effective_working_dir(
+        request.working_dir.as_deref(),
+        config.default_working_dir.as_deref(),
+        run_start_cwd.map(PathBuf::as_path),
+    )
+    .map(Some)
+    .ok_or_else(|| AgentWrapperError::InvalidRequest {
+        message: "working_dir must be provided or configured".to_string(),
+    })
 }
 
 fn codex_error_kind(err: &CodexError) -> &'static str {

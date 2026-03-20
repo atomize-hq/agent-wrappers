@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, fs, path::PathBuf, time::Duration};
+use std::{collections::BTreeMap, fs, path::PathBuf, sync::Arc, time::Duration};
 
 use tempfile::tempdir;
 
@@ -46,7 +46,56 @@ async fn run_claude_assertion(
         .expect("run completes successfully");
     assert!(
         completion.status.success(),
-        "expected successful fake Claude run"
+        "expected successful fake Claude run, events: {:?}",
+        _seen
+    );
+}
+
+async fn run_claude_assertion_with_adapter(
+    prompt: &str,
+    scenario: &str,
+    mut config: ClaudeCodeBackendConfig,
+    run_start_cwd: PathBuf,
+    request_working_dir: Option<PathBuf>,
+    extensions: BTreeMap<String, JsonValue>,
+) {
+    config
+        .env
+        .insert("FAKE_CLAUDE_SCENARIO".to_string(), scenario.to_string());
+    config
+        .env
+        .insert("FAKE_CLAUDE_EXPECT_PROMPT".to_string(), prompt.to_string());
+    let adapter = Arc::new(new_adapter_with_config_and_run_start_cwd(
+        config.clone(),
+        Some(run_start_cwd),
+    ));
+    let defaults = crate::backend_harness::BackendDefaults {
+        env: config.env.clone(),
+        default_timeout: config.default_timeout,
+    };
+    let handle = crate::backend_harness::run_harnessed_backend(
+        adapter,
+        defaults,
+        AgentWrapperRunRequest {
+            prompt: prompt.to_string(),
+            working_dir: request_working_dir,
+            extensions,
+            ..Default::default()
+        },
+    )
+    .expect("Claude run should start");
+
+    let mut events = handle.events;
+    let _seen = drain_to_none(events.as_mut(), Duration::from_secs(2)).await;
+
+    let completion = tokio::time::timeout(Duration::from_secs(2), handle.completion)
+        .await
+        .expect("completion resolves")
+        .expect("run completes successfully");
+    assert!(
+        completion.status.success(),
+        "expected successful fake Claude run, events: {:?}",
+        _seen
     );
 }
 
@@ -198,4 +247,83 @@ async fn fork_id_keeps_add_dir_group_before_fork_session_and_resume() {
     .collect();
 
     run_claude_assertion(prompt, "fork_id_assert", env, extensions).await;
+}
+
+#[tokio::test]
+async fn fresh_run_resolves_relative_request_working_dir_before_add_dirs_and_spawn() {
+    let prompt = "hello world";
+    let temp = tempdir().expect("tempdir");
+    let run_start_cwd = temp.path().join("run-start");
+    let expected_cwd = run_start_cwd.join("repo");
+    let expected_add_dir = expected_cwd.join("docs");
+    fs::create_dir_all(&expected_add_dir).expect("create add-dir target");
+
+    let env = expected_add_dirs_env(std::slice::from_ref(&expected_add_dir))
+        .into_iter()
+        .chain([(
+            "FAKE_CLAUDE_EXPECT_CWD".to_string(),
+            expected_cwd.display().to_string(),
+        )])
+        .collect();
+    let config = ClaudeCodeBackendConfig {
+        binary: Some(fake_claude_binary()),
+        env,
+        ..Default::default()
+    };
+    let extensions = [(
+        "agent_api.exec.add_dirs.v1".to_string(),
+        add_dirs_payload(&["docs"]),
+    )]
+    .into_iter()
+    .collect();
+
+    run_claude_assertion_with_adapter(
+        prompt,
+        "fresh_assert",
+        config,
+        run_start_cwd,
+        Some(PathBuf::from("repo")),
+        extensions,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn fresh_run_resolves_relative_default_working_dir_before_add_dirs_and_spawn() {
+    let prompt = "hello world";
+    let temp = tempdir().expect("tempdir");
+    let run_start_cwd = temp.path().join("run-start");
+    let expected_cwd = run_start_cwd.join("repo");
+    let expected_add_dir = expected_cwd.join("docs");
+    fs::create_dir_all(&expected_add_dir).expect("create add-dir target");
+
+    let env = expected_add_dirs_env(std::slice::from_ref(&expected_add_dir))
+        .into_iter()
+        .chain([(
+            "FAKE_CLAUDE_EXPECT_CWD".to_string(),
+            expected_cwd.display().to_string(),
+        )])
+        .collect();
+    let config = ClaudeCodeBackendConfig {
+        binary: Some(fake_claude_binary()),
+        default_working_dir: Some(PathBuf::from("repo")),
+        env,
+        ..Default::default()
+    };
+    let extensions = [(
+        "agent_api.exec.add_dirs.v1".to_string(),
+        add_dirs_payload(&["docs"]),
+    )]
+    .into_iter()
+    .collect();
+
+    run_claude_assertion_with_adapter(
+        prompt,
+        "fresh_assert",
+        config,
+        run_start_cwd,
+        None,
+        extensions,
+    )
+    .await;
 }

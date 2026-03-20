@@ -10,7 +10,7 @@ use codex::{CodexError, ExecStreamError, ExecStreamRequest, ThreadEvent};
 use futures_util::future::poll_fn;
 use tokio::sync::oneshot;
 
-use crate::backend_harness::BackendSpawn;
+use crate::{backend_harness::BackendSpawn, backends::spawn_path::resolve_effective_working_dir};
 
 pub(super) struct ExecFlowRequest {
     pub(super) config: super::CodexBackendConfig,
@@ -135,10 +135,12 @@ pub(super) async fn spawn_exec_or_resume_flow(
         builder = builder.model(model.clone());
     }
 
-    let working_dir = working_dir
-        .or_else(|| config.default_working_dir.clone())
-        .or(run_start_cwd)
-        .ok_or(super::CodexBackendError::WorkingDirectoryUnresolved)?;
+    let working_dir = resolve_effective_working_dir(
+        working_dir.as_deref(),
+        config.default_working_dir.as_deref(),
+        run_start_cwd.as_deref(),
+    )
+    .ok_or(super::CodexBackendError::WorkingDirectoryUnresolved)?;
     builder = builder.working_dir(working_dir);
 
     // Codex wrapper treats `Duration::ZERO` as “no timeout”.

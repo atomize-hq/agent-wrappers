@@ -6,3 +6,4 @@ mod mapping;
 mod policy_add_dirs;
 mod session_handle;
 mod support;
+mod working_dir_resolution;

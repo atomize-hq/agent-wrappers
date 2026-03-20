@@ -176,6 +176,25 @@ pub(crate) fn assert_add_dirs(args: &[String], out: &mut dyn Write) {
     }
 }
 
+pub(crate) fn maybe_assert_cwd(out: &mut dyn Write) {
+    let Ok(expected_cwd) = env::var("FAKE_CLAUDE_EXPECT_CWD") else {
+        return;
+    };
+    let got = env::current_dir().expect("read current dir");
+    let expected = std::fs::canonicalize(&expected_cwd)
+        .unwrap_or_else(|_| std::path::PathBuf::from(&expected_cwd));
+    let got_canonical = std::fs::canonicalize(&got).unwrap_or(got);
+    if got_canonical != expected {
+        fail(
+            out,
+            &format!(
+                "assertion failed: expected cwd {:?}, got {:?}",
+                expected, got_canonical
+            ),
+        );
+    }
+}
+
 pub(crate) fn selector_assertion_subsequence(tail: &[&str]) -> Vec<String> {
     let mut subseq = vec![
         "--print".to_string(),

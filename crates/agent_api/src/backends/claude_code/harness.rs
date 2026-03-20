@@ -30,6 +30,7 @@ use crate::{
         normalize_add_dirs_v1, BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn,
         DynBackendEventStream, NormalizedRequest,
     },
+    backends::spawn_path::resolve_effective_working_dir,
     AgentWrapperCompletion, AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind,
     AgentWrapperKind, AgentWrapperRunRequest,
 };
@@ -258,15 +259,15 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
 
         let add_dirs = match request.extensions.get(EXT_ADD_DIRS_V1) {
             Some(raw) => {
-                let effective_working_dir = request
-                    .working_dir
-                    .as_deref()
-                    .or(self.config.default_working_dir.as_deref())
-                    .or(self.run_start_cwd.as_deref())
-                    .ok_or_else(|| AgentWrapperError::InvalidRequest {
-                        message: "working_dir must be provided or configured".to_string(),
-                    })?;
-                normalize_add_dirs_v1(Some(raw), effective_working_dir)?
+                let effective_working_dir = resolve_effective_working_dir(
+                    request.working_dir.as_deref(),
+                    self.config.default_working_dir.as_deref(),
+                    self.run_start_cwd.as_deref(),
+                )
+                .ok_or_else(|| AgentWrapperError::InvalidRequest {
+                    message: "working_dir must be provided or configured".to_string(),
+                })?;
+                normalize_add_dirs_v1(Some(raw), effective_working_dir.as_path())?
             }
             None => Vec::new(),
         };
@@ -303,6 +304,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
         >,
     > {
         let config = self.config.clone();
+        let run_start_cwd = self.run_start_cwd.clone();
         let termination = self.termination.clone();
         let allow_flag_preflight = Arc::clone(&self.allow_flag_preflight);
         let ClaudeExecPolicy {
@@ -321,10 +323,11 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                 builder = builder.claude_home(claude_home.clone());
             }
 
-            let working_dir = req
-                .working_dir
-                .clone()
-                .or_else(|| config.default_working_dir.clone());
+            let working_dir = resolve_effective_working_dir(
+                req.working_dir.as_deref(),
+                config.default_working_dir.as_deref(),
+                run_start_cwd.as_deref(),
+            );
             if let Some(dir) = working_dir {
                 builder = builder.working_dir(dir);
             }

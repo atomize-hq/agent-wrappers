@@ -185,6 +185,59 @@ fn claude_policy_add_dirs_invalid_input_uses_safe_message_without_leakage() {
     );
 }
 
+#[test]
+fn claude_policy_add_dirs_resolves_relative_request_working_dir_from_run_start_cwd() {
+    let temp = tempdir().expect("tempdir");
+    let run_start_root = temp.path().join("run-start");
+    let request_docs = run_start_root.join("repo").join("docs");
+    fs::create_dir_all(&request_docs).expect("create request docs");
+
+    let adapter = new_adapter_with_run_start_cwd(Some(run_start_root));
+    let request = AgentWrapperRunRequest {
+        prompt: "hello".to_string(),
+        working_dir: Some(std::path::PathBuf::from("repo")),
+        extensions: [(EXT_ADD_DIRS_V1.to_string(), add_dirs_payload(&["docs"]))]
+            .into_iter()
+            .collect(),
+        ..Default::default()
+    };
+
+    let policy = adapter
+        .validate_and_extract_policy(&request)
+        .expect("policy extraction should succeed");
+
+    assert_eq!(policy.add_dirs, vec![request_docs]);
+}
+
+#[test]
+fn claude_policy_add_dirs_resolves_relative_default_working_dir_from_run_start_cwd() {
+    let temp = tempdir().expect("tempdir");
+    let run_start_root = temp.path().join("run-start");
+    let default_docs = run_start_root.join("repo").join("docs");
+    fs::create_dir_all(&default_docs).expect("create default docs");
+
+    let adapter = new_adapter_with_config_and_run_start_cwd(
+        ClaudeCodeBackendConfig {
+            default_working_dir: Some(std::path::PathBuf::from("repo")),
+            ..Default::default()
+        },
+        Some(run_start_root),
+    );
+    let request = AgentWrapperRunRequest {
+        prompt: "hello".to_string(),
+        extensions: [(EXT_ADD_DIRS_V1.to_string(), add_dirs_payload(&["docs"]))]
+            .into_iter()
+            .collect(),
+        ..Default::default()
+    };
+
+    let policy = adapter
+        .validate_and_extract_policy(&request)
+        .expect("policy extraction should succeed");
+
+    assert_eq!(policy.add_dirs, vec![default_docs]);
+}
+
 fn adapter_error(
     result: Result<super::super::harness::ClaudeExecPolicy, AgentWrapperError>,
 ) -> AgentWrapperError {
