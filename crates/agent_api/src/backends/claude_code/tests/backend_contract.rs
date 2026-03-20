@@ -81,3 +81,29 @@ fn claude_downstream_mapping_surfaces_do_not_reopen_raw_add_dirs_parsing() {
         "expected mcp runner helpers to avoid raw add-dir payload parsing"
     );
 }
+
+#[test]
+fn claude_harness_extracts_add_dirs_exactly_once_and_carries_policy_state_forward() {
+    const SOURCE: &str = include_str!("../harness.rs");
+
+    assert_eq!(
+        SOURCE.matches("request.extensions.get(EXT_ADD_DIRS_V1)").count(),
+        1,
+        "expected Claude harness to read the raw add-dir extension exactly once"
+    );
+    assert_eq!(
+        SOURCE
+            .matches("normalize_add_dirs_v1(Some(raw), effective_working_dir)")
+            .count(),
+        1,
+        "expected Claude harness to normalize add-dir payloads exactly once"
+    );
+    assert!(
+        SOURCE.contains("pub(super) add_dirs: Vec<PathBuf>"),
+        "expected ClaudeExecPolicy to carry normalized add-dir policy state"
+    );
+    assert!(
+        SOURCE.contains("add_dirs: _add_dirs"),
+        "expected spawn-time Claude wiring to consume add dirs only through policy state"
+    );
+}

@@ -113,6 +113,25 @@ fn claude_policy_add_dirs_run_start_cwd_is_final_fallback() {
 }
 
 #[test]
+fn claude_policy_add_dirs_requires_working_dir_when_key_is_present() {
+    let request = AgentWrapperRunRequest {
+        prompt: "hello".to_string(),
+        extensions: [(EXT_ADD_DIRS_V1.to_string(), add_dirs_payload(&["docs"]))]
+            .into_iter()
+            .collect(),
+        ..Default::default()
+    };
+
+    let err = adapter_error(new_adapter().validate_and_extract_policy(&request));
+    match &err {
+        AgentWrapperError::InvalidRequest { message } => {
+            assert_eq!(message, "working_dir must be provided or configured");
+        }
+        other => panic!("expected InvalidRequest, got: {other:?}"),
+    }
+}
+
+#[test]
 fn claude_policy_add_dirs_invalid_input_uses_safe_message_without_leakage() {
     let temp = tempdir().expect("tempdir");
     let request_root = temp.path().join("request-root");
