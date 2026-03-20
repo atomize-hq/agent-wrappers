@@ -1,6 +1,11 @@
 use super::support::*;
 use serde_json::json;
 
+const CLAUDE_MAPPING_CONTRACT: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../docs/specs/claude-code-session-mapping-contract.md"
+));
+
 fn idx(argv: &[String], needle: &str) -> usize {
     argv.iter()
         .position(|arg| arg == needle)
@@ -215,6 +220,92 @@ fn claude_add_dirs_runtime_rejection_classifier_does_not_match_generic_or_select
         !super::super::util::json_contains_add_dirs_runtime_rejection_signal(&selector_payload)
     );
     assert!(!super::super::util::json_contains_add_dirs_runtime_rejection_signal(&almost_payload));
+}
+
+#[test]
+fn claude_harness_keeps_selector_failures_distinct_from_add_dirs_runtime_rejection() {
+    const SOURCE: &str = include_str!("../harness.rs");
+
+    let selector_classifier_idx = SOURCE
+        .find("json_contains_not_found_signal(raw)")
+        .expect("expected selector-failure classifier");
+    let add_dirs_classifier_idx = SOURCE
+        .find("json_contains_add_dirs_runtime_rejection_signal(raw)")
+        .expect("expected add-dir runtime rejection classifier");
+
+    assert!(
+        selector_classifier_idx < add_dirs_classifier_idx,
+        "expected selector-failure classification to remain distinct from add-dir runtime rejection"
+    );
+    assert!(
+        SOURCE.contains("ADD_DIRS_RUNTIME_REJECTION_MESSAGE"),
+        "expected harness to use the pinned add-dir runtime rejection message"
+    );
+    assert!(
+        SOURCE.contains("Some(\"no session found\".to_string())"),
+        "expected selector='last' failure to keep the pinned safe message"
+    );
+    assert!(
+        SOURCE.contains("Some(\"session not found\".to_string())"),
+        "expected selector='id' failure to keep the pinned safe message"
+    );
+}
+
+#[test]
+fn claude_mapping_contract_pins_add_dirs_session_ordering_clauses() {
+    assert!(
+        CLAUDE_MAPPING_CONTRACT.contains("emit exactly one `--add-dir <DIR...>` argv group"),
+        "expected canonical Claude mapping contract to pin a single variadic add-dir group"
+    );
+    assert!(
+        CLAUDE_MAPPING_CONTRACT
+            .contains("The group MUST appear after any accepted `--model <trimmed-id>` pair."),
+        "expected canonical Claude mapping contract to pin model-before-add-dir ordering"
+    );
+    assert!(
+        CLAUDE_MAPPING_CONTRACT.contains("[--add-dir <DIR...>] --continue --verbose PROMPT"),
+        "expected canonical Claude mapping contract to pin resume(last) add-dir ordering"
+    );
+    assert!(
+        CLAUDE_MAPPING_CONTRACT.contains("[--add-dir <DIR...>] --resume ID --verbose PROMPT"),
+        "expected canonical Claude mapping contract to pin resume(id) add-dir ordering"
+    );
+    assert!(
+        CLAUDE_MAPPING_CONTRACT
+            .contains("[--add-dir <DIR...>] --continue --fork-session --verbose PROMPT"),
+        "expected canonical Claude mapping contract to pin fork(last) add-dir ordering"
+    );
+    assert!(
+        CLAUDE_MAPPING_CONTRACT
+            .contains("[--add-dir <DIR...>] --fork-session --resume ID --verbose PROMPT"),
+        "expected canonical Claude mapping contract to pin fork(id) add-dir ordering"
+    );
+}
+
+#[test]
+fn claude_mapping_contract_pins_add_dirs_runtime_rejection_parity() {
+    assert!(
+        CLAUDE_MAPPING_CONTRACT.contains("Runtime rejection parity (pinned):"),
+        "expected canonical Claude mapping contract to define add-dir runtime rejection parity"
+    );
+    assert!(
+        CLAUDE_MAPPING_CONTRACT.contains("`add_dirs rejected by runtime`"),
+        "expected canonical Claude mapping contract to pin the backend-owned add-dir runtime rejection message"
+    );
+    assert!(
+        CLAUDE_MAPPING_CONTRACT
+            .contains("emit exactly one terminal `AgentWrapperEventKind::Error` event"),
+        "expected canonical Claude mapping contract to pin one terminal error event"
+    );
+    assert!(
+        CLAUDE_MAPPING_CONTRACT.contains("message` surfaced through the completion error"),
+        "expected canonical Claude mapping contract to pin event/completion message parity"
+    );
+    assert!(
+        CLAUDE_MAPPING_CONTRACT
+            .contains("MUST NOT classify selector misses (`\"no session found\"` / `\"session not found\"`) as"),
+        "expected canonical Claude mapping contract to keep selector misses distinct from add-dir runtime rejection"
+    );
 }
 
 #[test]

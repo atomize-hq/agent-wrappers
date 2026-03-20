@@ -94,11 +94,36 @@ Placement rules (pinned):
 
 - Fresh run argv MUST contain the following ordered subsequence:
 
-`--print --output-format stream-json [--permission-mode bypassPermissions] [--dangerously-skip-permissions] [--allow-dangerously-skip-permissions] [--add-dir <DIR...>] --verbose PROMPT`
+`--print --output-format stream-json [--model ID] [--permission-mode bypassPermissions] [--dangerously-skip-permissions] [--allow-dangerously-skip-permissions] [--add-dir <DIR...>] --verbose PROMPT`
 
+- The group MUST appear after any accepted `--model <trimmed-id>` pair.
 - The group MUST appear before `--continue`, `--fork-session`, and `--resume`.
 - The group MUST appear before the final `--verbose` token that precedes the prompt.
 - The backend MUST NOT emit repeated `--add-dir` flags for this key.
+
+Verification requirements (pinned):
+
+- Regression coverage MUST assert fresh-run ordering and the selector-specific ordered subsequences
+  below.
+- The verification surface MUST fail if the `--add-dir <DIR...>` group drifts to the right of any
+  session-selector flag, the final `--verbose` token, or the final prompt token.
+
+Runtime rejection parity (pinned):
+
+- If an accepted `agent_api.exec.add_dirs.v1` value is rejected after the Claude backend has
+  already returned a run handle and the consumer-visible events stream is still open, the backend
+  MUST:
+  - fail the run as `AgentWrapperError::Backend { message }`,
+  - use the backend-owned safe/redacted `message` exactly equal to
+    `add_dirs rejected by runtime`,
+  - emit exactly one terminal `AgentWrapperEventKind::Error` event carrying that same
+    safe/redacted `message`, and
+  - close the stream after emitting that terminal error event.
+- The safe/redacted `message` in the terminal error event MUST exactly match the safe/redacted
+  `message` surfaced through the completion error so downstream consumers can compare them
+  deterministically.
+- The backend MUST NOT classify selector misses (`"no session found"` / `"session not found"`) as
+  add-dir runtime rejection.
 
 ## `agent_api.config.model.v1` mapping (pinned)
 
