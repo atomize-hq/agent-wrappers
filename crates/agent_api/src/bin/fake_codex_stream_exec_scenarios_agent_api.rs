@@ -311,6 +311,22 @@ fn emit_add_dirs_runtime_rejection(out: &mut impl Write) -> io::Result<()> {
     Ok(())
 }
 
+fn runtime_rejection_exit_code() -> io::Result<i32> {
+    match env::var("FAKE_CODEX_RUNTIME_REJECTION_EXIT_CODE") {
+        Ok(raw) => raw.parse::<i32>().map_err(|err| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("invalid FAKE_CODEX_RUNTIME_REJECTION_EXIT_CODE: {err}"),
+            )
+        }),
+        Err(env::VarError::NotPresent) => Ok(1),
+        Err(err) => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("failed to read FAKE_CODEX_RUNTIME_REJECTION_EXIT_CODE: {err}"),
+        )),
+    }
+}
+
 fn main() -> io::Result<()> {
     // Cross-platform test binary used by `agent_api` tests.
     //
@@ -718,7 +734,7 @@ fn main() -> io::Result<()> {
                 r#"{"type":"thread.started","thread_id":"thread-1"}"#,
             )?;
             emit_add_dirs_runtime_rejection(&mut out)?;
-            std::process::exit(1);
+            std::process::exit(runtime_rejection_exit_code()?);
         }
         _ => {
             emit_jsonl(

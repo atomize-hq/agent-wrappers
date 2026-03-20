@@ -44,6 +44,20 @@ enum CodexTailEvent {
     TerminalError { message: String },
 }
 
+fn snapshot_backend_error_message(
+    stream_state: &Arc<Mutex<CodexStreamState>>,
+    has_add_dirs: bool,
+) -> Option<String> {
+    if has_add_dirs {
+        stream_state
+            .lock()
+            .ok()
+            .and_then(|snapshot| snapshot.backend_error_message.clone())
+    } else {
+        None
+    }
+}
+
 fn is_unknown_bypass_flag_stderr(stderr: &str) -> bool {
     let stderr = stderr.to_ascii_lowercase();
     if !stderr.contains("dangerously-bypass-approvals-and-sandbox") {
@@ -215,31 +229,34 @@ pub(super) async fn spawn_exec_or_resume_flow(
 
     tokio::spawn(async move {
         let outcome = completion.await;
-        if resume_selector.is_some() {
+        if resume_selector.is_some() || has_add_dirs {
             let _ = events_done_rx.await;
         }
 
         match outcome {
             Ok(exec_completion) => {
                 let status = exec_completion.status;
+                let backend_error_message =
+                    snapshot_backend_error_message(&stream_state_for_completion, has_add_dirs);
+                let tail = backend_error_message
+                    .clone()
+                    .map(|message| CodexTailEvent::TerminalError { message });
                 let completion = super::CodexBackendCompletion {
                     status,
-                    final_text: exec_completion.last_message,
-                    backend_error_message: None,
+                    final_text: if backend_error_message.is_some() {
+                        None
+                    } else {
+                        exec_completion.last_message
+                    },
+                    backend_error_message,
                     selection_failure_message: None,
                 };
                 let _ = completion_tx.send(Ok(completion));
-                let _ = tail_tx.send(None);
+                let _ = tail_tx.send(tail);
             }
             Err(ExecStreamError::Codex(CodexError::NonZeroExit { status, stderr })) => {
-                let backend_error_message = if has_add_dirs {
-                    stream_state_for_completion
-                        .lock()
-                        .ok()
-                        .and_then(|snapshot| snapshot.backend_error_message.clone())
-                } else {
-                    None
-                };
+                let backend_error_message =
+                    snapshot_backend_error_message(&stream_state_for_completion, has_add_dirs);
                 let bypass_flag_unsupported_message =
                     if external_sandbox && is_unknown_bypass_flag_stderr(&stderr) {
                         Some(super::PINNED_EXTERNAL_SANDBOX_FLAG_UNSUPPORTED.to_string())
