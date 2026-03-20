@@ -206,6 +206,44 @@ fn claude_fresh_run_print_request_omits_add_dir_flag_when_policy_list_is_empty()
 }
 
 #[test]
+fn claude_fresh_run_print_request_places_allow_flag_before_variadic_add_dir_group() {
+    let argv = super::super::util::build_fresh_run_print_request(
+        "hello".to_string(),
+        true,
+        true,
+        true,
+        &[
+            std::path::PathBuf::from("/tmp/alpha"),
+            std::path::PathBuf::from("/tmp/beta"),
+        ],
+    )
+    .argv();
+
+    let dangerous_idx = idx(&argv, "--dangerously-skip-permissions");
+    let allow_idx = idx(&argv, "--allow-dangerously-skip-permissions");
+    let add_dir_idx = idx(&argv, "--add-dir");
+    let verbose_idx = idx(&argv, "--verbose");
+    let prompt_idx = idx(&argv, "hello");
+
+    assert!(
+        dangerous_idx < allow_idx,
+        "expected dangerous-skip flag to precede the allow flag"
+    );
+    assert!(
+        allow_idx < add_dir_idx,
+        "expected allow flag to stay in the root-flags segment before add-dir"
+    );
+    assert!(
+        add_dir_idx < verbose_idx,
+        "expected add-dir group to stay before the final verbose flag"
+    );
+    assert!(
+        verbose_idx < prompt_idx,
+        "expected verbose to stay before the final prompt token"
+    );
+}
+
+#[test]
 fn claude_add_dirs_runtime_rejection_classifier_requires_exact_safe_message_match() {
     let payload = json!({
         "type": "result",

@@ -22,7 +22,7 @@ async fn direct_spawn_failures_return_backend_error_without_handle() {
 }
 
 #[tokio::test]
-async fn direct_spawn_failures_return_backend_error_without_control_handle() {
+async fn direct_spawn_failures_surface_via_control_handle_after_return() {
     let adapter = std::sync::Arc::new(ToyAdapter {
         fail_spawn: true,
         spawn_error_disposition: contract::SpawnErrorDisposition::ReturnDirectly,
@@ -32,13 +32,37 @@ async fn direct_spawn_failures_return_backend_error_without_control_handle() {
         ..Default::default()
     };
 
-    let err = run_harnessed_backend_control(adapter, BackendDefaults::default(), request, None)
+    let crate::AgentWrapperRunControl {
+        mut handle,
+        cancel: _,
+    } = run_harnessed_backend_control(adapter, BackendDefaults::default(), request, None)
         .await
-        .expect_err("classified spawn failure should fail control directly");
+        .expect("control entrypoint should return before startup resolves");
+
+    let event = handle
+        .events
+        .next()
+        .await
+        .expect("spawn failure should surface as an error event");
+    assert_eq!(event.kind, AgentWrapperEventKind::Error);
+    assert_eq!(
+        event.message.as_deref(),
+        Some("toy backend error (redacted): phase=spawn")
+    );
+
+    assert!(
+        handle.events.next().await.is_none(),
+        "error event should be terminal for spawn failure"
+    );
+
+    let err = handle
+        .completion
+        .await
+        .expect_err("completion should surface the spawn failure");
     assert!(matches!(
         err,
         crate::AgentWrapperError::Backend { ref message }
-        if message == "toy backend error (redacted): phase=spawn"
+            if message == "toy backend error (redacted): phase=spawn"
     ));
 }
 
