@@ -141,7 +141,7 @@ fn claude_harness_extracts_add_dirs_exactly_once_and_carries_policy_state_forwar
 
 #[test]
 fn claude_fresh_run_print_request_emits_one_variadic_add_dir_group_in_order() {
-    let argv = super::super::harness::build_fresh_run_print_request(
+    let argv = super::super::util::build_fresh_run_print_request(
         "hello".to_string(),
         true,
         false,
@@ -181,7 +181,7 @@ fn claude_fresh_run_print_request_emits_one_variadic_add_dir_group_in_order() {
 
 #[test]
 fn claude_fresh_run_print_request_omits_add_dir_flag_when_policy_list_is_empty() {
-    let argv = super::super::harness::build_fresh_run_print_request(
+    let argv = super::super::util::build_fresh_run_print_request(
         "hello".to_string(),
         true,
         false,

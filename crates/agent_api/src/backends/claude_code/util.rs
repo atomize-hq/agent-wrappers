@@ -1,8 +1,26 @@
-use std::future::Future;
+use std::{
+    future::Future,
+    path::{Path, PathBuf},
+};
 
+use claude_code::{ClaudeOutputFormat, ClaudePrintRequest};
+use futures_util::stream;
 use tokio::sync::OnceCell;
 
+use crate::{
+    backend_harness::{BackendSpawn, DynBackendEventStream},
+    backends::spawn_path::resolve_effective_working_dir,
+    AgentWrapperError,
+};
+
+use super::{
+    harness::{ClaudeBackendCompletion, ClaudeBackendError, ClaudeBackendEvent},
+    ClaudeCodeBackendConfig,
+};
+
 pub(super) const ADD_DIRS_RUNTIME_REJECTION_MESSAGE: &str = "add_dirs rejected by runtime";
+pub(super) const PINNED_WORKING_DIR_RESOLUTION_FAILURE: &str =
+    "claude backend failed to resolve working directory";
 
 pub(super) fn parse_bool(
     value: &serde_json::Value,
@@ -89,6 +107,87 @@ pub(super) fn generic_non_zero_exit_message(status: &std::process::ExitStatus) -
         Some(code) => format!("claude_code exited non-zero: code={code} (output redacted)"),
         None => "claude_code exited non-zero (output redacted)".to_string(),
     }
+}
+
+pub(super) fn render_backend_error_message(err: &ClaudeBackendError) -> String {
+    match err {
+        ClaudeBackendError::Spawn(err) | ClaudeBackendError::Completion(err) => {
+            format!("claude_code error: {err}")
+        }
+        ClaudeBackendError::ExternalSandboxPreflight { message } => message.clone(),
+        ClaudeBackendError::StreamParse(err) => err.message.clone(),
+    }
+}
+
+pub(super) fn startup_failure_spawn(
+    err: ClaudeBackendError,
+    emit_external_sandbox_warning: bool,
+) -> BackendSpawn<ClaudeBackendEvent, ClaudeBackendCompletion, ClaudeBackendError> {
+    let message = render_backend_error_message(&err);
+    let events: DynBackendEventStream<ClaudeBackendEvent, ClaudeBackendError> =
+        if emit_external_sandbox_warning {
+            Box::pin(stream::iter(vec![
+                Ok(ClaudeBackendEvent::ExternalSandboxWarning),
+                Ok(ClaudeBackendEvent::TerminalError { message }),
+            ]))
+        } else {
+            Box::pin(stream::once(async move {
+                Ok(ClaudeBackendEvent::TerminalError { message })
+            }))
+        };
+    let completion = Box::pin(async move { Err(err) });
+    BackendSpawn { events, completion }
+}
+
+pub(super) fn resolve_claude_effective_working_dir(
+    config: &ClaudeCodeBackendConfig,
+    run_start_cwd: Option<&Path>,
+    request_working_dir: Option<&Path>,
+) -> Result<Option<PathBuf>, AgentWrapperError> {
+    let selected_working_dir = request_working_dir.or(config.default_working_dir.as_deref());
+    let resolved_working_dir = resolve_effective_working_dir(
+        request_working_dir,
+        config.default_working_dir.as_deref(),
+        run_start_cwd,
+    );
+
+    if selected_working_dir.is_some_and(Path::is_relative) && resolved_working_dir.is_none() {
+        return Err(AgentWrapperError::Backend {
+            message: PINNED_WORKING_DIR_RESOLUTION_FAILURE.to_string(),
+        });
+    }
+
+    Ok(resolved_working_dir)
+}
+
+pub(super) fn build_fresh_run_print_request(
+    prompt: String,
+    non_interactive: bool,
+    external_sandbox: bool,
+    allow_dangerously_skip_permissions: bool,
+    add_dirs: &[PathBuf],
+) -> ClaudePrintRequest {
+    let mut print_req = ClaudePrintRequest::new(prompt)
+        .output_format(ClaudeOutputFormat::StreamJson)
+        .include_partial_messages(true);
+    if non_interactive {
+        print_req = print_req.permission_mode("bypassPermissions");
+    }
+    if external_sandbox {
+        print_req = print_req.dangerously_skip_permissions(true);
+        if allow_dangerously_skip_permissions {
+            print_req = print_req.allow_dangerously_skip_permissions(true);
+        }
+    }
+    if !add_dirs.is_empty() {
+        print_req = print_req.add_dirs(
+            add_dirs
+                .iter()
+                .map(|dir| dir.as_os_str().to_string_lossy().into_owned()),
+        );
+    }
+
+    print_req
 }
 
 fn help_supports_allow_flag(stdout: &str) -> bool {

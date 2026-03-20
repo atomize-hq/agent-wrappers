@@ -1,13 +1,11 @@
 use std::{
     future::Future,
-    path::Path,
     path::PathBuf,
     pin::Pin,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
-use claude_code::{ClaudeOutputFormat, ClaudePrintRequest};
 use futures_util::{stream, StreamExt};
 use tokio::sync::{oneshot, OnceCell};
 
@@ -17,8 +15,10 @@ use super::{
         session_handle_facet, status_event,
     },
     util::{
-        generic_non_zero_exit_message, json_contains_add_dirs_runtime_rejection_signal,
-        json_contains_not_found_signal, parse_bool, preflight_allow_flag_support,
+        build_fresh_run_print_request, generic_non_zero_exit_message,
+        json_contains_add_dirs_runtime_rejection_signal, json_contains_not_found_signal,
+        parse_bool, preflight_allow_flag_support, render_backend_error_message,
+        resolve_claude_effective_working_dir, startup_failure_spawn,
         ADD_DIRS_RUNTIME_REJECTION_MESSAGE,
     },
     ClaudeCodeBackendConfig, AGENT_KIND, CLAUDE_EXEC_POLICY_PREFIX, EXT_ADD_DIRS_V1,
@@ -31,7 +31,6 @@ use crate::{
         normalize_add_dirs_v1, BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn,
         DynBackendEventStream, NormalizedRequest,
     },
-    backends::spawn_path::resolve_effective_working_dir,
     AgentWrapperCompletion, AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind,
     AgentWrapperKind, AgentWrapperRunRequest,
 };
@@ -128,90 +127,6 @@ pub(super) fn new_test_adapter_with_run_start_cwd(
     run_start_cwd: Option<PathBuf>,
 ) -> ClaudeHarnessAdapter {
     new_harness_adapter(config, run_start_cwd, None, Arc::new(OnceCell::new()))
-}
-
-fn render_backend_error_message(err: &ClaudeBackendError) -> String {
-    match err {
-        ClaudeBackendError::Spawn(err) | ClaudeBackendError::Completion(err) => {
-            format!("claude_code error: {err}")
-        }
-        ClaudeBackendError::ExternalSandboxPreflight { message } => message.clone(),
-        ClaudeBackendError::StreamParse(err) => err.message.clone(),
-    }
-}
-
-pub(super) fn startup_failure_spawn(
-    err: ClaudeBackendError,
-    emit_external_sandbox_warning: bool,
-) -> BackendSpawn<ClaudeBackendEvent, ClaudeBackendCompletion, ClaudeBackendError> {
-    let message = render_backend_error_message(&err);
-    let events: DynBackendEventStream<ClaudeBackendEvent, ClaudeBackendError> =
-        if emit_external_sandbox_warning {
-            Box::pin(stream::iter(vec![
-                Ok(ClaudeBackendEvent::ExternalSandboxWarning),
-                Ok(ClaudeBackendEvent::TerminalError { message }),
-            ]))
-        } else {
-            Box::pin(stream::once(async move {
-                Ok(ClaudeBackendEvent::TerminalError { message })
-            }))
-        };
-    let completion = Box::pin(async move { Err(err) });
-    BackendSpawn { events, completion }
-}
-
-pub(super) const PINNED_WORKING_DIR_RESOLUTION_FAILURE: &str =
-    "claude backend failed to resolve working directory";
-
-fn resolve_claude_effective_working_dir(
-    config: &ClaudeCodeBackendConfig,
-    run_start_cwd: Option<&Path>,
-    request_working_dir: Option<&Path>,
-) -> Result<Option<PathBuf>, AgentWrapperError> {
-    let selected_working_dir = request_working_dir.or(config.default_working_dir.as_deref());
-    let resolved_working_dir = resolve_effective_working_dir(
-        request_working_dir,
-        config.default_working_dir.as_deref(),
-        run_start_cwd,
-    );
-
-    if selected_working_dir.is_some_and(Path::is_relative) && resolved_working_dir.is_none() {
-        return Err(AgentWrapperError::Backend {
-            message: PINNED_WORKING_DIR_RESOLUTION_FAILURE.to_string(),
-        });
-    }
-
-    Ok(resolved_working_dir)
-}
-
-pub(super) fn build_fresh_run_print_request(
-    prompt: String,
-    non_interactive: bool,
-    external_sandbox: bool,
-    allow_dangerously_skip_permissions: bool,
-    add_dirs: &[PathBuf],
-) -> ClaudePrintRequest {
-    let mut print_req = ClaudePrintRequest::new(prompt)
-        .output_format(ClaudeOutputFormat::StreamJson)
-        .include_partial_messages(true);
-    if non_interactive {
-        print_req = print_req.permission_mode("bypassPermissions");
-    }
-    if external_sandbox {
-        print_req = print_req.dangerously_skip_permissions(true);
-        if allow_dangerously_skip_permissions {
-            print_req = print_req.allow_dangerously_skip_permissions(true);
-        }
-    }
-    if !add_dirs.is_empty() {
-        print_req = print_req.add_dirs(
-            add_dirs
-                .iter()
-                .map(|dir| dir.as_os_str().to_string_lossy().into_owned()),
-        );
-    }
-
-    print_req
 }
 
 impl BackendHarnessAdapter for ClaudeHarnessAdapter {

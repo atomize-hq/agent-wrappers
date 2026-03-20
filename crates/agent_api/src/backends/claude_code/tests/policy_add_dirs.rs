@@ -251,7 +251,7 @@ fn claude_policy_relative_working_dir_without_run_start_cwd_fails_safely() {
         AgentWrapperError::Backend { message } => {
             assert_eq!(
                 message,
-                super::super::harness::PINNED_WORKING_DIR_RESOLUTION_FAILURE
+                super::super::util::PINNED_WORKING_DIR_RESOLUTION_FAILURE
             );
         }
         other => panic!("expected Backend, got: {other:?}"),
