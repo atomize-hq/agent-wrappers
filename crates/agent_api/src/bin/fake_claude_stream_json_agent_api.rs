@@ -23,6 +23,10 @@ const STREAM_EVENT_TOOL_RESULT_START: &str = include_str!(
 );
 const ASSISTANT_MESSAGE_TEXT: &str =
     include_str!("../../../claude_code/tests/fixtures/stream_json/v1/assistant_message_text.jsonl");
+const ADD_DIRS_RUNTIME_REJECTION_MESSAGE: &str = "add_dirs rejected by runtime";
+const ADD_DIR_RAW_PATH_SECRET: &str = "ADD_DIR_RAW_PATH_SECRET";
+const ADD_DIR_STDOUT_SECRET: &str = "ADD_DIR_STDOUT_SECRET";
+const ADD_DIR_STDERR_SECRET: &str = "ADD_DIR_STDERR_SECRET";
 
 fn first_nonempty_line(text: &str) -> &str {
     text.lines()
@@ -63,6 +67,29 @@ fn write_result_error_with_message(out: &mut impl Write, message: &str) -> io::R
     write_line(out, &payload.to_string())?;
     write_line(out, "\n")?;
     Ok(())
+}
+
+fn write_add_dirs_runtime_rejection(out: &mut impl Write) -> io::Result<()> {
+    let payload = json!({
+        "type": "result",
+        "subtype": "error",
+        "session_id": "sess-1",
+        "is_error": true,
+        "message": ADD_DIRS_RUNTIME_REJECTION_MESSAGE,
+        "details": {
+            "raw_path": ADD_DIR_RAW_PATH_SECRET,
+            "stdout": ADD_DIR_STDOUT_SECRET,
+        },
+    });
+    write_line(out, &payload.to_string())?;
+    write_line(out, "\n")?;
+    Ok(())
+}
+
+fn exit_add_dirs_runtime_rejection(out: &mut impl Write) -> ! {
+    write_add_dirs_runtime_rejection(out).expect("write add_dirs runtime rejection");
+    eprintln!("{ADD_DIR_STDERR_SECRET}");
+    std::process::exit(1);
 }
 
 fn has_flag_value(args: &[String], flag: &str, expected: &str) -> bool {
@@ -342,6 +369,10 @@ fn main() -> io::Result<()> {
 
             write_line(&mut out, &format!("{init}\n"))?;
         }
+        "add_dirs_runtime_rejection_fresh" => {
+            write_line(&mut out, &format!("{init}\n"))?;
+            exit_add_dirs_runtime_rejection(&mut out);
+        }
         "fork_last_assert" => {
             let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
             if args.last() != Some(&expected_prompt) {
@@ -372,6 +403,38 @@ fn main() -> io::Result<()> {
             }
 
             write_line(&mut out, &format!("{init}\n"))?;
+        }
+        "add_dirs_runtime_rejection_fork_last" => {
+            let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
+            if args.last() != Some(&expected_prompt) {
+                fail(
+                    &mut out,
+                    "assertion failed: prompt must be final argv token",
+                );
+            }
+            if !has_flag(&args, "--verbose") {
+                fail(&mut out, "assertion failed: missing --verbose");
+            }
+
+            let subseq = selector_assertion_subsequence(&[
+                "--continue",
+                "--fork-session",
+                "--verbose",
+                &expected_prompt,
+            ]);
+            let ok = contains_ordered_subsequence(
+                &args,
+                &subseq.iter().map(String::as_str).collect::<Vec<_>>(),
+            );
+            if !ok {
+                fail(
+                    &mut out,
+                    "assertion failed: missing fork(last) argv subsequence",
+                );
+            }
+
+            write_line(&mut out, &format!("{init}\n"))?;
+            exit_add_dirs_runtime_rejection(&mut out);
         }
         "fork_id_assert" => {
             let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
@@ -406,6 +469,40 @@ fn main() -> io::Result<()> {
 
             write_line(&mut out, &format!("{init}\n"))?;
         }
+        "add_dirs_runtime_rejection_fork_id" => {
+            let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
+            let expected_id = require("FAKE_CLAUDE_EXPECT_RESUME_ID");
+            if args.last() != Some(&expected_prompt) {
+                fail(
+                    &mut out,
+                    "assertion failed: prompt must be final argv token",
+                );
+            }
+            if !has_flag(&args, "--verbose") {
+                fail(&mut out, "assertion failed: missing --verbose");
+            }
+
+            let subseq = selector_assertion_subsequence(&[
+                "--fork-session",
+                "--resume",
+                &expected_id,
+                "--verbose",
+                &expected_prompt,
+            ]);
+            let ok = contains_ordered_subsequence(
+                &args,
+                &subseq.iter().map(String::as_str).collect::<Vec<_>>(),
+            );
+            if !ok {
+                fail(
+                    &mut out,
+                    "assertion failed: missing fork(id) argv subsequence",
+                );
+            }
+
+            write_line(&mut out, &format!("{init}\n"))?;
+            exit_add_dirs_runtime_rejection(&mut out);
+        }
         "resume_last_assert" => {
             let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
             if args.last() != Some(&expected_prompt) {
@@ -432,6 +529,34 @@ fn main() -> io::Result<()> {
             }
 
             write_line(&mut out, &format!("{init}\n"))?;
+        }
+        "add_dirs_runtime_rejection_resume_last" => {
+            let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
+            if args.last() != Some(&expected_prompt) {
+                fail(
+                    &mut out,
+                    "assertion failed: prompt must be final argv token",
+                );
+            }
+            if !has_flag(&args, "--verbose") {
+                fail(&mut out, "assertion failed: missing --verbose");
+            }
+
+            let subseq =
+                selector_assertion_subsequence(&["--continue", "--verbose", &expected_prompt]);
+            let ok = contains_ordered_subsequence(
+                &args,
+                &subseq.iter().map(String::as_str).collect::<Vec<_>>(),
+            );
+            if !ok {
+                fail(
+                    &mut out,
+                    "assertion failed: missing resume(last) argv subsequence",
+                );
+            }
+
+            write_line(&mut out, &format!("{init}\n"))?;
+            exit_add_dirs_runtime_rejection(&mut out);
         }
         "resume_id_assert" => {
             let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
@@ -464,6 +589,39 @@ fn main() -> io::Result<()> {
             }
 
             write_line(&mut out, &format!("{init}\n"))?;
+        }
+        "add_dirs_runtime_rejection_resume_id" => {
+            let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
+            let expected_id = require("FAKE_CLAUDE_EXPECT_RESUME_ID");
+            if args.last() != Some(&expected_prompt) {
+                fail(
+                    &mut out,
+                    "assertion failed: prompt must be final argv token",
+                );
+            }
+            if !has_flag(&args, "--verbose") {
+                fail(&mut out, "assertion failed: missing --verbose");
+            }
+
+            let subseq = selector_assertion_subsequence(&[
+                "--resume",
+                &expected_id,
+                "--verbose",
+                &expected_prompt,
+            ]);
+            let ok = contains_ordered_subsequence(
+                &args,
+                &subseq.iter().map(String::as_str).collect::<Vec<_>>(),
+            );
+            if !ok {
+                fail(
+                    &mut out,
+                    "assertion failed: missing resume(id) argv subsequence",
+                );
+            }
+
+            write_line(&mut out, &format!("{init}\n"))?;
+            exit_add_dirs_runtime_rejection(&mut out);
         }
         "fork_last_not_found" => {
             let expected_prompt = require("FAKE_CLAUDE_EXPECT_PROMPT");
