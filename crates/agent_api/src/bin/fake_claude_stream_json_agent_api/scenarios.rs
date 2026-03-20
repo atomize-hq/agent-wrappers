@@ -255,6 +255,20 @@ fn scenario_kind(scenario: &str) -> ScenarioKind {
             result_message: "other failure",
             detail_stderr: "add_dirs rejected by runtime",
         },
+        "add_dirs_runtime_rejection_resume_id_not_found_detail_trap" => {
+            ScenarioKind::DetailedResultError {
+                tail: vec![
+                    "--resume".to_string(),
+                    require("FAKE_CLAUDE_EXPECT_RESUME_ID"),
+                    "--verbose".to_string(),
+                    require("FAKE_CLAUDE_EXPECT_PROMPT"),
+                ],
+                missing_subsequence_message:
+                    "assertion failed: missing resume(id) argv subsequence",
+                result_message: "add_dirs rejected by runtime",
+                detail_stderr: "session not found",
+            }
+        }
         "fork_last_not_found" => ScenarioKind::TerminalError {
             required_subsequence: vec!["--continue".to_string(), "--fork-session".to_string()],
             missing_subsequence_message: "assertion failed: missing --continue --fork-session",

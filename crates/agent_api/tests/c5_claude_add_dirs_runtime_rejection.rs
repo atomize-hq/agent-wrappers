@@ -355,3 +355,20 @@ async fn nested_add_dirs_rejection_detail_does_not_override_result_error() {
         "nested detail trap should still preserve the non-zero exit status"
     );
 }
+
+#[tokio::test]
+async fn top_level_add_dirs_rejection_beats_nested_resume_not_found_detail() {
+    let resume_id = "sess-123";
+    assert_runtime_rejection_parity(
+        "top_level_add_dirs_rejection_beats_nested_resume_not_found_detail",
+        "hello world",
+        "add_dirs_runtime_rejection_resume_id_not_found_detail_trap",
+        Some((
+            "agent_api.session.resume.v1",
+            json!({"selector": "id", "id": resume_id}),
+        )),
+        Some(resume_id),
+        std::iter::empty(),
+    )
+    .await;
+}

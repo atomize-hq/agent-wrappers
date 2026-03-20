@@ -1,5 +1,34 @@
 use super::*;
 
+fn write_env_sensitive_add_dir_probe(dir: &std::path::Path) -> PathBuf {
+    write_fake_codex(
+        dir,
+        r#"#!/bin/bash
+if [[ "$1" == "--version" ]]; then
+  echo "codex 1.0.0"
+elif [[ "$1" == "features" && "$2" == "list" && "$3" == "--json" ]]; then
+  if [[ "${CODEX_ENABLE_ADD_DIR_PROBE:-}" == "1" ]]; then
+    echo '{"features":["add_dir"]}'
+  else
+    echo '{"features":[]}'
+  fi
+elif [[ "$1" == "features" && "$2" == "list" ]]; then
+  if [[ "${CODEX_ENABLE_ADD_DIR_PROBE:-}" == "1" ]]; then
+    echo "add_dir"
+  else
+    echo ""
+  fi
+elif [[ "$1" == "--help" ]]; then
+  if [[ "${CODEX_ENABLE_ADD_DIR_PROBE:-}" == "1" ]]; then
+    echo "Usage: codex --add-dir"
+  else
+    echo "Usage: codex exec"
+  fi
+fi
+"#,
+    )
+}
+
 #[tokio::test]
 async fn capability_snapshot_short_circuits_probes() {
     let _guard = env_guard_async().await;
@@ -153,5 +182,71 @@ fi
     assert_eq!(
         capabilities.guard_add_dir().support,
         CapabilitySupport::Supported
+    );
+}
+
+#[tokio::test]
+async fn capability_probe_with_env_overrides_uses_effective_env() {
+    let _guard = env_guard_async().await;
+    clear_capability_cache();
+
+    let temp = tempfile::tempdir().unwrap();
+    let binary = write_env_sensitive_add_dir_probe(temp.path());
+    let client = CodexClient::builder()
+        .binary(&binary)
+        .timeout(Duration::from_secs(5))
+        .build();
+
+    let base = client.probe_capabilities().await;
+    assert!(!base.features.supports_add_dir);
+
+    let env_overrides =
+        BTreeMap::from([("CODEX_ENABLE_ADD_DIR_PROBE".to_string(), "1".to_string())]);
+    let env_sensitive = client
+        .probe_capabilities_with_env_overrides(&env_overrides)
+        .await;
+    assert!(env_sensitive.features.supports_add_dir);
+}
+
+#[tokio::test]
+async fn capability_probe_with_env_overrides_bypasses_cache_reads_and_writes() {
+    let _guard = env_guard_async().await;
+    clear_capability_cache();
+
+    let temp = tempfile::tempdir().unwrap();
+    let binary = write_env_sensitive_add_dir_probe(temp.path());
+    let client = CodexClient::builder()
+        .binary(&binary)
+        .timeout(Duration::from_secs(5))
+        .build();
+
+    let cached_base = client.probe_capabilities().await;
+    assert!(!cached_base.features.supports_add_dir);
+    assert!(
+        !capability_cache_entry(&binary)
+            .expect("plain probe should populate the cache")
+            .features
+            .supports_add_dir
+    );
+
+    let env_overrides =
+        BTreeMap::from([("CODEX_ENABLE_ADD_DIR_PROBE".to_string(), "1".to_string())]);
+    let env_sensitive = client
+        .probe_capabilities_with_env_overrides(&env_overrides)
+        .await;
+    assert!(
+        env_sensitive.features.supports_add_dir,
+        "env-aware probes must bypass stale cached snapshots"
+    );
+
+    assert!(
+        !capability_cache_entry(&binary)
+            .expect("env-aware probe must not replace the shared cache entry")
+            .features
+            .supports_add_dir
+    );
+    assert!(
+        !client.probe_capabilities().await.features.supports_add_dir,
+        "plain probes should continue to see the cached binary-path snapshot"
     );
 }

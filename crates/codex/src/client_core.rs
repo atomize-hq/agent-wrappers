@@ -119,6 +119,18 @@ impl CodexClient {
         S: AsRef<OsStr>,
         I: IntoIterator<Item = S>,
     {
+        self.run_basic_command_with_env_overrides(args, &[]).await
+    }
+
+    pub(crate) async fn run_basic_command_with_env_overrides<S, I>(
+        &self,
+        args: I,
+        env_overrides: &[(String, String)],
+    ) -> Result<CommandOutput, CodexError>
+    where
+        S: AsRef<OsStr>,
+        I: IntoIterator<Item = S>,
+    {
         let mut command = Command::new(self.command_env.binary_path());
         command
             .args(args)
@@ -127,6 +139,9 @@ impl CodexClient {
             .kill_on_drop(true);
 
         self.command_env.apply(&mut command)?;
+        for (key, value) in env_overrides {
+            command.env(key, value);
+        }
 
         let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
 

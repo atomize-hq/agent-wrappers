@@ -297,7 +297,7 @@ fn claude_add_dirs_runtime_rejection_classifier_ignores_nested_detail_traps() {
 }
 
 #[test]
-fn claude_harness_keeps_selector_failures_distinct_from_add_dirs_runtime_rejection() {
+fn claude_harness_prioritizes_top_level_add_dirs_runtime_rejection_over_selector_miss_traps() {
     const SOURCE: &str = include_str!("../harness.rs");
     const UTIL_SOURCE: &str = include_str!("../util.rs");
 
@@ -309,12 +309,16 @@ fn claude_harness_keeps_selector_failures_distinct_from_add_dirs_runtime_rejecti
         .expect("expected add-dir runtime rejection classifier");
 
     assert!(
-        selector_classifier_idx < add_dirs_classifier_idx,
-        "expected selector-failure classification to remain distinct from add-dir runtime rejection"
+        add_dirs_classifier_idx < selector_classifier_idx,
+        "expected top-level add-dir runtime rejection classification to run before selector-miss scanning"
     );
     assert!(
         SOURCE.contains("ADD_DIRS_RUNTIME_REJECTION_MESSAGE"),
         "expected harness to use the pinned add-dir runtime rejection message"
+    );
+    assert!(
+        UTIL_SOURCE.contains("json_contains_add_dirs_runtime_rejection_signal"),
+        "expected the classifier contract to stay anchored to the exact top-level add-dir rejection helper"
     );
     assert!(
         UTIL_SOURCE.contains("Some(SessionSelectorV1::Last) => Some(\"no session found\".to_string())"),

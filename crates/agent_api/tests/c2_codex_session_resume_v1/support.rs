@@ -34,6 +34,7 @@ pub(super) enum AddDirProbeMode {
     Unsupported,
     Unknown,
     SlowSupported,
+    EnvSensitiveSupported,
 }
 
 #[cfg(unix)]
@@ -294,6 +295,11 @@ fn write_probe_only_codex(
             r#"sleep 0.2; echo "add_dir""#,
             r#"sleep 0.2; echo "Usage: codex --add-dir""#,
         ),
+        AddDirProbeMode::EnvSensitiveSupported => (
+            r#"if [[ "${FAKE_CODEX_ENABLE_ADD_DIR_PROBE:-}" == "1" ]]; then echo '{"features":["add_dir"]}'; else echo '{"features":["output_schema"]}'; fi"#,
+            r#"if [[ "${FAKE_CODEX_ENABLE_ADD_DIR_PROBE:-}" == "1" ]]; then echo "add_dir"; else echo "output_schema"; fi"#,
+            r#"if [[ "${FAKE_CODEX_ENABLE_ADD_DIR_PROBE:-}" == "1" ]]; then echo "Usage: codex --add-dir"; else echo "Usage: codex exec"; fi"#,
+        ),
     };
     let script = format!(
         r#"#!/bin/bash
@@ -307,7 +313,7 @@ elif [[ "$1" == "features" && "$2" == "list" ]]; then
 elif [[ "$1" == "--help" ]]; then
   {help_output}
 elif [[ "$1" == "exec" ]]; then
-  echo "$@" >> "$log"
+  echo "$@ probe_env=${{FAKE_CODEX_ENABLE_ADD_DIR_PROBE:-unset}}" >> "$log"
   exit 99
 fi
 "#,

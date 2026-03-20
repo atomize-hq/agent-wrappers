@@ -197,3 +197,72 @@ async fn resume_id_add_dirs_preflight_rejects_when_probe_reports_unknown() {
     )
     .await;
 }
+
+#[cfg(unix)]
+#[tokio::test]
+async fn resume_id_add_dirs_env_sensitive_probe_uses_request_env() {
+    let fixture = add_dirs_fixture();
+    let resume_id = "thread-123";
+    let fixture_backend = build_probe_only_backend(
+        AddDirProbeMode::EnvSensitiveSupported,
+        base_env(),
+        None,
+        false,
+    );
+    let mut request = run_request(
+        "hello world",
+        [
+            add_dirs_extension(&fixture.dirs),
+            (
+                "agent_api.session.resume.v1".to_string(),
+                json!({"selector": "id", "id": resume_id}),
+            ),
+        ],
+    );
+    request.env.insert(
+        "FAKE_CODEX_ENABLE_ADD_DIR_PROBE".to_string(),
+        "1".to_string(),
+    );
+
+    let handle = fixture_backend
+        .backend
+        .run(request)
+        .await
+        .expect("env-sensitive probe should honor request env and return a handle");
+
+    let mut events = handle.events;
+    let seen = drain_to_none(events.as_mut(), STREAM_TIMEOUT).await;
+    assert!(
+        seen.iter()
+            .all(|event| event.message.as_deref() != Some(ADD_DIRS_RUNTIME_REJECTION_MESSAGE)),
+        "request-scoped env should prevent add-dir preflight rejection"
+    );
+
+    let completion = tokio::time::timeout(STREAM_TIMEOUT, handle.completion)
+        .await
+        .expect("completion resolves")
+        .expect("spawned resume path should still produce a completion");
+    assert!(
+        !completion.status.success(),
+        "fake exec path exits non-zero so the regression proves spawn happened"
+    );
+
+    let exec_log = std::fs::read_to_string(&fixture_backend.exec_log)
+        .expect("spawned exec path should be recorded");
+    assert!(
+        exec_log.contains("--add-dir"),
+        "expected add-dir flags to be emitted after env-aware probe support"
+    );
+    assert!(
+        exec_log.contains("resume"),
+        "expected the logged argv to include the resume flow"
+    );
+    assert!(
+        exec_log.contains(resume_id),
+        "expected the logged argv to include the requested resume id"
+    );
+    assert!(
+        exec_log.contains("probe_env=1"),
+        "expected request env overrides to reach the resume invocation"
+    );
+}

@@ -141,6 +141,7 @@ pub use rollout_jsonl::{
 };
 
 use std::{
+    collections::BTreeMap,
     path::PathBuf,
     time::{Duration, SystemTime},
 };
@@ -267,7 +268,30 @@ impl CodexClient {
     /// the builder (see [`CodexClientBuilder::capability_cache_policy`]).
     /// Failures are logged and return conservative defaults so callers can gate optional flags.
     pub async fn probe_capabilities(&self) -> CodexCapabilities {
-        self.probe_capabilities_with_policy(self.capability_cache_policy)
+        self.probe_capabilities_internal(self.capability_cache_policy, &[])
+            .await
+    }
+
+    /// Probes capabilities using per-invocation environment overrides.
+    ///
+    /// Env overrides are applied after the wrapper's internal environment injection so the probe
+    /// observes the same effective environment as `stream_*_with_env_overrides_control`.
+    /// Non-empty overrides bypass the process-wide capability cache to avoid polluting cached
+    /// snapshots keyed only by binary path.
+    pub async fn probe_capabilities_with_env_overrides(
+        &self,
+        env_overrides: &BTreeMap<String, String>,
+    ) -> CodexCapabilities {
+        if env_overrides.is_empty() {
+            return self.probe_capabilities().await;
+        }
+
+        let env_overrides: Vec<(String, String)> = env_overrides
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect();
+
+        self.probe_capabilities_internal(CapabilityCachePolicy::Bypass, &env_overrides)
             .await
     }
 
@@ -275,6 +299,14 @@ impl CodexClient {
     pub async fn probe_capabilities_with_policy(
         &self,
         cache_policy: CapabilityCachePolicy,
+    ) -> CodexCapabilities {
+        self.probe_capabilities_internal(cache_policy, &[]).await
+    }
+
+    async fn probe_capabilities_internal(
+        &self,
+        cache_policy: CapabilityCachePolicy,
+        env_overrides: &[(String, String)],
     ) -> CodexCapabilities {
         let cache_key = capability_cache_key(self.command_env.binary_path());
         let fingerprint = current_fingerprint(&cache_key);
@@ -319,7 +351,7 @@ impl CodexClient {
         }
 
         let probed = self
-            .probe_capabilities_uncached(&cache_key, fingerprint.clone())
+            .probe_capabilities_uncached(&cache_key, fingerprint.clone(), env_overrides)
             .await;
 
         let capabilities =
@@ -336,13 +368,17 @@ impl CodexClient {
         &self,
         cache_key: &CapabilityCacheKey,
         fingerprint: Option<BinaryFingerprint>,
+        env_overrides: &[(String, String)],
     ) -> CodexCapabilities {
         let mut plan = CapabilityProbePlan::default();
         let mut features = CodexFeatureFlags::default();
         let mut version = None;
 
         plan.steps.push(CapabilityProbeStep::VersionFlag);
-        match self.run_basic_command(["--version"]).await {
+        match self
+            .run_basic_command_with_env_overrides(["--version"], env_overrides)
+            .await
+        {
             Ok(output) => {
                 if !output.status.success() {
                     warn!(
@@ -366,7 +402,10 @@ impl CodexClient {
         let mut parsed_features = false;
 
         plan.steps.push(CapabilityProbeStep::FeaturesListJson);
-        match self.run_basic_command(["features", "list", "--json"]).await {
+        match self
+            .run_basic_command_with_env_overrides(["features", "list", "--json"], env_overrides)
+            .await
+        {
             Ok(output) => {
                 if !output.status.success() {
                     warn!(
@@ -397,7 +436,10 @@ impl CodexClient {
 
         if !parsed_features {
             plan.steps.push(CapabilityProbeStep::FeaturesListText);
-            match self.run_basic_command(["features", "list"]).await {
+            match self
+                .run_basic_command_with_env_overrides(["features", "list"], env_overrides)
+                .await
+            {
                 Ok(output) => {
                     if !output.status.success() {
                         warn!(
@@ -423,7 +465,10 @@ impl CodexClient {
 
         if version::should_run_help_fallback(&features) {
             plan.steps.push(CapabilityProbeStep::HelpFallback);
-            match self.run_basic_command(["--help"]).await {
+            match self
+                .run_basic_command_with_env_overrides(["--help"], env_overrides)
+                .await
+            {
                 Ok(output) => {
                     if !output.status.success() {
                         warn!(

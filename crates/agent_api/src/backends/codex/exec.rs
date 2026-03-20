@@ -160,14 +160,16 @@ pub(super) async fn spawn_exec_or_resume_flow(
     let has_add_dirs = !add_dirs.is_empty();
     if has_add_dirs {
         let probe_client = builder.clone().build();
-        if !probe_client
-            .probe_capabilities()
-            .await
-            .guard_add_dir()
-            .is_supported()
-        {
+        let capabilities = probe_client
+            .probe_capabilities_with_env_overrides(&env)
+            .await;
+        if !capabilities.guard_add_dir().is_supported() {
             return Err(super::CodexBackendError::AddDirsRejectedByRuntime);
         }
+        builder = builder.capability_feature_hints(codex::CodexFeatureFlags {
+            supports_add_dir: true,
+            ..Default::default()
+        });
     }
 
     // Codex wrapper treats `Duration::ZERO` as “no timeout”.

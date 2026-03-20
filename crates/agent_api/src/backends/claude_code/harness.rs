@@ -397,26 +397,6 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                                         }
                                     }
 
-                                    if selection_selector.is_some()
-                                        && matches!(
-                                            ev,
-                                            claude_code::ClaudeStreamJsonEvent::ResultError { .. }
-                                        )
-                                    {
-                                        if let claude_code::ClaudeStreamJsonEvent::ResultError {
-                                            raw,
-                                            ..
-                                        } = &ev
-                                        {
-                                            if json_contains_not_found_signal(raw) {
-                                                if let Ok(mut state) = stream_state.lock() {
-                                                    state.saw_not_found_signal = true;
-                                                }
-                                                continue;
-                                            }
-                                        }
-                                    }
-
                                     if has_add_dirs
                                         && matches!(
                                             ev,
@@ -435,6 +415,26 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                                                         ADD_DIRS_RUNTIME_REJECTION_MESSAGE
                                                             .to_string(),
                                                     );
+                                                }
+                                                continue;
+                                            }
+                                        }
+                                    }
+
+                                    if selection_selector.is_some()
+                                        && matches!(
+                                            ev,
+                                            claude_code::ClaudeStreamJsonEvent::ResultError { .. }
+                                        )
+                                    {
+                                        if let claude_code::ClaudeStreamJsonEvent::ResultError {
+                                            raw,
+                                            ..
+                                        } = &ev
+                                        {
+                                            if json_contains_not_found_signal(raw) {
+                                                if let Ok(mut state) = stream_state.lock() {
+                                                    state.saw_not_found_signal = true;
                                                 }
                                                 continue;
                                             }
