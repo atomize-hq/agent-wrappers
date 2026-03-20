@@ -265,6 +265,8 @@ Meaning:
 - There is intentionally no containment requirement that keeps resolved directories under the
   effective working directory.
 - This key is orthogonal to `agent_api.session.resume.v1` and `agent_api.session.fork.v1`.
+  Session selection for those flows remains owned by `AgentWrapperRunRequest.extensions`; this key
+  does not introduce any separate request field or alternate selector surface.
   Backends MUST preserve the same accepted effective add-dir set across new-session, resume, and
   fork decision-making. A selected session flow MUST either apply that set unchanged or take a
   pinned safe backend-rejection path owned by its backend contract; it MUST NOT silently ignore an
@@ -339,6 +341,10 @@ Runtime rejection behavior (v1, normative):
   - an installed CLI that rejects the required add-dir surface,
   - a backend flow that cannot apply accepted add-dir inputs to the targeted session transport, or
   - any other backend-owned inability to honor the accepted effective directory set.
+- Backend-owned rejection paths for this key apply only to accepted inputs. Malformed, out-of-
+  bounds, missing, or otherwise invalid add-dir payloads MUST still fail as
+  `AgentWrapperError::InvalidRequest` before any backend-owned session-transport rejection path is
+  considered.
 - The `message` MUST be safe/redacted and MUST NOT embed raw backend stdout/stderr.
 - v1 does not pin a universal runtime-rejection message string for add-dir failures.
 - If the backend can determine that inability before spawning its backend surface, it MUST return

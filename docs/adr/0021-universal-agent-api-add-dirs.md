@@ -43,7 +43,7 @@ This ADR corresponds to backlog item `uaa-0003` (`bucket=agent_api.exec`, `type=
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 9d3e140b4bcfcbb9668df75b22c37098694251e2b8b8cbd9c018cd4c8539ca7f
+ADR_BODY_SHA256: 0e76730d0a6ea502ce41c803540e2578c7bb82959fc08113f33552f715ac7c26
 
 ### Decision (draft)
 
@@ -87,8 +87,12 @@ ADR_BODY_SHA256: 9d3e140b4bcfcbb9668df75b22c37098694251e2b8b8cbd9c018cd4c8539ca7
   - Claude Code: one variadic `--add-dir <DIR...>` group in normalized order
 - Session compatibility:
   - the key is valid for new-session, resume, and fork flows
+  - session selection remains owned by `AgentWrapperRunRequest.extensions`; this key does not add a
+    separate request field or alternate selector surface
   - a selected session flow MUST either apply the accepted normalized directory set unchanged or
     take a pinned safe backend-rejection path; it MUST NOT silently ignore accepted add-dir inputs
+  - malformed or otherwise invalid add-dir payloads still fail as `AgentWrapperError::InvalidRequest`;
+    the Codex fork rejection applies only to accepted inputs
 
 ### Why
 
@@ -292,6 +296,8 @@ After spawn:
 - The key remains usable with resume/fork flows under one deterministic rule: Claude maps the
   accepted list directly, while the current Codex fork contract fails before app-server requests
   with the pinned safe backend message instead of silently dropping the list.
+- That Codex fork rejection is an accepted-input path only; invalid add-dir payloads still fail
+  earlier as `AgentWrapperError::InvalidRequest`.
 
 ## Canonical authority + sync workflow
 
