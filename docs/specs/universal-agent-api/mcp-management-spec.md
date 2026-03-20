@@ -378,8 +378,14 @@ Requirements:
   - Both built-in fields MUST default to `false` (safe by default).
   - Built-in backends MUST NOT advertise `agent_api.tools.mcp.add.v1` /
     `agent_api.tools.mcp.remove.v1` unless write enablement is configured.
-  - For built-in backends, `allow_mcp_write == true` MAY enable advertising only when the pinned
+  - For built-in backends, `allow_mcp_write == true` MUST enable advertising only when the pinned
     CLI manifest snapshot shows the required subcommand is available on the current target.
+  - The advertising predicate is fully determined by `(allow_mcp_write == true)` AND
+    `(manifest indicates subcommand available on this target)`; no additional env/config gates
+    exist in v1.
+  - If the manifest indicates availability but the runtime binary lacks the subcommand, the
+    backend MUST still advertise based on the manifest and MUST fail the operation with
+    `AgentWrapperError::Backend` per “Target availability source of truth (pinned)”.
   - Read operations (`list/get`) are unchanged and have no extra write-enablement knob in v1.
   - This enablement applies only to non-run MCP management config mutation. It does not change what
     a configured MCP server may do during a normal run.

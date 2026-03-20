@@ -43,3 +43,15 @@ This document maps fixtures to required outcomes. Fixtures live under:
 - Input: `unknown_outer_type.jsonl`
 - Outcome: `ClaudeStreamJsonEvent::Unknown`
 
+## Scenario 8: `parse_json` parity with `parse_line`
+
+For every fixture line used in Scenarios 1–7:
+
+- Parse the line into a `serde_json::Value` (after applying the same single-`\r` trimming that
+  `parse_line` applies).
+- `parse_json(&value)` MUST return the same outcome as `parse_line` on the original line:
+  - On success, the same `ClaudeStreamJsonEvent` variant with identical extracted fields.
+  - On failure, the same `ClaudeStreamJsonParseError.code` (`TypedParse` or `Normalize`).
+
+This scenario exists to keep the two public entry points in strict lockstep on the same fixture
+corpus and normalization semantics.

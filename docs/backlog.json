@@ -128,7 +128,7 @@
     {
       "id": "uaa-0016",
       "title": "Universal: external sandbox execution policy (dangerous)",
-      "status": "todo",
+      "status": "done",
       "bucket": "agent_api.exec",
       "type": "extension_key",
       "proposed_capability_id": "agent_api.exec.external_sandbox.v1",
@@ -512,7 +512,7 @@
     {
       "id": "uaa-0006",
       "title": "Universal MCP management commands",
-      "status": "todo",
+      "status": "done",
       "bucket": "agent_api.tools",
       "type": "api_surface",
       "notes": [

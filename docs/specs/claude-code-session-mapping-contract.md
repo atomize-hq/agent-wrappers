@@ -79,6 +79,66 @@ Deterministic allow-flag preflight requirement (pinned):
 Implementation note (non-normative): keep the `--help` parser a pure function so unit tests can pin
 both the allow-flag-supported and allow-flag-not-supported cases without spawning Claude.
 
+## `agent_api.exec.add_dirs.v1` mapping (pinned)
+
+The add-dir extension key is owned by `docs/specs/universal-agent-api/extensions-spec.md`. This
+section pins the Claude CLI mapping when the Claude backend advertises and accepts the key.
+
+When `extensions["agent_api.exec.add_dirs.v1"]` is accepted, the Claude backend MUST:
+
+- emit exactly one `--add-dir <DIR...>` argv group,
+- include the normalized unique directories in order, and
+- keep the group in the root-flags region before the final prompt token.
+
+Placement rules (pinned):
+
+- The group MUST appear before `--continue`, `--fork-session`, and `--resume`.
+- The group MUST appear before the final `--verbose` token that precedes the prompt.
+- The backend MUST NOT emit repeated `--add-dir` flags for this key.
+
+## `agent_api.config.model.v1` mapping (pinned)
+
+The model-selection extension key is owned by `docs/specs/universal-agent-api/extensions-spec.md`.
+This section pins the Claude CLI mapping when the Claude backend advertises and accepts the key.
+
+When `extensions["agent_api.config.model.v1"]` is accepted, the Claude backend MUST:
+
+- emit exactly one `--model <trimmed-id>` pair,
+- use the effective trimmed model id from the universal extension contract, and
+- omit `--model` entirely when the key is absent.
+
+Placement rules (pinned):
+
+- The pair MUST appear before any `--add-dir` group.
+- The pair MUST appear before `--continue`, `--fork-session`, and `--resume`.
+- The pair MUST appear before any `--fallback-model` flag/value.
+- The pair MUST appear before the final `--verbose` token that precedes the prompt.
+
+Verification requirements (pinned):
+
+- Regression coverage MUST assert this ordering in fresh print argv construction and in the
+  resume/fork session argv subsequences defined below.
+- The verification surface MUST fail if `--model <trimmed-id>` drifts to the right of the final
+  `--verbose` token or any forbidden flag region listed above.
+
+Runtime rejection parity (pinned):
+
+- If an accepted `agent_api.config.model.v1` value is rejected after the Claude backend has already
+  returned a run handle and the consumer-visible events stream is still open, the backend MUST:
+  - fail the run as `AgentWrapperError::Backend { message }`,
+  - emit exactly one terminal `AgentWrapperEventKind::Error` event carrying that same safe/redacted
+    `message`, and
+  - close the stream after emitting that terminal error event.
+- The safe/redacted `message` in the terminal error event MUST exactly match the safe/redacted
+  `message` surfaced through the completion error so downstream consumers can compare them
+  deterministically.
+- This event/completion parity requirement is owned by
+  `docs/specs/universal-agent-api/extensions-spec.md`
+  (`agent_api.config.model.v1`, "Runtime rejection behavior (v1, normative)").
+
+Implementation note (non-normative): the active verification plan for this contract clause lives in
+`docs/project_management/packs/active/agent-api-model-selection/seam-4-claude-code-mapping.md`.
+
 ## `agent_api.session.resume.v1` mapping (pinned)
 
 The resume extension key is owned by `docs/specs/universal-agent-api/extensions-spec.md`. This
@@ -91,7 +151,7 @@ Universal Agent API run protocol).
 
 The backend MUST spawn an argv containing the following **ordered subsequence**:
 
-`--print --output-format stream-json [--permission-mode bypassPermissions] --continue --verbose PROMPT`
+`--print --output-format stream-json [--model ID] [--permission-mode bypassPermissions] [--add-dir <DIR...>] --continue --verbose PROMPT`
 
 ### selector `"id"`
 
@@ -99,7 +159,7 @@ Let `ID == extensions["agent_api.session.resume.v1"].id` (non-empty after trimmi
 
 The backend MUST spawn an argv containing the following **ordered subsequence**:
 
-`--print --output-format stream-json [--permission-mode bypassPermissions] --resume ID --verbose PROMPT`
+`--print --output-format stream-json [--model ID] [--permission-mode bypassPermissions] [--add-dir <DIR...>] --resume ID --verbose PROMPT`
 
 ## `agent_api.session.fork.v1` mapping (pinned)
 
@@ -112,7 +172,7 @@ Let `PROMPT == AgentWrapperRunRequest.prompt` (non-empty after trimming; validat
 
 The backend MUST spawn an argv containing the following **ordered subsequence**:
 
-`--print --output-format stream-json [--permission-mode bypassPermissions] --continue --fork-session --verbose PROMPT`
+`--print --output-format stream-json [--model ID] [--permission-mode bypassPermissions] [--add-dir <DIR...>] --continue --fork-session --verbose PROMPT`
 
 ### selector `"id"`
 
@@ -120,7 +180,7 @@ Let `ID == extensions["agent_api.session.fork.v1"].id` (non-empty after trimming
 
 The backend MUST spawn an argv containing the following **ordered subsequence**:
 
-`--print --output-format stream-json [--permission-mode bypassPermissions] --fork-session --resume ID --verbose PROMPT`
+`--print --output-format stream-json [--model ID] [--permission-mode bypassPermissions] [--add-dir <DIR...>] --fork-session --resume ID --verbose PROMPT`
 
 ## Error translation requirements (pinned)
 
