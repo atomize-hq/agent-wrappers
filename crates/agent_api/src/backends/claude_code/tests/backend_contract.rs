@@ -247,6 +247,7 @@ fn claude_add_dirs_runtime_rejection_classifier_does_not_match_generic_or_select
 #[test]
 fn claude_harness_keeps_selector_failures_distinct_from_add_dirs_runtime_rejection() {
     const SOURCE: &str = include_str!("../harness.rs");
+    const UTIL_SOURCE: &str = include_str!("../util.rs");
 
     let selector_classifier_idx = SOURCE
         .find("json_contains_not_found_signal(raw)")
@@ -264,12 +265,12 @@ fn claude_harness_keeps_selector_failures_distinct_from_add_dirs_runtime_rejecti
         "expected harness to use the pinned add-dir runtime rejection message"
     );
     assert!(
-        SOURCE.contains("Some(\"no session found\".to_string())"),
-        "expected selector='last' failure to keep the pinned safe message"
+        UTIL_SOURCE.contains("Some(SessionSelectorV1::Last) => Some(\"no session found\".to_string())"),
+        "expected selector='last' failure to keep the pinned safe message in completion message resolution"
     );
     assert!(
-        SOURCE.contains("Some(\"session not found\".to_string())"),
-        "expected selector='id' failure to keep the pinned safe message"
+        UTIL_SOURCE.contains("Some(SessionSelectorV1::Id { .. }) => Some(\"session not found\".to_string())"),
+        "expected selector='id' failure to keep the pinned safe message in completion message resolution"
     );
 }
 
