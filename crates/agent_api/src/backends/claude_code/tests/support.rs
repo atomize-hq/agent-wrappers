@@ -1,7 +1,14 @@
 use claude_code::{ClaudeStreamJsonEvent, ClaudeStreamJsonParser};
 use futures_core::Stream;
 use serde_json::json;
-use std::{collections::BTreeMap, fs, path::PathBuf, pin::Pin, time::Duration};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+    pin::Pin,
+    process::Command,
+    sync::OnceLock,
+    time::Duration,
+};
 
 pub(super) use super::super::harness::ClaudeBackendEvent;
 pub(super) use super::super::*;
@@ -143,7 +150,37 @@ pub(super) fn new_adapter_with_config_and_run_start_cwd(
     new_test_adapter_with_run_start_cwd(config, run_start_cwd)
 }
 
+fn build_fake_claude_binary(repo_root: &Path, binary: &Path) -> Result<(), String> {
+    let output = Command::new("cargo")
+        .args([
+            "build",
+            "-p",
+            "agent_api",
+            "--bin",
+            "fake_claude_stream_json_agent_api",
+            "--all-features",
+        ])
+        .current_dir(repo_root)
+        .output()
+        .map_err(|err| format!("spawn cargo build: {err}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "cargo build failed: status={:?}, stderr={}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+    if !binary.exists() {
+        return Err(format!(
+            "cargo build succeeded but binary missing: {binary:?}"
+        ));
+    }
+    Ok(())
+}
+
 pub(super) fn fake_claude_binary() -> PathBuf {
+    static BUILT_BINARY: OnceLock<Result<PathBuf, String>> = OnceLock::new();
+
     if let Some(path) = std::env::var_os("CARGO_BIN_EXE_fake_claude_stream_json_agent_api") {
         let path = PathBuf::from(path);
         if path.exists() {
@@ -163,29 +200,15 @@ pub(super) fn fake_claude_binary() -> PathBuf {
     if binary.exists() {
         return binary;
     }
-
-    let deps_dir = target_dir.join("deps");
-    let mut candidates = fs::read_dir(&deps_dir)
-        .unwrap_or_else(|err| panic!("read deps dir {deps_dir:?}: {err}"))
-        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
-        .filter(|path| {
-            let Some(file_name) = path.file_name().and_then(|value| value.to_str()) else {
-                return false;
-            };
-            if cfg!(windows) {
-                file_name.starts_with("fake_claude_stream_json_agent_api-")
-                    && path.extension().is_some_and(|ext| ext == "exe")
-            } else {
-                file_name.starts_with("fake_claude_stream_json_agent_api-")
-                    && path.extension().is_none()
-                    && path.is_file()
-            }
-        })
-        .collect::<Vec<_>>();
-    candidates.sort();
-    candidates
-        .pop()
-        .unwrap_or_else(|| panic!("resolve fake Claude binary from {target_dir:?}"))
+    let repo_root = target_dir
+        .parent()
+        .and_then(|dir| dir.parent())
+        .expect("resolve repo root from current test binary");
+    let built = BUILT_BINARY
+        .get_or_init(|| build_fake_claude_binary(repo_root, &binary).map(|_| binary.clone()));
+    built
+        .clone()
+        .unwrap_or_else(|err| panic!("resolve fake Claude binary from {target_dir:?}: {err}"))
 }
 
 pub(super) fn expected_add_dirs_env(dirs: &[PathBuf]) -> BTreeMap<String, String> {
