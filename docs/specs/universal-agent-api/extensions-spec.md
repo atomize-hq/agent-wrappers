@@ -249,6 +249,8 @@ Schema:
 - Type: object
 - Required keys:
   - `dirs` (array of string)
+- Unknown keys:
+  - invalid in v1 (closed schema)
 - Default when absent: no extra context directories are requested
 
 Meaning:
@@ -258,7 +260,8 @@ Meaning:
   whitespace before validation and mapping.
 - The trimmed value is the effective directory entry for all v1 semantics.
 - Entries MAY be absolute or relative.
-- Relative entries MUST resolve against the run's effective working directory (see `contract.md`).
+- Relative entries MUST resolve against the run's effective working directory (see `contract.md`
+  "Working directory resolution (effective working directory)").
 - There is intentionally no containment requirement that keeps resolved directories under the
   effective working directory.
 - This key is orthogonal to `agent_api.session.resume.v1` and `agent_api.session.fork.v1`.
@@ -277,8 +280,8 @@ Validation rules:
   `AgentWrapperError::InvalidRequest`.
 - `dirs` MUST be an array; otherwise the backend MUST fail before spawn with
   `AgentWrapperError::InvalidRequest`.
-- `dirs` MUST contain at least 1 and at most 16 entries; otherwise the backend MUST fail before
-  spawn with `AgentWrapperError::InvalidRequest`.
+- `dirs` MUST contain at least 1 and at most 16 entries (`1..=16`); otherwise the backend MUST
+  fail before spawn with `AgentWrapperError::InvalidRequest`.
 - Each `dirs[i]` entry MUST be a string; otherwise the backend MUST fail before spawn with
   `AgentWrapperError::InvalidRequest`.
 - After trimming, each `dirs[i]` entry MUST be non-empty; otherwise the backend MUST fail before

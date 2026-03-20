@@ -43,7 +43,7 @@ This ADR corresponds to backlog item `uaa-0003` (`bucket=agent_api.exec`, `type=
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: acd077a303b70c170ef62f6ba264a9ea9b749850d7380a49163987c677bbf8ff
+ADR_BODY_SHA256: 9d3e140b4bcfcbb9668df75b22c37098694251e2b8b8cbd9c018cd4c8539ca7f
 
 ### Decision (draft)
 
@@ -164,6 +164,7 @@ Bounds:
 
 Absence semantics:
 - When absent, no extra directories are requested.
+- The backend MUST NOT synthesize any additional directories.
 - The backend MUST NOT emit `--add-dir` or any equivalent backend-specific override on behalf of
   this key.
 
@@ -235,9 +236,19 @@ CLI/backend mapping.
 
 Before spawn:
 - If the capability id is unsupported, fail per R0 with `AgentWrapperError::UnsupportedCapability`.
-- If the value is not an object, if `dirs` is missing, if unknown keys are present, if bounds are
-  violated, or if any resolved path does not exist / is not a directory, fail with
+- The value MUST be an object; otherwise fail with `AgentWrapperError::InvalidRequest`.
+- Unknown object keys MUST fail with `AgentWrapperError::InvalidRequest` (closed schema for `.v1`).
+- `dirs` MUST be present and MUST be an array; otherwise fail with
   `AgentWrapperError::InvalidRequest`.
+- `dirs` MUST contain at least 1 and at most 16 entries (`1..=16`); otherwise fail with
+  `AgentWrapperError::InvalidRequest`.
+- Each `dirs[i]` entry MUST be a string; otherwise fail with `AgentWrapperError::InvalidRequest`.
+- After trimming, each `dirs[i]` entry MUST be non-empty; otherwise fail with
+  `AgentWrapperError::InvalidRequest`.
+- After trimming, each `dirs[i]` entry MUST be `<= 1024` UTF-8 bytes; otherwise fail with
+  `AgentWrapperError::InvalidRequest`.
+- After resolution and lexical normalization, each effective path MUST exist and MUST be a
+  directory before spawn; otherwise fail with `AgentWrapperError::InvalidRequest`.
 - InvalidRequest messages for this key MUST be safe, MUST NOT echo raw path values, and MUST use
   one of these exact templates:
   - `invalid agent_api.exec.add_dirs.v1`
