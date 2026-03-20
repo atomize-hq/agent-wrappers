@@ -12,7 +12,7 @@ use super::super::{
 use super::{normalize_request, parse_ext_bool, parse_ext_string_enum};
 use crate::{AgentWrapperCompletion, AgentWrapperError, AgentWrapperRunRequest};
 
-mod add_dirs;
+mod c02_add_dirs;
 mod c03_timeout;
 
 #[test]
