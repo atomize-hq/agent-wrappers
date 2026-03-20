@@ -13,7 +13,7 @@ use crate::support::{
     assert_add_dirs, contains_ordered_subsequence, env_is_true, exit_add_dirs_runtime_rejection,
     fail, has_flag, has_flag_value, maybe_assert_cwd, maybe_assert_flag_presence,
     maybe_log_invocation, maybe_write_env_snapshot, require, selector_assertion_subsequence,
-    write_line, write_result_error_with_message,
+    write_line, write_result_error_with_message, write_result_error_with_stderr_detail,
 };
 
 enum ScenarioKind {
@@ -24,6 +24,12 @@ enum ScenarioKind {
     RuntimeRejection {
         tail: Vec<String>,
         missing_subsequence_message: &'static str,
+    },
+    DetailedResultError {
+        tail: Vec<String>,
+        missing_subsequence_message: &'static str,
+        result_message: &'static str,
+        detail_stderr: &'static str,
     },
     TerminalError {
         required_subsequence: Vec<String>,
@@ -116,6 +122,20 @@ fn dispatch_scenario(scenario: &str, args: &[String], out: &mut dyn Write) -> io
             tail,
             missing_subsequence_message,
         } => handle_runtime_rejection(out, args, init, &tail, missing_subsequence_message),
+        ScenarioKind::DetailedResultError {
+            tail,
+            missing_subsequence_message,
+            result_message,
+            detail_stderr,
+        } => handle_detailed_result_error(
+            out,
+            args,
+            init,
+            &tail,
+            missing_subsequence_message,
+            result_message,
+            detail_stderr,
+        ),
         ScenarioKind::TerminalError {
             required_subsequence,
             missing_subsequence_message,
@@ -226,6 +246,15 @@ fn scenario_kind(scenario: &str) -> ScenarioKind {
             ],
             missing_subsequence_message: "assertion failed: missing resume(id) argv subsequence",
         },
+        "add_dirs_runtime_rejection_nested_detail_trap" => ScenarioKind::DetailedResultError {
+            tail: vec![
+                "--verbose".to_string(),
+                require("FAKE_CLAUDE_EXPECT_PROMPT"),
+            ],
+            missing_subsequence_message: "assertion failed: missing fresh argv subsequence",
+            result_message: "other failure",
+            detail_stderr: "add_dirs rejected by runtime",
+        },
         "fork_last_not_found" => ScenarioKind::TerminalError {
             required_subsequence: vec!["--continue".to_string(), "--fork-session".to_string()],
             missing_subsequence_message: "assertion failed: missing --continue --fork-session",
@@ -327,6 +356,20 @@ fn handle_runtime_rejection(
 ) -> io::Result<()> {
     handle_assert(out, args, init, tail, missing_subsequence_message)?;
     exit_add_dirs_runtime_rejection(out);
+}
+
+fn handle_detailed_result_error(
+    out: &mut dyn Write,
+    args: &[String],
+    init: &str,
+    tail: &[String],
+    missing_subsequence_message: &str,
+    result_message: &str,
+    detail_stderr: &str,
+) -> io::Result<()> {
+    handle_assert(out, args, init, tail, missing_subsequence_message)?;
+    write_result_error_with_stderr_detail(out, result_message, detail_stderr)?;
+    std::process::exit(1);
 }
 
 fn handle_terminal_error(

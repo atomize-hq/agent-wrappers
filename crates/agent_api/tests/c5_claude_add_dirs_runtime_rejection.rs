@@ -275,3 +275,83 @@ async fn fresh_add_dirs_runtime_rejection_is_fatal_even_on_zero_exit() {
     )
     .await;
 }
+
+#[tokio::test]
+async fn nested_add_dirs_rejection_detail_does_not_override_result_error() {
+    let prompt = "hello world";
+    let temp = tempdir().expect("tempdir");
+    let dir_a = temp.path().join("alpha");
+    let dir_b = temp.path().join("beta");
+    fs::create_dir_all(&dir_a).expect("alpha dir");
+    fs::create_dir_all(&dir_b).expect("beta dir");
+    let add_dirs = vec![dir_a, dir_b];
+
+    let mut env = BTreeMap::from([
+        (
+            "FAKE_CLAUDE_SCENARIO".to_string(),
+            "add_dirs_runtime_rejection_nested_detail_trap".to_string(),
+        ),
+        ("FAKE_CLAUDE_EXPECT_PROMPT".to_string(), prompt.to_string()),
+    ]);
+    env.extend(add_dir_expectations(&add_dirs));
+
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
+        binary: Some(fake_claude_binary()),
+        env,
+        ..Default::default()
+    });
+
+    let handle = backend
+        .run(AgentWrapperRunRequest {
+            prompt: prompt.to_string(),
+            extensions: [(
+                "agent_api.exec.add_dirs.v1".to_string(),
+                json!({
+                    "dirs": add_dirs
+                        .iter()
+                        .map(|dir| dir.display().to_string())
+                        .collect::<Vec<_>>(),
+                }),
+            )]
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        })
+        .await
+        .expect("nested detail trap should still return a handle");
+
+    let mut events = handle.events;
+    let completion = handle.completion;
+
+    let seen = collect_events_to_none(events.as_mut(), STREAM_TIMEOUT).await;
+    assert!(
+        session_handle_facet_index(&seen).is_some(),
+        "expected session handle facet before failure"
+    );
+
+    let error_messages: Vec<_> = seen
+        .iter()
+        .filter(|event| event.kind == AgentWrapperEventKind::Error)
+        .map(|event| event.message.as_deref())
+        .collect();
+    assert_eq!(
+        error_messages,
+        vec![Some("result error")],
+        "nested detail trap should preserve the original ResultError path"
+    );
+    assert!(
+        error_messages
+            .iter()
+            .all(|message| *message != Some(ADD_DIRS_RUNTIME_REJECTION_MESSAGE)),
+        "nested detail trap must not be rewritten to the pinned add-dir rejection"
+    );
+
+    let completion = tokio::time::timeout(STREAM_TIMEOUT, completion)
+        .await
+        .expect("completion should resolve after stream finality")
+        .expect("completion should not become a backend error");
+    assert!(
+        !completion.status.success(),
+        "nested detail trap should still preserve the non-zero exit status"
+    );
+}

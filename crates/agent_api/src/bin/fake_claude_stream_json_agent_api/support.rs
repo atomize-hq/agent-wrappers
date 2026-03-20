@@ -49,6 +49,26 @@ pub(crate) fn write_result_error_with_message(
     Ok(())
 }
 
+pub(crate) fn write_result_error_with_stderr_detail(
+    out: &mut (impl Write + ?Sized),
+    message: &str,
+    stderr: &str,
+) -> io::Result<()> {
+    let payload = json!({
+        "type": "result",
+        "subtype": "error",
+        "session_id": "sess-1",
+        "is_error": true,
+        "message": message,
+        "details": {
+            "stderr": stderr,
+        },
+    });
+    write_line(out, &payload.to_string())?;
+    write_line(out, "\n")?;
+    Ok(())
+}
+
 pub(crate) fn write_add_dirs_runtime_rejection(out: &mut (impl Write + ?Sized)) -> io::Result<()> {
     let payload = json!({
         "type": "result",

@@ -76,31 +76,8 @@ pub(super) fn json_contains_not_found_signal(raw: &serde_json::Value) -> bool {
 }
 
 pub(super) fn json_contains_add_dirs_runtime_rejection_signal(raw: &serde_json::Value) -> bool {
-    const MAX_DEPTH: usize = 6;
-    const MAX_STRING_LEAVES: usize = 64;
-
-    fn visit(raw: &serde_json::Value, depth: usize, strings_seen: &mut usize) -> bool {
-        if depth > MAX_DEPTH || *strings_seen >= MAX_STRING_LEAVES {
-            return false;
-        }
-
-        match raw {
-            serde_json::Value::String(s) => {
-                *strings_seen += 1;
-                s == ADD_DIRS_RUNTIME_REJECTION_MESSAGE
-            }
-            serde_json::Value::Array(arr) => arr
-                .iter()
-                .any(|child| visit(child, depth + 1, strings_seen)),
-            serde_json::Value::Object(obj) => obj
-                .values()
-                .any(|child| visit(child, depth + 1, strings_seen)),
-            _ => false,
-        }
-    }
-
-    let mut strings_seen = 0usize;
-    visit(raw, 0, &mut strings_seen)
+    raw.get("message").and_then(serde_json::Value::as_str)
+        == Some(ADD_DIRS_RUNTIME_REJECTION_MESSAGE)
 }
 
 pub(super) fn generic_non_zero_exit_message(status: &std::process::ExitStatus) -> String {
