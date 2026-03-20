@@ -50,3 +50,34 @@ fn claude_backend_mcp_write_hooks_route_through_shared_mcp_runner() {
         "expected list/get/add/remove hooks to reuse the shared Claude MCP runner"
     );
 }
+
+#[test]
+fn claude_downstream_mapping_surfaces_do_not_reopen_raw_add_dirs_parsing() {
+    const RAW_KEY: &str = "agent_api.exec.add_dirs.v1";
+    const BACKEND_SOURCE: &str = include_str!("../backend.rs");
+    const MAPPING_SOURCE: &str = include_str!("../mapping.rs");
+    const MCP_ARGV_SOURCE: &str = include_str!("../mcp_management/argv.rs");
+    const MCP_RESOLVE_SOURCE: &str = include_str!("../mcp_management/resolve.rs");
+    const MCP_RUNNER_SOURCE: &str = include_str!("../mcp_management/runner.rs");
+
+    assert!(
+        !BACKEND_SOURCE.contains(RAW_KEY),
+        "expected backend.rs to avoid reopening raw add-dir payload parsing"
+    );
+    assert!(
+        !MAPPING_SOURCE.contains(RAW_KEY),
+        "expected mapping.rs to avoid reopening raw add-dir payload parsing"
+    );
+    assert!(
+        !MCP_ARGV_SOURCE.contains(RAW_KEY),
+        "expected mcp argv helpers to avoid raw add-dir payload parsing"
+    );
+    assert!(
+        !MCP_RESOLVE_SOURCE.contains(RAW_KEY),
+        "expected mcp resolve helpers to avoid raw add-dir payload parsing"
+    );
+    assert!(
+        !MCP_RUNNER_SOURCE.contains(RAW_KEY),
+        "expected mcp runner helpers to avoid raw add-dir payload parsing"
+    );
+}

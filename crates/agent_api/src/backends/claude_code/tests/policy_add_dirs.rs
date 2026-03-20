@@ -22,19 +22,25 @@ fn claude_policy_add_dirs_absent_key_returns_empty_vec() {
 }
 
 #[test]
-fn claude_policy_add_dirs_request_working_dir_beats_backend_default() {
+fn claude_policy_add_dirs_request_working_dir_beats_default_and_run_start_cwd() {
     let temp = tempdir().expect("tempdir");
     let request_root = temp.path().join("request-root");
     let default_root = temp.path().join("default-root");
+    let run_start_root = temp.path().join("run-start-root");
     let request_docs = request_root.join("docs");
     let default_docs = default_root.join("docs");
+    let run_start_docs = run_start_root.join("docs");
     fs::create_dir_all(&request_docs).expect("create request docs");
     fs::create_dir_all(&default_docs).expect("create default docs");
+    fs::create_dir_all(&run_start_docs).expect("create run-start docs");
 
-    let adapter = new_adapter_with_config(ClaudeCodeBackendConfig {
-        default_working_dir: Some(default_root),
-        ..Default::default()
-    });
+    let adapter = new_adapter_with_config_and_run_start_cwd(
+        ClaudeCodeBackendConfig {
+            default_working_dir: Some(default_root),
+            ..Default::default()
+        },
+        Some(run_start_root),
+    );
     let request = AgentWrapperRunRequest {
         prompt: "hello".to_string(),
         working_dir: Some(request_root),
