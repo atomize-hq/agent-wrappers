@@ -1,9 +1,20 @@
-use std::{collections::BTreeMap, time::Duration};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    ffi::OsString,
+    path::{Component, Path, PathBuf},
+    time::Duration,
+};
 
 use serde_json::Value;
 
 use super::{BackendDefaults, BackendHarnessAdapter, NormalizedRequest};
 use crate::{AgentWrapperError, AgentWrapperRunRequest};
+
+const ADD_DIRS_KEY: &str = "dirs";
+const ADD_DIRS_ROOT_INVALID: &str = "invalid agent_api.exec.add_dirs.v1";
+const ADD_DIRS_CONTAINER_INVALID: &str = "invalid agent_api.exec.add_dirs.v1.dirs";
+const ADD_DIRS_MAX_COUNT: usize = 16;
+const ADD_DIRS_MAX_ENTRY_BYTES: usize = 1024;
 
 fn validate_extension_keys_fail_closed<A: BackendHarnessAdapter>(
     adapter: &A,
@@ -35,6 +46,42 @@ fn derive_effective_timeout(
     default_timeout: Option<Duration>,
 ) -> Option<Duration> {
     request_timeout.or(default_timeout)
+}
+
+pub(crate) fn normalize_add_dirs_v1(
+    raw: Option<&Value>,
+    effective_working_dir: &Path,
+) -> Result<Vec<PathBuf>, AgentWrapperError> {
+    let Some(raw) = raw else {
+        return Ok(Vec::new());
+    };
+
+    let object = raw.as_object().ok_or_else(invalid_add_dirs_root)?;
+
+    if object.len() != 1 || !object.contains_key(ADD_DIRS_KEY) {
+        return Err(invalid_add_dirs_root());
+    }
+
+    let dirs = object
+        .get(ADD_DIRS_KEY)
+        .ok_or_else(invalid_add_dirs_root)?
+        .as_array()
+        .ok_or_else(invalid_add_dirs_container)?;
+
+    if dirs.is_empty() || dirs.len() > ADD_DIRS_MAX_COUNT {
+        return Err(invalid_add_dirs_container());
+    }
+
+    let mut normalized_dirs = Vec::with_capacity(dirs.len());
+    let mut seen = BTreeSet::new();
+    for (index, entry) in dirs.iter().enumerate() {
+        let normalized = normalize_add_dir_entry(entry, index, effective_working_dir)?;
+        if seen.insert(normalized.clone()) {
+            normalized_dirs.push(normalized);
+        }
+    }
+
+    Ok(normalized_dirs)
 }
 
 pub(crate) fn normalize_request<A: BackendHarnessAdapter>(
@@ -101,6 +148,97 @@ fn parse_ext_string_enum<'a>(
     Err(AgentWrapperError::InvalidRequest {
         message: format!("{key} must be one of: {allowed}"),
     })
+}
+
+fn normalize_add_dir_entry(
+    value: &Value,
+    index: usize,
+    effective_working_dir: &Path,
+) -> Result<PathBuf, AgentWrapperError> {
+    let raw = value.as_str().ok_or_else(|| invalid_add_dirs_entry(index))?;
+    let trimmed = raw.trim();
+    if trimmed.is_empty() || trimmed.len() > ADD_DIRS_MAX_ENTRY_BYTES {
+        return Err(invalid_add_dirs_entry(index));
+    }
+
+    let candidate = Path::new(trimmed);
+    let resolved = if candidate.is_absolute() {
+        candidate.to_path_buf()
+    } else {
+        effective_working_dir.join(candidate)
+    };
+    let normalized = lexical_normalize_path(&resolved);
+
+    if !normalized.exists() || !normalized.is_dir() {
+        return Err(invalid_add_dirs_entry(index));
+    }
+
+    Ok(normalized)
+}
+
+fn lexical_normalize_path(path: &Path) -> PathBuf {
+    let mut prefix: Option<OsString> = None;
+    let mut has_root = false;
+    let mut parts: Vec<OsString> = Vec::new();
+
+    for component in path.components() {
+        match component {
+            Component::Prefix(value) => {
+                prefix = Some(value.as_os_str().to_os_string());
+            }
+            Component::RootDir => {
+                has_root = true;
+            }
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if let Some(last) = parts.last() {
+                    if last != ".." {
+                        parts.pop();
+                        continue;
+                    }
+                }
+
+                if !has_root {
+                    parts.push(component.as_os_str().to_os_string());
+                }
+            }
+            Component::Normal(value) => parts.push(value.to_os_string()),
+        }
+    }
+
+    let mut normalized = PathBuf::new();
+    if let Some(prefix) = prefix {
+        normalized.push(PathBuf::from(prefix));
+    }
+    if has_root {
+        normalized.push(std::path::MAIN_SEPARATOR_STR);
+    }
+    for part in parts {
+        normalized.push(part);
+    }
+    if normalized.as_os_str().is_empty() {
+        normalized.push(".");
+    }
+
+    normalized
+}
+
+fn invalid_add_dirs_root() -> AgentWrapperError {
+    AgentWrapperError::InvalidRequest {
+        message: ADD_DIRS_ROOT_INVALID.to_string(),
+    }
+}
+
+fn invalid_add_dirs_container() -> AgentWrapperError {
+    AgentWrapperError::InvalidRequest {
+        message: ADD_DIRS_CONTAINER_INVALID.to_string(),
+    }
+}
+
+fn invalid_add_dirs_entry(index: usize) -> AgentWrapperError {
+    AgentWrapperError::InvalidRequest {
+        message: format!("{ADD_DIRS_CONTAINER_INVALID}[{index}]"),
+    }
 }
 
 #[cfg(test)]

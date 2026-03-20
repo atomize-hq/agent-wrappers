@@ -21,7 +21,8 @@ pub(crate) use contract::{
     BackendDefaults, BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn,
     DynBackendEventStream, NormalizedRequest,
 };
-pub(crate) use normalize::normalize_request;
+#[allow(unused_imports)]
+pub(crate) use normalize::{normalize_add_dirs_v1, normalize_request};
 pub(crate) use runtime::run_harnessed_backend;
 #[allow(unused_imports)]
 pub(crate) use runtime::run_harnessed_backend_control;
