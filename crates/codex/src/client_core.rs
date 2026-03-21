@@ -7,7 +7,7 @@ use std::{
 use crate::{
     apply_diff::ApplyDiffArtifacts,
     builder::{apply_cli_overrides, resolve_cli_overrides, CliOverridesPatch},
-    capabilities::resolve_binary_path,
+    capabilities::{effective_path_env, resolve_binary_path},
     process::{spawn_with_retry, tee_stream, CommandOutput, ConsoleTarget},
     CodexClient, CodexError,
 };
@@ -134,7 +134,11 @@ impl CodexClient {
         S: AsRef<OsStr>,
         I: IntoIterator<Item = S>,
     {
-        let binary_path = resolve_binary_path(self.command_env.binary_path(), current_dir);
+        let binary_path = resolve_binary_path(
+            self.command_env.binary_path(),
+            current_dir,
+            effective_path_env(env_overrides),
+        );
         let mut command = Command::new(&binary_path);
         command
             .args(args)

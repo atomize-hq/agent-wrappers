@@ -1,5 +1,32 @@
 use super::*;
 
+struct RestoreEnvVar {
+    key: &'static str,
+    original: Option<OsString>,
+}
+
+impl RestoreEnvVar {
+    fn capture(key: &'static str) -> Self {
+        Self {
+            key,
+            original: env::var_os(key),
+        }
+    }
+
+    fn set(&self, value: impl Into<OsString>) {
+        env::set_var(self.key, value.into());
+    }
+}
+
+impl Drop for RestoreEnvVar {
+    fn drop(&mut self) {
+        match self.original.take() {
+            Some(value) => env::set_var(self.key, value),
+            None => env::remove_var(self.key),
+        }
+    }
+}
+
 fn write_env_sensitive_add_dir_probe(dir: &std::path::Path) -> PathBuf {
     write_fake_codex(
         dir,
@@ -206,6 +233,47 @@ async fn capability_probe_with_env_overrides_uses_effective_env() {
         .probe_capabilities_with_env_overrides(&env_overrides)
         .await;
     assert!(env_sensitive.features.supports_add_dir);
+}
+
+#[tokio::test]
+async fn capability_probe_with_env_overrides_uses_effective_path() {
+    let _guard = env_guard_async().await;
+    clear_capability_cache();
+
+    let ambient = tempfile::tempdir().unwrap();
+    let override_dir = tempfile::tempdir().unwrap();
+    let path_restore = RestoreEnvVar::capture("PATH");
+
+    let ambient_binary = write_env_sensitive_add_dir_probe(ambient.path());
+    let override_binary = write_env_sensitive_add_dir_probe(override_dir.path());
+    path_restore.set(ambient.path().as_os_str().to_os_string());
+
+    let client = CodexClient::builder()
+        .timeout(Duration::from_secs(5))
+        .build();
+
+    let base = client.probe_capabilities().await;
+    assert!(!base.features.supports_add_dir);
+    assert_eq!(
+        base.cache_key.binary_path,
+        std_fs::canonicalize(&ambient_binary).unwrap()
+    );
+
+    let env_overrides = BTreeMap::from([
+        (
+            "PATH".to_string(),
+            override_dir.path().to_string_lossy().to_string(),
+        ),
+        ("CODEX_ENABLE_ADD_DIR_PROBE".to_string(), "1".to_string()),
+    ]);
+    let env_sensitive = client
+        .probe_capabilities_with_env_overrides(&env_overrides)
+        .await;
+    assert!(env_sensitive.features.supports_add_dir);
+    assert_eq!(
+        env_sensitive.cache_key.binary_path,
+        std_fs::canonicalize(&override_binary).unwrap()
+    );
 }
 
 #[tokio::test]

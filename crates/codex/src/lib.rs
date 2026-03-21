@@ -337,8 +337,11 @@ impl CodexClient {
         env_overrides: &[(String, String)],
         current_dir: Option<&Path>,
     ) -> CodexCapabilities {
-        let cache_key =
-            capability_cache_key_for_current_dir(self.command_env.binary_path(), current_dir);
+        let cache_key = capability_cache_key_for_current_dir_with_env(
+            self.command_env.binary_path(),
+            current_dir,
+            env_overrides,
+        );
         let fingerprint = current_fingerprint(&cache_key);
         let overrides = &self.capability_overrides;
 

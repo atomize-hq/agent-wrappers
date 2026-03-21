@@ -1,6 +1,6 @@
 use super::*;
 
-use std::{env, path::Path, path::PathBuf, time::Duration};
+use std::{env, ffi::OsString, path::Path, path::PathBuf, time::Duration};
 
 struct RestoreCurrentDir {
     original: PathBuf,
@@ -17,6 +17,44 @@ impl RestoreCurrentDir {
 impl Drop for RestoreCurrentDir {
     fn drop(&mut self) {
         env::set_current_dir(&self.original).unwrap();
+    }
+}
+
+struct RestoreEnvVar {
+    key: &'static str,
+    original: Option<OsString>,
+}
+
+impl RestoreEnvVar {
+    fn capture(key: &'static str) -> Self {
+        Self {
+            key,
+            original: env::var_os(key),
+        }
+    }
+
+    fn set(&self, value: impl Into<OsString>) {
+        env::set_var(self.key, value.into());
+    }
+}
+
+impl Drop for RestoreEnvVar {
+    fn drop(&mut self) {
+        match self.original.take() {
+            Some(value) => env::set_var(self.key, value),
+            None => env::remove_var(self.key),
+        }
+    }
+}
+
+fn prepend_path(path: &Path) -> OsString {
+    match env::var_os("PATH") {
+        Some(current) => {
+            let mut entries = vec![path.to_path_buf()];
+            entries.extend(env::split_paths(&current));
+            env::join_paths(entries).expect("join PATH entries")
+        }
+        None => path.as_os_str().to_os_string(),
     }
 }
 
@@ -108,4 +146,35 @@ async fn probe_cache_key_uses_effective_working_dir_for_relative_binary() {
         .collect();
     assert!(cache_paths.contains(&std_fs::canonicalize(alpha.path().join("bin/codex")).unwrap()));
     assert!(cache_paths.contains(&std_fs::canonicalize(beta.path().join("bin/codex")).unwrap()));
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn probe_cache_key_resolves_default_bare_binary_from_path() {
+    let _guard = env_guard_async().await;
+    clear_capability_cache();
+
+    let path_root = tempfile::tempdir().unwrap();
+    let working = tempfile::tempdir().unwrap();
+    let ambient = tempfile::tempdir().unwrap();
+    let _restore_cwd = RestoreCurrentDir::capture();
+    let path_restore = RestoreEnvVar::capture("PATH");
+
+    write_probe_script(path_root.path(), true);
+    path_restore.set(prepend_path(&path_root.path().join("bin")));
+    env::set_current_dir(ambient.path()).unwrap();
+
+    let client = CodexClient::builder()
+        .working_dir(working.path())
+        .timeout(Duration::from_secs(5))
+        .build();
+    let capabilities = client
+        .probe_capabilities_for_current_dir(working.path())
+        .await;
+
+    assert!(capabilities.features.supports_add_dir);
+    assert_eq!(
+        capabilities.cache_key.binary_path,
+        std_fs::canonicalize(path_root.path().join("bin/codex")).unwrap()
+    );
 }
