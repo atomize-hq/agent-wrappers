@@ -16,6 +16,10 @@ impl RestoreEnvVar {
     fn set(&self, value: impl Into<OsString>) {
         env::set_var(self.key, value.into());
     }
+
+    fn clear(&self) {
+        env::remove_var(self.key);
+    }
 }
 
 impl Drop for RestoreEnvVar {
@@ -243,9 +247,11 @@ async fn capability_probe_with_env_overrides_uses_effective_path() {
     let ambient = tempfile::tempdir().unwrap();
     let override_dir = tempfile::tempdir().unwrap();
     let path_restore = RestoreEnvVar::capture("PATH");
+    let binary_restore = RestoreEnvVar::capture("CODEX_BINARY");
 
     let ambient_binary = write_env_sensitive_add_dir_probe(ambient.path());
     let override_binary = write_env_sensitive_add_dir_probe(override_dir.path());
+    binary_restore.clear();
     path_restore.set(ambient.path().as_os_str().to_os_string());
 
     let client = CodexClient::builder()

@@ -36,6 +36,10 @@ impl RestoreEnvVar {
     fn set(&self, value: impl Into<OsString>) {
         env::set_var(self.key, value.into());
     }
+
+    fn clear(&self) {
+        env::remove_var(self.key);
+    }
 }
 
 impl Drop for RestoreEnvVar {
@@ -230,11 +234,13 @@ async fn send_prompt_probes_default_bare_binary_from_path() {
     let path_root = tempfile::tempdir().unwrap();
     let _restore_cwd = RestoreCurrentDir::capture();
     let path_restore = RestoreEnvVar::capture("PATH");
+    let binary_restore = RestoreEnvVar::capture("CODEX_BINARY");
     env::set_current_dir(ambient.path()).unwrap();
 
     let log_path = path_root.path().join("path-exec.log");
     write_relative_probe_sensitive_codex(path_root.path(), &log_path);
     std_fs::create_dir_all(working.path().join("src")).unwrap();
+    binary_restore.clear();
     path_restore.set(prepend_path(&path_root.path().join("bin")));
 
     let client = default_binary_client(working.path());
@@ -257,11 +263,13 @@ async fn stream_exec_probes_default_bare_binary_from_path() {
     let path_root = tempfile::tempdir().unwrap();
     let _restore_cwd = RestoreCurrentDir::capture();
     let path_restore = RestoreEnvVar::capture("PATH");
+    let binary_restore = RestoreEnvVar::capture("CODEX_BINARY");
     env::set_current_dir(ambient.path()).unwrap();
 
     let log_path = path_root.path().join("path-stream-exec.log");
     write_relative_probe_sensitive_codex(path_root.path(), &log_path);
     std_fs::create_dir_all(working.path().join("src")).unwrap();
+    binary_restore.clear();
     path_restore.set(prepend_path(&path_root.path().join("bin")));
 
     let client = default_binary_client(working.path());
@@ -295,11 +303,13 @@ async fn stream_resume_probes_default_bare_binary_from_path() {
     let path_root = tempfile::tempdir().unwrap();
     let _restore_cwd = RestoreCurrentDir::capture();
     let path_restore = RestoreEnvVar::capture("PATH");
+    let binary_restore = RestoreEnvVar::capture("CODEX_BINARY");
     env::set_current_dir(ambient.path()).unwrap();
 
     let log_path = path_root.path().join("path-stream-resume.log");
     write_relative_probe_sensitive_codex(path_root.path(), &log_path);
     std_fs::create_dir_all(working.path().join("src")).unwrap();
+    binary_restore.clear();
     path_restore.set(prepend_path(&path_root.path().join("bin")));
 
     let client = default_binary_client(working.path());

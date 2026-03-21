@@ -36,6 +36,10 @@ impl RestoreEnvVar {
     fn set(&self, value: impl Into<OsString>) {
         env::set_var(self.key, value.into());
     }
+
+    fn clear(&self) {
+        env::remove_var(self.key);
+    }
 }
 
 impl Drop for RestoreEnvVar {
@@ -159,8 +163,10 @@ async fn probe_cache_key_resolves_default_bare_binary_from_path() {
     let ambient = tempfile::tempdir().unwrap();
     let _restore_cwd = RestoreCurrentDir::capture();
     let path_restore = RestoreEnvVar::capture("PATH");
+    let binary_restore = RestoreEnvVar::capture("CODEX_BINARY");
 
     write_probe_script(path_root.path(), true);
+    binary_restore.clear();
     path_restore.set(prepend_path(&path_root.path().join("bin")));
     env::set_current_dir(ambient.path()).unwrap();
 
