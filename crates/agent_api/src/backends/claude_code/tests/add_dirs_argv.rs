@@ -19,6 +19,7 @@ async fn run_claude_assertion(
     mut env: BTreeMap<String, String>,
     extensions: BTreeMap<String, JsonValue>,
 ) {
+    let _env_lock = test_env_lock().lock().await;
     env.insert("FAKE_CLAUDE_SCENARIO".to_string(), scenario.to_string());
     env.insert("FAKE_CLAUDE_EXPECT_PROMPT".to_string(), prompt.to_string());
 
@@ -59,6 +60,7 @@ async fn run_claude_assertion_with_adapter(
     request_working_dir: Option<PathBuf>,
     extensions: BTreeMap<String, JsonValue>,
 ) {
+    let _env_lock = test_env_lock().lock().await;
     config
         .env
         .insert("FAKE_CLAUDE_SCENARIO".to_string(), scenario.to_string());

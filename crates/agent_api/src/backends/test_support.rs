@@ -1,8 +1,9 @@
 use std::{
     env,
     path::{Path, PathBuf},
-    sync::{Mutex, OnceLock},
+    sync::OnceLock,
 };
+use tokio::sync::Mutex;
 
 pub(crate) fn test_env_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
