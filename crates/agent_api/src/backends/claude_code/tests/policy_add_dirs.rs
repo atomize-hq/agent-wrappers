@@ -4,6 +4,9 @@ use tempfile::tempdir;
 
 use super::support::*;
 
+#[cfg(windows)]
+use std::path::{Component, Path, Prefix};
+
 const EXT_ADD_DIRS_V1: &str = "agent_api.exec.add_dirs.v1";
 
 #[test]
@@ -283,8 +286,59 @@ fn claude_policy_relative_working_dir_without_run_start_cwd_fails_safely() {
     }
 }
 
+#[cfg(windows)]
+#[test]
+fn claude_policy_cross_drive_drive_relative_working_dir_rejects_before_add_dir_resolution() {
+    let temp = tempdir().expect("tempdir");
+    let run_start_root = temp.path().join("run-start");
+    let adapter = new_adapter_with_run_start_cwd(Some(run_start_root.clone()));
+    let request = AgentWrapperRunRequest {
+        prompt: "hello".to_string(),
+        working_dir: Some(windows_drive_relative_on_other_drive(
+            "repo",
+            &run_start_root,
+        )),
+        extensions: [(EXT_ADD_DIRS_V1.to_string(), add_dirs_payload(&["docs"]))]
+            .into_iter()
+            .collect(),
+        ..Default::default()
+    };
+
+    let err = adapter_error(adapter.validate_and_extract_policy(&request));
+    match &err {
+        AgentWrapperError::Backend { message } => {
+            assert_eq!(
+                message,
+                super::super::util::PINNED_WORKING_DIR_RESOLUTION_FAILURE
+            );
+        }
+        other => panic!("expected Backend, got: {other:?}"),
+    }
+}
+
 fn adapter_error(
     result: Result<super::super::harness::ClaudeExecPolicy, AgentWrapperError>,
 ) -> AgentWrapperError {
     result.expect_err("policy extraction should fail")
+}
+
+#[cfg(windows)]
+fn windows_drive_relative_on_other_drive(
+    relative: &str,
+    absolute_path: &Path,
+) -> std::path::PathBuf {
+    let current_drive = absolute_path
+        .components()
+        .find_map(|component| match component {
+            Component::Prefix(value) => match value.kind() {
+                Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => {
+                    Some(drive.to_ascii_lowercase())
+                }
+                _ => None,
+            },
+            _ => None,
+        })
+        .expect("absolute windows path should include a disk prefix");
+    let alternate_drive = if current_drive == b'c' { 'd' } else { 'c' };
+    std::path::PathBuf::from(format!("{alternate_drive}:{relative}"))
 }

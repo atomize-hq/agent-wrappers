@@ -57,6 +57,7 @@ async fn assert_exec_add_dirs_case(
     config: CodexBackendConfig,
     run_start_cwd: PathBuf,
     request_working_dir: Option<PathBuf>,
+    add_dirs: &[&str],
 ) {
     let adapter = Arc::new(test_adapter_with_config_and_run_start_cwd(
         config.clone(),
@@ -72,7 +73,7 @@ async fn assert_exec_add_dirs_case(
         AgentWrapperRunRequest {
             prompt: "hello".to_string(),
             working_dir: request_working_dir,
-            extensions: [(EXT_ADD_DIRS_V1.to_string(), add_dirs_payload(&["docs"]))]
+            extensions: [(EXT_ADD_DIRS_V1.to_string(), add_dirs_payload(add_dirs))]
                 .into_iter()
                 .collect(),
             ..Default::default()
@@ -117,7 +118,13 @@ async fn codex_exec_resolves_relative_request_working_dir_before_add_dirs_and_sp
         ..Default::default()
     };
 
-    assert_exec_add_dirs_case(config, run_start_cwd, Some(PathBuf::from("repo"))).await;
+    assert_exec_add_dirs_case(
+        config,
+        run_start_cwd,
+        Some(PathBuf::from("repo")),
+        &["docs"],
+    )
+    .await;
 }
 
 #[tokio::test]
@@ -144,7 +151,7 @@ async fn codex_exec_resolves_relative_default_working_dir_before_add_dirs_and_sp
         ..Default::default()
     };
 
-    assert_exec_add_dirs_case(config, run_start_cwd, None).await;
+    assert_exec_add_dirs_case(config, run_start_cwd, None, &["docs"]).await;
 }
 
 #[cfg(windows)]
@@ -175,6 +182,40 @@ async fn codex_exec_resolves_drive_relative_request_working_dir_before_add_dirs_
         config,
         run_start_cwd.clone(),
         Some(windows_drive_relative("repo", &run_start_cwd)),
+        &["docs"],
+    )
+    .await;
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn codex_exec_deduplicates_case_insensitive_add_dirs_before_spawn() {
+    let temp = tempdir().expect("tempdir");
+    let run_start_cwd = temp.path().join("run-start");
+    let expected_cwd = run_start_cwd.join("repo");
+    let expected_add_dir = expected_cwd.join("docs");
+    std::fs::create_dir_all(&expected_add_dir).expect("create add-dir target");
+
+    let config = CodexBackendConfig {
+        binary: Some(fake_codex_binary()),
+        env: base_env()
+            .into_iter()
+            .chain(add_dir_expectations(std::slice::from_ref(
+                &expected_add_dir,
+            )))
+            .chain([(
+                "FAKE_CODEX_EXPECT_CWD".to_string(),
+                expected_cwd.display().to_string(),
+            )])
+            .collect(),
+        ..Default::default()
+    };
+
+    assert_exec_add_dirs_case(
+        config,
+        run_start_cwd,
+        Some(PathBuf::from("repo")),
+        &["docs", "DOCS"],
     )
     .await;
 }

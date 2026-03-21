@@ -1,6 +1,9 @@
 use super::support::*;
 use serde_json::json;
 
+#[cfg(windows)]
+use std::path::{Component, Path, Prefix};
+
 #[test]
 fn codex_backend_does_not_advertise_external_sandbox_exec_by_default() {
     assert!(!CodexBackendConfig::default().allow_external_sandbox_exec);
@@ -132,4 +135,121 @@ async fn external_sandbox_spawn_failure_emits_warning_before_terminal_error() {
         .await
         .expect_err("startup failure completion should preserve the backend error");
     assert!(matches!(err, CodexBackendError::WorkingDirectoryUnresolved));
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn exec_cross_drive_drive_relative_working_dir_fails_before_spawn() {
+    let run_start_cwd = std::env::temp_dir().join("codex-cross-drive-exec");
+    let adapter = test_adapter_with_run_start_cwd(Some(run_start_cwd.clone()));
+
+    let spawned = adapter
+        .spawn(crate::backend_harness::NormalizedRequest {
+            agent_kind: adapter.kind(),
+            prompt: "hello".to_string(),
+            working_dir: Some(windows_drive_relative_on_other_drive(
+                "repo",
+                &run_start_cwd,
+            )),
+            effective_timeout: None,
+            env: std::collections::BTreeMap::new(),
+            policy: CodexExecPolicy {
+                add_dirs: Vec::new(),
+                non_interactive: true,
+                external_sandbox: false,
+                approval_policy: None,
+                sandbox_mode: CodexSandboxMode::WorkspaceWrite,
+                resume: None,
+                fork: None,
+            },
+        })
+        .await
+        .expect("startup failure should still return a stream");
+
+    let backend_events: Vec<CodexBackendEvent> = spawned
+        .events
+        .map(|result| result.expect("synthetic startup-failure events should be infallible"))
+        .collect()
+        .await;
+    assert_eq!(backend_events.len(), 1);
+    assert!(matches!(
+        &backend_events[0],
+        CodexBackendEvent::TerminalError { message }
+        if message == "codex backend failed to resolve working directory"
+    ));
+
+    let err = spawned
+        .completion
+        .await
+        .expect_err("startup failure completion should preserve the backend error");
+    assert!(matches!(err, CodexBackendError::WorkingDirectoryUnresolved));
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn fork_cross_drive_drive_relative_working_dir_fails_before_app_server_start() {
+    let run_start_cwd = std::env::temp_dir().join("codex-cross-drive-fork");
+    let adapter = test_adapter_with_run_start_cwd(Some(run_start_cwd.clone()));
+
+    let spawned = adapter
+        .spawn(crate::backend_harness::NormalizedRequest {
+            agent_kind: adapter.kind(),
+            prompt: "hello".to_string(),
+            working_dir: Some(windows_drive_relative_on_other_drive(
+                "repo",
+                &run_start_cwd,
+            )),
+            effective_timeout: None,
+            env: std::collections::BTreeMap::new(),
+            policy: CodexExecPolicy {
+                add_dirs: Vec::new(),
+                non_interactive: true,
+                external_sandbox: false,
+                approval_policy: None,
+                sandbox_mode: CodexSandboxMode::WorkspaceWrite,
+                resume: None,
+                fork: Some(crate::backends::session_selectors::SessionSelectorV1::Last),
+            },
+        })
+        .await
+        .expect("startup failure should still return a stream");
+
+    let backend_events: Vec<CodexBackendEvent> = spawned
+        .events
+        .map(|result| result.expect("synthetic startup-failure events should be infallible"))
+        .collect()
+        .await;
+    assert_eq!(backend_events.len(), 1);
+    assert!(matches!(
+        &backend_events[0],
+        CodexBackendEvent::TerminalError { message }
+        if message == "codex backend failed to resolve working directory"
+    ));
+
+    let err = spawned
+        .completion
+        .await
+        .expect_err("startup failure completion should preserve the backend error");
+    assert!(matches!(err, CodexBackendError::WorkingDirectoryUnresolved));
+}
+
+#[cfg(windows)]
+fn windows_drive_relative_on_other_drive(
+    relative: &str,
+    absolute_path: &Path,
+) -> std::path::PathBuf {
+    let current_drive = absolute_path
+        .components()
+        .find_map(|component| match component {
+            Component::Prefix(value) => match value.kind() {
+                Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => {
+                    Some(drive.to_ascii_lowercase())
+                }
+                _ => None,
+            },
+            _ => None,
+        })
+        .expect("absolute windows path should include a disk prefix");
+    let alternate_drive = if current_drive == b'c' { 'd' } else { 'c' };
+    std::path::PathBuf::from(format!("{alternate_drive}:{relative}"))
 }

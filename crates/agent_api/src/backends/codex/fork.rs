@@ -15,6 +15,7 @@ use tokio::sync::{mpsc, oneshot};
 
 use crate::{
     backend_harness::{BackendSpawn, DynBackendCompletionFuture, DynBackendEventStream},
+    backends::spawn_path::resolve_effective_working_dir,
     AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind, AgentWrapperKind,
     AgentWrapperRunRequest,
 };
@@ -108,6 +109,19 @@ fn effective_approval_policy(
         return Some("never".to_string());
     }
     approval_policy.map(|policy| map_approval_policy(policy).to_string())
+}
+
+fn resolve_fork_effective_cwd(
+    config: &CodexBackendConfig,
+    run_start_cwd: Option<&PathBuf>,
+    working_dir: Option<&PathBuf>,
+) -> Result<PathBuf, CodexBackendError> {
+    resolve_effective_working_dir(
+        working_dir.map(PathBuf::as_path),
+        config.default_working_dir.as_deref(),
+        run_start_cwd.map(PathBuf::as_path),
+    )
+    .ok_or(CodexBackendError::WorkingDirectoryUnresolved)
 }
 
 fn install_thread_id(handle_state: &Arc<std::sync::Mutex<CodexHandleFacetState>>, thread_id: &str) {
@@ -297,10 +311,8 @@ pub(super) async fn spawn_fork_v1_flow(
         other => other,
     };
 
-    let effective_cwd = working_dir
-        .or_else(|| config.default_working_dir.clone())
-        .or(run_start_cwd)
-        .ok_or(CodexBackendError::WorkingDirectoryUnresolved)?;
+    let effective_cwd =
+        resolve_fork_effective_cwd(&config, run_start_cwd.as_ref(), working_dir.as_ref())?;
 
     let server = codex::mcp::CodexAppServer::with_capabilities(
         codex::mcp::StdioServerConfig {

@@ -336,6 +336,19 @@ fn ad_c02_lexically_normalizes_and_deduplicates_while_preserving_first_order() {
     assert_eq!(normalized, vec![first, second]);
 }
 
+#[cfg(windows)]
+#[test]
+fn ad_c02_deduplicates_windows_entries_case_insensitively() {
+    let fixtures = AddDirFixtures::new();
+    let docs = fixtures.create_effective_dir("docs");
+    let payload = add_dirs_payload(vec![json!("docs"), json!("DOCS")]);
+
+    let normalized = normalize_add_dirs_v1(Some(&payload), Some(fixtures.effective_working_dir()))
+        .expect("normalize");
+
+    assert_eq!(normalized, vec![docs]);
+}
+
 #[test]
 fn ad_c02_allows_resolved_directories_outside_effective_working_dir() {
     let fixtures = AddDirFixtures::new();

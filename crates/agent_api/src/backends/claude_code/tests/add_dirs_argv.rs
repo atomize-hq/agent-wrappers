@@ -351,3 +351,43 @@ async fn fresh_run_resolves_relative_default_working_dir_before_add_dirs_and_spa
     )
     .await;
 }
+
+#[cfg(windows)]
+#[tokio::test]
+async fn fresh_run_deduplicates_case_insensitive_add_dirs_before_spawn() {
+    let prompt = "hello world";
+    let temp = tempdir().expect("tempdir");
+    let run_start_cwd = temp.path().join("run-start");
+    let expected_cwd = run_start_cwd.join("repo");
+    let expected_add_dir = expected_cwd.join("docs");
+    fs::create_dir_all(&expected_add_dir).expect("create add-dir target");
+
+    let env = expected_add_dirs_env(std::slice::from_ref(&expected_add_dir))
+        .into_iter()
+        .chain([(
+            "FAKE_CLAUDE_EXPECT_CWD".to_string(),
+            expected_cwd.display().to_string(),
+        )])
+        .collect();
+    let config = ClaudeCodeBackendConfig {
+        binary: Some(fake_claude_binary()),
+        env,
+        ..Default::default()
+    };
+    let extensions = [(
+        "agent_api.exec.add_dirs.v1".to_string(),
+        add_dirs_payload(&["docs", "DOCS"]),
+    )]
+    .into_iter()
+    .collect();
+
+    run_claude_assertion_with_adapter(
+        prompt,
+        "fresh_assert",
+        config,
+        Some(run_start_cwd),
+        Some(PathBuf::from("repo")),
+        extensions,
+    )
+    .await;
+}

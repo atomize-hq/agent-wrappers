@@ -19,6 +19,11 @@ const ADD_DIRS_CONTAINER_INVALID: &str = "invalid agent_api.exec.add_dirs.v1.dir
 const ADD_DIRS_MAX_COUNT: usize = 16;
 const ADD_DIRS_MAX_ENTRY_BYTES: usize = 1024;
 
+#[cfg(windows)]
+type AddDirDedupeKey = String;
+#[cfg(not(windows))]
+type AddDirDedupeKey = PathBuf;
+
 fn validate_extension_keys_fail_closed<A: BackendHarnessAdapter>(
     adapter: &A,
     request: &AgentWrapperRunRequest,
@@ -79,7 +84,7 @@ pub(crate) fn normalize_add_dirs_v1(
     let mut seen = BTreeSet::new();
     for (index, entry) in dirs.iter().enumerate() {
         let normalized = normalize_add_dir_entry(entry, index, effective_working_dir)?;
-        if seen.insert(normalized.clone()) {
+        if seen.insert(add_dir_dedupe_key(&normalized)) {
             normalized_dirs.push(normalized);
         }
     }
@@ -183,6 +188,18 @@ fn normalize_add_dir_entry(
     }
 
     Ok(normalized)
+}
+
+fn add_dir_dedupe_key(path: &Path) -> AddDirDedupeKey {
+    #[cfg(windows)]
+    {
+        return path.as_os_str().to_string_lossy().to_lowercase();
+    }
+
+    #[cfg(not(windows))]
+    {
+        path.to_path_buf()
+    }
 }
 
 #[cfg(windows)]

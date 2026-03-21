@@ -42,7 +42,9 @@ pub(crate) fn resolve_effective_working_dir(
 
     match selected {
         Some(path) if path.is_absolute() => Some(path.to_path_buf()),
-        Some(path) => run_start_cwd.map(|base| resolve_relative_path_from_base(&base, path)),
+        Some(path) => {
+            run_start_cwd.and_then(|base| resolve_relative_working_dir_from_base(&base, path))
+        }
         None => run_start_cwd,
     }
 }
@@ -62,6 +64,23 @@ pub(crate) fn resolve_relative_path_from_base(base: &Path, path: &Path) -> PathB
     }
 
     base.join(path)
+}
+
+fn resolve_relative_working_dir_from_base(base: &Path, path: &Path) -> Option<PathBuf> {
+    if path.is_absolute() {
+        return Some(path.to_path_buf());
+    }
+
+    #[cfg(windows)]
+    if let Some((path_drive, relative_tail)) = windows_drive_relative_parts(path) {
+        if windows_drive_prefix(base).is_some_and(|base_drive| base_drive == path_drive) {
+            return Some(base.join(relative_tail));
+        }
+
+        return None;
+    }
+
+    Some(base.join(path))
 }
 
 fn resolve_path_qualified_binary(binary_path: PathBuf, invocation_cwd: Option<&Path>) -> PathBuf {
@@ -96,7 +115,7 @@ fn resolve_run_start_cwd(run_start_cwd: Option<&Path>) -> Option<PathBuf> {
         Some(path) if path.is_absolute() => Some(path.to_path_buf()),
         Some(path) => env::current_dir()
             .ok()
-            .map(|cwd| resolve_relative_path_from_base(&cwd, path)),
+            .and_then(|cwd| resolve_relative_working_dir_from_base(&cwd, path)),
         None => None,
     }
 }
@@ -383,28 +402,26 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
-    fn preserves_mismatched_drive_relative_request_working_dir_prefix() {
+    fn rejects_mismatched_drive_relative_request_working_dir_prefix() {
         let run_start = TempDir::new().expect("run start dir");
         let relative = windows_drive_relative_on_other_drive("repo", run_start.path());
 
         let resolved =
-            resolve_effective_working_dir(Some(relative.as_path()), None, Some(run_start.path()))
-                .expect("working dir should resolve");
+            resolve_effective_working_dir(Some(relative.as_path()), None, Some(run_start.path()));
 
-        assert_eq!(resolved, relative);
-        assert_ne!(resolved, run_start.path().join("repo"));
+        assert_eq!(resolved, None);
     }
 
     #[cfg(windows)]
     #[test]
-    fn preserves_mismatched_drive_relative_path_when_resolving_from_base() {
+    fn rejects_mismatched_drive_relative_default_working_dir_prefix() {
         let run_start = TempDir::new().expect("run start dir");
         let relative = windows_drive_relative_on_other_drive("repo", run_start.path());
 
-        let resolved = resolve_relative_path_from_base(run_start.path(), relative.as_path());
+        let resolved =
+            resolve_effective_working_dir(None, Some(relative.as_path()), Some(run_start.path()));
 
-        assert_eq!(resolved, relative);
-        assert_ne!(resolved, run_start.path().join("repo"));
+        assert_eq!(resolved, None);
     }
 
     #[test]
