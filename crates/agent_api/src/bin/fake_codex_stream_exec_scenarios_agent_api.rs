@@ -5,6 +5,11 @@ use std::{
     time::Duration,
 };
 
+const ADD_DIRS_RUNTIME_REJECTION_MESSAGE: &str = "add_dirs rejected by runtime";
+const ADD_DIR_RAW_PATH_SECRET: &str = "ADD_DIR_RAW_PATH_SECRET";
+const ADD_DIR_STDOUT_SECRET: &str = "ADD_DIR_STDOUT_SECRET";
+const ADD_DIR_STDERR_SECRET: &str = "ADD_DIR_STDERR_SECRET";
+
 fn write_line(out: &mut impl Write, line: &str) -> io::Result<()> {
     out.write_all(line.as_bytes())?;
     out.flush()?;
@@ -86,6 +91,144 @@ fn assert_env_overrides(out: &mut impl Write) -> io::Result<bool> {
     Ok(true)
 }
 
+fn assert_current_dir(out: &mut impl Write) -> io::Result<bool> {
+    let Ok(expected_cwd) = env::var("FAKE_CODEX_EXPECT_CWD") else {
+        return Ok(true);
+    };
+    let got = env::current_dir()?;
+    let expected = std::fs::canonicalize(&expected_cwd)
+        .unwrap_or_else(|_| std::path::PathBuf::from(&expected_cwd));
+    let got_canonical = std::fs::canonicalize(&got).unwrap_or(got.clone());
+    if got_canonical == expected {
+        return Ok(true);
+    }
+
+    let msg = format!(
+        "expected cwd={}, got {}",
+        expected.display(),
+        got_canonical.display()
+    );
+    emit_jsonl(out, &format!(r#"{{"type":"error","message":"{msg}"}}"#))?;
+    Ok(false)
+}
+
+fn assert_add_dirs(out: &mut impl Write, args: &[String]) -> io::Result<bool> {
+    let Ok(expected_count_raw) = env::var("FAKE_CODEX_EXPECT_ADD_DIR_COUNT") else {
+        return Ok(true);
+    };
+    let expected_count = match expected_count_raw.parse::<usize>() {
+        Ok(value) => value,
+        Err(err) => {
+            emit_jsonl(
+                out,
+                &format!(
+                    r#"{{"type":"error","message":"invalid FAKE_CODEX_EXPECT_ADD_DIR_COUNT: {err}"}}"#
+                ),
+            )?;
+            return Ok(false);
+        }
+    };
+
+    let mut actual = Vec::new();
+    let mut idx = 0usize;
+    while idx < args.len() {
+        if args[idx] == "--add-dir" {
+            let Some(value) = args.get(idx + 1) else {
+                emit_jsonl(
+                    out,
+                    r#"{"type":"error","message":"--add-dir missing required value"}"#,
+                )?;
+                return Ok(false);
+            };
+            actual.push(value.clone());
+            idx += 2;
+            continue;
+        }
+        idx += 1;
+    }
+
+    if actual.len() != expected_count {
+        emit_jsonl(
+            out,
+            &format!(
+                r#"{{"type":"error","message":"expected {expected_count} --add-dir values, got {}"}}"#,
+                actual.len()
+            ),
+        )?;
+        return Ok(false);
+    }
+
+    for (index, got) in actual.iter().enumerate() {
+        let key = format!("FAKE_CODEX_EXPECT_ADD_DIR_{index}");
+        let expected = require_env_var(out, &key)?;
+        if got != &expected {
+            emit_jsonl(
+                out,
+                &format!(
+                    r#"{{"type":"error","message":"expected add-dir[{index}]={expected:?}, got {got:?}"}}"#
+                ),
+            )?;
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
+}
+
+fn assert_model(out: &mut impl Write, args: &[String]) -> io::Result<bool> {
+    let Ok(expected_model) = env::var("FAKE_CODEX_EXPECT_MODEL") else {
+        return Ok(true);
+    };
+
+    let positions: Vec<_> = args
+        .iter()
+        .enumerate()
+        .filter_map(|(index, arg)| (arg == "--model").then_some(index))
+        .collect();
+
+    if positions.len() != 1 {
+        emit_jsonl(
+            out,
+            &format!(
+                r#"{{"type":"error","message":"expected exactly one --model flag, got {}"}}"#,
+                positions.len()
+            ),
+        )?;
+        return Ok(false);
+    }
+
+    let model_index = positions[0];
+    let Some(got_model) = args.get(model_index + 1) else {
+        emit_jsonl(
+            out,
+            r#"{"type":"error","message":"--model missing required value"}"#,
+        )?;
+        return Ok(false);
+    };
+
+    if got_model != &expected_model {
+        emit_jsonl(
+            out,
+            &format!(
+                r#"{{"type":"error","message":"expected --model={expected_model:?}, got {got_model:?}"}}"#
+            ),
+        )?;
+        return Ok(false);
+    }
+
+    if let Some(add_dir_index) = args.iter().position(|arg| arg == "--add-dir") {
+        if model_index > add_dir_index {
+            emit_jsonl(
+                out,
+                r#"{"type":"error","message":"expected --model before first --add-dir"}"#,
+            )?;
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
+}
+
 fn require_env_var(out: &mut impl Write, key: &str) -> io::Result<String> {
     match env::var(key) {
         Ok(value) if !value.trim().is_empty() => Ok(value),
@@ -153,6 +296,37 @@ fn assert_stdin_prompt(
     Ok(false)
 }
 
+fn emit_add_dirs_runtime_rejection(out: &mut impl Write) -> io::Result<()> {
+    emit_jsonl(
+        out,
+        &format!(
+            r#"{{"type":"error","message":"{ADD_DIRS_RUNTIME_REJECTION_MESSAGE}","code":"add_dirs_runtime_rejection","details":{{"raw_path":"{ADD_DIR_RAW_PATH_SECRET}","stdout":"{ADD_DIR_STDOUT_SECRET}","stderr":"{ADD_DIR_STDERR_SECRET}"}}}}"#
+        ),
+    )?;
+    {
+        let mut err = io::stderr().lock();
+        writeln!(err, "{ADD_DIR_STDERR_SECRET}")?;
+        err.flush()?;
+    }
+    Ok(())
+}
+
+fn runtime_rejection_exit_code() -> io::Result<i32> {
+    match env::var("FAKE_CODEX_RUNTIME_REJECTION_EXIT_CODE") {
+        Ok(raw) => raw.parse::<i32>().map_err(|err| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("invalid FAKE_CODEX_RUNTIME_REJECTION_EXIT_CODE: {err}"),
+            )
+        }),
+        Err(env::VarError::NotPresent) => Ok(1),
+        Err(err) => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("failed to read FAKE_CODEX_RUNTIME_REJECTION_EXIT_CODE: {err}"),
+        )),
+    }
+}
+
 fn main() -> io::Result<()> {
     // Cross-platform test binary used by `agent_api` tests.
     //
@@ -166,6 +340,26 @@ fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     let mut out = io::stdout().lock();
 
+    if args.get(1).is_some_and(|arg| arg == "--version") {
+        write_line(&mut out, "codex 1.2.3\n")?;
+        return Ok(());
+    }
+
+    if args.len() >= 3 && args[1] == "features" && args[2] == "list" {
+        if args.get(3).is_some_and(|arg| arg == "--json") {
+            write_line(&mut out, r#"{"features":["add_dir"]}"#)?;
+            write_line(&mut out, "\n")?;
+        } else {
+            write_line(&mut out, "add_dir\n")?;
+        }
+        return Ok(());
+    }
+
+    if args.get(1).is_some_and(|arg| arg == "--help") {
+        write_line(&mut out, "Usage: codex --add-dir\n")?;
+        return Ok(());
+    }
+
     if !args.get(1).is_some_and(|arg| arg == "exec") {
         emit_jsonl(
             &mut out,
@@ -178,6 +372,15 @@ fn main() -> io::Result<()> {
         std::process::exit(1);
     }
     if !require_flag_present(&mut out, &args, "--skip-git-repo-check")? {
+        std::process::exit(1);
+    }
+    if !assert_current_dir(&mut out)? {
+        std::process::exit(1);
+    }
+    if !assert_add_dirs(&mut out, &args)? {
+        std::process::exit(1);
+    }
+    if !assert_model(&mut out, &args)? {
         std::process::exit(1);
     }
 
@@ -268,6 +471,30 @@ fn main() -> io::Result<()> {
                 r#"{"type":"thread.resumed","thread_id":"thread-1"}"#,
             )?;
         }
+        "add_dirs_runtime_rejection_resume_last" => {
+            let expected_prompt = require_env_var(&mut out, "FAKE_CODEX_EXPECT_PROMPT")?;
+
+            let ok =
+                contains_ordered_subsequence(&args, &["exec", "--json", "resume", "--last", "-"]);
+            if !ok {
+                emit_jsonl(
+                    &mut out,
+                    r#"{"type":"error","message":"missing argv subsequence: exec --json resume --last -"}"#,
+                )?;
+                std::process::exit(1);
+            }
+
+            if !assert_stdin_prompt(&mut out, &expected_prompt, Duration::from_secs(1))? {
+                std::process::exit(1);
+            }
+
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.resumed","thread_id":"thread-1"}"#,
+            )?;
+            emit_add_dirs_runtime_rejection(&mut out)?;
+            std::process::exit(1);
+        }
         "resume_id_assert" => {
             let expected_prompt = require_env_var(&mut out, "FAKE_CODEX_EXPECT_PROMPT")?;
             let expected_id = require_env_var(&mut out, "FAKE_CODEX_EXPECT_RESUME_ID")?;
@@ -292,6 +519,33 @@ fn main() -> io::Result<()> {
                 &mut out,
                 r#"{"type":"thread.resumed","thread_id":"thread-1"}"#,
             )?;
+        }
+        "add_dirs_runtime_rejection_resume_id" => {
+            let expected_prompt = require_env_var(&mut out, "FAKE_CODEX_EXPECT_PROMPT")?;
+            let expected_id = require_env_var(&mut out, "FAKE_CODEX_EXPECT_RESUME_ID")?;
+
+            let ok = contains_ordered_subsequence(
+                &args,
+                &["exec", "--json", "resume", expected_id.as_str(), "-"],
+            );
+            if !ok {
+                emit_jsonl(
+                    &mut out,
+                    r#"{"type":"error","message":"missing argv subsequence: exec --json resume <ID> -"}"#,
+                )?;
+                std::process::exit(1);
+            }
+
+            if !assert_stdin_prompt(&mut out, &expected_prompt, Duration::from_secs(1))? {
+                std::process::exit(1);
+            }
+
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.resumed","thread_id":"thread-1"}"#,
+            )?;
+            emit_add_dirs_runtime_rejection(&mut out)?;
+            std::process::exit(1);
         }
         "resume_last_not_found" => {
             let expected_prompt = require_env_var(&mut out, "FAKE_CODEX_EXPECT_PROMPT")?;
@@ -473,6 +727,14 @@ fn main() -> io::Result<()> {
             )?;
             eprintln!("RAW-STDERR-SECRET");
             std::process::exit(3);
+        }
+        "add_dirs_runtime_rejection_exec" => {
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+            emit_add_dirs_runtime_rejection(&mut out)?;
+            std::process::exit(runtime_rejection_exit_code()?);
         }
         _ => {
             emit_jsonl(

@@ -112,3 +112,24 @@ Offline parsing MUST surface unknown event types as a per-line error without abo
   - success for (1),
   - an error outcome for (2) (typically `ExecStreamError::Parse` from typed deserialization),
   - success for (3).
+
+## Scenario G: `line_number` reflects physical lines (including blanks)
+
+The offline parser MUST preserve physical line numbering even when blank lines emit no record.
+At minimum, a test MUST construct an input buffer with interleaved blank lines and assert that
+the emitted `ThreadEventJsonlRecord.line_number` values match the original physical line numbers.
+
+Example input (physical line numbers shown for clarity):
+
+1. `{"type":"thread.started", ...}`
+2. *(blank line)*
+3. `{"type":"turn.started", ...}`
+4. *(blank line)*
+5. `{"type":"item.output_text.delta", ...}`
+
+Required outcomes:
+
+- Records are emitted only for lines 1, 3, and 5.
+- The emitted records MUST carry `line_number` values `1`, `3`, and `5` respectively.
+- Any error outcomes in this scenario MUST still carry the correct `line_number` so downstream
+  tooling can report precise locations.

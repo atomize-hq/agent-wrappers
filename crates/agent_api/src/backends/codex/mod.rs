@@ -10,6 +10,7 @@ impl super::termination::TerminationHandle for codex::ExecTerminationHandle {
 pub struct CodexBackendConfig {
     pub binary: Option<PathBuf>,
     pub codex_home: Option<PathBuf>,
+    pub model: Option<String>,
     pub default_timeout: Option<Duration>,
     pub default_working_dir: Option<PathBuf>,
     pub env: BTreeMap<String, String>,
@@ -28,6 +29,8 @@ impl CodexBackend {
 }
 
 const PINNED_APPROVAL_REQUIRED: &str = "approval required";
+const PINNED_ADD_DIRS_UNSUPPORTED_FOR_FORK: &str = "add_dirs unsupported for codex fork";
+const PINNED_ADD_DIRS_RUNTIME_REJECTION: &str = "add_dirs rejected by runtime";
 const PINNED_TIMEOUT: &str = "codex backend error: timeout (details redacted when unsafe)";
 const PINNED_NO_SESSION_FOUND: &str = "no session found";
 const PINNED_SESSION_NOT_FOUND: &str = "session not found";
@@ -51,6 +54,10 @@ fn pinned_selection_failure_message(selector: &SessionSelectorV1) -> &'static st
         SessionSelectorV1::Last => PINNED_NO_SESSION_FOUND,
         SessionSelectorV1::Id { .. } => PINNED_SESSION_NOT_FOUND,
     }
+}
+
+fn is_add_dirs_runtime_rejection_signal(text: &str) -> bool {
+    text == PINNED_ADD_DIRS_RUNTIME_REJECTION
 }
 
 fn is_not_found_signal(text: &str) -> bool {
@@ -87,13 +94,16 @@ use harness::{
 };
 use policy::{
     validate_and_extract_exec_policy, CodexApprovalPolicy, CodexExecPolicy, CodexSandboxMode,
-    EXT_CODEX_APPROVAL_POLICY, EXT_CODEX_SANDBOX_MODE, EXT_EXTERNAL_SANDBOX_V1,
+    EXT_ADD_DIRS_V1, EXT_CODEX_APPROVAL_POLICY, EXT_CODEX_SANDBOX_MODE, EXT_EXTERNAL_SANDBOX_V1,
     EXT_NON_INTERACTIVE, SUPPORTED_EXTENSION_KEYS_DEFAULT,
     SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN,
 };
 
 #[cfg(test)]
-use harness::{new_test_adapter, redact_exec_stream_error, CodexHarnessAdapter};
+use harness::{
+    new_test_adapter, new_test_adapter_with_run_start_cwd, redact_exec_stream_error,
+    CodexHarnessAdapter,
+};
 #[cfg(test)]
 use mapping::map_thread_event;
 

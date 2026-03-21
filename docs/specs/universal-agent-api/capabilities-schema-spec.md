@@ -4,7 +4,8 @@ Status: Approved
 Approved (UTC): 2026-02-21  
 Date (UTC): 2026-02-16
 
-This spec defines `AgentWrapperCapabilities` naming and stability.
+This spec defines `AgentWrapperCapabilities` naming and stability, including standard capability
+ids such as `agent_api.exec.add_dirs.v1`.
 
 This document is normative and uses RFC 2119 keywords (MUST/SHOULD/MUST NOT).
 
@@ -29,6 +30,7 @@ Reserved ids (v1):
     - `agent_api.run` — backend supports the core run contract
     - `agent_api.events` — backend produces `AgentWrapperEvent`s (live or buffered)
     - `agent_api.events.live` — backend supports live streaming events
+    - `agent_api.exec.add_dirs.v1` — backend supports the universal add-dirs extension key
 - Backend-specific capabilities:
   - Prefix: `backend.<agent_kind>.`
   - Examples:
@@ -57,6 +59,8 @@ Notes:
 - New universal buckets SHOULD be introduced in this spec before shipping new `agent_api.*` ids.
 - Backend-specific capabilities MUST stay under `backend.<agent_kind>.*` until the capability’s
   semantics are proven cross-agent.
+- `agent_api.exec.add_dirs.v1` is the exec-bucket capability id that gates the universal add-dirs
+  extension key (see Standard capability ids).
 
 ## Stability
 
@@ -86,6 +90,16 @@ Semantics (pinned):
   `allow_mcp_write` to `false`.
 - Runtime availability checks MUST use `AgentWrapperCapabilities.ids` from the selected backend; the matrix is a
   maintenance/overview artifact, not a runtime truth source.
+
+## Change control and verification (normative)
+
+This spec is the canonical registry for standard `agent_api.*` capability ids. When a new universal
+capability id is introduced or promoted:
+
+- This spec MUST be updated in the same change that introduces the capability.
+- The capability matrix MUST be regenerated, and reviewers SHOULD verify the id appears in both
+  this spec and the generated matrix (noting that config-conditional capabilities may be absent
+  from the matrix under default generator settings).
 
 ## Required minimum capabilities (v1, normative)
 
@@ -156,6 +170,47 @@ This section defines stable universal capability ids and their minimum semantics
     - `AgentWrapperCompletion.data` whenever a completion is produced and the id is known,
     per `event-envelope-schema-spec.md` ("Session handle facet (handle.v1)").
   - A backend that does not implement this MUST NOT advertise the capability.
+- `agent_api.config.model.v1`:
+  - Bucket: `agent_api.config.*`.
+  - This is the stable capability id and R0 gate for the universal model-selection extension key.
+  - Schema, trimming behavior, absence semantics, runtime-rejection posture, and backend mapping
+    requirements are owned by `docs/specs/universal-agent-api/extensions-spec.md`.
+  - For this capability, "deterministically honor the owner-doc semantics for a run flow" means
+    the flow has exactly one pinned outcome after R0 gating and pre-spawn validation:
+    either apply the accepted effective trimmed model id unchanged to the backend transport for that
+    flow, or take a pinned backend-owned safe rejection path for that flow. A flow that silently
+    drops, rewrites, or conditionally ignores an accepted model id does not satisfy this
+    requirement.
+  - A backend that advertises this capability MUST accept the same string key in
+    `AgentWrapperRunRequest.extensions`, apply the owner-doc v1 semantics unchanged, and advertise
+    the id only when it can deterministically honor those semantics for the targeted run flow.
+  - `AgentWrapperCapabilities.ids` is a backend-global capability set, not a per-request or
+    per-flow response. A backend that exposes multiple run flows MAY advertise this capability
+    globally only when every exposed flow has one of the pinned deterministic outcomes above.
+  - A backend that cannot deterministically honor the owner-doc semantics for one of its exposed
+    run flows MUST either stop advertising this capability entirely or narrow its exposed flow set;
+    it MUST NOT keep advertising while leaving that flow ambiguous.
+  - Built-in backend posture for v1:
+    - `codex` MAY advertise globally once exec/resume apply `--model <trimmed-id>` and fork keeps
+      the pinned pre-handle safe rejection path from
+      `docs/specs/codex-app-server-jsonrpc-contract.md`.
+  - `claude_code` MAY advertise globally once its print exec/resume/fork flows all emit exactly
+    one `--model <trimmed-id>` pair per
+    `docs/specs/claude-code-session-mapping-contract.md`.
+- `agent_api.exec.add_dirs.v1`:
+  - Bucket: `agent_api.exec.*`.
+  - This is the stable capability id and R0 gate for the universal add-dirs extension key.
+  - Schema, trimming behavior, absence semantics, runtime-rejection posture, and backend mapping
+    requirements are owned by `docs/specs/universal-agent-api/extensions-spec.md`.
+  - A backend that advertises this capability MUST accept the same string key in
+    `AgentWrapperRunRequest.extensions`, apply the owner-doc v1 semantics unchanged for every
+    exposed run flow, and either map the accepted normalized directory set into backend transport
+    or take a pinned safe backend-rejection path (it MUST NOT silently ignore accepted add-dir
+    inputs).
+  - `AgentWrapperCapabilities.ids` is a backend-global capability set, not a per-request or
+    per-flow response. A backend that cannot deterministically honor the owner-doc semantics for
+    one of its exposed run flows MUST either stop advertising this capability entirely or narrow
+    its exposed flow set.
 
 ## Extension keys (v1, normative)
 

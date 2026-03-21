@@ -26,7 +26,6 @@ mod app_server;
 mod auth_session;
 mod builder_env_home;
 mod bundled_binary;
-#[cfg(unix)]
 mod capabilities;
 mod cli;
 mod cli_overrides;
@@ -37,6 +36,7 @@ mod sandbox_execpolicy;
 mod stream_exec_env_overrides;
 mod stream_exec_termination;
 mod stream_exec_timeout;
+mod stream_exec_working_dir;
 mod stream_resume_env_overrides;
 mod stream_resume_termination;
 mod stream_resume_timeout;

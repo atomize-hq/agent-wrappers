@@ -32,6 +32,24 @@ mod unix {
         }
     }
 
+    async fn wait_for_pid_file(pid_file: &std::path::Path) -> i32 {
+        let deadline = time::Instant::now() + Duration::from_secs(1);
+        let contents = loop {
+            match fs::read_to_string(pid_file) {
+                Ok(contents) => break contents,
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                    if time::Instant::now() >= deadline {
+                        panic!("pid file was not created before timeout");
+                    }
+                    time::sleep(Duration::from_millis(25)).await;
+                }
+                Err(err) => panic!("failed to read pid file: {err}"),
+            }
+        };
+
+        contents.trim().parse().expect("pid parse")
+    }
+
     #[tokio::test]
     async fn setup_token_timeout_reaps_child() {
         use std::os::unix::fs::PermissionsExt;
@@ -68,17 +86,14 @@ exec sleep 1000000
             .await
             .expect("start");
 
+        let pid = wait_for_pid_file(&pid_file).await;
+        assert!(pid_exists(pid), "expected setup-token child to be running");
+
         let err = session.wait().await.unwrap_err();
         assert!(
             matches!(err, ClaudeCodeError::Timeout { .. }),
             "expected timeout, got: {err:?}"
         );
-
-        let pid: i32 = fs::read_to_string(&pid_file)
-            .expect("pid file")
-            .trim()
-            .parse()
-            .expect("pid parse");
         assert_pid_gone(pid).await;
     }
 }

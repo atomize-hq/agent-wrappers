@@ -160,3 +160,14 @@ Let a logical line `L` parse as JSON value `V`. Then:
   MUST return `Err` with the same `code` and the same invariant decision.
 - `parse_json` MUST NOT emit `JsonParse` (JSON parsing already occurred).
 
+## Acceptance linkage (normative)
+
+The scenario catalog for this contract MUST explicitly exercise `parse_json` with the same fixture
+corpus used for `parse_line`, asserting identical outcomes:
+
+- For each fixture line that parses successfully, `parse_json` MUST return the same event variant
+  with the same extracted fields as `parse_line`.
+- For each fixture line that yields `TypedParse` or `Normalize` via `parse_line`, `parse_json`
+  MUST return the same error `code`.
+
+The intent is to lock down `parse_json` as a peer API, not a best-effort helper.

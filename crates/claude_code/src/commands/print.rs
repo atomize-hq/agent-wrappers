@@ -409,6 +409,10 @@ impl ClaudePrintRequest {
             out.push("--dangerously-skip-permissions".to_string());
         }
 
+        if self.allow_dangerously_skip_permissions {
+            out.push("--allow-dangerously-skip-permissions".to_string());
+        }
+
         if !self.add_dirs.is_empty() {
             out.push("--add-dir".to_string());
             out.extend(self.add_dirs.iter().cloned());
@@ -431,10 +435,6 @@ impl ClaudePrintRequest {
         if let Some(agents) = self.agents.as_ref() {
             out.push("--agents".to_string());
             out.push(agents.clone());
-        }
-
-        if self.allow_dangerously_skip_permissions {
-            out.push("--allow-dangerously-skip-permissions".to_string());
         }
 
         if let Some(prompt) = self.append_system_prompt.as_ref() {

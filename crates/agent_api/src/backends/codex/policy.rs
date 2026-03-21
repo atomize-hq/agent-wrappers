@@ -2,12 +2,14 @@ use serde_json::Value;
 
 use crate::{AgentWrapperError, AgentWrapperRunRequest};
 
+pub(super) const EXT_ADD_DIRS_V1: &str = "agent_api.exec.add_dirs.v1";
 pub(super) const EXT_NON_INTERACTIVE: &str = "agent_api.exec.non_interactive";
 pub(super) const EXT_EXTERNAL_SANDBOX_V1: &str = "agent_api.exec.external_sandbox.v1";
 pub(super) const EXT_CODEX_APPROVAL_POLICY: &str = "backend.codex.exec.approval_policy";
 pub(super) const EXT_CODEX_SANDBOX_MODE: &str = "backend.codex.exec.sandbox_mode";
 
 pub(super) const SUPPORTED_EXTENSION_KEYS_DEFAULT: &[&str] = &[
+    EXT_ADD_DIRS_V1,
     EXT_NON_INTERACTIVE,
     EXT_CODEX_APPROVAL_POLICY,
     EXT_CODEX_SANDBOX_MODE,
@@ -16,6 +18,7 @@ pub(super) const SUPPORTED_EXTENSION_KEYS_DEFAULT: &[&str] = &[
 ];
 
 pub(super) const SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN: &[&str] = &[
+    EXT_ADD_DIRS_V1,
     EXT_NON_INTERACTIVE,
     EXT_CODEX_APPROVAL_POLICY,
     EXT_CODEX_SANDBOX_MODE,
@@ -86,6 +89,7 @@ fn parse_codex_sandbox_mode(value: &Value) -> Result<CodexSandboxMode, AgentWrap
 
 #[derive(Clone, Debug)]
 pub(super) struct CodexExecPolicy {
+    pub(super) add_dirs: Vec<std::path::PathBuf>,
     pub(super) non_interactive: bool,
     pub(super) external_sandbox: bool,
     pub(super) approval_policy: Option<CodexApprovalPolicy>,
@@ -160,6 +164,7 @@ pub(super) fn validate_and_extract_exec_policy(
     }
 
     Ok(CodexExecPolicy {
+        add_dirs: Vec::new(),
         non_interactive,
         external_sandbox,
         approval_policy,

@@ -1,6 +1,8 @@
 use std::{
+    env,
     ffi::OsString,
     io,
+    path::{Path, PathBuf},
     process::{ExitStatus, Stdio},
     time::Duration,
 };
@@ -56,11 +58,8 @@ pub(super) async fn capture_claude_mcp_output(
         .stderr(Stdio::piped())
         .kill_on_drop(true)
         .env_clear()
-        .envs(&resolved.env);
-
-    if let Some(working_dir) = resolved.working_dir.as_ref() {
-        command.current_dir(working_dir);
-    }
+        .envs(&resolved.env)
+        .current_dir(spawn_current_dir(resolved.working_dir.as_deref()));
 
     let mut child = command
         .spawn()
@@ -97,6 +96,13 @@ pub(super) async fn capture_claude_mcp_output(
         stderr_bytes,
         stderr_saw_more,
     })
+}
+
+fn spawn_current_dir(working_dir: Option<&Path>) -> PathBuf {
+    working_dir
+        .map(Path::to_path_buf)
+        .or_else(|| env::current_dir().ok())
+        .unwrap_or_else(env::temp_dir)
 }
 
 pub(super) fn finalize_claude_mcp_output(

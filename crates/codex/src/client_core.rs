@@ -7,6 +7,7 @@ use std::{
 use crate::{
     apply_diff::ApplyDiffArtifacts,
     builder::{apply_cli_overrides, resolve_cli_overrides, CliOverridesPatch},
+    capabilities::{effective_path_env, resolve_binary_path},
     process::{spawn_with_retry, tee_stream, CommandOutput, ConsoleTarget},
     CodexClient, CodexError,
 };
@@ -119,16 +120,41 @@ impl CodexClient {
         S: AsRef<OsStr>,
         I: IntoIterator<Item = S>,
     {
-        let mut command = Command::new(self.command_env.binary_path());
+        self.run_basic_command_with_env_overrides_and_current_dir(args, &[], None)
+            .await
+    }
+
+    pub(crate) async fn run_basic_command_with_env_overrides_and_current_dir<S, I>(
+        &self,
+        args: I,
+        env_overrides: &[(String, String)],
+        current_dir: Option<&Path>,
+    ) -> Result<CommandOutput, CodexError>
+    where
+        S: AsRef<OsStr>,
+        I: IntoIterator<Item = S>,
+    {
+        let binary_path = resolve_binary_path(
+            self.command_env.binary_path(),
+            current_dir,
+            effective_path_env(env_overrides),
+        );
+        let mut command = Command::new(&binary_path);
         command
             .args(args)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true);
+        if let Some(current_dir) = current_dir {
+            command.current_dir(current_dir);
+        }
 
         self.command_env.apply(&mut command)?;
+        for (key, value) in env_overrides {
+            command.env(key, value);
+        }
 
-        let mut child = spawn_with_retry(&mut command, self.command_env.binary_path())?;
+        let mut child = spawn_with_retry(&mut command, &binary_path)?;
 
         let stdout = child.stdout.take().ok_or(CodexError::StdoutUnavailable)?;
         let stderr = child.stderr.take().ok_or(CodexError::StderrUnavailable)?;

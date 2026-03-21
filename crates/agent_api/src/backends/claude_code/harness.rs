@@ -1,11 +1,11 @@
 use std::{
     future::Future,
+    path::PathBuf,
     pin::Pin,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
-use claude_code::{ClaudeOutputFormat, ClaudePrintRequest};
 use futures_util::{stream, StreamExt};
 use tokio::sync::{oneshot, OnceCell};
 
@@ -15,18 +15,20 @@ use super::{
         session_handle_facet, status_event,
     },
     util::{
-        generic_non_zero_exit_message, json_contains_not_found_signal, parse_bool,
-        preflight_allow_flag_support,
+        build_fresh_run_print_request, json_contains_add_dirs_runtime_rejection_signal,
+        json_contains_not_found_signal, parse_bool, preflight_allow_flag_support,
+        render_backend_error_message, resolve_claude_effective_working_dir,
+        resolve_completion_messages, startup_failure_spawn, ADD_DIRS_RUNTIME_REJECTION_MESSAGE,
     },
-    ClaudeCodeBackendConfig, AGENT_KIND, CLAUDE_EXEC_POLICY_PREFIX, EXT_EXTERNAL_SANDBOX_V1,
-    EXT_NON_INTERACTIVE, PINNED_EXTERNAL_SANDBOX_WARNING, SESSION_HANDLE_ID_BOUND_BYTES,
-    SESSION_HANDLE_OVERSIZE_WARNING, SUPPORTED_EXTENSION_KEYS_DEFAULT,
-    SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN,
+    ClaudeCodeBackendConfig, AGENT_KIND, CLAUDE_EXEC_POLICY_PREFIX, EXT_ADD_DIRS_V1,
+    EXT_EXTERNAL_SANDBOX_V1, EXT_NON_INTERACTIVE, PINNED_EXTERNAL_SANDBOX_WARNING,
+    SESSION_HANDLE_ID_BOUND_BYTES, SESSION_HANDLE_OVERSIZE_WARNING,
+    SUPPORTED_EXTENSION_KEYS_DEFAULT, SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN,
 };
 use crate::{
     backend_harness::{
-        BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn, DynBackendEventStream,
-        NormalizedRequest,
+        normalize_add_dirs_v1, BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn,
+        DynBackendEventStream, NormalizedRequest,
     },
     AgentWrapperCompletion, AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind,
     AgentWrapperKind, AgentWrapperRunRequest,
@@ -40,6 +42,7 @@ use super::super::session_selectors::{
 #[derive(Clone, Debug)]
 pub(super) struct ClaudeHarnessAdapter {
     config: ClaudeCodeBackendConfig,
+    run_start_cwd: Option<PathBuf>,
     termination: Option<
         Arc<super::super::termination::TerminationState<claude_code::ClaudeTerminationHandle>>,
     >,
@@ -49,17 +52,19 @@ pub(super) struct ClaudeHarnessAdapter {
 
 #[derive(Clone, Debug)]
 pub(super) struct ClaudeExecPolicy {
-    non_interactive: bool,
-    external_sandbox: bool,
-    resume: Option<SessionSelectorV1>,
-    fork: Option<SessionSelectorV1>,
+    pub(super) non_interactive: bool,
+    pub(super) external_sandbox: bool,
+    pub(super) resume: Option<SessionSelectorV1>,
+    pub(super) fork: Option<SessionSelectorV1>,
+    pub(super) resolved_working_dir: Option<PathBuf>,
+    pub(super) add_dirs: Vec<PathBuf>,
 }
 
 #[derive(Clone, Debug)]
 pub(super) struct ClaudeBackendCompletion {
     pub(super) status: std::process::ExitStatus,
     pub(super) final_text: Option<String>,
-    pub(super) selection_failure_message: Option<String>,
+    pub(super) backend_error_message: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -68,6 +73,7 @@ struct ClaudeStreamState {
     saw_assistant_message: bool,
     saw_stream_error: bool,
     saw_not_found_signal: bool,
+    backend_error_message: Option<String>,
 }
 
 #[derive(Debug)]
@@ -94,6 +100,7 @@ pub(super) enum ClaudeBackendError {
 
 pub(super) fn new_harness_adapter(
     config: ClaudeCodeBackendConfig,
+    run_start_cwd: Option<PathBuf>,
     termination: Option<
         Arc<super::super::termination::TerminationState<claude_code::ClaudeTerminationHandle>>,
     >,
@@ -101,6 +108,7 @@ pub(super) fn new_harness_adapter(
 ) -> ClaudeHarnessAdapter {
     ClaudeHarnessAdapter {
         config,
+        run_start_cwd,
         termination,
         handle_state: Arc::new(Mutex::new(ClaudeHandleFacetState::default())),
         allow_flag_preflight,
@@ -109,37 +117,15 @@ pub(super) fn new_harness_adapter(
 
 #[cfg(test)]
 pub(super) fn new_test_adapter(config: ClaudeCodeBackendConfig) -> ClaudeHarnessAdapter {
-    new_harness_adapter(config, None, Arc::new(OnceCell::new()))
+    new_harness_adapter(config, None, None, Arc::new(OnceCell::new()))
 }
 
-fn render_backend_error_message(err: &ClaudeBackendError) -> String {
-    match err {
-        ClaudeBackendError::Spawn(err) | ClaudeBackendError::Completion(err) => {
-            format!("claude_code error: {err}")
-        }
-        ClaudeBackendError::ExternalSandboxPreflight { message } => message.clone(),
-        ClaudeBackendError::StreamParse(err) => err.message.clone(),
-    }
-}
-
-pub(super) fn startup_failure_spawn(
-    err: ClaudeBackendError,
-    emit_external_sandbox_warning: bool,
-) -> BackendSpawn<ClaudeBackendEvent, ClaudeBackendCompletion, ClaudeBackendError> {
-    let message = render_backend_error_message(&err);
-    let events: DynBackendEventStream<ClaudeBackendEvent, ClaudeBackendError> =
-        if emit_external_sandbox_warning {
-            Box::pin(stream::iter(vec![
-                Ok(ClaudeBackendEvent::ExternalSandboxWarning),
-                Ok(ClaudeBackendEvent::TerminalError { message }),
-            ]))
-        } else {
-            Box::pin(stream::once(async move {
-                Ok(ClaudeBackendEvent::TerminalError { message })
-            }))
-        };
-    let completion = Box::pin(async move { Err(err) });
-    BackendSpawn { events, completion }
+#[cfg(test)]
+pub(super) fn new_test_adapter_with_run_start_cwd(
+    config: ClaudeCodeBackendConfig,
+    run_start_cwd: Option<PathBuf>,
+) -> ClaudeHarnessAdapter {
+    new_harness_adapter(config, run_start_cwd, None, Arc::new(OnceCell::new()))
 }
 
 impl BackendHarnessAdapter for ClaudeHarnessAdapter {
@@ -209,13 +195,26 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
             .map(parse_session_fork_v1)
             .transpose()?;
 
+        let resolved_working_dir = resolve_claude_effective_working_dir(
+            &self.config,
+            self.run_start_cwd.as_deref(),
+            request.working_dir.as_deref(),
+        )?;
+
         validate_resume_fork_mutual_exclusion(&request.extensions)?;
+
+        let add_dirs = match request.extensions.get(EXT_ADD_DIRS_V1) {
+            Some(raw) => normalize_add_dirs_v1(Some(raw), resolved_working_dir.as_deref())?,
+            None => Vec::new(),
+        };
 
         Ok(ClaudeExecPolicy {
             non_interactive,
             external_sandbox,
             resume,
             fork,
+            resolved_working_dir,
+            add_dirs,
         })
     }
 
@@ -244,6 +243,22 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
         let config = self.config.clone();
         let termination = self.termination.clone();
         let allow_flag_preflight = Arc::clone(&self.allow_flag_preflight);
+        let NormalizedRequest {
+            prompt,
+            working_dir: _raw_working_dir,
+            effective_timeout,
+            env,
+            policy,
+            ..
+        } = req;
+        let ClaudeExecPolicy {
+            non_interactive,
+            external_sandbox,
+            resume,
+            fork,
+            resolved_working_dir,
+            add_dirs,
+        } = policy;
         Box::pin(async move {
             let mut builder = claude_code::ClaudeClient::builder();
             if let Some(binary) = config.binary.as_ref() {
@@ -253,28 +268,24 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                 builder = builder.claude_home(claude_home.clone());
             }
 
-            let working_dir = req
-                .working_dir
-                .clone()
-                .or_else(|| config.default_working_dir.clone());
-            if let Some(dir) = working_dir {
+            if let Some(dir) = resolved_working_dir {
                 builder = builder.working_dir(dir);
             }
 
-            let timeout = match req.effective_timeout {
+            let timeout = match effective_timeout {
                 Some(t) if t == Duration::ZERO => None,
                 other => other,
             };
             builder = builder.timeout(timeout);
 
-            for (k, v) in &req.env {
+            for (k, v) in &env {
                 builder = builder.env(k.clone(), v.clone());
             }
 
             let client = builder.build();
 
             let mut allow_dangerously_skip_permissions = false;
-            if req.policy.external_sandbox {
+            if external_sandbox {
                 allow_dangerously_skip_permissions =
                     match preflight_allow_flag_support(allow_flag_preflight.as_ref(), || {
                         client.help()
@@ -291,20 +302,15 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                     };
             }
 
-            let mut print_req = ClaudePrintRequest::new(req.prompt)
-                .output_format(ClaudeOutputFormat::StreamJson)
-                .include_partial_messages(true);
-            if req.policy.non_interactive {
-                print_req = print_req.permission_mode("bypassPermissions");
-            }
-            if req.policy.external_sandbox {
-                print_req = print_req.dangerously_skip_permissions(true);
-                if allow_dangerously_skip_permissions {
-                    print_req = print_req.allow_dangerously_skip_permissions(true);
-                }
-            }
+            let mut print_req = build_fresh_run_print_request(
+                prompt,
+                non_interactive,
+                external_sandbox,
+                allow_dangerously_skip_permissions,
+                &add_dirs,
+            );
 
-            if let Some(resume) = req.policy.resume.as_ref() {
+            if let Some(resume) = resume.as_ref() {
                 match resume {
                     SessionSelectorV1::Last => {
                         print_req = print_req.continue_session(true);
@@ -315,7 +321,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                 }
             }
 
-            if let Some(fork) = req.policy.fork.as_ref() {
+            if let Some(fork) = fork.as_ref() {
                 print_req = print_req.fork_session(true);
                 match fork {
                     SessionSelectorV1::Last => {
@@ -329,7 +335,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
 
             let handle = match client.print_stream_json_control(print_req).await {
                 Ok(handle) => handle,
-                Err(err) if req.policy.external_sandbox => {
+                Err(err) if external_sandbox => {
                     return Ok(startup_failure_spawn(ClaudeBackendError::Spawn(err), true));
                 }
                 Err(err) => return Err(ClaudeBackendError::Spawn(err)),
@@ -339,12 +345,14 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                 state.set_handle(handle.termination.clone());
             }
 
-            let selection_selector = req.policy.resume.clone().or(req.policy.fork.clone());
+            let selection_selector = resume.clone().or(fork.clone());
+            let has_add_dirs = !add_dirs.is_empty();
             let stream_state: Arc<Mutex<ClaudeStreamState>> =
                 Arc::new(Mutex::new(ClaudeStreamState::default()));
             let (events_done_tx, events_done_rx) = oneshot::channel::<()>();
 
-            let (tail_tx, tail_rx) = if selection_selector.is_some() {
+            let monitor_backend_error_tail = selection_selector.is_some() || has_add_dirs;
+            let (tail_tx, tail_rx) = if monitor_backend_error_tail {
                 let (tx, rx) = oneshot::channel::<Option<String>>();
                 (Some(tx), Some(rx))
             } else {
@@ -359,6 +367,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                         Some(events_done_tx),
                         tail_rx,
                         selection_selector.clone(),
+                        has_add_dirs,
                         false,
                     ),
                     |(
@@ -367,6 +376,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                         mut events_done_tx,
                         mut tail_rx,
                         selection_selector,
+                        has_add_dirs,
                         tail_emitted,
                     )| async move {
                         loop {
@@ -387,6 +397,30 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                                         }
                                     }
 
+                                    if has_add_dirs
+                                        && matches!(
+                                            ev,
+                                            claude_code::ClaudeStreamJsonEvent::ResultError { .. }
+                                        )
+                                    {
+                                        if let claude_code::ClaudeStreamJsonEvent::ResultError {
+                                            raw,
+                                            ..
+                                        } = &ev
+                                        {
+                                            if json_contains_add_dirs_runtime_rejection_signal(raw)
+                                            {
+                                                if let Ok(mut state) = stream_state.lock() {
+                                                    state.backend_error_message = Some(
+                                                        ADD_DIRS_RUNTIME_REJECTION_MESSAGE
+                                                            .to_string(),
+                                                    );
+                                                }
+                                                continue;
+                                            }
+                                        }
+                                    }
+
                                     if selection_selector.is_some()
                                         && matches!(
                                             ev,
@@ -402,8 +436,17 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                                                 if let Ok(mut state) = stream_state.lock() {
                                                     state.saw_not_found_signal = true;
                                                 }
+                                                continue;
                                             }
                                         }
+                                    }
+
+                                    if selection_selector.is_some()
+                                        && matches!(
+                                            ev,
+                                            claude_code::ClaudeStreamJsonEvent::ResultError { .. }
+                                        )
+                                    {
                                         continue;
                                     }
 
@@ -415,6 +458,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                                             events_done_tx,
                                             tail_rx,
                                             selection_selector,
+                                            has_add_dirs,
                                             tail_emitted,
                                         ),
                                     ));
@@ -432,6 +476,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                                             events_done_tx,
                                             tail_rx,
                                             selection_selector,
+                                            has_add_dirs,
                                             tail_emitted,
                                         ),
                                     ));
@@ -456,6 +501,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                                             events_done_tx,
                                             tail_rx,
                                             selection_selector,
+                                            has_add_dirs,
                                             true,
                                         ),
                                     ));
@@ -465,7 +511,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                     },
                 ));
 
-            let events = if req.policy.external_sandbox {
+            let events = if external_sandbox {
                 Box::pin(
                     stream::once(async move { Ok(ClaudeBackendEvent::ExternalSandboxWarning) })
                         .chain(events),
@@ -482,41 +528,31 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                     .await
                     .map_err(ClaudeBackendError::Completion)?;
 
-                let (final_text, saw_stream_error, saw_not_found_signal) = stream_state
+                let (
+                    final_text,
+                    saw_stream_error,
+                    saw_not_found_signal,
+                    runtime_backend_error_message,
+                ) = stream_state
                     .lock()
                     .map(|guard| {
                         (
                             guard.last_assistant_text.clone(),
                             guard.saw_stream_error,
                             guard.saw_not_found_signal,
+                            guard.backend_error_message.clone(),
                         )
                     })
-                    .unwrap_or((None, true, false));
+                    .unwrap_or((None, true, false, None));
 
-                let selection_failure_message = if selection_selector.is_some()
-                    && !status.success()
-                    && !saw_stream_error
-                    && saw_not_found_signal
-                {
-                    match selection_selector {
-                        Some(SessionSelectorV1::Last) => Some("no session found".to_string()),
-                        Some(SessionSelectorV1::Id { .. }) => Some("session not found".to_string()),
-                        None => None,
-                    }
-                } else {
-                    None
-                };
-
-                let terminal_error_event_message =
-                    if selection_selector.is_some() && !status.success() && !saw_stream_error {
-                        Some(
-                            selection_failure_message
-                                .clone()
-                                .unwrap_or_else(|| generic_non_zero_exit_message(&status)),
-                        )
-                    } else {
-                        None
-                    };
+                let (backend_error_message, terminal_error_event_message) =
+                    resolve_completion_messages(
+                        &status,
+                        selection_selector.as_ref(),
+                        saw_stream_error,
+                        saw_not_found_signal,
+                        runtime_backend_error_message,
+                    );
 
                 if let Some(tx) = tail_tx {
                     let _ = tx.send(terminal_error_event_message.clone());
@@ -525,7 +561,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                 Ok(ClaudeBackendCompletion {
                     status,
                     final_text,
-                    selection_failure_message,
+                    backend_error_message,
                 })
             });
 
@@ -606,7 +642,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
         &self,
         completion: Self::BackendCompletion,
     ) -> Result<AgentWrapperCompletion, AgentWrapperError> {
-        if let Some(message) = completion.selection_failure_message {
+        if let Some(message) = completion.backend_error_message {
             return Err(AgentWrapperError::Backend { message });
         }
 

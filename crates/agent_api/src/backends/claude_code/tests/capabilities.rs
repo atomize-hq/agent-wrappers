@@ -1,3 +1,7 @@
+use std::fs;
+
+use tempfile::tempdir;
+
 use super::support::*;
 
 #[test]
@@ -12,8 +16,52 @@ fn claude_backend_reports_required_capabilities() {
     assert!(capabilities.contains(CAP_TOOLS_RESULTS_V1));
     assert!(capabilities.contains(CAP_ARTIFACTS_FINAL_TEXT_V1));
     assert!(capabilities.contains(CAP_SESSION_HANDLE_V1));
+    assert!(capabilities.contains(EXT_ADD_DIRS_V1));
     assert!(capabilities.contains(EXT_SESSION_RESUME_V1));
     assert!(capabilities.contains(EXT_SESSION_FORK_V1));
+}
+
+#[test]
+fn claude_add_dirs_capability_and_supported_key_surfaces_stay_aligned() {
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig::default());
+    assert!(backend.capabilities().contains(EXT_ADD_DIRS_V1));
+
+    let default_adapter = new_adapter();
+    assert!(default_adapter
+        .supported_extension_keys()
+        .contains(&EXT_ADD_DIRS_V1));
+
+    let external_sandbox_adapter = new_adapter_with_config(ClaudeCodeBackendConfig {
+        allow_external_sandbox_exec: true,
+        ..Default::default()
+    });
+    assert!(external_sandbox_adapter
+        .supported_extension_keys()
+        .contains(&EXT_ADD_DIRS_V1));
+}
+
+#[test]
+fn claude_add_dirs_normalize_request_accepts_supported_key_and_extracts_policy() {
+    let temp = tempdir().expect("tempdir");
+    let working_dir = temp.path().join("workspace");
+    let child_dir = working_dir.join("child");
+    fs::create_dir_all(&child_dir).expect("create child directory");
+
+    let adapter = new_adapter();
+    let defaults = crate::backend_harness::BackendDefaults::default();
+    let request = AgentWrapperRunRequest {
+        prompt: "hello".to_string(),
+        working_dir: Some(working_dir),
+        extensions: [(EXT_ADD_DIRS_V1.to_string(), add_dirs_payload(&["child"]))]
+            .into_iter()
+            .collect(),
+        ..Default::default()
+    };
+
+    let normalized = crate::backend_harness::normalize_request(&adapter, &defaults, request)
+        .expect("add_dirs should pass R0 gating and policy extraction");
+
+    assert_eq!(normalized.policy.add_dirs, vec![child_dir]);
 }
 
 #[test]

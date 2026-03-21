@@ -24,6 +24,7 @@ Do not edit by hand.
 
 | capability id | `claude_code` | `codex` |
 |---|---|---|
+| `agent_api.exec.add_dirs.v1` | ✅ | ✅ |
 | `agent_api.exec.non_interactive` | ✅ | ✅ |
 
 ## `agent_api.session`

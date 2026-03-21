@@ -67,7 +67,7 @@ fn claude_completion_attaches_handle_facet_when_id_is_known() {
         .map_completion(super::super::harness::ClaudeBackendCompletion {
             status: success_exit_status(),
             final_text: None,
-            selection_failure_message: None,
+            backend_error_message: None,
         })
         .expect("completion maps");
 
@@ -106,7 +106,7 @@ fn claude_whitespace_session_id_is_treated_as_unknown() {
         .map_completion(super::super::harness::ClaudeBackendCompletion {
             status: success_exit_status(),
             final_text: None,
-            selection_failure_message: None,
+            backend_error_message: None,
         })
         .expect("completion maps");
     assert!(completion.data.is_none());
@@ -145,7 +145,7 @@ fn claude_oversize_session_id_is_omitted_and_warns_once() {
         .map_completion(super::super::harness::ClaudeBackendCompletion {
             status: success_exit_status(),
             final_text: None,
-            selection_failure_message: None,
+            backend_error_message: None,
         })
         .expect("completion maps");
     assert!(completion.data.is_none());

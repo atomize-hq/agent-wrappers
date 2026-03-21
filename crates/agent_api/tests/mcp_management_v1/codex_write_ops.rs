@@ -1,3 +1,5 @@
+#![allow(clippy::await_holding_lock)]
+
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 use agent_api::{

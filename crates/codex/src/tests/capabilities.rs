@@ -101,9 +101,19 @@ fn capability_snapshot_with_metadata(
     }
 }
 
+#[cfg(unix)]
 mod exec_and_login;
+#[cfg(unix)]
 mod feature_parsing_and_guards;
+#[cfg(unix)]
 mod overrides_and_probe;
+#[cfg(unix)]
 mod probe_cache_policy;
+#[cfg(unix)]
+mod probe_working_dir;
+#[cfg(unix)]
 mod snapshots_and_cache;
+#[cfg(unix)]
 mod version_and_advisory;
+#[cfg(windows)]
+mod windows_path_overrides;

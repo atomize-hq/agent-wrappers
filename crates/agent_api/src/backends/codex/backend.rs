@@ -3,7 +3,7 @@ use std::{collections::BTreeSet, future::Future, pin::Pin, sync::Arc};
 use super::{
     harness::{new_harness_adapter, CodexTerminationHandle},
     mcp_management, CodexBackend, CAP_ARTIFACTS_FINAL_TEXT_V1, CAP_SESSION_HANDLE_V1,
-    CAP_TOOLS_RESULTS_V1, CAP_TOOLS_STRUCTURED_V1, EXT_CODEX_APPROVAL_POLICY,
+    CAP_TOOLS_RESULTS_V1, CAP_TOOLS_STRUCTURED_V1, EXT_ADD_DIRS_V1, EXT_CODEX_APPROVAL_POLICY,
     EXT_CODEX_SANDBOX_MODE, EXT_EXTERNAL_SANDBOX_V1, EXT_NON_INTERACTIVE,
 };
 use crate::{
@@ -48,6 +48,7 @@ impl AgentWrapperBackend for CodexBackend {
         ids.insert(CAP_ARTIFACTS_FINAL_TEXT_V1.to_string());
         ids.insert(CAP_SESSION_HANDLE_V1.to_string());
         ids.insert("backend.codex.exec_stream".to_string());
+        ids.insert(EXT_ADD_DIRS_V1.to_string());
         ids.insert(EXT_NON_INTERACTIVE.to_string());
         ids.insert(EXT_CODEX_APPROVAL_POLICY.to_string());
         ids.insert(EXT_CODEX_SANDBOX_MODE.to_string());
@@ -173,8 +174,8 @@ impl AgentWrapperBackend for CodexBackend {
     ) -> Pin<Box<dyn Future<Output = Result<AgentWrapperRunHandle, AgentWrapperError>> + Send + '_>>
     {
         let config = self.config.clone();
+        let run_start_cwd = std::env::current_dir().ok();
         Box::pin(async move {
-            let run_start_cwd = std::env::current_dir().ok();
             let adapter = Arc::new(new_harness_adapter(config.clone(), run_start_cwd, None));
 
             let defaults = BackendDefaults {
@@ -182,7 +183,7 @@ impl AgentWrapperBackend for CodexBackend {
                 default_timeout: config.default_timeout,
             };
 
-            crate::backend_harness::run_harnessed_backend(adapter, defaults, request)
+            crate::backend_harness::run_harnessed_backend(adapter, defaults, request).await
         })
     }
 
@@ -202,6 +203,7 @@ impl AgentWrapperBackend for CodexBackend {
         }
 
         let config = self.config.clone();
+        let run_start_cwd = std::env::current_dir().ok();
         Box::pin(async move {
             let termination_state: Arc<
                 super::super::termination::TerminationState<CodexTerminationHandle>,
@@ -211,7 +213,6 @@ impl AgentWrapperBackend for CodexBackend {
                 Arc::new(move || termination_state.request())
             });
 
-            let run_start_cwd = std::env::current_dir().ok();
             let adapter = Arc::new(new_harness_adapter(
                 config.clone(),
                 run_start_cwd,
@@ -229,6 +230,7 @@ impl AgentWrapperBackend for CodexBackend {
                 request,
                 request_termination,
             )
+            .await
         })
     }
 }

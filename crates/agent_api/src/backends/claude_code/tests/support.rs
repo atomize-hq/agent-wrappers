@@ -1,9 +1,21 @@
 use claude_code::{ClaudeStreamJsonEvent, ClaudeStreamJsonParser};
+use futures_core::Stream;
+use serde_json::json;
+use std::{
+    collections::BTreeMap,
+    fs as std_fs,
+    path::{Path, PathBuf},
+    pin::Pin,
+    process::Command,
+    sync::OnceLock,
+    time::Duration,
+};
 
 pub(super) use super::super::harness::ClaudeBackendEvent;
 pub(super) use super::super::*;
 pub(super) use crate::{
     backend_harness::BackendHarnessAdapter,
+    backends::test_support::{test_env_lock, CurrentDirGuard},
     mcp::{AgentWrapperMcpAddRequest, AgentWrapperMcpAddTransport, AgentWrapperMcpRemoveRequest},
     mcp::{
         CAPABILITY_MCP_ADD_V1, CAPABILITY_MCP_GET_V1, CAPABILITY_MCP_LIST_V1,
@@ -127,6 +139,181 @@ pub(super) fn new_adapter_with_config(config: ClaudeCodeBackendConfig) -> Claude
     new_test_adapter(config)
 }
 
+pub(super) fn new_adapter_with_run_start_cwd(
+    run_start_cwd: Option<PathBuf>,
+) -> ClaudeHarnessAdapter {
+    new_test_adapter_with_run_start_cwd(ClaudeCodeBackendConfig::default(), run_start_cwd)
+}
+
+pub(super) fn new_adapter_with_config_and_run_start_cwd(
+    config: ClaudeCodeBackendConfig,
+    run_start_cwd: Option<PathBuf>,
+) -> ClaudeHarnessAdapter {
+    new_test_adapter_with_run_start_cwd(config, run_start_cwd)
+}
+
+fn build_fake_claude_binary(repo_root: &Path, binary: &Path) -> Result<(), String> {
+    let output = Command::new("cargo")
+        .args([
+            "build",
+            "-p",
+            "agent_api",
+            "--bin",
+            "fake_claude_stream_json_agent_api",
+            "--all-features",
+        ])
+        .current_dir(repo_root)
+        .output()
+        .map_err(|err| format!("spawn cargo build: {err}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "cargo build failed: status={:?}, stderr={}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+    if !binary.exists() {
+        return Err(format!(
+            "cargo build succeeded but binary missing: {binary:?}"
+        ));
+    }
+    Ok(())
+}
+
+fn find_existing_fake_claude_binary(target_dir: &Path) -> Option<PathBuf> {
+    let binary_name = if cfg!(windows) {
+        "fake_claude_stream_json_agent_api.exe"
+    } else {
+        "fake_claude_stream_json_agent_api"
+    };
+    let deps_dir = target_dir.join("deps");
+    let prefix = "fake_claude_stream_json_agent_api-";
+    let deps_binary = std_fs::read_dir(&deps_dir)
+        .ok()?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .find(|path| {
+            let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
+                return false;
+            };
+            if cfg!(windows) {
+                file_name.starts_with(prefix) && file_name.ends_with(".exe")
+            } else {
+                file_name.starts_with(prefix) && !file_name.contains('.')
+            }
+        });
+    if deps_binary.is_some() {
+        return deps_binary;
+    }
+
+    let direct_binary = target_dir.join(binary_name);
+    direct_binary.exists().then_some(direct_binary)
+}
+
+pub(super) fn fake_claude_binary() -> PathBuf {
+    static BUILT_BINARY: OnceLock<Result<PathBuf, String>> = OnceLock::new();
+
+    if let Some(path) = std::env::var_os("CARGO_BIN_EXE_fake_claude_stream_json_agent_api") {
+        let path = PathBuf::from(path);
+        if path.exists() {
+            return path;
+        }
+    }
+
+    let current_exe = std::env::current_exe().expect("resolve current test binary path");
+    let target_dir = current_exe
+        .parent()
+        .and_then(|dir| dir.parent())
+        .expect("resolve target dir from current test binary");
+    let mut binary = target_dir.join("fake_claude_stream_json_agent_api");
+    if cfg!(windows) {
+        binary.set_extension("exe");
+    }
+    let repo_root = target_dir
+        .parent()
+        .and_then(|dir| dir.parent())
+        .expect("resolve repo root from current test binary");
+    let built = BUILT_BINARY.get_or_init(|| {
+        if binary.exists() {
+            return Ok(binary.clone());
+        }
+
+        build_fake_claude_binary(repo_root, &binary).map(|_| binary.clone())
+    });
+    built
+        .clone()
+        .unwrap_or_else(|err| panic!("resolve fake Claude binary from {target_dir:?}: {err}"))
+}
+
+#[test]
+fn fake_claude_binary_finds_deps_executable_when_top_level_binary_is_absent() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let target_dir = temp.path().join("debug");
+    let deps_dir = target_dir.join("deps");
+    std_fs::create_dir_all(&deps_dir).expect("create deps dir");
+
+    let deps_binary = deps_dir.join(if cfg!(windows) {
+        "fake_claude_stream_json_agent_api-deadbeef.exe"
+    } else {
+        "fake_claude_stream_json_agent_api-deadbeef"
+    });
+    std_fs::write(&deps_binary, b"test").expect("write deps binary");
+
+    let discovered =
+        find_existing_fake_claude_binary(&target_dir).expect("deps binary should be discovered");
+    assert_eq!(discovered, deps_binary);
+}
+
+#[test]
+fn fake_claude_binary_prefers_deps_executable_over_top_level_binary() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let target_dir = temp.path().join("debug");
+    let deps_dir = target_dir.join("deps");
+    std_fs::create_dir_all(&deps_dir).expect("create deps dir");
+
+    let top_level_binary = target_dir.join(if cfg!(windows) {
+        "fake_claude_stream_json_agent_api.exe"
+    } else {
+        "fake_claude_stream_json_agent_api"
+    });
+    std_fs::write(&top_level_binary, b"top-level").expect("write top-level binary");
+
+    let deps_binary = deps_dir.join(if cfg!(windows) {
+        "fake_claude_stream_json_agent_api-deadbeef.exe"
+    } else {
+        "fake_claude_stream_json_agent_api-deadbeef"
+    });
+    std_fs::write(&deps_binary, b"deps").expect("write deps binary");
+
+    let discovered =
+        find_existing_fake_claude_binary(&target_dir).expect("deps binary should be discovered");
+    assert_eq!(discovered, deps_binary);
+}
+
+pub(super) fn expected_add_dirs_env(dirs: &[PathBuf]) -> BTreeMap<String, String> {
+    let mut env = BTreeMap::from([(
+        "FAKE_CLAUDE_EXPECT_ADD_DIR_COUNT".to_string(),
+        dirs.len().to_string(),
+    )]);
+    for (index, dir) in dirs.iter().enumerate() {
+        env.insert(
+            format!("FAKE_CLAUDE_EXPECT_ADD_DIR_{index}"),
+            dir.display().to_string(),
+        );
+    }
+    env
+}
+
+pub(super) fn expect_no_add_dir_env() -> BTreeMap<String, String> {
+    BTreeMap::from([("FAKE_CLAUDE_EXPECT_NO_ADD_DIR".to_string(), "1".to_string())])
+}
+
+pub(super) fn add_dirs_payload(dirs: &[impl AsRef<str>]) -> JsonValue {
+    json!({
+        "dirs": dirs.iter().map(|dir| dir.as_ref()).collect::<Vec<_>>()
+    })
+}
+
 pub(super) fn parse_single_line(line: &str) -> ClaudeStreamJsonEvent {
     let mut parser = ClaudeStreamJsonParser::new();
     parser
@@ -141,4 +328,27 @@ pub(super) fn handle_facet_schema(event: &crate::AgentWrapperEvent) -> Option<&s
         .as_ref()
         .and_then(|v| v.get("schema"))
         .and_then(|v| v.as_str())
+}
+
+pub(super) async fn drain_to_none(
+    mut stream: Pin<&mut (dyn Stream<Item = AgentWrapperEvent> + Send)>,
+    timeout: Duration,
+) -> Vec<AgentWrapperEvent> {
+    let mut out = Vec::new();
+    let deadline = tokio::time::sleep(timeout);
+    tokio::pin!(deadline);
+
+    loop {
+        tokio::select! {
+            _ = &mut deadline => break,
+            item = std::future::poll_fn(|cx| stream.as_mut().poll_next(cx)) => {
+                match item {
+                    Some(ev) => out.push(ev),
+                    None => break,
+                }
+            }
+        }
+    }
+
+    out
 }

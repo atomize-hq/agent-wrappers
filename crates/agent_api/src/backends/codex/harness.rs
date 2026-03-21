@@ -12,16 +12,18 @@ use futures_util::{stream, StreamExt};
 
 use super::{
     mapping::{error_event, map_thread_event, status_event},
-    validate_and_extract_exec_policy, CodexBackendConfig, CAP_SESSION_HANDLE_V1,
-    PINNED_EXTERNAL_SANDBOX_WARNING, PINNED_NO_SESSION_FOUND, PINNED_SESSION_NOT_FOUND,
-    PINNED_TIMEOUT, SESSION_HANDLE_ID_BOUND_BYTES, SESSION_HANDLE_OVERSIZE_WARNING_MARKER,
-    SUPPORTED_EXTENSION_KEYS_DEFAULT, SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN,
+    validate_and_extract_exec_policy, CodexBackendConfig, CAP_SESSION_HANDLE_V1, EXT_ADD_DIRS_V1,
+    PINNED_ADD_DIRS_UNSUPPORTED_FOR_FORK, PINNED_EXTERNAL_SANDBOX_WARNING, PINNED_NO_SESSION_FOUND,
+    PINNED_SESSION_NOT_FOUND, PINNED_TIMEOUT, SESSION_HANDLE_ID_BOUND_BYTES,
+    SESSION_HANDLE_OVERSIZE_WARNING_MARKER, SUPPORTED_EXTENSION_KEYS_DEFAULT,
+    SUPPORTED_EXTENSION_KEYS_EXTERNAL_SANDBOX_OPT_IN,
 };
 use crate::{
     backend_harness::{
-        BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn, DynBackendEventStream,
-        NormalizedRequest,
+        normalize_add_dirs_v1, BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn,
+        DynBackendEventStream, NormalizedRequest,
     },
+    backends::spawn_path::resolve_effective_working_dir,
     AgentWrapperCompletion, AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind,
     AgentWrapperKind, AgentWrapperRunRequest,
 };
@@ -88,6 +90,7 @@ pub(super) enum CodexBackendEvent {
 pub(super) struct CodexBackendCompletion {
     pub(super) status: ExitStatus,
     pub(super) final_text: Option<String>,
+    pub(super) backend_error_message: Option<String>,
     pub(super) selection_failure_message: Option<String>,
 }
 
@@ -96,6 +99,7 @@ pub(super) enum CodexBackendError {
     Exec(ExecStreamError),
     AppServer(codex::mcp::McpError),
     Timeout { timeout: Duration },
+    AddDirsRejectedByRuntime,
     ForkSelectionEmpty,
     ForkSessionNotFound,
     CompletionTaskDropped,
@@ -118,6 +122,30 @@ pub(super) fn new_harness_adapter(
 #[cfg(test)]
 pub(super) fn new_test_adapter(config: CodexBackendConfig) -> CodexHarnessAdapter {
     new_harness_adapter(config, None, None)
+}
+
+#[cfg(test)]
+pub(super) fn new_test_adapter_with_run_start_cwd(
+    config: CodexBackendConfig,
+    run_start_cwd: Option<PathBuf>,
+) -> CodexHarnessAdapter {
+    new_harness_adapter(config, run_start_cwd, None)
+}
+
+fn effective_working_dir_for_add_dirs(
+    config: &CodexBackendConfig,
+    run_start_cwd: Option<&PathBuf>,
+    request: &AgentWrapperRunRequest,
+) -> Result<Option<PathBuf>, AgentWrapperError> {
+    if !request.extensions.contains_key(EXT_ADD_DIRS_V1) {
+        return Ok(None);
+    }
+
+    Ok(resolve_effective_working_dir(
+        request.working_dir.as_deref(),
+        config.default_working_dir.as_deref(),
+        run_start_cwd.map(PathBuf::as_path),
+    ))
 }
 
 fn codex_error_kind(err: &CodexError) -> &'static str {
@@ -187,6 +215,9 @@ fn render_backend_error_message(err: &CodexBackendError) -> String {
         }
         CodexBackendError::AppServer(_) => "codex app-server rpc error".to_string(),
         CodexBackendError::Timeout { timeout: _timeout } => PINNED_TIMEOUT.to_string(),
+        CodexBackendError::AddDirsRejectedByRuntime => {
+            super::PINNED_ADD_DIRS_RUNTIME_REJECTION.to_string()
+        }
         CodexBackendError::ForkSelectionEmpty => PINNED_NO_SESSION_FOUND.to_string(),
         CodexBackendError::ForkSessionNotFound => PINNED_SESSION_NOT_FOUND.to_string(),
         CodexBackendError::CompletionTaskDropped => "codex completion task dropped".to_string(),
@@ -242,7 +273,14 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         &self,
         request: &AgentWrapperRunRequest,
     ) -> Result<Self::Policy, AgentWrapperError> {
-        let exec_policy = validate_and_extract_exec_policy(request)?;
+        let mut exec_policy = validate_and_extract_exec_policy(request)?;
+
+        let effective_working_dir =
+            effective_working_dir_for_add_dirs(&self.config, self.run_start_cwd.as_ref(), request)?;
+        exec_policy.add_dirs = normalize_add_dirs_v1(
+            request.extensions.get(EXT_ADD_DIRS_V1),
+            effective_working_dir.as_deref(),
+        )?;
 
         let resume = request
             .extensions
@@ -253,6 +291,12 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         let fork = super::fork::extract_fork_selector_v1(request)?;
 
         validate_resume_fork_mutual_exclusion(&request.extensions)?;
+
+        if fork.is_some() && !exec_policy.add_dirs.is_empty() {
+            return Err(AgentWrapperError::Backend {
+                message: PINNED_ADD_DIRS_UNSUPPORTED_FOR_FORK.to_string(),
+            });
+        }
 
         Ok(super::CodexExecPolicy {
             resume,
@@ -288,6 +332,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         let termination = self.termination.clone();
         let handle_state = Arc::clone(&self.handle_state);
         let super::CodexExecPolicy {
+            add_dirs,
             non_interactive,
             external_sandbox,
             approval_policy,
@@ -323,6 +368,7 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                     config,
                     run_start_cwd,
                     termination,
+                    add_dirs,
                     non_interactive,
                     external_sandbox,
                     approval_policy,
@@ -336,7 +382,12 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
                 .await
             } {
                 Ok(spawned) => spawned,
-                Err(err) if external_sandbox => return Ok(startup_failure_spawn(err, true)),
+                Err(err)
+                    if external_sandbox
+                        && !matches!(err, CodexBackendError::AddDirsRejectedByRuntime) =>
+                {
+                    return Ok(startup_failure_spawn(err, true));
+                }
                 Err(err) => return Err(err),
             };
 
@@ -353,7 +404,6 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
             Ok(BackendSpawn { events, completion })
         })
     }
-
     fn map_event(&self, event: Self::BackendEvent) -> Vec<AgentWrapperEvent> {
         match event {
             CodexBackendEvent::ExternalSandboxWarning => {
@@ -513,8 +563,13 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         let CodexBackendCompletion {
             status,
             final_text,
+            backend_error_message,
             selection_failure_message,
         } = completion;
+
+        if let Some(message) = backend_error_message {
+            return Err(AgentWrapperError::Backend { message });
+        }
 
         if let Some(message) = selection_failure_message {
             return Err(AgentWrapperError::Backend { message });

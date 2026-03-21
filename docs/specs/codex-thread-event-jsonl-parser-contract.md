@@ -165,6 +165,12 @@ The offline parsing API MUST match the streaming normalization behavior:
 Note: This makes `line_number` values potentially non-contiguous in the emitted record stream when
 the input contains blank lines. This is intentional and is part of the contract.
 
+### Diagnostics linkage (normative)
+
+`ThreadEventJsonlRecord.line_number` is the authoritative physical line reference for downstream
+diagnostics and reporting. Acceptance scenarios MUST assert the field’s value (including gaps when
+blank lines are skipped) so tooling can surface precise locations for parse failures and recovery.
+
 ## Data minimization (v1, normative)
 
 To keep the parsing surface safe-by-default and lightweight:

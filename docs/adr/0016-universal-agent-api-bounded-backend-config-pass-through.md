@@ -39,7 +39,7 @@ This is the “final sweep before implementation” for backlog work item `uaa-0
 
 ## Executive Summary (Operator)
 
-ADR_BODY_SHA256: 7624ac7330a8195a7e5e228d7f5f3c351a7d4145741ba3a44d9377ee10fc5c97
+ADR_BODY_SHA256: 9b0a2ca67edd67ca56db41d5203b7f4e3214dcd3ab486dbecfc76964b5ac7330
 
 ### Decision (draft)
 
@@ -191,24 +191,13 @@ Notes:
 
 ### Core: `agent_api.exec.add_dirs.v1` (object)
 
-Schema (closed):
-- Type: object
-- Keys:
-  - `dirs` (array of string, required)
-- Bounds:
-  - `dirs`: 0..=16 entries
-  - each entry: trimmed, non-empty, length 1..=1024 bytes
+This ADR only records the promotion decision that "extra context roots" belongs in a core
+`agent_api.exec.*` key.
 
-Path validation (proposed):
-- `effective working directory` is defined in `docs/specs/universal-agent-api/contract.md` ("Working directory resolution (effective working directory)").
-- Each entry MAY be absolute or relative.
-- If relative, resolve against the run’s effective working directory.
-- Backends SHOULD reject paths that normalize outside the effective working directory (containment
-  check), unless the backend explicitly documents an exception.
-
-Backend mapping:
-- Codex: repeat `--add-dir <dir>` per entry
-- Claude Code: repeat `--add-dir <dir>` per entry
+The concrete schema, absence semantics, path normalization rules, session-flow compatibility, and
+backend mapping for `agent_api.exec.add_dirs.v1` are owned by:
+- `docs/adr/0021-universal-agent-api-add-dirs.md`
+- `docs/specs/universal-agent-api/extensions-spec.md`
 
 Notes:
 - Track in `docs/backlog.json` as `uaa-0003`.
