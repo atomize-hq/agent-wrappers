@@ -68,6 +68,7 @@ fn handle_facet_emitted_once_on_thread_started_and_attached_to_completion() {
         .map_completion(CodexBackendCompletion {
             status: success_exit_status(),
             final_text: None,
+            backend_error_message: None,
             selection_failure_message: None,
         })
         .expect("completion maps");
@@ -108,6 +109,7 @@ fn whitespace_thread_id_is_treated_as_unknown() {
         .map_completion(CodexBackendCompletion {
             status: success_exit_status(),
             final_text: None,
+            backend_error_message: None,
             selection_failure_message: None,
         })
         .expect("completion maps");
@@ -152,6 +154,7 @@ fn oversize_thread_id_is_omitted_and_warns_once() {
         .map_completion(CodexBackendCompletion {
             status: success_exit_status(),
             final_text: None,
+            backend_error_message: None,
             selection_failure_message: None,
         })
         .expect("completion maps");

@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     future::Future,
     pin::Pin,
     task::{Context, Poll},
@@ -92,7 +93,20 @@ pub(super) async fn stream_exec_with_overrides_and_env_overrides_control(
         output_last_message.unwrap_or_else(|| unique_temp_path("codex_last_message_", "txt"));
     let needs_capabilities = output_schema.is_some() || !client.add_dirs.is_empty();
     let capabilities = if needs_capabilities {
-        Some(client.probe_capabilities().await)
+        if env_overrides.is_empty() {
+            Some(client.probe_capabilities_for_current_dir(&dir_path).await)
+        } else {
+            let env_overrides_map: BTreeMap<String, String> =
+                env_overrides.iter().cloned().collect();
+            Some(
+                client
+                    .probe_capabilities_with_env_overrides_for_current_dir(
+                        &env_overrides_map,
+                        &dir_path,
+                    )
+                    .await,
+            )
+        }
     } else {
         None
     };
@@ -292,7 +306,20 @@ pub(super) async fn stream_resume_with_env_overrides_control(
         output_last_message.unwrap_or_else(|| unique_temp_path("codex_last_message_", "txt"));
     let needs_capabilities = output_schema.is_some() || !client.add_dirs.is_empty();
     let capabilities = if needs_capabilities {
-        Some(client.probe_capabilities().await)
+        if env_overrides.is_empty() {
+            Some(client.probe_capabilities_for_current_dir(&dir_path).await)
+        } else {
+            let env_overrides_map: BTreeMap<String, String> =
+                env_overrides.iter().cloned().collect();
+            Some(
+                client
+                    .probe_capabilities_with_env_overrides_for_current_dir(
+                        &env_overrides_map,
+                        &dir_path,
+                    )
+                    .await,
+            )
+        }
     } else {
         None
     };

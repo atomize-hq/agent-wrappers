@@ -85,10 +85,14 @@ streaming wrapper MUST:
 
 Placement rules (pinned):
 
+- For both `stream_exec*` and `stream_resume`, the effective argv layout for accepted model/add-dir
+  inputs MUST remain: wrapper-owned CLI overrides first, then exactly one `--model <trimmed-id>`
+  pair when present, then repeated `--add-dir <dir>` pairs when present.
 - Any accepted `--model <trimmed-id>` pair MUST appear before the first emitted `--add-dir`.
 - The wrapper MUST NOT reorder the normalized directory list while emitting the repeated pairs.
-- Resume runs MUST preserve the same effective add-dir list that a fresh exec run would emit; the
-  wrapper MUST NOT silently drop accepted directories on `stream_resume`.
+- Fresh exec and resume runs MUST emit the same effective repeated `--add-dir <dir>` sequence for
+  the same normalized directory list; the wrapper MUST NOT silently drop accepted directories on
+  `stream_resume`.
 
 Exclusion rules (pinned):
 

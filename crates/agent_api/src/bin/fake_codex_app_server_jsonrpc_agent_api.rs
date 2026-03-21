@@ -1,5 +1,6 @@
 use std::{
     env,
+    fs::OpenOptions,
     io::{self, BufRead, Write},
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -31,6 +32,19 @@ fn write_error(
         err["data"] = data;
     }
     write_json(out, &json!({"jsonrpc":"2.0","id":id,"error":err}))
+}
+
+fn maybe_log_request_method(method: &str) {
+    let Ok(path) = env::var("FAKE_CODEX_APP_SERVER_REQUEST_LOG") else {
+        return;
+    };
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .expect("open FAKE_CODEX_APP_SERVER_REQUEST_LOG");
+    writeln!(file, "{method}").expect("append FAKE_CODEX_APP_SERVER_REQUEST_LOG");
 }
 
 fn main() -> io::Result<()> {
@@ -92,6 +106,7 @@ fn main() -> io::Result<()> {
             .and_then(Value::as_str)
             .unwrap_or_default()
             .to_string();
+        maybe_log_request_method(&method);
 
         let id = msg.get("id").cloned();
         let params = msg.get("params").cloned().unwrap_or(Value::Null);

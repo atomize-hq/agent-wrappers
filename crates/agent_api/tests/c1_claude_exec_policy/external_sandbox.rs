@@ -173,6 +173,7 @@ async fn external_sandbox_help_preflight_failure_returns_backend_error_before_pr
     let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig {
         binary: Some(fake_claude_binary()),
         env: [
+            ("FAKE_CLAUDE_HELP_DELAY_MS".to_string(), "300".to_string()),
             ("FAKE_CLAUDE_HELP_FAIL".to_string(), "1".to_string()),
             ("FAKE_CLAUDE_HELP_FAIL_SECRET".to_string(), secret.clone()),
             (
@@ -190,8 +191,9 @@ async fn external_sandbox_help_preflight_failure_returns_backend_error_before_pr
         ..Default::default()
     });
 
-    let handle = backend
-        .run(AgentWrapperRunRequest {
+    let handle = tokio::time::timeout(
+        Duration::from_millis(100),
+        backend.run(AgentWrapperRunRequest {
             prompt: "hello".to_string(),
             extensions: [(
                 "agent_api.exec.external_sandbox.v1".to_string(),
@@ -200,9 +202,11 @@ async fn external_sandbox_help_preflight_failure_returns_backend_error_before_pr
             .into_iter()
             .collect(),
             ..Default::default()
-        })
-        .await
-        .expect("run yields a handle; preflight failure is surfaced via events/completion");
+        }),
+    )
+    .await
+    .expect("run should return before help preflight completes")
+    .expect("run yields a handle; preflight failure is surfaced via events/completion");
 
     let mut events = handle.events;
     let completion = handle.completion;

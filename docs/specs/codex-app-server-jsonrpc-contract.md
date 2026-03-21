@@ -166,6 +166,12 @@ Required backend behavior (pinned):
   `thread/list`, `thread/fork`, or `turn/start`.
 - The failure MUST be returned directly as:
   - `AgentWrapperError::Backend { message: "add_dirs unsupported for codex fork" }`
+- If the add-dir payload is malformed, out of bounds, missing, or resolves to a missing or
+  non-directory path, the run MUST fail earlier as the exact AD-C03 `InvalidRequest` template
+  (`invalid agent_api.exec.add_dirs.v1`, `invalid agent_api.exec.add_dirs.v1.dirs`, or
+  `invalid agent_api.exec.add_dirs.v1.dirs[<i>]`) instead of the fork-specific backend rejection.
+- Neither the earlier invalid-input path nor the accepted-input fork rejection path may send
+  `thread/list`, `thread/fork`, or `turn/start`.
 - Because no run handle is returned on this path, the backend MUST NOT emit any user-visible event
   stream item for this rejection.
 - Future support for add-dir-on-fork requires a new pinned contract revision that names the exact

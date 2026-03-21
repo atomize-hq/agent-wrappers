@@ -250,9 +250,10 @@ impl CodexClient {
     async fn invoke_codex_exec(&self, request: ExecRequest) -> Result<String, CodexError> {
         let ExecRequest { prompt, overrides } = request;
         let dir_ctx = self.directory_context()?;
+        let dir_path = dir_ctx.path().to_path_buf();
         let needs_capabilities = self.output_schema || !self.add_dirs.is_empty();
         let capabilities = if needs_capabilities {
-            Some(self.probe_capabilities().await)
+            Some(self.probe_capabilities_for_current_dir(&dir_path).await)
         } else {
             None
         };
@@ -268,7 +269,7 @@ impl CodexClient {
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true)
-            .current_dir(dir_ctx.path());
+            .current_dir(&dir_path);
 
         apply_cli_overrides(&mut command, &resolved_overrides, true);
 

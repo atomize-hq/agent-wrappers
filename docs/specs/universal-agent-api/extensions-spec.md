@@ -249,6 +249,8 @@ Schema:
 - Type: object
 - Required keys:
   - `dirs` (array of string)
+- Unknown keys:
+  - invalid in v1 (closed schema)
 - Default when absent: no extra context directories are requested
 
 Meaning:
@@ -258,10 +260,13 @@ Meaning:
   whitespace before validation and mapping.
 - The trimmed value is the effective directory entry for all v1 semantics.
 - Entries MAY be absolute or relative.
-- Relative entries MUST resolve against the run's effective working directory (see `contract.md`).
+- Relative entries MUST resolve against the run's effective working directory (see `contract.md`
+  "Working directory resolution (effective working directory)").
 - There is intentionally no containment requirement that keeps resolved directories under the
   effective working directory.
 - This key is orthogonal to `agent_api.session.resume.v1` and `agent_api.session.fork.v1`.
+  Session selection for those flows remains owned by `AgentWrapperRunRequest.extensions`; this key
+  does not introduce any separate request field or alternate selector surface.
   Backends MUST preserve the same accepted effective add-dir set across new-session, resume, and
   fork decision-making. A selected session flow MUST either apply that set unchanged or take a
   pinned safe backend-rejection path owned by its backend contract; it MUST NOT silently ignore an
@@ -277,8 +282,8 @@ Validation rules:
   `AgentWrapperError::InvalidRequest`.
 - `dirs` MUST be an array; otherwise the backend MUST fail before spawn with
   `AgentWrapperError::InvalidRequest`.
-- `dirs` MUST contain at least 1 and at most 16 entries; otherwise the backend MUST fail before
-  spawn with `AgentWrapperError::InvalidRequest`.
+- `dirs` MUST contain at least 1 and at most 16 entries (`1..=16`); otherwise the backend MUST
+  fail before spawn with `AgentWrapperError::InvalidRequest`.
 - Each `dirs[i]` entry MUST be a string; otherwise the backend MUST fail before spawn with
   `AgentWrapperError::InvalidRequest`.
 - After trimming, each `dirs[i]` entry MUST be non-empty; otherwise the backend MUST fail before
@@ -336,10 +341,21 @@ Runtime rejection behavior (v1, normative):
   - an installed CLI that rejects the required add-dir surface,
   - a backend flow that cannot apply accepted add-dir inputs to the targeted session transport, or
   - any other backend-owned inability to honor the accepted effective directory set.
+- Backend-owned rejection paths for this key apply only to accepted inputs. Malformed, out-of-
+  bounds, missing, or otherwise invalid add-dir payloads MUST still fail as
+  `AgentWrapperError::InvalidRequest` before any backend-owned session-transport rejection path is
+  considered.
 - The `message` MUST be safe/redacted and MUST NOT embed raw backend stdout/stderr.
 - v1 does not pin a universal runtime-rejection message string for add-dir failures.
-- If the backend can determine that inability before spawning its backend surface, it MUST return
-  `AgentWrapperError::Backend { message }` without returning an `AgentWrapperRunHandle`.
+- If the backend can determine that inability before returning an `AgentWrapperRunHandle`, it MUST
+  return `AgentWrapperError::Backend { message }` directly.
+- If the backend discovers that inability during asynchronous startup/preflight after it has
+  already returned an `AgentWrapperRunHandle`, it MUST surface the failure through that handle even
+  if the backend surface was never spawned:
+  - `completion` MUST resolve as `Err(AgentWrapperError::Backend { message })`, and
+  - if the consumer-visible events stream is still open, the backend MUST emit exactly one
+    terminal `AgentWrapperEventKind::Error` event with the same safe/redacted `message` before
+    closing the stream.
 - If such failure occurs after the backend has already returned an `AgentWrapperRunHandle` and the
   consumer-visible events stream is still open, the backend MUST emit exactly one terminal
   `AgentWrapperEventKind::Error` event with the same safe/redacted message before closing the

@@ -3,6 +3,7 @@ use super::*;
 #[cfg(unix)]
 #[tokio::test]
 async fn sandbox_maps_platform_flags_and_command() {
+    let _guard = env_guard_async().await;
     let dir = tempfile::tempdir().unwrap();
     let script_path = write_fake_codex(
         dir.path(),
@@ -58,6 +59,7 @@ printf "%s\n" "$@"
 #[cfg(unix)]
 #[tokio::test]
 async fn sandbox_includes_log_denials_on_macos() {
+    let _guard = env_guard_async().await;
     let dir = tempfile::tempdir().unwrap();
     let script_path = write_fake_codex(
         dir.path(),
@@ -85,6 +87,7 @@ printf "%s\n" "$@"
 #[cfg(unix)]
 #[tokio::test]
 async fn sandbox_honors_working_dir_precedence() {
+    let _guard = env_guard_async().await;
     let dir = tempfile::tempdir().unwrap();
     let script_path = write_fake_codex(
         dir.path(),
@@ -151,6 +154,7 @@ echo "$PWD"
 #[cfg(unix)]
 #[tokio::test]
 async fn sandbox_returns_non_zero_status_without_error() {
+    let _guard = env_guard_async().await;
     let dir = tempfile::tempdir().unwrap();
     let script_path = write_fake_codex(
         dir.path(),
@@ -181,6 +185,7 @@ exit 7
 #[cfg(unix)]
 #[tokio::test]
 async fn execpolicy_maps_policies_and_overrides() {
+    let _guard = env_guard_async().await;
     let dir = tempfile::tempdir().unwrap();
     let script_path = dir.path().join("codex-execpolicy");
     std_fs::write(
@@ -269,6 +274,7 @@ JSON
 
 #[tokio::test]
 async fn execpolicy_rejects_empty_command() {
+    let _guard = env_guard_async().await;
     let client = CodexClient::builder().build();
     let request = ExecPolicyCheckRequest::new(Vec::<OsString>::new());
     let err = client.check_execpolicy(request).await.unwrap_err();
@@ -278,6 +284,7 @@ async fn execpolicy_rejects_empty_command() {
 #[cfg(unix)]
 #[tokio::test]
 async fn execpolicy_surfaces_parse_errors() {
+    let _guard = env_guard_async().await;
     let dir = tempfile::tempdir().unwrap();
     let script_path = dir.path().join("codex-execpolicy-bad");
     std_fs::write(
@@ -313,6 +320,7 @@ echo "not-json"
 
 #[tokio::test]
 async fn sandbox_rejects_empty_command() {
+    let _guard = env_guard_async().await;
     let client = CodexClient::builder().build();
     let request = SandboxCommandRequest::new(SandboxPlatform::Linux, Vec::<OsString>::new());
     let err = client.run_sandbox(request).await.unwrap_err();

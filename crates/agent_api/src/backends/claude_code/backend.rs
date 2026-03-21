@@ -3,7 +3,7 @@ use std::{collections::BTreeSet, future::Future, pin::Pin, sync::Arc};
 use super::{
     harness::new_harness_adapter, mcp_management, ClaudeCodeBackend, AGENT_KIND,
     CAP_ARTIFACTS_FINAL_TEXT_V1, CAP_SESSION_HANDLE_V1, CAP_TOOLS_RESULTS_V1,
-    CAP_TOOLS_STRUCTURED_V1, EXT_EXTERNAL_SANDBOX_V1, EXT_NON_INTERACTIVE,
+    CAP_TOOLS_STRUCTURED_V1, EXT_ADD_DIRS_V1, EXT_EXTERNAL_SANDBOX_V1, EXT_NON_INTERACTIVE,
 };
 use crate::{
     backend_harness::BackendDefaults,
@@ -47,6 +47,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
         ids.insert(CAP_ARTIFACTS_FINAL_TEXT_V1.to_string());
         ids.insert(CAP_SESSION_HANDLE_V1.to_string());
         ids.insert("backend.claude_code.print_stream_json".to_string());
+        ids.insert(EXT_ADD_DIRS_V1.to_string());
         ids.insert(EXT_NON_INTERACTIVE.to_string());
         ids.insert(EXT_SESSION_RESUME_V1.to_string());
         ids.insert(EXT_SESSION_FORK_V1.to_string());
@@ -176,9 +177,11 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
     {
         let config = self.config.clone();
         let allow_flag_preflight = Arc::clone(&self.allow_flag_preflight);
+        let run_start_cwd = std::env::current_dir().ok();
         Box::pin(async move {
             let adapter = Arc::new(new_harness_adapter(
                 config.clone(),
+                run_start_cwd,
                 None,
                 allow_flag_preflight,
             ));
@@ -187,7 +190,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
                 default_timeout: config.default_timeout,
             };
 
-            crate::backend_harness::run_harnessed_backend(adapter, defaults, request)
+            crate::backend_harness::run_harnessed_backend(adapter, defaults, request).await
         })
     }
 
@@ -208,6 +211,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
 
         let config = self.config.clone();
         let allow_flag_preflight = Arc::clone(&self.allow_flag_preflight);
+        let run_start_cwd = std::env::current_dir().ok();
         Box::pin(async move {
             let termination_state = Arc::new(super::super::termination::TerminationState::new());
             let request_termination: Option<Arc<dyn Fn() + Send + Sync + 'static>> = Some({
@@ -217,6 +221,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
 
             let adapter = Arc::new(new_harness_adapter(
                 config.clone(),
+                run_start_cwd,
                 Some(termination_state),
                 allow_flag_preflight,
             ));
@@ -231,6 +236,7 @@ impl AgentWrapperBackend for ClaudeCodeBackend {
                 request,
                 request_termination,
             )
+            .await
         })
     }
 }

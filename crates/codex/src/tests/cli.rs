@@ -3,6 +3,7 @@ use super::*;
 #[cfg(unix)]
 #[tokio::test]
 async fn features_list_maps_overrides_and_json_flag() {
+    let _guard = env_guard_async().await;
     let dir = tempfile::tempdir().unwrap();
     let script_path = write_fake_codex(
         dir.path(),
@@ -70,6 +71,7 @@ JSON
 #[cfg(unix)]
 #[tokio::test]
 async fn supports_help_review_fork_resume_and_features_commands() {
+    let _guard = env_guard_async().await;
     let dir = tempfile::tempdir().unwrap();
     let script_path = write_fake_codex(
         dir.path(),

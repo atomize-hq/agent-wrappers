@@ -13,6 +13,7 @@ fn codex_backend_reports_required_capabilities() {
     assert!(capabilities.contains(CAP_ARTIFACTS_FINAL_TEXT_V1));
     assert!(capabilities.contains(CAP_SESSION_HANDLE_V1));
     assert!(capabilities.contains("backend.codex.exec_stream"));
+    assert!(capabilities.contains(EXT_ADD_DIRS_V1));
     assert!(capabilities.contains(EXT_NON_INTERACTIVE));
     assert!(!capabilities.contains(EXT_EXTERNAL_SANDBOX_V1));
     assert!(capabilities.contains(EXT_CODEX_APPROVAL_POLICY));

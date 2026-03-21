@@ -102,7 +102,6 @@ impl BackendHarnessAdapter for ToyAdapter {
             })
         })
     }
-
     fn map_event(&self, event: Self::BackendEvent) -> Vec<AgentWrapperEvent> {
         match event {
             ToyEvent::Text(text) => vec![AgentWrapperEvent {

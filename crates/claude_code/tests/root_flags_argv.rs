@@ -122,3 +122,32 @@ fn stream_json_output_implies_verbose_flag() {
         .argv();
     assert!(idx(&argv, "--verbose").is_some());
 }
+
+#[test]
+fn dangerous_skip_allow_flag_precedes_add_dir_group() {
+    let argv = ClaudePrintRequest::new("hello")
+        .output_format(claude_code::ClaudeOutputFormat::StreamJson)
+        .dangerously_skip_permissions(true)
+        .allow_dangerously_skip_permissions(true)
+        .add_dirs(["/tmp/alpha", "/tmp/beta"])
+        .argv();
+
+    let dangerous_idx = idx(&argv, "--dangerously-skip-permissions").expect("dangerous skip");
+    let allow_idx = idx(&argv, "--allow-dangerously-skip-permissions").expect("allow flag");
+    let add_dir_idx = idx(&argv, "--add-dir").expect("add-dir");
+    let verbose_idx = idx(&argv, "--verbose").expect("verbose");
+    let prompt_idx = idx(&argv, "hello").expect("prompt");
+
+    assert!(
+        dangerous_idx < allow_idx,
+        "dangerous skip should precede allow flag"
+    );
+    assert!(allow_idx < add_dir_idx, "allow flag should precede add-dir");
+    assert_eq!(
+        &argv[(add_dir_idx + 1)..(add_dir_idx + 3)],
+        ["/tmp/alpha".to_string(), "/tmp/beta".to_string()],
+        "add-dir values should follow the single variadic flag in order"
+    );
+    assert!(add_dir_idx < verbose_idx, "add-dir should precede verbose");
+    assert!(verbose_idx < prompt_idx, "verbose should precede prompt");
+}

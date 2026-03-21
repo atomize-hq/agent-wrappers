@@ -10,13 +10,14 @@ use codex::{CodexError, ExecStreamError, ExecStreamRequest, ThreadEvent};
 use futures_util::future::poll_fn;
 use tokio::sync::oneshot;
 
-use crate::backend_harness::BackendSpawn;
+use crate::{backend_harness::BackendSpawn, backends::spawn_path::resolve_effective_working_dir};
 
 pub(super) struct ExecFlowRequest {
     pub(super) config: super::CodexBackendConfig,
     pub(super) run_start_cwd: Option<PathBuf>,
     pub(super) termination:
         Option<Arc<super::super::termination::TerminationState<super::CodexTerminationHandle>>>,
+    pub(super) add_dirs: Vec<PathBuf>,
     pub(super) non_interactive: bool,
     pub(super) external_sandbox: bool,
     pub(super) approval_policy: Option<super::CodexApprovalPolicy>,
@@ -32,6 +33,7 @@ pub(super) struct ExecFlowRequest {
 struct CodexStreamState {
     saw_thread_id: bool,
     saw_stream_error: bool,
+    backend_error_message: Option<String>,
     last_transport_error_code: Option<String>,
     last_transport_error_message: Option<String>,
 }
@@ -40,6 +42,20 @@ struct CodexStreamState {
 enum CodexTailEvent {
     NonZeroExit { status: ExitStatus },
     TerminalError { message: String },
+}
+
+fn snapshot_backend_error_message(
+    stream_state: &Arc<Mutex<CodexStreamState>>,
+    has_add_dirs: bool,
+) -> Option<String> {
+    if has_add_dirs {
+        stream_state
+            .lock()
+            .ok()
+            .and_then(|snapshot| snapshot.backend_error_message.clone())
+    } else {
+        None
+    }
 }
 
 fn is_unknown_bypass_flag_stderr(stderr: &str) -> bool {
@@ -92,6 +108,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
         config,
         run_start_cwd,
         termination,
+        add_dirs,
         non_interactive,
         external_sandbox,
         approval_policy,
@@ -128,14 +145,36 @@ pub(super) async fn spawn_exec_or_resume_flow(
         builder = builder.codex_home(codex_home.clone());
     }
 
-    let working_dir = working_dir
-        .or_else(|| config.default_working_dir.clone())
-        .or(run_start_cwd)
-        .ok_or(super::CodexBackendError::WorkingDirectoryUnresolved)?;
+    if let Some(model) = config.model.as_ref() {
+        builder = builder.model(model.clone());
+    }
+
+    let working_dir = resolve_effective_working_dir(
+        working_dir.as_deref(),
+        config.default_working_dir.as_deref(),
+        run_start_cwd.as_deref(),
+    )
+    .ok_or(super::CodexBackendError::WorkingDirectoryUnresolved)?;
     builder = builder.working_dir(working_dir);
+
+    let has_add_dirs = !add_dirs.is_empty();
+    if has_add_dirs {
+        let probe_client = builder.clone().build();
+        let capabilities = probe_client
+            .probe_capabilities_with_env_overrides(&env)
+            .await;
+        if !capabilities.guard_add_dir().is_supported() {
+            return Err(super::CodexBackendError::AddDirsRejectedByRuntime);
+        }
+        builder = builder.capability_feature_hints(codex::CodexFeatureFlags {
+            supports_add_dir: true,
+            ..Default::default()
+        });
+    }
 
     // Codex wrapper treats `Duration::ZERO` as “no timeout”.
     builder = builder.timeout(effective_timeout.unwrap_or(Duration::ZERO));
+    builder = builder.add_dirs(add_dirs);
 
     let client = builder.build();
 
@@ -195,22 +234,34 @@ pub(super) async fn spawn_exec_or_resume_flow(
 
     tokio::spawn(async move {
         let outcome = completion.await;
-        if resume_selector.is_some() {
+        if resume_selector.is_some() || has_add_dirs {
             let _ = events_done_rx.await;
         }
 
         match outcome {
             Ok(exec_completion) => {
                 let status = exec_completion.status;
+                let backend_error_message =
+                    snapshot_backend_error_message(&stream_state_for_completion, has_add_dirs);
+                let tail = backend_error_message
+                    .clone()
+                    .map(|message| CodexTailEvent::TerminalError { message });
                 let completion = super::CodexBackendCompletion {
                     status,
-                    final_text: exec_completion.last_message,
+                    final_text: if backend_error_message.is_some() {
+                        None
+                    } else {
+                        exec_completion.last_message
+                    },
+                    backend_error_message,
                     selection_failure_message: None,
                 };
                 let _ = completion_tx.send(Ok(completion));
-                let _ = tail_tx.send(None);
+                let _ = tail_tx.send(tail);
             }
             Err(ExecStreamError::Codex(CodexError::NonZeroExit { status, stderr })) => {
+                let backend_error_message =
+                    snapshot_backend_error_message(&stream_state_for_completion, has_add_dirs);
                 let bypass_flag_unsupported_message =
                     if external_sandbox && is_unknown_bypass_flag_stderr(&stderr) {
                         Some(super::PINNED_EXTERNAL_SANDBOX_FLAG_UNSUPPORTED.to_string())
@@ -218,35 +269,43 @@ pub(super) async fn spawn_exec_or_resume_flow(
                         None
                     };
 
-                let selection_failure_message = bypass_flag_unsupported_message.or_else(|| {
-                    resume_selector.as_ref().and_then(|selector| {
-                        let snapshot = stream_state_for_completion.lock().ok()?;
-                        if snapshot.saw_thread_id || snapshot.saw_stream_error {
-                            return None;
-                        }
+                let selection_failure_message = if backend_error_message.is_some() {
+                    None
+                } else {
+                    bypass_flag_unsupported_message.or_else(|| {
+                        resume_selector.as_ref().and_then(|selector| {
+                            let snapshot = stream_state_for_completion.lock().ok()?;
+                            if snapshot.saw_thread_id || snapshot.saw_stream_error {
+                                return None;
+                            }
 
-                        let stderr_not_found = super::is_not_found_signal(&stderr);
-                        let transport_message_not_found = snapshot
-                            .last_transport_error_message
-                            .as_deref()
-                            .is_some_and(super::is_not_found_signal);
-                        let transport_code_not_found = snapshot
-                            .last_transport_error_code
-                            .as_deref()
-                            .is_some_and(super::is_not_found_signal);
+                            let stderr_not_found = super::is_not_found_signal(&stderr);
+                            let transport_message_not_found = snapshot
+                                .last_transport_error_message
+                                .as_deref()
+                                .is_some_and(super::is_not_found_signal);
+                            let transport_code_not_found = snapshot
+                                .last_transport_error_code
+                                .as_deref()
+                                .is_some_and(super::is_not_found_signal);
 
-                        if stderr_not_found
-                            || transport_message_not_found
-                            || transport_code_not_found
-                        {
-                            Some(super::pinned_selection_failure_message(selector).to_string())
-                        } else {
-                            None
-                        }
+                            if stderr_not_found
+                                || transport_message_not_found
+                                || transport_code_not_found
+                            {
+                                Some(super::pinned_selection_failure_message(selector).to_string())
+                            } else {
+                                None
+                            }
+                        })
                     })
-                });
+                };
 
-                let tail = if let Some(message) = selection_failure_message.clone() {
+                let terminal_message = backend_error_message
+                    .clone()
+                    .or_else(|| selection_failure_message.clone());
+
+                let tail = if let Some(message) = terminal_message {
                     CodexTailEvent::TerminalError { message }
                 } else {
                     CodexTailEvent::NonZeroExit { status }
@@ -255,6 +314,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
                 let completion = super::CodexBackendCompletion {
                     status,
                     final_text: None,
+                    backend_error_message,
                     selection_failure_message,
                 };
                 let _ = completion_tx.send(Ok(completion));
@@ -274,6 +334,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
             Some(events_done_tx),
             Some(tail_rx),
             suppress_transport_errors,
+            has_add_dirs,
             false,
         ),
         |(
@@ -282,18 +343,31 @@ pub(super) async fn spawn_exec_or_resume_flow(
             mut events_done_tx,
             mut tail_rx,
             suppress_transport_errors,
+            has_add_dirs,
             tail_emitted,
         )| async move {
             loop {
                 let item = poll_fn(|cx| events.as_mut().poll_next(cx)).await;
                 match item {
                     Some(Ok(thread_ev)) => {
+                        let suppress_add_dirs_runtime_rejection = has_add_dirs
+                            && matches!(
+                                &thread_ev,
+                                ThreadEvent::Error(err)
+                                    if super::is_add_dirs_runtime_rejection_signal(
+                                        err.message.as_str()
+                                    )
+                            );
+
                         if let Ok(mut snapshot) = stream_state.lock() {
                             if thread_ev.thread_id().is_some() {
                                 snapshot.saw_thread_id = true;
                             }
 
-                            if suppress_transport_errors
+                            if suppress_add_dirs_runtime_rejection {
+                                snapshot.backend_error_message =
+                                    Some(super::PINNED_ADD_DIRS_RUNTIME_REJECTION.to_string());
+                            } else if suppress_transport_errors
                                 && matches!(thread_ev, ThreadEvent::Error(_))
                             {
                                 if let ThreadEvent::Error(err) = &thread_ev {
@@ -304,7 +378,10 @@ pub(super) async fn spawn_exec_or_resume_flow(
                             }
                         }
 
-                        if suppress_transport_errors && matches!(thread_ev, ThreadEvent::Error(_)) {
+                        if suppress_add_dirs_runtime_rejection
+                            || (suppress_transport_errors
+                                && matches!(thread_ev, ThreadEvent::Error(_)))
+                        {
                             continue;
                         }
 
@@ -316,6 +393,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
                                 events_done_tx,
                                 tail_rx,
                                 suppress_transport_errors,
+                                has_add_dirs,
                                 tail_emitted,
                             ),
                         ));
@@ -333,6 +411,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
                                 events_done_tx,
                                 tail_rx,
                                 suppress_transport_errors,
+                                has_add_dirs,
                                 tail_emitted,
                             ),
                         ));
@@ -368,6 +447,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
                                 events_done_tx,
                                 tail_rx,
                                 suppress_transport_errors,
+                                has_add_dirs,
                                 true,
                             ),
                         ));
