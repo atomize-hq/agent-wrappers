@@ -1,8 +1,8 @@
 ---
 seam_id: SEAM-3
 seam_slug: codex-mapping
-status: decomposed
-execution_horizon: active
+status: closed
+execution_horizon: future
 plan_version: v1
 basis:
   currentness: current
@@ -18,16 +18,16 @@ basis:
     - Codex fork transport gains model selection support
 gates:
   pre_exec:
-    review: pending
-    contract: pending
+    review: passed
+    contract: passed
     revalidation: passed
   post_exec:
-    landing: pending
-    closeout: pending
+    landing: passed
+    closeout: passed
 seam_exit_gate:
   required: true
-  planned_location: reserved_final_slice
-  status: pending
+  planned_location: S4
+  status: passed
 open_remediations: []
 ---
 # SEAM-3 - Codex backend mapping (Activated)

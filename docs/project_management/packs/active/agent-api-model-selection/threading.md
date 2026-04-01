@@ -133,9 +133,9 @@ This document is authoritative for:
   - **Consumer seam(s)**: `SEAM-5`
   - **Carried contract IDs**: `C-02`, `C-04`, `C-06`, `C-09`
   - **Purpose**: make Codex mapping deterministic (exactly-one `--model`, correct ordering, fork rejection, safe runtime rejection).
-  - **State**: identified
+  - **State**: published
   - **Revalidation trigger**: Codex builder/argv construction changes; fork transport gains a model field.
-  - **Satisfied by**: Codex mapping tests for exec/resume ordering plus runtime rejection scenario coverage.
+  - **Satisfied by**: Codex mapping tests for exec/resume ordering and policy fork rejection (commits `653c6e8`, `7b3a8a2`) plus runtime rejection parity coverage (commit `3f8b649`).
   - **Notes**: SEAM-3 must not add a second raw parse site.
 
 - **Thread ID**: `THR-05`
