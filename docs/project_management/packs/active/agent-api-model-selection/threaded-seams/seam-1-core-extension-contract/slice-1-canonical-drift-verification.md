@@ -3,7 +3,7 @@ slice_id: S1
 seam_id: SEAM-1
 slice_kind: delivery
 execution_horizon: active
-status: decomposed
+status: exec-ready
 plan_version: v1
 basis:
   currentness: current
@@ -56,4 +56,3 @@ candidate_subslices: []
 Checklist:
 - Validate: compared sources list matches the seam brief
 - Validate: result is recorded under the pack seam brief (`../../seam-1-core-extension-contract.md`)
-

@@ -3,7 +3,7 @@ slice_id: S2
 seam_id: SEAM-1
 slice_kind: delivery
 execution_horizon: active
-status: decomposed
+status: exec-ready
 plan_version: v1
 basis:
   currentness: current
@@ -53,4 +53,3 @@ candidate_subslices: []
 
 - **Outcome**: verification record cites a commit hash or PR URL and is usable by downstream seams.
 - **Thread/contract refs**: `THR-01`
-

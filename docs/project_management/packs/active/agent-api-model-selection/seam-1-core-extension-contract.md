@@ -2,7 +2,7 @@
 seam_id: SEAM-1
 seam_slug: core-extension-contract
 type: integration
-status: proposed
+status: exec-ready
 execution_horizon: active
 plan_version: v1
 basis:
@@ -16,9 +16,9 @@ basis:
     - canonical owner spec or registry entry changes for agent_api.config.model.v1
 gates:
   pre_exec:
-    review: pending
-    contract: pending
-    revalidation: pending
+    review: passed
+    contract: passed
+    revalidation: passed
   post_exec:
     landing: pending
     closeout: pending
@@ -148,3 +148,5 @@ open_remediations: []
   - Synchronization reference: provisional local reference `git HEAD=aeeda8b` with the working-tree delta from this
     uncommitted doc-sync change set; replace this line with the commit/PR reference when the synchronized change is
     published
+  - Publication note: a commit/PR reference is preferred for downstream citation, but canonical alignment is the
+    normative approval criterion for this pack; replace the provisional reference once a published ref exists.

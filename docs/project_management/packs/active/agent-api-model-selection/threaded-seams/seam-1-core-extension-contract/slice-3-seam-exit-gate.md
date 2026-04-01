@@ -3,7 +3,7 @@ slice_id: S3
 seam_id: SEAM-1
 slice_kind: seam_exit_gate
 execution_horizon: active
-status: decomposed
+status: exec-ready
 plan_version: v1
 basis:
   currentness: current
@@ -47,4 +47,3 @@ This is the dedicated final seam-exit slice for SEAM-1. It does not hide unfinis
 Checklist:
 - Validate: closeout file updated: `../../governance/seam-1-closeout.md`
 - Validate: remediation log updated if needed: `../../governance/remediation-log.md`
-

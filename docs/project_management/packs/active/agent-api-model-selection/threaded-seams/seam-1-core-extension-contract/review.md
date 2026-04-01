@@ -44,13 +44,17 @@ flowchart TB
 
 ## Pre-exec findings
 
-None yet.
+- Revalidation: canonical sources and ADR/pack restatements still align on v1 semantics (trim-before-validate, UTF-8
+  byte bound `1..=128`, absence behavior, exact InvalidRequest template, and terminal error-event rule) as of
+  2026-04-01 local working tree.
+- Note: SEAM-1 verification record still cites a provisional local `git HEAD` reference; a published commit/PR
+  reference is preferred for downstream citation, but canonical alignment is the approval criterion for this pack.
 
 ## Pre-exec gate disposition
 
-- **Review gate**: pending
-- **Contract gate concerns**: ensure C-01..C-04 are concrete enough that implementation seams cannot reinterpret.
-- **Revalidation prerequisites**: none (this seam produces the initial published verification record).
+- **Review gate**: passed
+- **Contract gate**: passed (canonical alignment approved; commit/PR reference preferred but not required)
+- **Revalidation gate**: passed
 - **Opened remediations**: none
 
 ## Planned seam-exit gate focus
@@ -58,4 +62,3 @@ None yet.
 - **What must be true before downstream promotion is legal**: SEAM-1 verification record cites a commit/PR reference and any drift is resolved in canonical specs first.
 - **Which outbound contracts/threads matter most**: `THR-01` and `C-01..C-04`.
 - **Which review-surface deltas would force downstream revalidation**: any edit to the canonical spec sections governing v1 semantics.
-

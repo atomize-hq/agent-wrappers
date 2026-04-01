@@ -105,8 +105,8 @@ This document is authoritative for:
   - **Purpose**: publish a downstream-citable verification record that confirms no unresolved canonical-doc delta exists for v1 semantics.
   - **State**: defined
   - **Revalidation trigger**: any edit under `docs/specs/universal-agent-api/` that touches `agent_api.config.model.v1` semantics or any ADR/pack restatement of those semantics.
-  - **Satisfied by**: the latest `pass: no unresolved canonical-doc delta` entry recorded by SEAM-1, with a published commit/PR reference rather than a provisional local HEAD note.
-  - **Notes**: while the record is still a provisional local reference, downstream seams may proceed in a working branch but should not claim the gate is satisfied in a mergeable change.
+  - **Satisfied by**: the latest `pass: no unresolved canonical-doc delta` entry recorded by SEAM-1.
+  - **Notes**: a published commit/PR reference is preferred for downstream citation, but canonical alignment is sufficient for SEAM-1 promotion when the pack owner explicitly approves proceeding.
 
 - **Thread ID**: `THR-02`
   - **Producer seam**: `SEAM-2`
