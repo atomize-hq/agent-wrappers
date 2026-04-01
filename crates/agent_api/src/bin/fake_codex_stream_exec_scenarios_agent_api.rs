@@ -750,6 +750,23 @@ fn main() -> io::Result<()> {
             emit_add_dirs_runtime_rejection(&mut out)?;
             std::process::exit(runtime_rejection_exit_code()?);
         }
+        "model_runtime_rejection_after_thread_started" => {
+            let secret =
+                require_env_var(&mut out, "FAKE_CODEX_MODEL_RUNTIME_REJECTION_SECRET")?;
+            let model = flag_value(&args, "--model").unwrap_or("<missing>");
+
+            emit_jsonl(
+                &mut out,
+                r#"{"type":"thread.started","thread_id":"thread-1"}"#,
+            )?;
+            emit_jsonl(
+                &mut out,
+                &format!(
+                    r#"{{"type":"error","message":"unknown model: {model} ({secret})","code":"model_runtime_rejection"}}"#
+                ),
+            )?;
+            std::process::exit(runtime_rejection_exit_code()?);
+        }
         _ => {
             emit_jsonl(
                 &mut out,

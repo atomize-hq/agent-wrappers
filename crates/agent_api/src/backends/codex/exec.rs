@@ -47,16 +47,49 @@ enum CodexTailEvent {
 
 fn snapshot_backend_error_message(
     stream_state: &Arc<Mutex<CodexStreamState>>,
-    has_add_dirs: bool,
 ) -> Option<String> {
-    if has_add_dirs {
-        stream_state
-            .lock()
-            .ok()
-            .and_then(|snapshot| snapshot.backend_error_message.clone())
-    } else {
-        None
+    stream_state
+        .lock()
+        .ok()
+        .and_then(|snapshot| snapshot.backend_error_message.clone())
+}
+
+fn is_model_runtime_rejection_signal(
+    code: Option<&str>,
+    message: &str,
+    requested_model_id: &str,
+) -> bool {
+    if code == Some("model_runtime_rejection") {
+        return true;
     }
+
+    if message.contains(requested_model_id)
+        || message
+            .to_ascii_lowercase()
+            .contains(&requested_model_id.to_ascii_lowercase())
+    {
+        return true;
+    }
+
+    let lower = message.to_ascii_lowercase();
+    if !lower.contains("model") {
+        return false;
+    }
+
+    const SIGNALS: &[&str] = &[
+        "unknown",
+        "not found",
+        "unavailable",
+        "unauthorized",
+        "forbidden",
+        "unsupported",
+        "not allowed",
+        "invalid",
+        "rejected",
+        "cannot",
+        "can't",
+    ];
+    SIGNALS.iter().any(|signal| lower.contains(signal))
 }
 
 fn is_unknown_bypass_flag_stderr(stderr: &str) -> bool {
@@ -121,6 +154,8 @@ pub(super) async fn spawn_exec_or_resume_flow(
         effective_timeout,
         env,
     } = req;
+
+    let requested_model_id = model_id.clone();
 
     let mut builder = codex::CodexClient::builder()
         .json(true)
@@ -246,7 +281,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
             Ok(exec_completion) => {
                 let status = exec_completion.status;
                 let backend_error_message =
-                    snapshot_backend_error_message(&stream_state_for_completion, has_add_dirs);
+                    snapshot_backend_error_message(&stream_state_for_completion);
                 let tail = backend_error_message
                     .clone()
                     .map(|message| CodexTailEvent::TerminalError { message });
@@ -265,7 +300,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
             }
             Err(ExecStreamError::Codex(CodexError::NonZeroExit { status, stderr })) => {
                 let backend_error_message =
-                    snapshot_backend_error_message(&stream_state_for_completion, has_add_dirs);
+                    snapshot_backend_error_message(&stream_state_for_completion);
                 let bypass_flag_unsupported_message =
                     if external_sandbox && is_unknown_bypass_flag_stderr(&stderr) {
                         Some(super::PINNED_EXTERNAL_SANDBOX_FLAG_UNSUPPORTED.to_string())
@@ -339,6 +374,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
             Some(tail_rx),
             suppress_transport_errors,
             has_add_dirs,
+            requested_model_id,
             false,
         ),
         |(
@@ -348,6 +384,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
             mut tail_rx,
             suppress_transport_errors,
             has_add_dirs,
+            requested_model_id,
             tail_emitted,
         )| async move {
             loop {
@@ -363,6 +400,19 @@ pub(super) async fn spawn_exec_or_resume_flow(
                                     )
                             );
 
+                        let suppress_model_runtime_rejection =
+                            requested_model_id.as_deref().is_some_and(|requested| {
+                                matches!(
+                                    &thread_ev,
+                                    ThreadEvent::Error(err)
+                                        if is_model_runtime_rejection_signal(
+                                            err.code.as_deref(),
+                                            err.message.as_str(),
+                                            requested
+                                        )
+                                )
+                            });
+
                         if let Ok(mut snapshot) = stream_state.lock() {
                             if thread_ev.thread_id().is_some() {
                                 snapshot.saw_thread_id = true;
@@ -371,6 +421,11 @@ pub(super) async fn spawn_exec_or_resume_flow(
                             if suppress_add_dirs_runtime_rejection {
                                 snapshot.backend_error_message =
                                     Some(super::PINNED_ADD_DIRS_RUNTIME_REJECTION.to_string());
+                            } else if suppress_model_runtime_rejection
+                                && snapshot.backend_error_message.is_none()
+                            {
+                                snapshot.backend_error_message =
+                                    Some(super::PINNED_MODEL_RUNTIME_REJECTION.to_string());
                             } else if suppress_transport_errors
                                 && matches!(thread_ev, ThreadEvent::Error(_))
                             {
@@ -383,6 +438,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
                         }
 
                         if suppress_add_dirs_runtime_rejection
+                            || suppress_model_runtime_rejection
                             || (suppress_transport_errors
                                 && matches!(thread_ev, ThreadEvent::Error(_)))
                         {
@@ -398,6 +454,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
                                 tail_rx,
                                 suppress_transport_errors,
                                 has_add_dirs,
+                                requested_model_id,
                                 tail_emitted,
                             ),
                         ));
@@ -416,6 +473,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
                                 tail_rx,
                                 suppress_transport_errors,
                                 has_add_dirs,
+                                requested_model_id,
                                 tail_emitted,
                             ),
                         ));
@@ -452,6 +510,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
                                 tail_rx,
                                 suppress_transport_errors,
                                 has_add_dirs,
+                                requested_model_id,
                                 true,
                             ),
                         ));
