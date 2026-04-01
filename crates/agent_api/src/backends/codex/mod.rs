@@ -30,6 +30,7 @@ impl CodexBackend {
 
 const PINNED_APPROVAL_REQUIRED: &str = "approval required";
 const PINNED_ADD_DIRS_UNSUPPORTED_FOR_FORK: &str = "add_dirs unsupported for codex fork";
+const PINNED_MODEL_OVERRIDE_UNSUPPORTED_FOR_FORK: &str = "model override unsupported for codex fork";
 const PINNED_ADD_DIRS_RUNTIME_REJECTION: &str = "add_dirs rejected by runtime";
 const PINNED_TIMEOUT: &str = "codex backend error: timeout (details redacted when unsafe)";
 const PINNED_NO_SESSION_FOUND: &str = "no session found";

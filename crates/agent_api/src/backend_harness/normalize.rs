@@ -73,6 +73,12 @@ fn normalize_model_id_v1(raw: Option<&Value>) -> Result<Option<String>, AgentWra
     Ok(Some(trimmed.to_string()))
 }
 
+pub(crate) fn accepted_model_override_v1(
+    request: &AgentWrapperRunRequest,
+) -> Result<bool, AgentWrapperError> {
+    Ok(normalize_model_id_v1(request.extensions.get(MODEL_ID_KEY))?.is_some())
+}
+
 pub(crate) fn normalize_add_dirs_v1(
     raw: Option<&Value>,
     effective_working_dir: Option<&Path>,

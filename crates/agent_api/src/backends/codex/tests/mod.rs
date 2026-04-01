@@ -4,6 +4,7 @@ mod capabilities;
 mod external_sandbox;
 mod mapping;
 mod model_mapping;
+mod policy_model_override;
 mod policy_add_dirs;
 mod run_start_cwd_capture;
 mod session_handle;

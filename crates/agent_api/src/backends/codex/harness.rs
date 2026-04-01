@@ -20,8 +20,8 @@ use super::{
 };
 use crate::{
     backend_harness::{
-        normalize_add_dirs_v1, BackendHarnessAdapter, BackendHarnessErrorPhase, BackendSpawn,
-        DynBackendEventStream, NormalizedRequest,
+        accepted_model_override_v1, normalize_add_dirs_v1, BackendHarnessAdapter,
+        BackendHarnessErrorPhase, BackendSpawn, DynBackendEventStream, NormalizedRequest,
     },
     backends::spawn_path::resolve_effective_working_dir,
     AgentWrapperCompletion, AgentWrapperError, AgentWrapperEvent, AgentWrapperEventKind,
@@ -291,6 +291,12 @@ impl BackendHarnessAdapter for CodexHarnessAdapter {
         let fork = super::fork::extract_fork_selector_v1(request)?;
 
         validate_resume_fork_mutual_exclusion(&request.extensions)?;
+
+        if fork.is_some() && accepted_model_override_v1(request)? {
+            return Err(AgentWrapperError::Backend {
+                message: super::PINNED_MODEL_OVERRIDE_UNSUPPORTED_FOR_FORK.to_string(),
+            });
+        }
 
         if fork.is_some() && !exec_policy.add_dirs.is_empty() {
             return Err(AgentWrapperError::Backend {
