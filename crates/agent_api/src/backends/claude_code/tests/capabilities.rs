@@ -5,6 +5,12 @@ use tempfile::tempdir;
 use super::support::*;
 
 #[test]
+fn claude_backend_does_not_advertise_agent_api_config_model_v1() {
+    let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig::default());
+    assert!(!backend.capabilities().contains("agent_api.config.model.v1"));
+}
+
+#[test]
 fn claude_backend_reports_required_capabilities() {
     let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig::default());
     let capabilities = backend.capabilities();

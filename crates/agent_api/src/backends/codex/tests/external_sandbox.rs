@@ -5,6 +5,14 @@ use serde_json::json;
 use std::path::{Component, Path, Prefix};
 
 #[test]
+fn codex_harness_supported_extension_keys_do_not_include_agent_api_config_model_v1() {
+    let adapter = test_adapter();
+    assert!(!adapter
+        .supported_extension_keys()
+        .contains(&"agent_api.config.model.v1"));
+}
+
+#[test]
 fn codex_backend_does_not_advertise_external_sandbox_exec_by_default() {
     assert!(!CodexBackendConfig::default().allow_external_sandbox_exec);
 

@@ -1,5 +1,9 @@
-use std::collections::BTreeMap;
-use std::time::Duration;
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 use serde_json::{json, Value};
 
@@ -16,6 +20,20 @@ use crate::{AgentWrapperCompletion, AgentWrapperError, AgentWrapperRunRequest};
 
 mod c02_add_dirs;
 mod c03_timeout;
+
+const MODEL_ID_KEY: &str = "agent_api.config.model.v1";
+
+fn collect_rs_files(dir: &Path, files: &mut Vec<PathBuf>) {
+    for entry in fs::read_dir(dir).expect("read source directory") {
+        let entry = entry.expect("read source entry");
+        let path = entry.path();
+        if path.is_dir() {
+            collect_rs_files(&path, files);
+        } else if path.extension().and_then(|ext| ext.to_str()) == Some("rs") {
+            files.push(path);
+        }
+    }
+}
 
 #[test]
 fn bh_c02_unknown_extension_key_is_rejected_via_normalize_request() {
@@ -788,4 +806,137 @@ fn normalize_model_id_v1_trims_and_returns_success() {
     let normalized = normalize_model_id_v1(Some(&json!("  agent-model-1  ")))
         .expect("expected trimmed success");
     assert_eq!(normalized, Some("agent-model-1".to_string()));
+}
+
+#[test]
+fn bh_r0_agent_api_config_model_v1_is_rejected_before_value_shape_validation_via_normalize_request()
+{
+    struct PanicOnPolicyAdapter;
+
+    impl BackendHarnessAdapter for PanicOnPolicyAdapter {
+        fn kind(&self) -> crate::AgentWrapperKind {
+            toy_kind()
+        }
+
+        fn supported_extension_keys(&self) -> &'static [&'static str] {
+            &["backend.toy.example"]
+        }
+
+        type Policy = ToyPolicy;
+
+        fn validate_and_extract_policy(
+            &self,
+            _request: &AgentWrapperRunRequest,
+        ) -> Result<Self::Policy, crate::AgentWrapperError> {
+            panic!("validate_and_extract_policy must not be called for unsupported keys");
+        }
+
+        type BackendEvent = ToyEvent;
+        type BackendCompletion = ToyCompletion;
+        type BackendError = ToyBackendError;
+
+        fn spawn(
+            &self,
+            _req: NormalizedRequest<Self::Policy>,
+        ) -> std::pin::Pin<
+            Box<
+                dyn std::future::Future<
+                        Output = Result<
+                            super::super::contract::BackendSpawn<
+                                Self::BackendEvent,
+                                Self::BackendCompletion,
+                                Self::BackendError,
+                            >,
+                            Self::BackendError,
+                        >,
+                    > + Send
+                    + 'static,
+            >,
+        > {
+            panic!("spawn must not be called from normalize_request");
+        }
+
+        fn map_event(&self, _event: Self::BackendEvent) -> Vec<crate::AgentWrapperEvent> {
+            panic!("map_event must not be called from normalize_request");
+        }
+
+        fn map_completion(
+            &self,
+            _completion: Self::BackendCompletion,
+        ) -> Result<crate::AgentWrapperCompletion, crate::AgentWrapperError> {
+            panic!("map_completion must not be called from normalize_request");
+        }
+
+        fn redact_error(
+            &self,
+            _phase: BackendHarnessErrorPhase,
+            _err: &Self::BackendError,
+        ) -> String {
+            panic!("redact_error must not be called from normalize_request");
+        }
+    }
+
+    let adapter = PanicOnPolicyAdapter;
+    let defaults = BackendDefaults::default();
+
+    for raw in [json!(false), json!("x".repeat(256))] {
+        let mut request = AgentWrapperRunRequest {
+            prompt: "hello".to_string(),
+            ..Default::default()
+        };
+        request
+            .extensions
+            .insert(MODEL_ID_KEY.to_string(), raw.clone());
+
+        let err = match normalize_request(&adapter, &defaults, request) {
+            Ok(_) => panic!("unsupported model key must fail closed"),
+            Err(err) => err,
+        };
+        match err {
+            AgentWrapperError::UnsupportedCapability {
+                agent_kind,
+                capability,
+            } => {
+                assert_eq!(agent_kind, "toy");
+                assert_eq!(capability, MODEL_ID_KEY);
+            }
+            other => panic!("expected UnsupportedCapability, got: {other:?}"),
+        }
+    }
+}
+
+#[test]
+fn bh_r0_agent_api_config_model_v1_is_confined_to_normalize_rs_in_production_code() {
+    let src_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let allowed_normalize = src_root.join("backend_harness/normalize.rs");
+
+    let mut files = Vec::new();
+    collect_rs_files(&src_root, &mut files);
+
+    let mut offenders = Vec::new();
+    for path in files {
+        let is_test_source = path
+            .components()
+            .any(|component| component.as_os_str() == "tests")
+            || path.file_name().and_then(|name| name.to_str()) == Some("tests.rs");
+
+        if is_test_source || path == allowed_normalize {
+            continue;
+        }
+
+        let contents = fs::read_to_string(&path).expect("read source file");
+        if contents.contains(MODEL_ID_KEY) {
+            offenders.push(
+                path.strip_prefix(&src_root)
+                    .unwrap_or(&path)
+                    .display()
+                    .to_string(),
+            );
+        }
+    }
+
+    assert!(
+        offenders.is_empty(),
+        "agent_api.config.model.v1 leaked outside backend_harness/normalize.rs and its tests: {offenders:?}"
+    );
 }

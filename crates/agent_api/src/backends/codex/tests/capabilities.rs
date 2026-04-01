@@ -1,6 +1,12 @@
 use super::support::*;
 
 #[test]
+fn codex_backend_does_not_advertise_agent_api_config_model_v1() {
+    let backend = CodexBackend::new(CodexBackendConfig::default());
+    assert!(!backend.capabilities().contains("agent_api.config.model.v1"));
+}
+
+#[test]
 fn codex_backend_reports_required_capabilities() {
     let backend = CodexBackend::new(CodexBackendConfig::default());
     let capabilities = backend.capabilities();

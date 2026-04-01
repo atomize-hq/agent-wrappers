@@ -5,6 +5,14 @@ use tokio::sync::OnceCell;
 use super::support::*;
 
 #[test]
+fn claude_harness_supported_extension_keys_do_not_include_agent_api_config_model_v1() {
+    let adapter = new_adapter();
+    assert!(!adapter
+        .supported_extension_keys()
+        .contains(&"agent_api.config.model.v1"));
+}
+
+#[test]
 fn claude_backend_does_not_advertise_external_sandbox_exec_by_default() {
     let backend = ClaudeCodeBackend::new(ClaudeCodeBackendConfig::default());
     let capabilities = backend.capabilities();
