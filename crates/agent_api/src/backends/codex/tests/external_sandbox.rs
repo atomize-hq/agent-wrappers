@@ -82,6 +82,7 @@ async fn external_sandbox_spawn_failure_emits_warning_before_terminal_error() {
         .spawn(crate::backend_harness::NormalizedRequest {
             agent_kind: adapter.kind(),
             prompt: "hello".to_string(),
+            model_id: None,
             working_dir: None,
             effective_timeout: None,
             env: std::collections::BTreeMap::new(),
@@ -147,6 +148,7 @@ async fn exec_cross_drive_drive_relative_working_dir_fails_before_spawn() {
         .spawn(crate::backend_harness::NormalizedRequest {
             agent_kind: adapter.kind(),
             prompt: "hello".to_string(),
+            model_id: None,
             working_dir: Some(windows_drive_relative_on_other_drive(
                 "repo",
                 &run_start_cwd,
@@ -195,6 +197,7 @@ async fn fork_cross_drive_drive_relative_working_dir_fails_before_app_server_sta
         .spawn(crate::backend_harness::NormalizedRequest {
             agent_kind: adapter.kind(),
             prompt: "hello".to_string(),
+            model_id: None,
             working_dir: Some(windows_drive_relative_on_other_drive(
                 "repo",
                 &run_start_cwd,

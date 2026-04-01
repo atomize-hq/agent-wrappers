@@ -22,6 +22,7 @@ async fn toy_adapter_success_smoke() {
     let req = NormalizedRequest {
         agent_kind: adapter.kind(),
         prompt: "hello".to_string(),
+        model_id: None,
         working_dir: None,
         effective_timeout: None,
         env: BTreeMap::new(),
@@ -59,6 +60,7 @@ async fn toy_adapter_spawn_failure_is_redacted() {
     let req = NormalizedRequest {
         agent_kind: adapter.kind(),
         prompt: "hello".to_string(),
+        model_id: None,
         working_dir: None,
         effective_timeout: None,
         env: BTreeMap::new(),

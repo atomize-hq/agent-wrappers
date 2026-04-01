@@ -9,7 +9,9 @@ use super::super::test_support::{
 use super::super::{
     BackendDefaults, BackendHarnessAdapter, BackendHarnessErrorPhase, NormalizedRequest,
 };
-use super::{normalize_request, parse_ext_bool, parse_ext_string_enum};
+use super::{
+    normalize_model_id_v1, normalize_request, parse_ext_bool, parse_ext_string_enum,
+};
 use crate::{AgentWrapperCompletion, AgentWrapperError, AgentWrapperRunRequest};
 
 mod c02_add_dirs;
@@ -565,6 +567,7 @@ fn bh_c02_all_keys_allowed_passes_via_normalize_request() {
     let normalized = normalize_request(&adapter, &defaults, request).expect("all keys allowed");
     assert_eq!(normalized.agent_kind.as_str(), "toy");
     assert_eq!(normalized.prompt, "hello");
+    assert_eq!(normalized.model_id, None);
 }
 
 #[test]
@@ -733,4 +736,56 @@ fn parse_ext_string_enum_rejects_unknown_value_without_leaking_value() {
         }
         other => panic!("expected InvalidRequest, got: {other:?}"),
     }
+}
+
+#[test]
+fn normalize_model_id_v1_absent_returns_none() {
+    let normalized = normalize_model_id_v1(None).expect("absent model id is allowed");
+    assert_eq!(normalized, None);
+}
+
+#[test]
+fn normalize_model_id_v1_rejects_non_string_without_echoing_value() {
+    let raw = json!(false);
+    let err = normalize_model_id_v1(Some(&raw)).expect_err("expected string parse failure");
+    match err {
+        AgentWrapperError::InvalidRequest { message } => {
+            assert_eq!(message, "invalid agent_api.config.model.v1");
+            assert!(!message.contains("false"));
+        }
+        other => panic!("expected InvalidRequest, got: {other:?}"),
+    }
+}
+
+#[test]
+fn normalize_model_id_v1_rejects_whitespace_only_after_trim() {
+    let err = normalize_model_id_v1(Some(&json!("  \t \n  ")))
+        .expect_err("expected whitespace-only failure");
+    match err {
+        AgentWrapperError::InvalidRequest { message } => {
+            assert_eq!(message, "invalid agent_api.config.model.v1");
+        }
+        other => panic!("expected InvalidRequest, got: {other:?}"),
+    }
+}
+
+#[test]
+fn normalize_model_id_v1_rejects_oversize_after_trim_without_echoing_value() {
+    let raw = format!("  {}  ", "a".repeat(129));
+    let err = normalize_model_id_v1(Some(&json!(raw.clone())))
+        .expect_err("expected oversize failure");
+    match err {
+        AgentWrapperError::InvalidRequest { message } => {
+            assert_eq!(message, "invalid agent_api.config.model.v1");
+            assert!(!message.contains(&raw));
+        }
+        other => panic!("expected InvalidRequest, got: {other:?}"),
+    }
+}
+
+#[test]
+fn normalize_model_id_v1_trims_and_returns_success() {
+    let normalized = normalize_model_id_v1(Some(&json!("  agent-model-1  ")))
+        .expect("expected trimmed success");
+    assert_eq!(normalized, Some("agent-model-1".to_string()));
 }

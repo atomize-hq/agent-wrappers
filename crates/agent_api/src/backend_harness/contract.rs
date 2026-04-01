@@ -38,6 +38,9 @@ pub(crate) struct NormalizedRequest<P> {
     /// Preserved from `AgentWrapperRunRequest` (must be non-empty after trimming).
     pub prompt: String,
 
+    /// Typed handoff for `agent_api.config.model.v1` after shared normalization.
+    pub model_id: Option<String>,
+
     /// Preserved from `AgentWrapperRunRequest` (no harness defaulting in v1).
     pub working_dir: Option<std::path::PathBuf>,
 
