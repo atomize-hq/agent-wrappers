@@ -274,6 +274,33 @@ pub(crate) fn maybe_assert_model_mapping(args: &[String], out: &mut dyn Write) {
             ),
         );
     }
+
+    if let Some(permission_idx) = args.iter().position(|arg| arg == "--permission-mode") {
+        if model_idx > permission_idx {
+            fail(
+                out,
+                "assertion failed: expected --model to precede --permission-mode",
+            );
+        }
+    }
+
+    for flag in [
+        "--add-dir",
+        "--continue",
+        "--fork-session",
+        "--resume",
+        "--fallback-model",
+        "--verbose",
+    ] {
+        if let Some(idx) = args.iter().position(|arg| arg == flag) {
+            if model_idx > idx {
+                fail(
+                    out,
+                    &format!("assertion failed: expected --model to precede {flag}"),
+                );
+            }
+        }
+    }
 }
 
 pub(crate) fn selector_assertion_subsequence(tail: &[&str]) -> Vec<String> {
