@@ -245,7 +245,7 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
         let allow_flag_preflight = Arc::clone(&self.allow_flag_preflight);
         let NormalizedRequest {
             prompt,
-            model_id: _model_id,
+            model_id,
             working_dir: _raw_working_dir,
             effective_timeout,
             env,
@@ -310,6 +310,10 @@ impl BackendHarnessAdapter for ClaudeHarnessAdapter {
                 allow_dangerously_skip_permissions,
                 &add_dirs,
             );
+
+            if let Some(model_id) = model_id {
+                print_req = print_req.model(model_id);
+            }
 
             if let Some(resume) = resume.as_ref() {
                 match resume {

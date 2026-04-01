@@ -225,6 +225,57 @@ pub(crate) fn maybe_assert_cwd(out: &mut dyn Write) {
     }
 }
 
+pub(crate) fn maybe_assert_model_mapping(args: &[String], out: &mut dyn Write) {
+    let expect_model = env::var("FAKE_CLAUDE_EXPECT_MODEL").ok();
+    let expect_no_model = env_is_true("FAKE_CLAUDE_EXPECT_NO_MODEL");
+    let expect_no_fallback_model = env_is_true("FAKE_CLAUDE_EXPECT_NO_FALLBACK_MODEL");
+
+    if expect_model.is_some() && expect_no_model {
+        panic!("FAKE_CLAUDE_EXPECT_MODEL and FAKE_CLAUDE_EXPECT_NO_MODEL are mutually exclusive");
+    }
+
+    if expect_no_fallback_model && has_flag(args, "--fallback-model") {
+        fail(out, "assertion failed: expected --fallback-model to be absent");
+    }
+
+    if expect_no_model {
+        if has_flag(args, "--model") {
+            fail(out, "assertion failed: expected --model to be absent");
+        }
+        return;
+    }
+
+    let Some(expected_model) = expect_model else {
+        return;
+    };
+
+    let model_indices: Vec<usize> = args
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, arg)| (arg == "--model").then_some(idx))
+        .collect();
+    if model_indices.len() != 1 {
+        fail(
+            out,
+            &format!(
+                "assertion failed: expected exactly one --model flag, got {}",
+                model_indices.len()
+            ),
+        );
+    }
+    let model_idx = model_indices[0];
+    let actual = args.get(model_idx + 1).cloned().unwrap_or_default();
+    if actual != expected_model {
+        fail(
+            out,
+            &format!(
+                "assertion failed: expected --model value {:?}, got {:?}",
+                expected_model, actual
+            ),
+        );
+    }
+}
+
 pub(crate) fn selector_assertion_subsequence(tail: &[&str]) -> Vec<String> {
     let mut subseq = vec![
         "--print".to_string(),

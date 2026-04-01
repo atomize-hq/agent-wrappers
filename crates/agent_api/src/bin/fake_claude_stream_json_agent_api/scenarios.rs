@@ -12,8 +12,9 @@ use crate::fixtures::{
 use crate::support::{
     assert_add_dirs, contains_ordered_subsequence, env_is_true, exit_add_dirs_runtime_rejection,
     fail, has_flag, has_flag_value, maybe_assert_cwd, maybe_assert_flag_presence,
-    maybe_log_invocation, maybe_write_env_snapshot, require, selector_assertion_subsequence,
-    write_line, write_result_error_with_message, write_result_error_with_stderr_detail,
+    maybe_assert_model_mapping, maybe_log_invocation, maybe_write_env_snapshot, require,
+    selector_assertion_subsequence, write_line, write_result_error_with_message,
+    write_result_error_with_stderr_detail,
 };
 
 enum ScenarioKind {
@@ -92,6 +93,8 @@ fn prepare_print_invocation(args: &[String], out: &mut dyn Write) {
             "assertion failed: missing --permission-mode bypassPermissions",
         );
     }
+
+    maybe_assert_model_mapping(args, out);
 
     maybe_assert_flag_presence(
         args,
