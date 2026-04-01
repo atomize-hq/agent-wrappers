@@ -1,8 +1,8 @@
 ---
 seam_id: SEAM-2
 seam_slug: backend-advertising-normalization
-status: decomposed
-execution_horizon: active
+status: closed
+execution_horizon: future
 plan_version: v1
 basis:
   currentness: current

@@ -2,8 +2,8 @@
 seam_id: SEAM-2
 seam_slug: backend-advertising-normalization
 type: integration
-status: decomposed
-execution_horizon: active
+status: closed
+execution_horizon: future
 plan_version: v1
 basis:
   currentness: current
@@ -16,16 +16,16 @@ basis:
     - shared helper signature or validation rules change after SEAM-3/4 implementation starts
 gates:
   pre_exec:
-    review: pending
-    contract: pending
+    review: passed
+    contract: passed
     revalidation: passed
   post_exec:
-    landing: pending
-    closeout: pending
+    landing: passed
+    closeout: passed
 seam_exit_gate:
   required: true
   planned_location: S4
-  status: pending
+  status: passed
 open_remediations: []
 ---
 

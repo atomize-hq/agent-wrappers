@@ -9,9 +9,9 @@ This document is authoritative for:
 
 ## Execution horizon summary
 
-- Active seam: `SEAM-2`
-- Next seam: `SEAM-3`
-- Future seams: `SEAM-4`, `SEAM-5`
+- Active seam: `SEAM-3`
+- Next seam: `SEAM-4`
+- Future seams: `SEAM-5`
 
 ## Contract registry
 
@@ -113,9 +113,9 @@ This document is authoritative for:
   - **Consumer seam(s)**: `SEAM-3`, `SEAM-4`, `SEAM-5`
   - **Carried contract IDs**: `C-03`, `C-09`
   - **Purpose**: establish exactly one raw-parse site and one typed handoff (`Option<String>`) for the effective trimmed model id.
-  - **State**: identified
+  - **State**: published
   - **Revalidation trigger**: shared helper signature or validation rules change; additional parse sites appear outside `crates/agent_api/src/backend_harness/normalize.rs`.
-  - **Satisfied by**: unit tests for absence/non-string/empty/oversize/trimmed-success plus diff review proving no new parse sites.
+  - **Satisfied by**: SEAM-2 landed helper + tests + confinement guards (commits `5590197`, `6bf7eeb`).
   - **Notes**: once published, SEAM-3 and SEAM-4 must treat the helper output as the only permitted input.
 
 - **Thread ID**: `THR-03`
@@ -123,9 +123,9 @@ This document is authoritative for:
   - **Consumer seam(s)**: `SEAM-5`
   - **Carried contract IDs**: `C-05`, `C-08`
   - **Purpose**: keep built-in advertising and the published capability matrix in lockstep.
-  - **State**: identified
+  - **State**: published
   - **Revalidation trigger**: changes to backend capability sets without a matching matrix regeneration in the same change.
-  - **Satisfied by**: `cargo run -p xtask -- capability-matrix` rerun in the same commit/PR that updates advertising plus SEAM-5 assertions.
+  - **Satisfied by**: SEAM-2 staleness gate test that byte-compares generated vs checked-in matrix (commit `4d895a2`) plus re-running `cargo run -p xtask -- capability-matrix` in the same change as any advertising flip.
   - **Notes**: WS-INT treats any stale diff as merge-blocking.
 
 - **Thread ID**: `THR-04`

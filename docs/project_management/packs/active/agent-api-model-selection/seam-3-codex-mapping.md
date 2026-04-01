@@ -3,10 +3,10 @@ seam_id: SEAM-3
 seam_slug: codex-mapping
 type: capability
 status: proposed
-execution_horizon: next
+execution_horizon: active
 plan_version: v1
 basis:
-  currentness: provisional
+  currentness: current
   source_scope_ref: scope_brief.md
   source_scope_version: v1
   upstream_closeouts: []
@@ -20,7 +20,7 @@ gates:
   pre_exec:
     review: pending
     contract: pending
-    revalidation: pending
+    revalidation: passed
   post_exec:
     landing: pending
     closeout: pending

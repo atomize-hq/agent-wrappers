@@ -1,6 +1,6 @@
 # Readiness Note - SEAM-3 Codex backend mapping
 
-This seam is `execution_horizon: next` in this pack's v2.3 horizon policy.
+This seam is `execution_horizon: active` in this pack's v2.3 horizon policy.
 
 If SEAM-3 is activated:
 

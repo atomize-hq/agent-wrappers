@@ -1,6 +1,6 @@
 # Readiness Note - SEAM-4 Claude Code backend mapping
 
-This seam is `execution_horizon: future` in this pack's v2.3 horizon policy.
+This seam is `execution_horizon: next` in this pack's v2.3 horizon policy.
 
 If SEAM-4 is activated:
 
@@ -8,4 +8,3 @@ If SEAM-4 is activated:
 - Decompose seam-local `review.md` and slices (including a final `seam-exit-gate` slice) via the v2.3 decomposer.
 
 Archived pre-v2.3 seam-local planning (non-authoritative): `../_archive_pre_v2_3/seam-4-claude-code-mapping/`.
-
