@@ -1,8 +1,8 @@
 ---
 seam_id: SEAM-5
 seam_slug: tests
-status: decomposed
-execution_horizon: active
+status: closed
+execution_horizon: future
 plan_version: v1
 basis:
   currentness: current

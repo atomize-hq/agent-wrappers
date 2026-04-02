@@ -9,7 +9,7 @@ This document is authoritative for:
 
 ## Execution horizon summary
 
-- Active seam: `SEAM-5`
+- Active seam: none
 - Next seam: none
 - Future seams: none
 
