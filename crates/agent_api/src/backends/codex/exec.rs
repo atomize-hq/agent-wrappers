@@ -268,12 +268,11 @@ pub(super) async fn spawn_exec_or_resume_flow(
     let (tail_tx, tail_rx) = oneshot::channel::<Option<CodexTailEvent>>();
     let (events_done_tx, events_done_rx) = oneshot::channel::<()>();
     let stream_state_for_completion = Arc::clone(&stream_state);
+    let has_requested_model_id = requested_model_id.is_some();
 
     tokio::spawn(async move {
+        let mut events_done_rx = Some(events_done_rx);
         let outcome = completion.await;
-        if resume_selector.is_some() || has_add_dirs {
-            let _ = events_done_rx.await;
-        }
 
         match outcome {
             Ok(exec_completion) => {
@@ -297,6 +296,21 @@ pub(super) async fn spawn_exec_or_resume_flow(
                 let _ = tail_tx.send(tail);
             }
             Err(ExecStreamError::Codex(CodexError::NonZeroExit { status, stderr })) => {
+                // Some exit-classification logic depends on observing (and potentially suppressing)
+                // streamed `ThreadEvent::Error` frames first. In tests and in most real flows the
+                // caller drains events, but the completion future can resolve first.
+                //
+                // Avoid flaking parity expectations by giving the event stream a brief window to
+                // finish when we have signal-dependent suppression logic.
+                let wait_for_event_processing =
+                    resume_selector.is_some() || has_add_dirs || has_requested_model_id;
+                if wait_for_event_processing {
+                    if let Some(rx) = events_done_rx.take() {
+                        let _ =
+                            tokio::time::timeout(Duration::from_millis(50), rx).await;
+                    }
+                }
+
                 let backend_error_message =
                     snapshot_backend_error_message(&stream_state_for_completion);
                 let bypass_flag_unsupported_message =
