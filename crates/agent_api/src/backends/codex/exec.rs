@@ -306,8 +306,7 @@ pub(super) async fn spawn_exec_or_resume_flow(
                     resume_selector.is_some() || has_add_dirs || has_requested_model_id;
                 if wait_for_event_processing {
                     if let Some(rx) = events_done_rx.take() {
-                        let _ =
-                            tokio::time::timeout(Duration::from_millis(50), rx).await;
+                        let _ = tokio::time::timeout(Duration::from_millis(50), rx).await;
                     }
                 }
 
