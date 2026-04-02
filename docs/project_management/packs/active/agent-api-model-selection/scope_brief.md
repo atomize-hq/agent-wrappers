@@ -4,8 +4,8 @@ pack_version: v1
 pack_status: extracted
 source_ref: docs/adr/0020-universal-agent-api-model-selection.md
 execution_horizon:
-  active_seam: SEAM-3
-  next_seam: SEAM-4
+  active_seam: SEAM-5
+  next_seam: null
 ---
 
 # Scope Brief - Universal model selection (`agent_api.config.model.v1`)

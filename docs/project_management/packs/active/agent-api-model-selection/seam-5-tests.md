@@ -2,14 +2,18 @@
 seam_id: SEAM-5
 seam_slug: tests
 type: risk
-status: proposed
-execution_horizon: future
+status: decomposed
+execution_horizon: active
 plan_version: v1
 basis:
-  currentness: provisional
+  currentness: current
   source_scope_ref: scope_brief.md
   source_scope_version: v1
-  upstream_closeouts: []
+  upstream_closeouts:
+    - governance/seam-1-closeout.md
+    - governance/seam-2-closeout.md
+    - governance/seam-3-closeout.md
+    - governance/seam-4-closeout.md
   required_threads:
     - THR-01
     - THR-02
@@ -22,13 +26,13 @@ gates:
   pre_exec:
     review: pending
     contract: pending
-    revalidation: pending
+    revalidation: passed
   post_exec:
     landing: pending
     closeout: pending
 seam_exit_gate:
   required: true
-  planned_location: reserved_final_slice
+  planned_location: S3
   status: pending
 open_remediations: []
 ---
