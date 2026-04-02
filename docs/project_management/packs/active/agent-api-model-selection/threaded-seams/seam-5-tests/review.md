@@ -21,8 +21,7 @@ None yet.
 
 ## Pre-exec gate disposition
 
-- **Review gate**: pending
-- **Contract gate**: pending
+- **Review gate**: passed
+- **Contract gate**: passed
 - **Revalidation gate**: passed (SEAM-1..SEAM-4 closeouts published)
 - **Opened remediations**: none
-

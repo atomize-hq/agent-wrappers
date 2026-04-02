@@ -23,16 +23,16 @@ basis:
     - capability matrix regeneration is deferred from advertising changes
 gates:
   pre_exec:
-    review: pending
-    contract: pending
+    review: passed
+    contract: passed
     revalidation: passed
   post_exec:
-    landing: pending
-    closeout: pending
+    landing: passed
+    closeout: passed
 seam_exit_gate:
   required: true
   planned_location: S3
-  status: pending
+  status: passed
 open_remediations: []
 ---
 # SEAM-5 - Tests (Activated)
@@ -49,4 +49,3 @@ open_remediations: []
 ## Next planning step
 
 - Execute `slice-*.md` sequentially (S1..S3), then complete the dedicated `seam-exit-gate` slice.
-
