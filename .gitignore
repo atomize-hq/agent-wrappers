@@ -3,6 +3,12 @@ target
 .codex
 .claude
 .gstack
+!.claude/
+!.claude/agents/
+!.claude/agents/*.md
+!.claude/skills/
+!.claude/skills/*/
+!.claude/skills/*/SKILL.md
 /.idea
 /.vscode
 /wt
