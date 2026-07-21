@@ -144,6 +144,34 @@ future fix.
   deliberate contract (owner: xtask). Priority: low.
 - Blocking: follow-up only.
 
+## Entry 7a — executor's Codex host leaked an orphaned, unsandboxed nested process pair
+
+- Workflow step / timestamp: execute-canonical-lane / remediation, 2026-07-21
+  (observed ~17:56 local, spawned 16:54 local).
+- Observed issue: during `execute-agent-maintenance --write`, the Codex host
+  (itself running `--dangerously-bypass-approvals-and-sandbox`) spawned a
+  nested `xtask execute-agent-maintenance --dry-run --codex-binary ...` whose
+  own `codex exec --dangerously-bypass-approvals-and-sandbox --cd <main repo>`
+  child survived the parent run's completion (both re-parented to PID 1) and
+  kept running ~60 minutes later.
+- Evidence: `ps -eo pid,ppid,lstart,command` showed PID 4379 (nested dry-run,
+  ppid 1, started 16:54:29) and child PID 4821 (codex exec, started 16:54:51)
+  alive at 17:56 while the write run had finished at 17:21.
+- Impact: an unsandboxed agent process kept running against the main
+  workspace after the run ended (mutation risk; none materialized — tracked
+  tree verified clean), and a downstream worker's process-exit monitor keyed
+  on `codex exec` was deadlocked by the stale process.
+- Workaround used: verified main-repo cleanliness, then killed exactly PIDs
+  4379/4821.
+- Likely root cause: execute-agent-maintenance does not run its host in a
+  managed process group and does not reap descendants on exit; the host
+  prompt does not forbid leaving background probes running.
+- Proposed fix / owner / priority: spawn the host in its own process group
+  and terminate the group when the run concludes; consider prompt guidance
+  against leaving background probes running (owner: xtask executor).
+  Priority: medium-high.
+- Blocking: worked around; fix is follow-up only.
+
 ## Entry 7 — Codex snapshot discovery mistakes a wrapped description for a subcommand
 
 - Workflow step / timestamp: version-scoped artifact refresh, 2026-07-21.
