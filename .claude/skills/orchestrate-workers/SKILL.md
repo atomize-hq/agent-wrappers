@@ -1,33 +1,52 @@
 ---
 name: orchestrate-workers
-description: Delegate bounded, isolated implementation tasks to native Claude Code or profile-pinned Codex workers while retaining lead-session integration authority.
+description: Lead a Codex-first documentation, implementation, and review workflow, with an Opus adversarial reviewer only as a parallel review lane.
 ---
 
 # Orchestrate Workers
 
-Use this skill when a lead Claude Code session needs parallel or delegated work.
-The lead retains architectural decisions, integration, and final verification.
+Use this skill when a lead Claude Code session needs delegated documentation or
+implementation work. The lead session is the architect and integrator: it
+defines the plan and direction before dispatch, assigns bounded ownership,
+normalizes review evidence, and gives the final candidate a direct once-over.
 
-## Before dispatch
+## Roles and hard boundaries
 
-1. Inspect the repository and identify the base revision, acceptance criteria,
-   dependencies, and a non-overlapping write-owner map.
-2. Divide work only where tasks are independent. Do not assign two write tasks
-   the same file, worktree, or generated artifact.
-3. Send a complete packet. Never ask a worker to “finish the feature”,
-   “investigate and fix everything”, or infer acceptance criteria.
+| Role | Permitted work |
+| --- | --- |
+| Lead orchestrator | Repository investigation, plan and direction, task boundaries, integration, review adjudication, final source/diff/verification once-over. |
+| `codex-profile-worker` | All delegated documentation, implementation, and Codex review work, under an explicit profile. |
+| `opus-adversarial-reviewer` | Read-only adversarial review only, launched in parallel with a Codex review lane. Never documentation or implementation. |
 
-Use `opus-worker` for bounded implementation that benefits from strong
-repository judgment. Use `codex-profile-worker` for work that must run through
-Codex. The latter always requires a named Codex profile such as `atomize_systems_azure`.
-Native Claude worker isolation is supplied by its `isolation: worktree` agent
-configuration; do not bypass it by directing multiple workers into the lead
-worktree.
+Do not delegate architecture ownership to either worker. Do not launch the
+Opus reviewer for an implementation or documentation packet, and do not launch
+it as a standalone substitute for Codex review.
 
-## Required task packet
+## Lead planning gate
+
+Before every dispatch, inspect the repository and write a concise internal plan
+that identifies:
+
+1. objective, intended user-visible or contract outcome, and explicit non-goals;
+2. base revision, affected interfaces, invariants, dependencies, and acceptance
+   conditions;
+3. a non-overlapping write-owner map; and
+4. the review intent: the specific risks, contracts, and changed areas that a
+   later review must examine.
+
+If these are not known, investigate or ask the user; do not send an open-ended
+worker request such as “finish the feature” or “review everything.”
+
+## Required Codex task packet
+
+Every Codex packet must contain all sections below. `Work type` is exactly one
+of `documentation`, `implementation`, or `review`.
 
 ```md
 # Task packet: <short name>
+
+## Work type
+documentation | implementation | review
 
 ## Objective
 <one concrete, measurable outcome>
@@ -36,12 +55,12 @@ worktree.
 <commit SHA and expected starting state>
 
 ## Allowed write set
-- `<path or glob>`
+- `<path or glob>` (use `None` for review)
 
 ## Required interfaces and invariants
 - <must remain true>
 
-## Constraints
+## Constraints and non-goals
 - <scope, no-go areas, commit policy>
 
 ## Dependencies
@@ -59,32 +78,59 @@ worktree.
 - Commit hash, only when requested
 ```
 
-For a Codex packet, also state `Codex profile: atomize_systems_azure` (or another
-explicit profile). The launcher command must be equivalent to:
+Also state `Codex profile: atomize_systems_azure` (or another explicit
+profile). Invoke the launcher with `--sandbox workspace-write` for
+documentation or implementation, and `--sandbox read-only` for review.
 
-```sh
-scripts/run-codex-worker.sh \
-  --profile atomize_systems_azure \
-  --sandbox workspace-write \
-  --worktree "$PWD" \
-  --packet /path/outside/the-worktree/packet.md \
-  --output-last-message /path/outside/the-worktree/codex-final.md
-```
+## Documentation and implementation loop
 
-## Dispatch and integration
+1. Dispatch documentation and implementation only to `codex-profile-worker`.
+2. Parallelize only independent packets with distinct write sets and worktrees.
+3. Inspect each returned status, diff, and verification result. Worker prose is
+   evidence, not approval.
+4. Integrate deliberately and verify in the canonical integration worktree.
+5. Start review only against a known candidate revision and the lead's stated
+   review intent.
 
-1. Start independent tasks concurrently only after checking ownership.
-2. Treat worker output as evidence to inspect, not as approval.
-3. Inspect every worker's `git status` and diff. Integrate deliberately;
-   cherry-pick only a reviewed commit or manually apply selected changes.
-4. Run the full required verification in the canonical integration worktree.
-5. If evidence conflicts, inspect source and requirements directly; the lead
-   resolves the conflict.
+## Required parallel review loop
 
-## Non-negotiable rules
+For every candidate requiring review, dispatch these **at the same time**
+against the same base/candidate revision, contract paths, changed-file set, and
+review intent:
 
-- Do not let workers change the integration worktree concurrently.
-- Do not widen a packet after dispatch; issue a replacement packet instead.
-- Do not claim completion until lead-side verification passes.
-- Use read-only packets for design races and reviews unless the lead explicitly
-  selects one proposal for implementation.
+1. `codex-profile-worker` with `Work type: review`, `Allowed write set: None`,
+   an explicit Codex profile, and `--sandbox read-only`.
+2. `opus-adversarial-reviewer` with a read-only packet and the same evidence.
+
+The Codex lane checks defects, edge cases, missing tests, and simpler safe
+alternatives. The Opus lane tries to falsify the candidate through concrete
+failure scenarios. Neither reviewer may redesign the work or claim final
+approval.
+
+## Lead review adjudication and final validation
+
+When both review results return, the lead must inspect the candidate, relevant
+contracts, and each cited location directly. For every finding, record one of:
+
+- **accepted** — materially violates the objective, invariant, or review intent;
+- **rejected** — unsupported, already addressed, out of scope, or beyond the
+  stated intent; include a brief reason; or
+- **deferred** — real but deliberately outside this packet; identify the
+  follow-up boundary without silently widening the current work.
+
+The lead must also verify that the combined findings are coherent: they address
+the intended candidate and right contract areas, do not conflict with one
+another, and do not overreach into a redesign or unrelated cleanup. Accepted
+findings go to a new bounded `codex-profile-worker` remediation packet. Re-run
+the parallel review loop when remediation changes material behavior or risks.
+
+Only after the review result is clean may the lead make the final once-over:
+
+1. inspect the final diff and changed files against the original objective and
+   non-goals;
+2. read the relevant source and contracts directly for integration coherence;
+3. run the required canonical verification in the integration worktree; and
+4. confirm no accepted review finding, scope leak, or unverified claim remains.
+
+Do not declare completion based only on clean reviewer reports or passing
+automation.

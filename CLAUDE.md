@@ -6,9 +6,13 @@ policy for both Claude Code and Codex; do not duplicate or override it here.
 ## Worker orchestration
 
 Use `$orchestrate-workers` when work needs delegation and `$cross-review` for
-independent review of a candidate change. The lead session keeps architecture,
-integration, and final-verification authority. Delegate only bounded packets
-with explicit write ownership.
+independent review of a candidate change. The lead session defines the plan,
+direction, acceptance criteria, and task boundaries; it also owns integration
+and final validation. Delegate only bounded packets with explicit write
+ownership.
 
-For a Codex worker, use the `codex-profile-worker` agent and explicitly state
-the required Codex profile. The repository launcher rejects omitted profiles.
+Use `codex-profile-worker` for documentation, implementation, and Codex review
+work. Use `opus-adversarial-reviewer` only as a read-only adversarial lane,
+dispatched in parallel with a Codex review—not as an implementation worker. A
+Codex packet must state its explicit profile; the repository launcher rejects
+omitted profiles.

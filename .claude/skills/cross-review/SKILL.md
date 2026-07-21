@@ -1,45 +1,56 @@
 ---
 name: cross-review
-description: Run independent native-Claude and profile-pinned Codex read-only review lanes, then normalize findings in the lead session.
+description: Run Codex and Opus adversarial read-only review lanes in parallel, then require lead-session scope-aware adjudication and final validation.
 ---
 
 # Cross Review
 
-Use this skill after a bounded candidate change exists. Both review lanes are
-read-only and examine the same base/candidate diff. The lead session decides
-whether a finding is valid and whether remediation is warranted.
+Use this skill only after the lead has a known candidate revision and an
+explicit review intent. It is the review phase of `$orchestrate-workers`, not
+a replacement for planning or implementation.
 
-## Inputs required from the lead
+## Prepare the shared review packet
 
-- Candidate base and head revisions.
-- Requirement or contract paths.
-- Exact files or diff under review.
-- Verification commands reviewers may run.
-- Explicit Codex review profile (for example, `workflows`).
+The lead first supplies both lanes the same:
 
-## Lane A: native Claude reviewer
+- base and candidate revisions;
+- objective, acceptance criteria, and explicit non-goals;
+- contract or requirement paths;
+- changed-file set and exact review areas;
+- allowed read-only verification commands; and
+- review intent: the risks and behavior the review is meant to validate.
 
-Dispatch the `opus-worker` with an allowed write set of `None` and an explicit
-instruction not to modify files. Ask it to review requirements, architecture,
-semantic correctness, integration risks, and missing tests. Its packet must
-require each finding to include severity, file/line, rationale, and a concrete
-failure mode.
+Reviewers must assess the supplied candidate, not current uncommitted work or
+an imagined broader project.
 
-## Lane B: Codex reviewer
+## Dispatch the two lanes concurrently
 
-Dispatch `codex-profile-worker` with the same candidate and a packet that
-requires `--sandbox read-only`. Ask it to focus on defects, missing tests, edge
-cases, regressions, and simpler alternatives. The launcher invocation must
-include the designated profile and preserve Codex's final response with
-`--output-last-message`.
+1. Dispatch `codex-profile-worker` with `Work type: review`, an explicit Codex
+   profile, `Allowed write set: None`, and `--sandbox read-only`. Require it to
+   preserve Codex's final response separately from observed repository evidence.
+2. At the same time, dispatch `opus-adversarial-reviewer` with the identical
+   candidate evidence and a read-only packet.
 
-## Normalize in the lead session
+The Codex reviewer looks for concrete defects, edge cases, missing tests, and
+safe simplifications. The Opus reviewer actively tries to falsify the candidate
+through requirement violations and realistic failure scenarios. Neither lane
+may write, redesign, broaden scope, or self-approve the candidate.
 
-1. Deduplicate findings without treating agreement as proof.
-2. Inspect the cited source and contract directly.
-3. Record each finding as accepted, rejected (with rationale), or deferred.
-4. For accepted findings, send a new bounded write packet to one owner.
-5. Re-run review after remediation when risk or requirements warrant it.
+## Lead adjudication
 
-Passing automated checks and reviewer self-reports are evidence, not a
-substitute for source inspection by the lead.
+The lead reads the source, diff, and cited contracts directly before deciding
+any finding. Normalize each as accepted, rejected, or deferred, with rationale.
+Reject findings that are unsupported, unrelated to the stated review intent,
+or that widen the packet into redesign or unrelated cleanup. Preserve genuine
+out-of-scope issues as explicit follow-ups rather than silently absorbing them.
+
+Send accepted findings only to a new, bounded Codex remediation packet. If the
+remediation changes material behavior or the reviewed risk surface, re-run both
+review lanes concurrently.
+
+## Clean exit
+
+After both lanes are clean and all accepted findings are resolved, the lead must
+perform a final once-over of the source, final diff, scope boundaries, and
+canonical verification output. Completion requires that direct validation—not
+just reviewer agreement or test success—confirms the candidate meets its intent.
