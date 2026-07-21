@@ -19,7 +19,7 @@ The lead retains architectural decisions, integration, and final verification.
 
 Use `opus-worker` for bounded implementation that benefits from strong
 repository judgment. Use `codex-profile-worker` for work that must run through
-Codex. The latter always requires a named Codex profile such as `workflows`.
+Codex. The latter always requires a named Codex profile such as `atomize_systems_azure`.
 Native Claude worker isolation is supplied by its `isolation: worktree` agent
 configuration; do not bypass it by directing multiple workers into the lead
 worktree.
@@ -59,12 +59,12 @@ worktree.
 - Commit hash, only when requested
 ```
 
-For a Codex packet, also state `Codex profile: workflows` (or another explicit
-profile). The launcher command must be equivalent to:
+For a Codex packet, also state `Codex profile: atomize_systems_azure` (or another
+explicit profile). The launcher command must be equivalent to:
 
 ```sh
 scripts/run-codex-worker.sh \
-  --profile workflows \
+  --profile atomize_systems_azure \
   --sandbox workspace-write \
   --worktree "$PWD" \
   --packet /path/outside/the-worktree/packet.md \
