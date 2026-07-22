@@ -152,6 +152,14 @@ fn clone_codex_error(err: &CodexError) -> CodexError {
                 token: token.clone(),
             }
         }
+        CodexError::NonTuiServerRequiresSpawn { command } => {
+            CodexError::NonTuiServerRequiresSpawn {
+                command: command.clone(),
+            }
+        }
+        CodexError::NonTuiCommandIsNotServer { command } => CodexError::NonTuiCommandIsNotServer {
+            command: command.clone(),
+        },
         CodexError::EmptyApiKey => CodexError::EmptyApiKey,
         CodexError::EmptyTaskId => CodexError::EmptyTaskId,
         CodexError::EmptyEnvId => CodexError::EmptyEnvId,

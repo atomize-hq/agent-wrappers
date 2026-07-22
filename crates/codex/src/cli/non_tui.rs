@@ -127,6 +127,10 @@ impl NonTuiCommand {
             Self::AppServer | Self::AppServerDaemon | Self::RemoteControl
         )
     }
+
+    pub(crate) const fn requires_process_handle(self) -> bool {
+        matches!(self, Self::AppServer | Self::ExecServer)
+    }
 }
 
 /// A bounded pass-through request for a packet-maintained non-TUI command.
@@ -137,7 +141,10 @@ impl NonTuiCommand {
 /// support through this compatibility surface. The parent-only `AppServer`,
 /// `AppServerDaemon`, and `RemoteControl` variants accept only flag-form
 /// passthrough tokens, so valued flags must use `--flag=value` and callers
-/// cannot descend to child command paths through those variants.
+/// cannot descend to child command paths through those variants. `AppServer`
+/// and `ExecServer` must be launched with
+/// [`CodexClient::start_non_tui_server`](crate::CodexClient::start_non_tui_server)
+/// so their stdio remains available to the caller.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NonTuiCommandRequest {
     pub command: NonTuiCommand,
