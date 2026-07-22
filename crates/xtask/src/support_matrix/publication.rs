@@ -219,6 +219,8 @@ mod tests {
                 uaa_support: UaaSupportState::Partial,
                 pointer_promotion: PointerPromotionState::LatestValidated,
                 evidence_notes: vec![
+                    "backend report includes passthrough surface outside unified support"
+                        .to_string(),
                     "backend report includes backend-only surface outside unified support"
                         .to_string(),
                 ],
@@ -265,7 +267,7 @@ mod tests {
 \n\
 | agent | version | target | manifest_support | backend_support | uaa_support | pointer_promotion | evidence_notes |\n\
 |---|---|---|---|---|---|---|---|\n\
-| `codex` | `1.0.0` | `linux-x64` | `supported` | `partial` | `partial` | `latest_validated` | backend report includes backend-only surface outside unified support |\n\
+| `codex` | `1.0.0` | `linux-x64` | `supported` | `partial` | `partial` | `latest_validated` | backend report includes passthrough surface outside unified support; backend report includes backend-only surface outside unified support |\n\
 | `codex` | `0.9.0` | `darwin-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | current root snapshot omits this target |\n";
         assert_eq!(bundle.markdown, expected_markdown);
         assert_eq!(bundle.runtime_support_data, "// runtime-support\n");

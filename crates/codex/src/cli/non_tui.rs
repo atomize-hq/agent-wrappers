@@ -81,7 +81,7 @@ impl NonTuiCommand {
         ]
     }
 
-    pub(crate) const fn path(self) -> &'static [&'static str] {
+    pub const fn path(self) -> &'static [&'static str] {
         match self {
             Self::AppServer => &["app-server"],
             Self::AppServerDaemon => &["app-server", "daemon"],
@@ -120,6 +120,13 @@ impl NonTuiCommand {
             Self::Unarchive => &["unarchive"],
         }
     }
+
+    pub(crate) const fn requires_flag_only_passthrough(self) -> bool {
+        matches!(
+            self,
+            Self::AppServer | Self::AppServerDaemon | Self::RemoteControl
+        )
+    }
 }
 
 /// A bounded pass-through request for a packet-maintained non-TUI command.
@@ -127,10 +134,18 @@ impl NonTuiCommand {
 /// `arguments` are sent verbatim after the selected command path so callers
 /// can use upstream-maintained flags without waiting for a crate release. The
 /// command itself is an enum, preventing access to deferred shell completion
-/// support through this compatibility surface.
+/// support through this compatibility surface. The parent-only `AppServer`,
+/// `AppServerDaemon`, and `RemoteControl` variants accept only flag-form
+/// passthrough tokens, so valued flags must use `--flag=value` and callers
+/// cannot descend to child command paths through those variants.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NonTuiCommandRequest {
     pub command: NonTuiCommand,
+    /// Command-specific passthrough argv tokens.
+    ///
+    /// For `AppServer`, `AppServerDaemon`, and `RemoteControl`, every token
+    /// must begin with `-`; descendant command paths are rejected and valued
+    /// flags must use `--flag=value`.
     pub arguments: Vec<OsString>,
     pub dangerously_bypass_hook_trust: bool,
     pub strict_config: bool,

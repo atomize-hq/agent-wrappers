@@ -569,6 +569,11 @@ allowlisted path, so these entries are recorded as `passthrough` rather than
 claiming typed support. `completion` is intentionally absent from the enum and
 remains governed by the non-TUI support-debt record.
 
+At runtime, the parent-only `app-server`, `app-server daemon`, and
+`remote-control` variants MUST reject any passthrough token that does not begin
+with `-`; callers MUST use dedicated descendant enum variants for child command
+paths, and valued flags on those parent variants MUST use `--flag=value`.
+
 The generator MUST record this request's two root flags and all packet-owned
 new flags/arguments as `passthrough`, and must record newly discovered command
 paths as `passthrough`. Existing typed command entries remain `explicit` while

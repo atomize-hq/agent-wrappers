@@ -7,7 +7,7 @@ use std::{
 };
 
 use codex::{
-    AppServerCodegenRequest, AppServerProxyRequest, AppServerRequest, CodexClient,
+    AppServerCodegenRequest, AppServerProxyRequest, AppServerRequest, CodexClient, CodexError,
     DebugAppServerSendMessageV2Request, DebugModelsRequest, DebugPromptInputRequest,
     ExecServerRequest, FeaturesDisableRequest, FeaturesEnableRequest, NonTuiCommand,
     NonTuiCommandRequest, PluginCommandRequest, PluginMarketplaceAddRequest,
@@ -322,13 +322,14 @@ async fn packet_non_tui_commands_are_bounded_and_forward_arguments(
     for command in NonTuiCommand::all() {
         client
             .run_non_tui_command(
-                NonTuiCommandRequest::new(*command).args(["--packet-flag", "packet-value"]),
+                NonTuiCommandRequest::new(*command).args(non_tui_passthrough_args(*command)),
             )
             .await?;
     }
     client
         .run_non_tui_command(
-            NonTuiCommandRequest::new(NonTuiCommand::Doctor)
+            NonTuiCommandRequest::new(NonTuiCommand::RemoteControlHelp)
+                .arg("sessions")
                 .dangerously_bypass_hook_trust(true)
                 .strict_config(true),
         )
@@ -336,18 +337,110 @@ async fn packet_non_tui_commands_are_bounded_and_forward_arguments(
 
     let invocations = read_invocations(&log_path)?;
     assert_eq!(invocations.len(), NonTuiCommand::all().len() + 1);
-    assert!(invocations.iter().all(|invocation| {
-        invocation
-            .argv
+
+    for (command, invocation) in NonTuiCommand::all()
+        .iter()
+        .zip(invocations.iter().take(NonTuiCommand::all().len()))
+    {
+        let expected_path = command.path();
+        let expected_args = non_tui_passthrough_args(*command);
+        let actual_path = invocation.argv[..expected_path.len()]
             .iter()
-            .any(|argument| argument == "--packet-flag")
-            || invocation.argv
-                == [
-                    "--dangerously-bypass-hook-trust",
-                    "--strict-config",
-                    "doctor",
-                ]
-    }));
+            .map(|value| value.as_str())
+            .collect::<Vec<_>>();
+        let actual_args = invocation.argv[expected_path.len()..]
+            .iter()
+            .map(|value| value.as_str())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            actual_path, expected_path,
+            "command path must lead argv for {command:?}: {:?}",
+            invocation.argv
+        );
+        assert_eq!(
+            actual_args, expected_args,
+            "verbatim args must immediately follow command path for {command:?}: {:?}",
+            invocation.argv
+        );
+    }
+
+    assert_eq!(
+        invocations.last().expect("root-flag invocation").argv,
+        [
+            "--dangerously-bypass-hook-trust",
+            "--strict-config",
+            "remote-control",
+            "help",
+            "sessions",
+        ]
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn packet_non_tui_parent_variants_reject_bare_descendant_tokens(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp = tempfile::tempdir()?;
+    let log_path = temp.path().join("invocations.jsonl");
+    let fake_codex = write_fake_codex(&log_path)?;
+    let client = CodexClient::builder()
+        .binary(&fake_codex)
+        .mirror_stdout(false)
+        .quiet(true)
+        .build();
+
+    for (command, bare_token) in [
+        (NonTuiCommand::AppServer, "proxy"),
+        (NonTuiCommand::AppServerDaemon, "help"),
+        (NonTuiCommand::RemoteControl, "start"),
+    ] {
+        let error = client
+            .run_non_tui_command(NonTuiCommandRequest::new(command).arg(bare_token))
+            .await
+            .expect_err("parent variant should reject bare descendant token");
+
+        match error {
+            CodexError::NonZeroExit { stderr, .. } => {
+                assert!(stderr.contains(&command.path().join(" ")));
+                assert!(stderr.contains(bare_token));
+            }
+            other => panic!("unexpected error for {command:?}: {other:?}"),
+        }
+    }
+
+    assert!(
+        !log_path.exists(),
+        "validation should reject before spawn, but got invocations: {:?}",
+        read_invocations(&log_path).unwrap_or_default()
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn packet_non_tui_parent_variants_accept_flag_only_passthrough_arguments(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp = tempfile::tempdir()?;
+    let log_path = temp.path().join("invocations.jsonl");
+    let fake_codex = write_fake_codex(&log_path)?;
+    let client = CodexClient::builder()
+        .binary(&fake_codex)
+        .mirror_stdout(false)
+        .quiet(true)
+        .build();
+
+    client
+        .run_non_tui_command(
+            NonTuiCommandRequest::new(NonTuiCommand::AppServer).arg("--listen=127.0.0.1:9090"),
+        )
+        .await?;
+
+    let invocations = read_invocations(&log_path)?;
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(
+        invocations[0].argv,
+        ["app-server", "--listen=127.0.0.1:9090"]
+    );
     Ok(())
 }
 
@@ -580,6 +673,15 @@ exit 0
     permissions.set_mode(0o755);
     fs::set_permissions(&script_path, permissions)?;
     Ok(script_path)
+}
+
+fn non_tui_passthrough_args(command: NonTuiCommand) -> &'static [&'static str] {
+    match command {
+        NonTuiCommand::AppServer
+        | NonTuiCommand::AppServerDaemon
+        | NonTuiCommand::RemoteControl => &["--packet-flag=packet-value"],
+        _ => &["--packet-flag", "packet-value"],
+    }
 }
 
 fn read_invocations(log_path: &Path) -> Result<Vec<Invocation>, Box<dyn std::error::Error>> {
