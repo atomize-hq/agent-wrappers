@@ -18,7 +18,10 @@ use crate::{
 
 use super::{
     docs::build_packet_docs,
-    request::{load_request, MaintenanceAction, MaintenanceRequest, MaintenanceRequestError},
+    request::{
+        load_request_envelope_validated, AuditReconciliation, MaintenanceAction,
+        MaintenanceRequest, MaintenanceRequestError,
+    },
 };
 
 #[derive(Debug, Parser, Clone)]
@@ -50,6 +53,7 @@ pub enum Error {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RefreshPlan {
     pub request: MaintenanceRequest,
+    pub support_surface_audit_reconciliation: Option<AuditReconciliation>,
     pub files: Vec<PlannedFile>,
 }
 
@@ -134,7 +138,10 @@ pub fn build_refresh_plan(
     workspace_root: &Path,
     request_path: &Path,
 ) -> Result<RefreshPlan, Error> {
-    let request = load_request(workspace_root, request_path)?;
+    let validated_envelope = load_request_envelope_validated(workspace_root, request_path)?;
+    let request = validated_envelope.envelope.request;
+    let support_surface_audit_reconciliation =
+        validated_envelope.support_surface_audit_reconciliation;
     let mut files = Vec::new();
     let mut seen_paths = BTreeSet::new();
 
@@ -191,7 +198,11 @@ pub fn build_refresh_plan(
         }
     }
 
-    Ok(RefreshPlan { request, files })
+    Ok(RefreshPlan {
+        request,
+        support_surface_audit_reconciliation,
+        files,
+    })
 }
 
 pub fn apply_refresh_plan(
@@ -253,6 +264,14 @@ fn write_plan_preview<W: Write>(
         plan.request.trigger_kind.as_str()
     )
     .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
+    if let Some(reconciliation) = plan.support_surface_audit_reconciliation {
+        writeln!(
+            writer,
+            "support_surface_audit: {}",
+            reconciliation.human_status()
+        )
+        .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
+    }
     writeln!(writer, "requested_control_plane_actions:")
         .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
     for action in &plan.request.requested_control_plane_actions {

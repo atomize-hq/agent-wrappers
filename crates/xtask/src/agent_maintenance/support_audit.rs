@@ -126,6 +126,73 @@ impl SurfaceIdentity {
             surface_id,
         }
     }
+
+    pub(crate) fn describe(&self) -> String {
+        format!(
+            "surface_kind={} command_path={} surface_id={}",
+            self.surface_kind, self.command_path, self.surface_id
+        )
+    }
+}
+
+impl EvidenceBackedSurface {
+    pub(crate) fn identity(&self) -> SurfaceIdentity {
+        SurfaceIdentity::new(
+            self.surface_kind.clone(),
+            self.command_path.clone(),
+            self.surface_id.clone(),
+        )
+    }
+}
+
+impl DebtBackedSurface {
+    pub(crate) fn identity(&self) -> SurfaceIdentity {
+        SurfaceIdentity::new(
+            self.surface_kind.clone(),
+            self.command_path.clone(),
+            self.surface_id.clone(),
+        )
+    }
+}
+
+impl EligibleSurface {
+    pub(crate) fn identity(&self) -> SurfaceIdentity {
+        SurfaceIdentity::new(
+            self.surface_kind.clone(),
+            self.command_path.clone(),
+            self.surface_id.clone(),
+        )
+    }
+}
+
+impl RequiredUplift {
+    pub(crate) fn identity(&self) -> SurfaceIdentity {
+        SurfaceIdentity::new(
+            self.surface_kind.clone(),
+            self.command_path.clone(),
+            self.surface_id.clone(),
+        )
+    }
+}
+
+impl DeferredGap {
+    pub(crate) fn identity(&self) -> SurfaceIdentity {
+        SurfaceIdentity::new(
+            self.surface_kind.clone(),
+            self.command_path.clone(),
+            self.surface_id.clone(),
+        )
+    }
+}
+
+impl PublicationImpact {
+    pub(crate) fn identity(&self) -> SurfaceIdentity {
+        SurfaceIdentity::new(
+            self.surface_kind.clone(),
+            self.command_path.clone(),
+            self.surface_id.clone(),
+        )
+    }
 }
 
 impl DebtInventoryRow {

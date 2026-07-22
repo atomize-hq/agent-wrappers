@@ -297,6 +297,53 @@ fn execute_agent_maintenance_write_ignores_generated_python_bytecode_caches() {
 }
 
 #[test]
+fn execute_agent_maintenance_write_fails_when_support_surface_audit_goes_stale_after_gates() {
+    let fixture = prepare_execute_fixture("agent-maintenance-execute-support-audit-stale");
+    let request_path =
+        fixture.join("docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml");
+    let request_text = fs::read_to_string(&request_path).expect("read request");
+    harness::write_text(
+        &request_path,
+        &request_text.replace(
+            "  \"cli_manifests/codex/versions/0.98.0.json\",\n",
+            "  \"cli_manifests/codex/versions/0.98.0.json\",\n  \"cli_manifests/codex/reports/0.98.0/**\",\n",
+        ),
+    );
+    harness::write_text(
+        &fixture.join("gate-command.sh"),
+        "#!/usr/bin/env sh\nset -eu\nlabel=\"$1\"\nlog_path=\"$2\"\nmkdir -p \"$(dirname \"$log_path\")\"\nprintf '%s\\n' \"$label\" >> \"$log_path\"\ncat > \"cli_manifests/codex/reports/0.98.0/coverage.any.json\" <<'EOF'\n{\n  \"deltas\": {\n    \"missing_commands\": [\n      {\n        \"path\": [\"status\"]\n      }\n    ],\n    \"missing_flags\": [],\n    \"missing_args\": [],\n    \"intentionally_unsupported\": []\n  }\n}\nEOF\n",
+    );
+
+    let codex_binary = fake_execute_codex_binary(&fixture);
+    let dry_run = run_execute_cli(execute_args("--dry-run", Some(&codex_binary)), &fixture);
+    assert_eq!(dry_run.exit_code, 0, "stderr:\n{}", dry_run.stderr);
+
+    let output = run_execute_cli(execute_args("--write", Some(&codex_binary)), &fixture);
+
+    assert_eq!(output.exit_code, 2);
+    assert!(output
+        .stderr
+        .contains("support_surface_audit.discovered_upstream_surface added"));
+    assert!(output
+        .stderr
+        .contains("surface_kind=commands command_path=codex status surface_id=status"));
+
+    let run_dir = fixture.join(EXECUTE_RUNS_ROOT).join(EXECUTE_WRITE_RUN_ID);
+    let report = read_json(&run_dir.join("validation-report.json"));
+    assert_eq!(report.get("status").and_then(Value::as_str), Some("fail"));
+    assert!(
+        report
+            .get("errors")
+            .and_then(Value::as_array)
+            .expect("errors array")
+            .iter()
+            .filter_map(Value::as_str)
+            .any(|message| message
+                .contains("support_surface_audit.discovered_upstream_surface added"))
+    );
+}
+
+#[test]
 fn execute_agent_maintenance_closeout_harness_keeps_claude_code_recovery_parity() {
     let harness_source = include_str!("support/agent_maintenance_closeout_harness.rs");
 

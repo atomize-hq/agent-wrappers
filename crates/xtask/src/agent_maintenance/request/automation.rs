@@ -1,4 +1,8 @@
-use std::{fs, path::Path};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    path::Path,
+};
 
 use sha2::{Digest, Sha256};
 
@@ -24,9 +28,14 @@ use super::{
         validate_repo_relative_reference, validate_repo_relative_string_array,
         validate_sha256_value,
     },
-    DetectedRelease, ExecutionContract, ExecutionContractRecovery, MaintenanceAction,
-    MaintenanceRequestError, TriggerKind, AUTOMATED_ARTIFACT_VERSION,
+    AuditReconciliation, DetectedRelease, ExecutionContract, ExecutionContractRecovery,
+    MaintenanceAction, MaintenanceRequestError, TriggerKind, AUTOMATED_ARTIFACT_VERSION,
 };
+
+pub(super) struct SupportSurfaceAuditValidation {
+    pub audit: Option<SupportSurfaceAudit>,
+    pub reconciliation: Option<AuditReconciliation>,
+}
 
 pub(super) fn validate_support_surface_audit(
     workspace_root: &Path,
@@ -35,7 +44,7 @@ pub(super) fn validate_support_surface_audit(
     trigger_kind: TriggerKind,
     detected_release: Option<&DetectedRelease>,
     raw: Option<RawSupportSurfaceAudit>,
-) -> Result<Option<SupportSurfaceAudit>, MaintenanceRequestError> {
+) -> Result<SupportSurfaceAuditValidation, MaintenanceRequestError> {
     match (trigger_kind, raw) {
         (TriggerKind::UpstreamReleaseDetected, Some(raw_audit)) => {
             let detected_release = detected_release.ok_or_else(|| {
@@ -71,25 +80,26 @@ pub(super) fn validate_support_surface_audit(
                     request_path.display()
                 )));
             }
-            if actual != expected {
-                return Err(MaintenanceRequestError::Validation(format!(
-                    "maintenance request `{}` field `support_surface_audit` must match the shared derived maintenance contract",
-                    request_path.display()
-                )));
-            }
-            Ok(Some(expected))
+            let reconciliation = reconcile_support_surface_audit(request_path, &actual, &expected)?;
+            Ok(SupportSurfaceAuditValidation {
+                audit: Some(actual),
+                reconciliation: Some(reconciliation),
+            })
         }
-        (TriggerKind::UpstreamReleaseDetected, None) => Err(MaintenanceRequestError::Validation(
-            format!(
+        (TriggerKind::UpstreamReleaseDetected, None) => {
+            Err(MaintenanceRequestError::Validation(format!(
                 "maintenance request `{}` trigger_kind `upstream_release_detected` requires a `[support_surface_audit]` table",
                 request_path.display()
-            ),
-        )),
+            )))
+        }
         (_, Some(_)) => Err(MaintenanceRequestError::Validation(format!(
             "maintenance request `{}` may only include `[support_surface_audit]` when `trigger_kind = \"upstream_release_detected\"`",
             request_path.display()
         ))),
-        (_, None) => Ok(None),
+        (_, None) => Ok(SupportSurfaceAuditValidation {
+            audit: None,
+            reconciliation: None,
+        }),
     }
 }
 
@@ -533,6 +543,255 @@ fn validate_exact_array(
         "maintenance request `{}` field `{field_name}` must match the shared maintenance contract",
         request_path.display()
     )))
+}
+
+fn reconcile_support_surface_audit(
+    request_path: &Path,
+    frozen: &SupportSurfaceAudit,
+    live: &SupportSurfaceAudit,
+) -> Result<AuditReconciliation, MaintenanceRequestError> {
+    if frozen == live {
+        return Ok(AuditReconciliation::Exact);
+    }
+    if support_surface_audit_satisfied(frozen, live) {
+        return Ok(AuditReconciliation::Satisfied);
+    }
+
+    Err(MaintenanceRequestError::Validation(format!(
+        "maintenance request `{}` field `support_surface_audit` no longer matches the live derived maintenance contract: {}",
+        request_path.display(),
+        describe_support_surface_audit_drift(frozen, live)
+    )))
+}
+
+fn support_surface_audit_satisfied(
+    frozen: &SupportSurfaceAudit,
+    live: &SupportSurfaceAudit,
+) -> bool {
+    let frozen_had_work = !frozen.discovered_upstream_surface.is_empty()
+        || !frozen.required_uplifts_this_run.is_empty();
+    if !frozen_had_work {
+        return false;
+    }
+    if !live.discovered_upstream_surface.is_empty() || !live.required_uplifts_this_run.is_empty() {
+        return false;
+    }
+    if live.deferred_preexisting_gaps != frozen.deferred_preexisting_gaps {
+        return false;
+    }
+    if live.pre_run_debt_count != frozen.deferred_preexisting_gaps.len() {
+        return false;
+    }
+    if !live.removed_upstream_surface.is_empty() {
+        return false;
+    }
+
+    let live_debt_rows = live
+        .preexisting_unsupported_surface
+        .iter()
+        .map(DebtBackedSurface::identity)
+        .collect::<BTreeSet<_>>();
+    let frozen_deferred_rows = frozen
+        .deferred_preexisting_gaps
+        .iter()
+        .map(DeferredGap::identity)
+        .collect::<BTreeSet<_>>();
+    live_debt_rows == frozen_deferred_rows
+}
+
+fn describe_support_surface_audit_drift(
+    frozen: &SupportSurfaceAudit,
+    live: &SupportSurfaceAudit,
+) -> String {
+    let mut diffs = Vec::new();
+    push_scalar_diff(
+        &mut diffs,
+        "support_surface_audit.pre_run_debt_count",
+        frozen.pre_run_debt_count,
+        live.pre_run_debt_count,
+    );
+    push_scalar_diff(
+        &mut diffs,
+        "support_surface_audit.expected_post_run_debt_count",
+        frozen.expected_post_run_debt_count,
+        live.expected_post_run_debt_count,
+    );
+    push_row_diffs(
+        &mut diffs,
+        "support_surface_audit.discovered_upstream_surface",
+        &frozen.discovered_upstream_surface,
+        &live.discovered_upstream_surface,
+        EvidenceBackedSurface::identity,
+        |row| format!("evidence_ref={}", row.evidence_ref),
+    );
+    push_row_diffs(
+        &mut diffs,
+        "support_surface_audit.removed_upstream_surface",
+        &frozen.removed_upstream_surface,
+        &live.removed_upstream_surface,
+        EvidenceBackedSurface::identity,
+        |row| format!("evidence_ref={}", row.evidence_ref),
+    );
+    push_row_diffs(
+        &mut diffs,
+        "support_surface_audit.preexisting_unsupported_surface",
+        &frozen.preexisting_unsupported_surface,
+        &live.preexisting_unsupported_surface,
+        DebtBackedSurface::identity,
+        |row| format!("debt_ref={}", row.debt_ref),
+    );
+    push_row_diffs(
+        &mut diffs,
+        "support_surface_audit.eligible_preexisting_surface",
+        &frozen.eligible_preexisting_surface,
+        &live.eligible_preexisting_surface,
+        EligibleSurface::identity,
+        |row| format!("eligibility_reason={}", row.eligibility_reason),
+    );
+    push_row_diffs(
+        &mut diffs,
+        "support_surface_audit.missing_wrapper_support",
+        &frozen.missing_wrapper_support,
+        &live.missing_wrapper_support,
+        Clone::clone,
+        |_| String::new(),
+    );
+    push_row_diffs(
+        &mut diffs,
+        "support_surface_audit.missing_backend_support",
+        &frozen.missing_backend_support,
+        &live.missing_backend_support,
+        Clone::clone,
+        |_| String::new(),
+    );
+    push_row_diffs(
+        &mut diffs,
+        "support_surface_audit.required_uplifts_this_run",
+        &frozen.required_uplifts_this_run,
+        &live.required_uplifts_this_run,
+        RequiredUplift::identity,
+        |row| {
+            format!(
+                "reason={}; required_writes={}",
+                row.reason,
+                row.required_writes.join(",")
+            )
+        },
+    );
+    push_row_diffs(
+        &mut diffs,
+        "support_surface_audit.deferred_preexisting_gaps",
+        &frozen.deferred_preexisting_gaps,
+        &live.deferred_preexisting_gaps,
+        DeferredGap::identity,
+        |row| {
+            let follow_on = row.blocking_follow_on.as_deref().unwrap_or("none");
+            format!(
+                "defer_reason={}; blocking_follow_on={follow_on}",
+                row.defer_reason
+            )
+        },
+    );
+    push_row_diffs(
+        &mut diffs,
+        "support_surface_audit.publication_impacts",
+        &frozen.publication_impacts,
+        &live.publication_impacts,
+        PublicationImpact::identity,
+        |row| format!("surface_doc={}", row.surface_doc),
+    );
+
+    if diffs.is_empty() {
+        "the frozen audit differs from the live derivation in an unclassified way".to_string()
+    } else {
+        diffs.join("; ")
+    }
+}
+
+fn push_scalar_diff<T>(diffs: &mut Vec<String>, field_name: &str, frozen: T, live: T)
+where
+    T: PartialEq + std::fmt::Display,
+{
+    if frozen != live {
+        diffs.push(format!(
+            "{field_name} changed: frozen `{frozen}` vs live `{live}`"
+        ));
+    }
+}
+
+fn push_row_diffs<T, IdentityFn, DetailFn>(
+    diffs: &mut Vec<String>,
+    field_name: &str,
+    frozen: &[T],
+    live: &[T],
+    identity: IdentityFn,
+    detail: DetailFn,
+) where
+    IdentityFn: Fn(&T) -> SurfaceIdentity,
+    DetailFn: Fn(&T) -> String,
+{
+    let frozen_map = frozen
+        .iter()
+        .map(|row| (identity(row), detail(row)))
+        .collect::<BTreeMap<_, _>>();
+    let live_map = live
+        .iter()
+        .map(|row| (identity(row), detail(row)))
+        .collect::<BTreeMap<_, _>>();
+    let identities = frozen_map
+        .keys()
+        .chain(live_map.keys())
+        .cloned()
+        .collect::<BTreeSet<_>>();
+
+    let mut added = Vec::new();
+    let mut removed = Vec::new();
+    let mut changed = Vec::new();
+    for identity in identities {
+        match (frozen_map.get(&identity), live_map.get(&identity)) {
+            (Some(frozen_detail), Some(live_detail)) if frozen_detail != live_detail => {
+                changed.push(format!(
+                    "{} [frozen: {}; live: {}]",
+                    identity.describe(),
+                    render_detail(frozen_detail),
+                    render_detail(live_detail)
+                ));
+            }
+            (Some(frozen_detail), None) => {
+                removed.push(render_row(&identity, frozen_detail));
+            }
+            (None, Some(live_detail)) => {
+                added.push(render_row(&identity, live_detail));
+            }
+            _ => {}
+        }
+    }
+
+    if !added.is_empty() {
+        diffs.push(format!("{field_name} added: {}", added.join(", ")));
+    }
+    if !removed.is_empty() {
+        diffs.push(format!("{field_name} removed: {}", removed.join(", ")));
+    }
+    if !changed.is_empty() {
+        diffs.push(format!("{field_name} changed: {}", changed.join(", ")));
+    }
+}
+
+fn render_row(identity: &SurfaceIdentity, detail: &str) -> String {
+    if detail.is_empty() {
+        identity.describe()
+    } else {
+        format!("{} [{}]", identity.describe(), detail)
+    }
+}
+
+fn render_detail(detail: &str) -> &str {
+    if detail.is_empty() {
+        "no additional detail"
+    } else {
+        detail
+    }
 }
 
 fn map_raw_support_surface_audit(raw: RawSupportSurfaceAudit) -> SupportSurfaceAudit {
