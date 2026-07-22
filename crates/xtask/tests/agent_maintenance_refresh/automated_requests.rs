@@ -194,6 +194,22 @@ fn seed_live_new_discovery(fixture: &std::path::Path) {
     );
 }
 
+fn seed_live_clean_report(fixture: &std::path::Path) {
+    write_text(
+        &fixture.join("cli_manifests/opencode/reports/0.98.0/coverage.any.json"),
+        concat!(
+            "{\n",
+            "  \"deltas\": {\n",
+            "    \"missing_commands\": [],\n",
+            "    \"missing_flags\": [],\n",
+            "    \"missing_args\": [],\n",
+            "    \"intentionally_unsupported\": []\n",
+            "  }\n",
+            "}\n"
+        ),
+    );
+}
+
 fn seed_live_deferred_row(fixture: &std::path::Path, blocker_class: &str) {
     write_text(
         &fixture.join("cli_manifests/opencode/reports/0.98.0/coverage.any.json"),
@@ -497,7 +513,7 @@ fn automated_packet_refresh_renders_canonical_handoff_and_pr_summary() {
         "cargo run -p xtask -- execute-agent-maintenance --dry-run --request docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml"
     ));
     assert!(handoff.contains(
-        "cargo run -p xtask -- execute-agent-maintenance --write --request docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml --run-id <run-id-from-dry-run>"
+        "cargo run -p xtask -- execute-agent-maintenance --write --request docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml --run-id RUN_ID_FROM_DRY_RUN"
     ));
     assert!(handoff.contains("## Exact closeout command"));
     assert!(handoff.contains("## Exact maintained-agent prompt"));
@@ -553,6 +569,7 @@ fn automated_request_support_surface_audit_satisfied_state_keeps_frozen_discover
     let fixture = fixture_root("agent-maintenance-automated-request-satisfied");
     seed_publication_inputs(&fixture);
     seed_opencode_packet_pr_workflow(&fixture);
+    seed_live_clean_report(&fixture);
 
     let request_path =
         "docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml";
@@ -595,6 +612,67 @@ fn automated_request_support_surface_audit_satisfied_state_keeps_frozen_discover
     .expect("refresh dry-run");
     let stdout = String::from_utf8(stdout).expect("utf8 stdout");
     assert!(stdout.contains("support_surface_audit: satisfied (frozen discovery preserved)"));
+}
+
+#[test]
+fn automated_request_support_surface_audit_rejects_missing_live_report_after_frozen_discovery() {
+    let fixture = fixture_root("agent-maintenance-automated-request-missing-report");
+    seed_publication_inputs(&fixture);
+    seed_opencode_packet_pr_workflow(&fixture);
+    seed_live_clean_report(&fixture);
+    fs::remove_file(fixture.join("cli_manifests/opencode/reports/0.98.0/coverage.any.json"))
+        .expect("remove live report");
+
+    let request_path =
+        "docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml";
+    write_text(
+        &fixture.join(request_path),
+        &(opencode_automated_request_toml(
+            "docs/integrations/opencode/governance/seam-2-closeout.md",
+        ) + FROZEN_DISCOVERY_ROW),
+    );
+
+    let err = request::load_request_envelope_validated(&fixture, Path::new(request_path))
+        .expect_err("missing live report should invalidate the frozen request");
+    let message = err.to_string();
+    assert!(message.contains("cannot confirm reconciliation"));
+    assert!(message.contains("target version `0.98.0`"));
+    assert!(message.contains("cli_manifests/opencode/reports/0.98.0"));
+
+    let refresh_err = build_refresh_plan(&fixture, Path::new(request_path))
+        .expect_err("refresh should reject missing report evidence");
+    let refresh_message = refresh_err.to_string();
+    assert!(refresh_message.contains("cannot confirm reconciliation"));
+    assert!(refresh_message.contains("cli_manifests/opencode/reports/0.98.0"));
+}
+
+#[test]
+fn automated_request_support_surface_audit_exact_state_survives_when_live_matches_frozen() {
+    let fixture = fixture_root("agent-maintenance-automated-request-exact");
+    seed_publication_inputs(&fixture);
+    seed_opencode_packet_pr_workflow(&fixture);
+
+    let request_path =
+        "docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml";
+    write_text(
+        &fixture.join(request_path),
+        &opencode_automated_request_toml(
+            "docs/integrations/opencode/governance/seam-2-closeout.md",
+        ),
+    );
+
+    let envelope = request::load_request_envelope_validated(&fixture, Path::new(request_path))
+        .expect("load exact request");
+    assert_eq!(
+        envelope.support_surface_audit_reconciliation,
+        Some(request::AuditReconciliation::Exact)
+    );
+
+    let plan = build_refresh_plan(&fixture, Path::new(request_path)).expect("build refresh plan");
+    assert_eq!(
+        plan.support_surface_audit_reconciliation,
+        Some(request::AuditReconciliation::Exact)
+    );
 }
 
 #[test]

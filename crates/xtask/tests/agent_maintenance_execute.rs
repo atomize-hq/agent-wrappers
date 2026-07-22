@@ -127,7 +127,7 @@ fn execute_agent_maintenance_dry_run_locks_relay_wording_and_distinction() {
         "cargo run -p xtask -- execute-agent-maintenance --dry-run --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml"
     ));
     assert!(handoff.contains(
-        "cargo run -p xtask -- execute-agent-maintenance --write --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml --run-id <run-id-from-dry-run>"
+        "cargo run -p xtask -- execute-agent-maintenance --write --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml --run-id RUN_ID_FROM_DRY_RUN"
     ));
 }
 

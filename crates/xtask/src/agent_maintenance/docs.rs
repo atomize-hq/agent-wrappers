@@ -255,11 +255,11 @@ pub fn render_execution_packet(
         request.relative_path
     );
     let write_command = format!(
-        "cargo run -p xtask -- execute-agent-maintenance --write --request {} --run-id <run-id-from-dry-run>",
+        "cargo run -p xtask -- execute-agent-maintenance --write --request {} --run-id RUN_ID_FROM_DRY_RUN",
         request.relative_path
     );
     let handoff_contents = wrap_markdown(&format!(
-        "# Handoff\n\nThis file is the canonical contributor execution contract for `{}` maintenance.\n\n## Packet origin\n\n{}\n\n## Support-surface audit\n\n{}\n\n## Relay contract\n\n- maintained agent packet: `{}`\n- local execution host: `{}`\n- executor surface: `{}`\n- request artifact: `{}`\n- prompt template path: `{}`\n- prompt sha256: `{}`\n- canonical handoff: `{}`\n- derivative pr summary: `{}`\n- exact closeout artifact: `{}`\n- branch linkage: `{}`\n- manual closeout required: `{}`\n\n## Writable surfaces\n\n{}\n\n## Read-only inputs\n\n{}\n\n## Ordered repo commands\n\n{}\n\n## Exact green gates\n\n{}\n\n## Recovery\n\n- recreate packet command: `{}`\n- reopen pr body path: `{}`\n- reopen pr branch: `{}`\n- notes:\n{}\n\n## Dry-run to write relay\n\nUse the `run_id` printed by the dry-run output when invoking write mode.\n\n```sh\n{}\n{}\n```\n\n## Exact closeout command\n\n```sh\ncargo run -p xtask -- close-agent-maintenance --request {} --closeout {}\n```\n\n## Exact maintained-agent prompt\n\n```md\n{}\n```\n",
+        "# Handoff\n\nThis file is the canonical contributor execution contract for `{}` maintenance.\n\n## Packet origin\n\n{}\n\n## Support-surface audit\n\n{}\n\n## Relay contract\n\n- maintained agent packet: `{}`\n- local execution host: `{}`\n- executor surface: `{}`\n- request artifact: `{}`\n- prompt template path: `{}`\n- prompt sha256: `{}`\n- canonical handoff: `{}`\n- derivative pr summary: `{}`\n- exact closeout artifact: `{}`\n- branch linkage: `{}`\n- manual closeout required: `{}`\n\n## Writable surfaces\n\n{}\n\n## Read-only inputs\n\n{}\n\n## Ordered repo commands\n\n{}\n\n## Exact green gates\n\n{}\n\n## Recovery\n\n- recreate packet command: `{}`\n- reopen pr body path: `{}`\n- reopen pr branch: `{}`\n- notes:\n{}\n\n## Dry-run to write relay\n\nUse the `run_id` printed by the dry-run output, replacing `RUN_ID_FROM_DRY_RUN` before invoking write mode.\n\n```sh\n{}\n{}\n```\n\n## Exact closeout command\n\n```sh\ncargo run -p xtask -- close-agent-maintenance --request {} --closeout {}\n```\n\n## Exact maintained-agent prompt\n\n```md\n{}\n```\n",
         request.agent_id,
         trigger_context,
         support_audit,

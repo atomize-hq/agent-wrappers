@@ -68,6 +68,22 @@ fn seed_live_new_discovery(fixture: &std::path::Path) {
     );
 }
 
+fn seed_live_clean_report(fixture: &std::path::Path) {
+    write_text(
+        &fixture.join("cli_manifests/opencode/reports/1.14.47/coverage.any.json"),
+        concat!(
+            "{\n",
+            "  \"deltas\": {\n",
+            "    \"missing_commands\": [],\n",
+            "    \"missing_flags\": [],\n",
+            "    \"missing_args\": [],\n",
+            "    \"intentionally_unsupported\": []\n",
+            "  }\n",
+            "}\n"
+        ),
+    );
+}
+
 fn seed_live_deferred_row(fixture: &std::path::Path, blocker_class: &str) {
     write_text(
         &fixture.join("cli_manifests/opencode/reports/1.14.47/coverage.any.json"),
@@ -322,6 +338,7 @@ fn close_agent_maintenance_accepts_satisfied_support_surface_audit_request() {
         &fixture.join(".github/workflows/agent-maintenance-open-pr.yml"),
         "name: Packet PR worker\n",
     );
+    seed_live_clean_report(&fixture);
     let request_path =
         Path::new("docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml");
     let request_absolute = fixture.join(request_path);
@@ -347,6 +364,44 @@ fn close_agent_maintenance_accepts_satisfied_support_surface_audit_request() {
         linked.request.trigger_kind.as_str(),
         "upstream_release_detected"
     );
+}
+
+#[test]
+fn close_agent_maintenance_rejects_missing_live_report_in_linked_request() {
+    let fixture = fixture_root("close-agent-maintenance-support-audit-missing-report");
+    maintenance_harness::seed_opencode_basis(&fixture);
+    write_text(
+        &fixture.join(".github/workflows/agent-maintenance-open-pr.yml"),
+        "name: Packet PR worker\n",
+    );
+    seed_live_clean_report(&fixture);
+    fs::remove_file(fixture.join("cli_manifests/opencode/reports/1.14.47/coverage.any.json"))
+        .expect("remove live report");
+    let request_path =
+        Path::new("docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml");
+    let request_absolute = fixture.join(request_path);
+    write_text(
+        &request_absolute,
+        &(automated_maintenance_request_toml(
+            "opencode",
+            "docs/integrations/opencode/governance/seam-2-closeout.md",
+        ) + FROZEN_DISCOVERY_ROW),
+    );
+
+    let closeout_path = Path::new(
+        "docs/agents/lifecycle/opencode-maintenance/governance/maintenance-closeout.json",
+    );
+    write_text(
+        &fixture.join(closeout_path),
+        &valid_closeout_json(&request_absolute, request_path),
+    );
+
+    let err = load_linked_closeout(&fixture, request_path, closeout_path)
+        .expect_err("missing live report should invalidate closeout");
+    let message = err.to_string();
+    assert!(message.contains("cannot confirm reconciliation"));
+    assert!(message.contains("target version `1.14.47`"));
+    assert!(message.contains("cli_manifests/opencode/reports/1.14.47"));
 }
 
 #[test]

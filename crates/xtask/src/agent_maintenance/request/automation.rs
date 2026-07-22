@@ -12,9 +12,9 @@ use super::super::contract_policy::{
     build_execution_contract, derive_detected_release_fields, LEGACY_EXECUTOR_ALIAS,
 };
 use super::super::support_audit::{
-    allowed_deferrals, derive_support_surface_audit, excluded_surface_kinds, surface_kinds,
-    DebtBackedSurface, DeferredGap, EligibleSurface, EvidenceBackedSurface, PublicationImpact,
-    RequiredUplift, SupportSurfaceAudit, SurfaceIdentity,
+    allowed_deferrals, coverage_report_present_for_target, derive_support_surface_audit,
+    excluded_surface_kinds, surface_kinds, DebtBackedSurface, DeferredGap, EligibleSurface,
+    EvidenceBackedSurface, PublicationImpact, RequiredUplift, SupportSurfaceAudit, SurfaceIdentity,
 };
 use super::{
     raw::{
@@ -54,9 +54,9 @@ pub(super) fn validate_support_surface_audit(
                 ))
             })?;
             let actual = map_raw_support_surface_audit(raw_audit);
-            let expected = derive_support_surface_audit(workspace_root, registry_entry, detected_release)
-                .map_err(MaintenanceRequestError::Internal)?;
-            if actual.required != expected.required {
+            let frozen_had_discovery_work = !actual.discovered_upstream_surface.is_empty()
+                || !actual.required_uplifts_this_run.is_empty();
+            if !actual.required {
                 return Err(MaintenanceRequestError::Validation(format!(
                     "maintenance request `{}` field `support_surface_audit.required` must be `true`",
                     request_path.display()
@@ -80,6 +80,38 @@ pub(super) fn validate_support_surface_audit(
                     request_path.display()
                 )));
             }
+            if frozen_had_discovery_work {
+                let report_dir = format!(
+                    "{}/reports/{}",
+                    registry_entry.manifest_root, detected_release.target_version
+                );
+                match coverage_report_present_for_target(
+                    workspace_root,
+                    registry_entry,
+                    &detected_release.target_version,
+                ) {
+                    Ok(true) => {}
+                    Ok(false) => {
+                        return Err(MaintenanceRequestError::Validation(format!(
+                            "maintenance request `{}` field `support_surface_audit` cannot confirm reconciliation because live coverage report evidence for target version `{}` is missing under `{}`",
+                            request_path.display(),
+                            detected_release.target_version,
+                            report_dir
+                        )));
+                    }
+                    Err(error) => {
+                        return Err(MaintenanceRequestError::Validation(format!(
+                            "maintenance request `{}` field `support_surface_audit` cannot confirm reconciliation because live coverage report evidence for target version `{}` under `{}` is unreadable: {}",
+                            request_path.display(),
+                            detected_release.target_version,
+                            report_dir,
+                            error
+                        )));
+                    }
+                }
+            }
+            let expected = derive_support_surface_audit(workspace_root, registry_entry, detected_release)
+                .map_err(MaintenanceRequestError::Internal)?;
             let reconciliation = reconcile_support_surface_audit(request_path, &actual, &expected)?;
             Ok(SupportSurfaceAuditValidation {
                 audit: Some(actual),

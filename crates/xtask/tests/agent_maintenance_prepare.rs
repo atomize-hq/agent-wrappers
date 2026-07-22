@@ -220,7 +220,7 @@ fn shared_renderer_keeps_handoff_pr_summary_and_prompt_in_lockstep() {
         "cargo run -p xtask -- execute-agent-maintenance --dry-run --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml"
     ));
     assert!(rendered_packet.handoff_contents.contains(
-        "cargo run -p xtask -- execute-agent-maintenance --write --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml --run-id <run-id-from-dry-run>"
+        "cargo run -p xtask -- execute-agent-maintenance --write --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml --run-id RUN_ID_FROM_DRY_RUN"
     ));
     assert!(rendered_packet
         .handoff_contents
