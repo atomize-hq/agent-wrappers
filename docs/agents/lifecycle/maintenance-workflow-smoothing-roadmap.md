@@ -77,3 +77,29 @@ independent waves parallelized. Every material candidate gets a parallel
 Codex + Opus read-only review lane, lead adjudication, and a lead final
 once-over before integration. The 0.144.6 packet branch (PR #144) is frozen and
 independent of this campaign.
+
+## Completion status (2026-07-22)
+
+P0 + P1 landed on `maintenance/workflow-smoothing-p0p1` (branch base
+`origin/staging` `1ae6ee12`); `make preflight` green (incl. `loc-check`).
+
+| Commit | Wave | Notes |
+| --- | --- | --- |
+| `0bd4a5fe` | W1 | fault-isolating + paginated + hardened `maintenance-watch` (additive `failed_agents[]`, `--agent` filter) |
+| `b754f53c` | W2 | CI failure surfacing, per-agent `dispatch_workflow`, per-agent PR supersession |
+| `18803cf4` | W2 review remediation | systemic-outage red gate, strict-semver close guard, fail-visible `gh` calls |
+| `fa6aecbd` | W3 | computed `AuditReconciliation::{Exact,Satisfied}` + execute-time staleness gate |
+| `0980c4f6` | W4 | governance-tolerant execute baseline (E5), `--run-id` relay (E4), single-source refresh allowlist (A3); **A2 deferred** |
+| `12e6cd09` | W3/W4 review remediation | reject `Satisfied` when live coverage report vanished; shell-safe `--run-id` placeholder |
+| `d58bf3cd` | hygiene | extract reconciliation into `request/support_surface_audit_reconcile.rs` (700-LOC cap) |
+
+Each material candidate passed a parallel Codex + Opus review lane plus lead
+adjudication; the P1 lanes caught a real defect (vanished-coverage-report →
+false `Satisfied`) fixed in `12e6cd09`.
+
+### Deferred (tracked; not in P0+P1)
+
+- **A2** — narrow the maintained agent's `writable_surfaces` off control-plane docs. Deferred because it forces regenerating committed packet docs for codex/claude_code/opencode plus fixtures (`contract_policy.rs`).
+- **W5–W7** — runtime robustness (E7a process reaping, E7 regression test, E6 musl-lane doc, A5 run-packet placement), host-neutral generality, enrollment clarity.
+- **Prerelease-target selection** — `watch.rs` `fetch_github_releases` accepts prerelease-semver tags not flagged prerelease on GitHub as targets (pre-existing; add `!version.pre.is_empty()` guard).
+- **`Satisfied` provenance/content integrity (High, defended-in-depth)** — the reconciliation trusts coverage-report *content*: a present-but-emptied report (all delta arrays empty) or a renumbered `debt_ref` is not distinguished from genuine reconciliation. Defended today by `codex-validate`/report-consistency green gates. Proper fix is a per-identity resolution proof cross-referencing wrapper coverage (not a freeze-vs-live digest, which always differs for a real `Satisfied`).
