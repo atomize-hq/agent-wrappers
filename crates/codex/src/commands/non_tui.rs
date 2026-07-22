@@ -1,5 +1,4 @@
 use std::ffi::OsString;
-use std::process::ExitStatus;
 
 use crate::{ApplyDiffArtifacts, CodexClient, CodexError, NonTuiCommandRequest};
 
@@ -27,13 +26,9 @@ impl CodexClient {
                 .iter()
                 .find(|argument| !argument.to_string_lossy().starts_with('-'))
             {
-                return Err(CodexError::NonZeroExit {
-                    status: invalid_usage_status(),
-                    stderr: format!(
-                        "non-TUI command `{}` only accepts flag-form passthrough arguments; got bare token `{}`",
-                        command.path().join(" "),
-                        argument.to_string_lossy()
-                    ),
+                return Err(CodexError::InvalidNonTuiPassthrough {
+                    command: command.path().join(" "),
+                    token: argument.to_string_lossy().into_owned(),
                 });
             }
         }
@@ -51,18 +46,4 @@ impl CodexClient {
         self.run_simple_command_with_overrides(args, overrides)
             .await
     }
-}
-
-#[cfg(unix)]
-fn invalid_usage_status() -> ExitStatus {
-    use std::os::unix::process::ExitStatusExt;
-
-    ExitStatus::from_raw(2 << 8)
-}
-
-#[cfg(windows)]
-fn invalid_usage_status() -> ExitStatus {
-    use std::os::windows::process::ExitStatusExt;
-
-    ExitStatus::from_raw(2)
 }

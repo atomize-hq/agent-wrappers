@@ -55,6 +55,8 @@ pub enum CodexError {
     EmptySandboxCommand,
     #[error("execpolicy command must not be empty")]
     EmptyExecPolicyCommand,
+    #[error("non-TUI command `{command}` does not accept bare passthrough token `{token}`; parent commands require --flag=value form")]
+    InvalidNonTuiPassthrough { command: String, token: String },
     #[error("API key must not be empty")]
     EmptyApiKey,
     #[error("task id must not be empty")]

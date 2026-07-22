@@ -401,9 +401,12 @@ async fn packet_non_tui_parent_variants_reject_bare_descendant_tokens(
             .expect_err("parent variant should reject bare descendant token");
 
         match error {
-            CodexError::NonZeroExit { stderr, .. } => {
-                assert!(stderr.contains(&command.path().join(" ")));
-                assert!(stderr.contains(bare_token));
+            CodexError::InvalidNonTuiPassthrough {
+                command: actual_command,
+                token,
+            } => {
+                assert_eq!(actual_command, command.path().join(" "));
+                assert_eq!(token, bare_token);
             }
             other => panic!("unexpected error for {command:?}: {other:?}"),
         }
@@ -441,6 +444,46 @@ async fn packet_non_tui_parent_variants_accept_flag_only_passthrough_arguments(
         invocations[0].argv,
         ["app-server", "--listen=127.0.0.1:9090"]
     );
+    Ok(())
+}
+
+#[tokio::test]
+async fn packet_non_tui_parent_variant_predicate_edge_cases_preserve_spawn_behavior(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp = tempfile::tempdir()?;
+    let log_path = temp.path().join("invocations.jsonl");
+    let fake_codex = write_fake_codex(&log_path)?;
+    let client = CodexClient::builder()
+        .binary(&fake_codex)
+        .mirror_stdout(false)
+        .quiet(true)
+        .build();
+
+    client
+        .run_non_tui_command(NonTuiCommandRequest::new(NonTuiCommand::AppServer).arg("-"))
+        .await?;
+    client
+        .run_non_tui_command(NonTuiCommandRequest::new(NonTuiCommand::AppServer).arg("--"))
+        .await?;
+
+    let error = client
+        .run_non_tui_command(NonTuiCommandRequest::new(NonTuiCommand::AppServer).arg(""))
+        .await
+        .expect_err("empty passthrough should be rejected before spawn");
+
+    match error {
+        CodexError::InvalidNonTuiPassthrough { command, token } => {
+            assert_eq!(command, NonTuiCommand::AppServer.path().join(" "));
+            assert_eq!(token, "");
+        }
+        other => panic!("unexpected error for empty passthrough: {other:?}"),
+    }
+
+    let invocations = read_invocations(&log_path)?;
+    assert_eq!(invocations.len(), 2);
+    assert_eq!(invocations[0].argv, ["app-server", "-"]);
+    assert_eq!(invocations[1].argv, ["app-server", "--"]);
+
     Ok(())
 }
 

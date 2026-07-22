@@ -146,6 +146,12 @@ fn clone_codex_error(err: &CodexError) -> CodexError {
         CodexError::EmptyPrompt => CodexError::EmptyPrompt,
         CodexError::EmptySandboxCommand => CodexError::EmptySandboxCommand,
         CodexError::EmptyExecPolicyCommand => CodexError::EmptyExecPolicyCommand,
+        CodexError::InvalidNonTuiPassthrough { command, token } => {
+            CodexError::InvalidNonTuiPassthrough {
+                command: command.clone(),
+                token: token.clone(),
+            }
+        }
         CodexError::EmptyApiKey => CodexError::EmptyApiKey,
         CodexError::EmptyTaskId => CodexError::EmptyTaskId,
         CodexError::EmptyEnvId => CodexError::EmptyEnvId,

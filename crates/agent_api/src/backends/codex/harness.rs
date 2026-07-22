@@ -156,6 +156,7 @@ fn codex_error_kind(err: &CodexError) -> &'static str {
         CodexError::EmptyPrompt
         | CodexError::EmptySandboxCommand
         | CodexError::EmptyExecPolicyCommand
+        | CodexError::InvalidNonTuiPassthrough { .. }
         | CodexError::EmptyApiKey
         | CodexError::EmptyTaskId
         | CodexError::EmptyEnvId
