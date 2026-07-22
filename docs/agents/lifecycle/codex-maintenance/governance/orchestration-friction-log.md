@@ -127,7 +127,50 @@ future fix.
   xtask executor). Priority: medium.
 - Blocking: worked around.
 
-## Entry 6 — watcher release-history window is first-page-only
+## Entry 6 — required-target platform evidence has no working local lane
+
+- Workflow step / timestamp: execute-canonical-lane (second write run), 2026-07-21.
+- Observed issue: the packet requires a `x86_64-unknown-linux-musl` snapshot
+  (RULES.json `union.required_target`), but every configured execution path
+  failed: local AMD64 Podman under QEMU SIGSEGVs `rustc`; configured hosts
+  `spenser-linux-codex` (192.168.50.132) and `clawOne` (20.127.187.160) are
+  unreachable ("No route to host" / connect timeout, re-verified by the
+  orchestrator). The historical CI lane
+  (`codex-cli-update-snapshot.yml`) is workflow_dispatch-only and marked
+  "historical manual only"; dispatching it or pushing was out of contract for
+  this run.
+- Evidence: `maintainer-follow-up.md` written by the packet host; orchestrator
+  ssh probes; write-run status `written_paths` limited to the darwin snapshot
+  and follow-up note.
+- Impact: the packet stalls after the darwin snapshot; union/coverage/
+  versions/closeout blocked.
+- Workaround used: reproduced the CI `union-report-validate` fallback step
+  locally with repository tooling only — scratch worktree at candidate commit
+  `df0762ea`; pinned upstream asset
+  `codex-x86_64-unknown-linux-musl.tar.gz` from `rust-v0.144.6`
+  (sha256 `6a9def51a0ad8cea6684d8eb3bf033c89f33e3bc5cfe492f1a1e0a718451a1c6`,
+  109369631 bytes); `SOURCE_DATE_EPOCH=1784382712` from the release
+  `published_at`; generator invocation identical to the CI recipe. Because
+  the Podman machine's `Rosetta: true` flag is inert (only `qemu-*` binfmt
+  handlers are registered, so `rustc` still SIGSEGVs in-container), the
+  orchestrator cross-compiled the workspace `xtask` on the macOS host to a
+  static `x86_64-unknown-linux-musl` binary (`rustup target add` +
+  `RUSTFLAGS="-C linker=rust-lld -C target-feature=+crt-static" cargo build
+  -p xtask --release --target x86_64-unknown-linux-musl`) and ran it with the
+  real pinned codex binary inside a `docker.io/library/alpine` linux/amd64
+  container — plain CLI execution works under qemu even though `rustc` does
+  not. No hand-authored snapshot content.
+- Likely root cause: the maintenance relay assumes either CI runners or a
+  reachable native Linux host; neither exists in the current local-first
+  transport, and the packet host does not know about the Rosetta-backed
+  container path.
+- Proposed fix / owner / priority: teach the executor (or a documented
+  runbook step) the containerized required-target generation path, or
+  re-enable a CI lane for platform evidence (owner: xtask / wrappers team).
+  Priority: high.
+- Blocking: worked around for this run.
+
+## Entry 6b — watcher release-history window is first-page-only
 
 - Workflow step / timestamp: establish-maintenance-truth, 2026-07-21.
 - Observed issue: `fetch_github_releases` requests

@@ -6,8 +6,8 @@ opened_from = ".github/workflows/agent-maintenance-open-pr.yml"
 requested_control_plane_actions = [
   "packet_doc_refresh",
 ]
-request_recorded_at = "2026-07-21T20:41:20Z"
-request_commit = "1ae6ee12ffd78a93ab41f3f2c754bd1eba14bbb3"
+request_recorded_at = "2026-07-22T00:14:53Z"
+request_commit = "df0762ea109af1206b85c585a87030a8e3bbfe38"
 
 [runtime_followup_required]
 required = false
@@ -47,6 +47,414 @@ allowed_deferrals = [
 pre_run_debt_count = 2
 expected_post_run_debt_count = 2
 
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "commands"
+command_path = "codex archive"
+surface_id = "archive"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "commands"
+command_path = "codex delete"
+surface_id = "delete"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "commands"
+command_path = "codex doctor"
+surface_id = "doctor"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "commands"
+command_path = "codex remote-control"
+surface_id = "remote-control"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "commands"
+command_path = "codex unarchive"
+surface_id = "unarchive"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex app-server"
+surface_id = "--stdio"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex app-server daemon bootstrap"
+surface_id = "--remote-control"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex delete"
+surface_id = "--force"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--all"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--ascii"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--no-color"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--summary"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex exec resume"
+surface_id = "--output-schema"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex exec review"
+surface_id = "--output-schema"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex exec-server"
+surface_id = "--environment-id"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex exec-server"
+surface_id = "--use-agent-identity-auth"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex mcp add"
+surface_id = "--oauth-client-id"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex mcp add"
+surface_id = "--oauth-resource"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex plugin add"
+surface_id = "--json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex plugin add"
+surface_id = "--marketplace"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--available"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--marketplace"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace add"
+surface_id = "--json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace list"
+surface_id = "--json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace remove"
+surface_id = "--json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace upgrade"
+surface_id = "--json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex plugin remove"
+surface_id = "--json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex plugin remove"
+surface_id = "--marketplace"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex remote-control"
+surface_id = "--json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex remote-control pair"
+surface_id = "--json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex remote-control start"
+surface_id = "--json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex remote-control stop"
+surface_id = "--json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--allow-unix-socket"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--include-managed-config"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--log-denials"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--permission-profile"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-disable-network"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-json"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-readable-root"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "global_flags"
+command_path = "codex"
+surface_id = "--dangerously-bypass-hook-trust"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "global_flags"
+command_path = "codex"
+surface_id = "--strict-config"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "positional_args"
+command_path = "codex app-server daemon help"
+surface_id = "COMMAND"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "positional_args"
+command_path = "codex archive"
+surface_id = "SESSION"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "positional_args"
+command_path = "codex delete"
+surface_id = "SESSION"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "positional_args"
+command_path = "codex plugin add"
+surface_id = "PLUGIN[@MARKETPLACE]"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "positional_args"
+command_path = "codex plugin remove"
+surface_id = "PLUGIN[@MARKETPLACE]"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "positional_args"
+command_path = "codex remote-control help"
+surface_id = "COMMAND"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "positional_args"
+command_path = "codex sandbox"
+surface_id = "COMMAND"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "positional_args"
+command_path = "codex unarchive"
+surface_id = "SESSION"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon"
+surface_id = "daemon"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon bootstrap"
+surface_id = "bootstrap"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon disable-remote-control"
+surface_id = "disable-remote-control"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon enable-remote-control"
+surface_id = "enable-remote-control"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon help"
+surface_id = "help"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon restart"
+surface_id = "restart"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon start"
+surface_id = "start"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon stop"
+surface_id = "stop"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon version"
+surface_id = "version"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex plugin add"
+surface_id = "add"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex plugin list"
+surface_id = "list"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex plugin marketplace list"
+surface_id = "list"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex plugin remove"
+surface_id = "remove"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex remote-control help"
+surface_id = "help"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex remote-control pair"
+surface_id = "pair"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex remote-control start"
+surface_id = "start"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
+[[support_surface_audit.discovered_upstream_surface]]
+surface_kind = "subcommands"
+command_path = "codex remote-control stop"
+surface_id = "stop"
+evidence_ref = "cli_manifests/codex/reports/0.144.6/coverage.any.json"
+
 [[support_surface_audit.preexisting_unsupported_surface]]
 surface_kind = "commands"
 command_path = "codex completion"
@@ -61,23 +469,1587 @@ debt_ref = "docs/specs/unified-agent-api/non-tui-support-debt.md#codex-completio
 
 [[support_surface_audit.missing_wrapper_support]]
 surface_kind = "commands"
+command_path = "codex archive"
+surface_id = "archive"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "commands"
 command_path = "codex completion"
 surface_id = "completion"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "commands"
+command_path = "codex delete"
+surface_id = "delete"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "commands"
+command_path = "codex doctor"
+surface_id = "doctor"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "commands"
+command_path = "codex remote-control"
+surface_id = "remote-control"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "commands"
+command_path = "codex unarchive"
+surface_id = "unarchive"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex app-server"
+surface_id = "--stdio"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex app-server daemon bootstrap"
+surface_id = "--remote-control"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex delete"
+surface_id = "--force"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--all"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--ascii"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--no-color"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--summary"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex exec resume"
+surface_id = "--output-schema"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex exec review"
+surface_id = "--output-schema"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex exec-server"
+surface_id = "--environment-id"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex exec-server"
+surface_id = "--use-agent-identity-auth"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex mcp add"
+surface_id = "--oauth-client-id"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex mcp add"
+surface_id = "--oauth-resource"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex plugin add"
+surface_id = "--json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex plugin add"
+surface_id = "--marketplace"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--available"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--marketplace"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace add"
+surface_id = "--json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace list"
+surface_id = "--json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace remove"
+surface_id = "--json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace upgrade"
+surface_id = "--json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex plugin remove"
+surface_id = "--json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex plugin remove"
+surface_id = "--marketplace"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex remote-control"
+surface_id = "--json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex remote-control pair"
+surface_id = "--json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex remote-control start"
+surface_id = "--json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex remote-control stop"
+surface_id = "--json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--allow-unix-socket"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--include-managed-config"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--log-denials"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--permission-profile"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-disable-network"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-json"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-readable-root"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "global_flags"
+command_path = "codex"
+surface_id = "--dangerously-bypass-hook-trust"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "global_flags"
+command_path = "codex"
+surface_id = "--strict-config"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "positional_args"
+command_path = "codex app-server daemon help"
+surface_id = "COMMAND"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "positional_args"
+command_path = "codex archive"
+surface_id = "SESSION"
 
 [[support_surface_audit.missing_wrapper_support]]
 surface_kind = "positional_args"
 command_path = "codex completion"
 surface_id = "SHELL"
 
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "positional_args"
+command_path = "codex delete"
+surface_id = "SESSION"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "positional_args"
+command_path = "codex plugin add"
+surface_id = "PLUGIN[@MARKETPLACE]"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "positional_args"
+command_path = "codex plugin remove"
+surface_id = "PLUGIN[@MARKETPLACE]"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "positional_args"
+command_path = "codex remote-control help"
+surface_id = "COMMAND"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "positional_args"
+command_path = "codex sandbox"
+surface_id = "COMMAND"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "positional_args"
+command_path = "codex unarchive"
+surface_id = "SESSION"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon"
+surface_id = "daemon"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon bootstrap"
+surface_id = "bootstrap"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon disable-remote-control"
+surface_id = "disable-remote-control"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon enable-remote-control"
+surface_id = "enable-remote-control"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon help"
+surface_id = "help"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon restart"
+surface_id = "restart"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon start"
+surface_id = "start"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon stop"
+surface_id = "stop"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon version"
+surface_id = "version"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex plugin add"
+surface_id = "add"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex plugin list"
+surface_id = "list"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex plugin marketplace list"
+surface_id = "list"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex plugin remove"
+surface_id = "remove"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex remote-control help"
+surface_id = "help"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex remote-control pair"
+surface_id = "pair"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex remote-control start"
+surface_id = "start"
+
+[[support_surface_audit.missing_wrapper_support]]
+surface_kind = "subcommands"
+command_path = "codex remote-control stop"
+surface_id = "stop"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "commands"
+command_path = "codex archive"
+surface_id = "archive"
+
 [[support_surface_audit.missing_backend_support]]
 surface_kind = "commands"
 command_path = "codex completion"
 surface_id = "completion"
 
 [[support_surface_audit.missing_backend_support]]
+surface_kind = "commands"
+command_path = "codex delete"
+surface_id = "delete"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "commands"
+command_path = "codex doctor"
+surface_id = "doctor"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "commands"
+command_path = "codex remote-control"
+surface_id = "remote-control"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "commands"
+command_path = "codex unarchive"
+surface_id = "unarchive"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex app-server"
+surface_id = "--stdio"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex app-server daemon bootstrap"
+surface_id = "--remote-control"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex delete"
+surface_id = "--force"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--all"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--ascii"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--no-color"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--summary"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex exec resume"
+surface_id = "--output-schema"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex exec review"
+surface_id = "--output-schema"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex exec-server"
+surface_id = "--environment-id"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex exec-server"
+surface_id = "--use-agent-identity-auth"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex mcp add"
+surface_id = "--oauth-client-id"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex mcp add"
+surface_id = "--oauth-resource"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex plugin add"
+surface_id = "--json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex plugin add"
+surface_id = "--marketplace"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--available"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--marketplace"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace add"
+surface_id = "--json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace list"
+surface_id = "--json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace remove"
+surface_id = "--json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace upgrade"
+surface_id = "--json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex plugin remove"
+surface_id = "--json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex plugin remove"
+surface_id = "--marketplace"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex remote-control"
+surface_id = "--json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex remote-control pair"
+surface_id = "--json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex remote-control start"
+surface_id = "--json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex remote-control stop"
+surface_id = "--json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--allow-unix-socket"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--include-managed-config"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--log-denials"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--permission-profile"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-disable-network"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-json"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-readable-root"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "global_flags"
+command_path = "codex"
+surface_id = "--dangerously-bypass-hook-trust"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "global_flags"
+command_path = "codex"
+surface_id = "--strict-config"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "positional_args"
+command_path = "codex app-server daemon help"
+surface_id = "COMMAND"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "positional_args"
+command_path = "codex archive"
+surface_id = "SESSION"
+
+[[support_surface_audit.missing_backend_support]]
 surface_kind = "positional_args"
 command_path = "codex completion"
 surface_id = "SHELL"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "positional_args"
+command_path = "codex delete"
+surface_id = "SESSION"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "positional_args"
+command_path = "codex plugin add"
+surface_id = "PLUGIN[@MARKETPLACE]"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "positional_args"
+command_path = "codex plugin remove"
+surface_id = "PLUGIN[@MARKETPLACE]"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "positional_args"
+command_path = "codex remote-control help"
+surface_id = "COMMAND"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "positional_args"
+command_path = "codex sandbox"
+surface_id = "COMMAND"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "positional_args"
+command_path = "codex unarchive"
+surface_id = "SESSION"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon"
+surface_id = "daemon"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon bootstrap"
+surface_id = "bootstrap"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon disable-remote-control"
+surface_id = "disable-remote-control"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon enable-remote-control"
+surface_id = "enable-remote-control"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon help"
+surface_id = "help"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon restart"
+surface_id = "restart"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon start"
+surface_id = "start"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon stop"
+surface_id = "stop"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon version"
+surface_id = "version"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex plugin add"
+surface_id = "add"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex plugin list"
+surface_id = "list"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex plugin marketplace list"
+surface_id = "list"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex plugin remove"
+surface_id = "remove"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex remote-control help"
+surface_id = "help"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex remote-control pair"
+surface_id = "pair"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex remote-control start"
+surface_id = "start"
+
+[[support_surface_audit.missing_backend_support]]
+surface_kind = "subcommands"
+command_path = "codex remote-control stop"
+surface_id = "stop"
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "commands"
+command_path = "codex archive"
+surface_id = "archive"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "commands"
+command_path = "codex delete"
+surface_id = "delete"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "commands"
+command_path = "codex doctor"
+surface_id = "doctor"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "commands"
+command_path = "codex remote-control"
+surface_id = "remote-control"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "commands"
+command_path = "codex unarchive"
+surface_id = "unarchive"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex app-server"
+surface_id = "--stdio"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex app-server daemon bootstrap"
+surface_id = "--remote-control"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex delete"
+surface_id = "--force"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--all"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--ascii"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--no-color"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--summary"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex exec resume"
+surface_id = "--output-schema"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex exec review"
+surface_id = "--output-schema"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex exec-server"
+surface_id = "--environment-id"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex exec-server"
+surface_id = "--use-agent-identity-auth"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex mcp add"
+surface_id = "--oauth-client-id"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex mcp add"
+surface_id = "--oauth-resource"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex plugin add"
+surface_id = "--json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex plugin add"
+surface_id = "--marketplace"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--available"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--marketplace"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace add"
+surface_id = "--json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace list"
+surface_id = "--json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace remove"
+surface_id = "--json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace upgrade"
+surface_id = "--json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex plugin remove"
+surface_id = "--json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex plugin remove"
+surface_id = "--marketplace"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex remote-control"
+surface_id = "--json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex remote-control pair"
+surface_id = "--json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex remote-control start"
+surface_id = "--json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex remote-control stop"
+surface_id = "--json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--allow-unix-socket"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--include-managed-config"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--log-denials"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--permission-profile"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-disable-network"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-json"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-readable-root"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "global_flags"
+command_path = "codex"
+surface_id = "--dangerously-bypass-hook-trust"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "global_flags"
+command_path = "codex"
+surface_id = "--strict-config"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "positional_args"
+command_path = "codex app-server daemon help"
+surface_id = "COMMAND"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "positional_args"
+command_path = "codex archive"
+surface_id = "SESSION"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "positional_args"
+command_path = "codex delete"
+surface_id = "SESSION"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "positional_args"
+command_path = "codex plugin add"
+surface_id = "PLUGIN[@MARKETPLACE]"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "positional_args"
+command_path = "codex plugin remove"
+surface_id = "PLUGIN[@MARKETPLACE]"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "positional_args"
+command_path = "codex remote-control help"
+surface_id = "COMMAND"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "positional_args"
+command_path = "codex sandbox"
+surface_id = "COMMAND"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "positional_args"
+command_path = "codex unarchive"
+surface_id = "SESSION"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon"
+surface_id = "daemon"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon bootstrap"
+surface_id = "bootstrap"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon disable-remote-control"
+surface_id = "disable-remote-control"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon enable-remote-control"
+surface_id = "enable-remote-control"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon help"
+surface_id = "help"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon restart"
+surface_id = "restart"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon start"
+surface_id = "start"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon stop"
+surface_id = "stop"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon version"
+surface_id = "version"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex plugin add"
+surface_id = "add"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex plugin list"
+surface_id = "list"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex plugin marketplace list"
+surface_id = "list"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex plugin remove"
+surface_id = "remove"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex remote-control help"
+surface_id = "help"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex remote-control pair"
+surface_id = "pair"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex remote-control start"
+surface_id = "start"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
+
+[[support_surface_audit.required_uplifts_this_run]]
+surface_kind = "subcommands"
+command_path = "codex remote-control stop"
+surface_id = "stop"
+reason = "new_upstream_surface"
+required_writes = [
+  "wrapper",
+  "backend",
+  "manifest",
+  "publication",
+  "packet_docs",
+]
 
 [[support_surface_audit.deferred_preexisting_gaps]]
 surface_kind = "commands"
@@ -92,6 +2064,12 @@ command_path = "codex completion"
 surface_id = "SHELL"
 defer_reason = "requires_new_architectural_seam"
 blocking_follow_on = "TODOS.md#close-codex-completion-maintenance-gap"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "commands"
+command_path = "codex archive"
+surface_id = "archive"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
 
 [[support_surface_audit.publication_impacts]]
 surface_kind = "commands"
@@ -100,9 +2078,411 @@ surface_id = "completion"
 surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
 
 [[support_surface_audit.publication_impacts]]
+surface_kind = "commands"
+command_path = "codex delete"
+surface_id = "delete"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "commands"
+command_path = "codex doctor"
+surface_id = "doctor"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "commands"
+command_path = "codex remote-control"
+surface_id = "remote-control"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "commands"
+command_path = "codex unarchive"
+surface_id = "unarchive"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex app-server"
+surface_id = "--stdio"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex app-server daemon bootstrap"
+surface_id = "--remote-control"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex delete"
+surface_id = "--force"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--all"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--ascii"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--no-color"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex doctor"
+surface_id = "--summary"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex exec resume"
+surface_id = "--output-schema"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex exec review"
+surface_id = "--output-schema"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex exec-server"
+surface_id = "--environment-id"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex exec-server"
+surface_id = "--use-agent-identity-auth"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex mcp add"
+surface_id = "--oauth-client-id"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex mcp add"
+surface_id = "--oauth-resource"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex plugin add"
+surface_id = "--json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex plugin add"
+surface_id = "--marketplace"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--available"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex plugin list"
+surface_id = "--marketplace"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace add"
+surface_id = "--json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace list"
+surface_id = "--json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace remove"
+surface_id = "--json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex plugin marketplace upgrade"
+surface_id = "--json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex plugin remove"
+surface_id = "--json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex plugin remove"
+surface_id = "--marketplace"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex remote-control"
+surface_id = "--json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex remote-control pair"
+surface_id = "--json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex remote-control start"
+surface_id = "--json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex remote-control stop"
+surface_id = "--json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--allow-unix-socket"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--include-managed-config"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--log-denials"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--permission-profile"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-disable-network"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-json"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "flags"
+command_path = "codex sandbox"
+surface_id = "--sandbox-state-readable-root"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "global_flags"
+command_path = "codex"
+surface_id = "--dangerously-bypass-hook-trust"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "global_flags"
+command_path = "codex"
+surface_id = "--strict-config"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "positional_args"
+command_path = "codex app-server daemon help"
+surface_id = "COMMAND"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "positional_args"
+command_path = "codex archive"
+surface_id = "SESSION"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
 surface_kind = "positional_args"
 command_path = "codex completion"
 surface_id = "SHELL"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "positional_args"
+command_path = "codex delete"
+surface_id = "SESSION"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "positional_args"
+command_path = "codex plugin add"
+surface_id = "PLUGIN[@MARKETPLACE]"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "positional_args"
+command_path = "codex plugin remove"
+surface_id = "PLUGIN[@MARKETPLACE]"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "positional_args"
+command_path = "codex remote-control help"
+surface_id = "COMMAND"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "positional_args"
+command_path = "codex sandbox"
+surface_id = "COMMAND"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "positional_args"
+command_path = "codex unarchive"
+surface_id = "SESSION"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon"
+surface_id = "daemon"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon bootstrap"
+surface_id = "bootstrap"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon disable-remote-control"
+surface_id = "disable-remote-control"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon enable-remote-control"
+surface_id = "enable-remote-control"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon help"
+surface_id = "help"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon restart"
+surface_id = "restart"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon start"
+surface_id = "start"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon stop"
+surface_id = "stop"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex app-server daemon version"
+surface_id = "version"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex plugin add"
+surface_id = "add"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex plugin list"
+surface_id = "list"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex plugin marketplace list"
+surface_id = "list"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex plugin remove"
+surface_id = "remove"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex remote-control help"
+surface_id = "help"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex remote-control pair"
+surface_id = "pair"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex remote-control start"
+surface_id = "start"
+surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
+
+[[support_surface_audit.publication_impacts]]
+surface_kind = "subcommands"
+command_path = "codex remote-control stop"
+surface_id = "stop"
 surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
 
 [execution_contract]
