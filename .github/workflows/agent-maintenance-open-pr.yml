@@ -127,16 +127,23 @@ jobs:
         run: |
           set -euo pipefail
           branch_prefix="automation/${AGENT_ID}-maintenance-"
+          strict_version_regex='^[0-9]+\.[0-9]+\.[0-9]+$'
+
+          if [[ ! "$TARGET_VERSION" =~ $strict_version_regex ]]; then
+            echo "::warning::Skipping supersession because TARGET_VERSION is not strict semver: ${TARGET_VERSION}"
+            exit 0
+          fi
+
+          pr_json="$(gh pr list --state open --limit 500 --json number,headRefName)"
 
           mapfile -t candidate_prs < <(
-            gh pr list --state open --limit 500 --json number,headRefName | \
-              jq -r --arg prefix "$branch_prefix" --argjson new_pr "$NEW_PR_NUMBER" '
-                .[]
-                | select(.number != $new_pr)
-                | select(.headRefName | startswith($prefix))
-                | [.number, .headRefName]
-                | @tsv
-              '
+            jq -r --arg prefix "$branch_prefix" --argjson new_pr "$NEW_PR_NUMBER" '
+              .[]
+              | select(.number != $new_pr)
+              | select(.headRefName | startswith($prefix))
+              | [.number, .headRefName]
+              | @tsv
+            ' <<< "$pr_json"
           )
 
           if [[ ${#candidate_prs[@]} -eq 0 ]]; then
@@ -153,7 +160,7 @@ jobs:
               continue
             fi
 
-            if [[ ! "$candidate_version" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+            if [[ ! "$candidate_version" =~ $strict_version_regex ]]; then
               echo "Skipping non-version branch: ${head_ref_name}"
               continue
             fi
@@ -170,7 +177,7 @@ jobs:
           fi
 
           for pr_number in "${superseded_prs[@]}"; do
-            gh pr close "$pr_number" --comment "Superseded by #${NEW_PR_NUMBER} for ${AGENT_ID} ${TARGET_VERSION}."
+            gh pr close "$pr_number" --comment "Superseded by #${NEW_PR_NUMBER} for ${AGENT_ID} ${TARGET_VERSION}." || echo "::warning::could not close #$pr_number (already closed?)"
           done
       - name: Print recovery guidance
         if: ${{ steps.create_pr.outcome == 'failure' }}

@@ -93,6 +93,31 @@ jobs:
           name: maintenance-watch-queue
           path: _ci_tmp/maintenance-watch.json
           if-no-files-found: error
+      - name: Annotate upstream release-watch failures
+        if: ${{ always() && hashFiles('_ci_tmp/maintenance-watch.json') != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! jq -e . _ci_tmp/maintenance-watch.json >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          while IFS= read -r failure; do
+            [[ -n "$failure" ]] || continue
+            echo "::warning title=maintenance-watch upstream failure::${failure}"
+          done < <(
+            jq -r '(.failed_agents // [])[] | "\(.agent_id): \(.error // "unknown error")"' \
+              _ci_tmp/maintenance-watch.json
+          )
+
+          stale_count="$(jq '(.stale_agents // []) | length' _ci_tmp/maintenance-watch.json)"
+          failed_count="$(jq '(.failed_agents // []) | length' _ci_tmp/maintenance-watch.json)"
+
+          if (( stale_count == 0 && failed_count > 0 )); then
+            echo "::error title=maintenance-watch systemic outage::No stale agents were emitted and ${failed_count} upstream watcher failures were recorded."
+            exit 1
+          fi
       - name: Fail queue job if watcher emission failed
         if: ${{ always() && steps.emit_queue.outcome == 'failure' }}
         shell: bash
