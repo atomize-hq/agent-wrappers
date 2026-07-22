@@ -122,6 +122,13 @@ fn execute_agent_maintenance_dry_run_locks_relay_wording_and_distinction() {
     assert!(handoff.contains(
         "If the local execution-host preflight (local Codex CLI host via execute-agent-maintenance) fails, fix the Codex binary/auth state and rerun `execute-agent-maintenance --dry-run` before write mode."
     ));
+    assert!(handoff.contains("## Dry-run to write relay"));
+    assert!(handoff.contains(
+        "cargo run -p xtask -- execute-agent-maintenance --dry-run --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml"
+    ));
+    assert!(handoff.contains(
+        "cargo run -p xtask -- execute-agent-maintenance --write --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml --run-id <run-id-from-dry-run>"
+    ));
 }
 
 #[test]
@@ -143,6 +150,81 @@ fn execute_agent_maintenance_write_requires_run_id() {
 
     assert_eq!(output.exit_code, 2);
     assert!(output.stderr.contains("--run-id is required"));
+}
+
+#[test]
+fn execute_agent_maintenance_write_ignores_operator_governance_edits_but_still_fails_runtime_out_of_bounds_writes(
+) {
+    let ignored_fixture = prepare_execute_fixture("agent-maintenance-execute-operator-governance");
+    let codex_binary = fake_execute_codex_binary(&ignored_fixture);
+    let dry_run = run_execute_cli(
+        execute_args("--dry-run", Some(&codex_binary)),
+        &ignored_fixture,
+    );
+    assert_eq!(dry_run.exit_code, 0, "stderr:\n{}", dry_run.stderr);
+    harness::write_text(
+        &ignored_fixture.join(
+            "docs/agents/lifecycle/codex-maintenance/governance/orchestration-friction-log.md",
+        ),
+        "# Friction log\n\n- operator note between dry-run and write\n",
+    );
+    write_fake_execute_codex_scenario(&ignored_fixture, "success");
+
+    let ignored_output = run_execute_cli(
+        execute_args("--write", Some(&codex_binary)),
+        &ignored_fixture,
+    );
+
+    assert_eq!(
+        ignored_output.exit_code, 0,
+        "stderr:\n{}",
+        ignored_output.stderr
+    );
+    let ignored_run_dir = ignored_fixture
+        .join(EXECUTE_RUNS_ROOT)
+        .join(EXECUTE_WRITE_RUN_ID);
+    let ignored_written_paths: Vec<String> = serde_json::from_slice(
+        &fs::read(ignored_run_dir.join("written-paths.json")).expect("read written paths"),
+    )
+    .expect("parse written paths");
+    assert!(!ignored_written_paths
+        .iter()
+        .any(|path| path.ends_with("governance/orchestration-friction-log.md")));
+    assert!(ignored_written_paths
+        .iter()
+        .any(|path| path == "docs/agents/lifecycle/codex-maintenance/runtime-note.md"));
+
+    let violating_fixture =
+        prepare_execute_fixture("agent-maintenance-execute-operator-governance-violation");
+    let violating_codex_binary = fake_execute_codex_binary(&violating_fixture);
+    let violating_dry_run = run_execute_cli(
+        execute_args("--dry-run", Some(&violating_codex_binary)),
+        &violating_fixture,
+    );
+    assert_eq!(
+        violating_dry_run.exit_code, 0,
+        "stderr:\n{}",
+        violating_dry_run.stderr
+    );
+    harness::write_text(
+        &violating_fixture.join(
+            "docs/agents/lifecycle/codex-maintenance/governance/orchestration-friction-log.md",
+        ),
+        "# Friction log\n\n- operator note between dry-run and write\n",
+    );
+    write_fake_execute_codex_scenario(&violating_fixture, "out_of_bounds");
+
+    let violating_output = run_execute_cli(
+        execute_args("--write", Some(&violating_codex_binary)),
+        &violating_fixture,
+    );
+
+    assert_eq!(violating_output.exit_code, 2);
+    assert!(violating_output.stderr.contains("write boundary violation"));
+    assert!(violating_output.stderr.contains("docs/unowned.md"));
+    assert!(!violating_output
+        .stderr
+        .contains("orchestration-friction-log.md"));
 }
 
 #[test]

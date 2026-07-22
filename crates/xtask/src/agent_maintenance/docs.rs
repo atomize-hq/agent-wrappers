@@ -43,6 +43,17 @@ pub fn build_packet_docs(
     }
 }
 
+pub fn packet_doc_relative_paths(
+    workspace_root: &Path,
+    request: &MaintenanceRequest,
+) -> Result<Vec<String>, String> {
+    build_packet_docs(workspace_root, request).map(|docs| {
+        docs.into_iter()
+            .map(|doc| doc.relative_path)
+            .collect::<Vec<_>>()
+    })
+}
+
 pub fn build_packet_docs_from_envelope(
     workspace_root: &Path,
     envelope: &MaintenanceRequestEnvelope,
@@ -239,8 +250,16 @@ pub fn render_execution_packet(
 
     let trigger_context = render_trigger_context(request);
     let support_audit = render_support_surface_audit(request);
+    let dry_run_command = format!(
+        "cargo run -p xtask -- execute-agent-maintenance --dry-run --request {}",
+        request.relative_path
+    );
+    let write_command = format!(
+        "cargo run -p xtask -- execute-agent-maintenance --write --request {} --run-id <run-id-from-dry-run>",
+        request.relative_path
+    );
     let handoff_contents = wrap_markdown(&format!(
-        "# Handoff\n\nThis file is the canonical contributor execution contract for `{}` maintenance.\n\n## Packet origin\n\n{}\n\n## Support-surface audit\n\n{}\n\n## Relay contract\n\n- maintained agent packet: `{}`\n- local execution host: `{}`\n- executor surface: `{}`\n- request artifact: `{}`\n- prompt template path: `{}`\n- prompt sha256: `{}`\n- canonical handoff: `{}`\n- derivative pr summary: `{}`\n- exact closeout artifact: `{}`\n- branch linkage: `{}`\n- manual closeout required: `{}`\n\n## Writable surfaces\n\n{}\n\n## Read-only inputs\n\n{}\n\n## Ordered repo commands\n\n{}\n\n## Exact green gates\n\n{}\n\n## Recovery\n\n- recreate packet command: `{}`\n- reopen pr body path: `{}`\n- reopen pr branch: `{}`\n- notes:\n{}\n\n## Exact closeout command\n\n```sh\ncargo run -p xtask -- close-agent-maintenance --request {} --closeout {}\n```\n\n## Exact maintained-agent prompt\n\n```md\n{}\n```\n",
+        "# Handoff\n\nThis file is the canonical contributor execution contract for `{}` maintenance.\n\n## Packet origin\n\n{}\n\n## Support-surface audit\n\n{}\n\n## Relay contract\n\n- maintained agent packet: `{}`\n- local execution host: `{}`\n- executor surface: `{}`\n- request artifact: `{}`\n- prompt template path: `{}`\n- prompt sha256: `{}`\n- canonical handoff: `{}`\n- derivative pr summary: `{}`\n- exact closeout artifact: `{}`\n- branch linkage: `{}`\n- manual closeout required: `{}`\n\n## Writable surfaces\n\n{}\n\n## Read-only inputs\n\n{}\n\n## Ordered repo commands\n\n{}\n\n## Exact green gates\n\n{}\n\n## Recovery\n\n- recreate packet command: `{}`\n- reopen pr body path: `{}`\n- reopen pr branch: `{}`\n- notes:\n{}\n\n## Dry-run to write relay\n\nUse the `run_id` printed by the dry-run output when invoking write mode.\n\n```sh\n{}\n{}\n```\n\n## Exact closeout command\n\n```sh\ncargo run -p xtask -- close-agent-maintenance --request {} --closeout {}\n```\n\n## Exact maintained-agent prompt\n\n```md\n{}\n```\n",
         request.agent_id,
         trigger_context,
         support_audit,
@@ -267,6 +286,8 @@ pub fn render_execution_packet(
         execution_contract.recovery.reopen_pr_body_path,
         execution_contract.recovery.reopen_pr_branch,
         markdown_list(&execution_contract.recovery.notes),
+        dry_run_command,
+        write_command,
         request.relative_path,
         execution_contract.closeout_path,
         prompt_contents

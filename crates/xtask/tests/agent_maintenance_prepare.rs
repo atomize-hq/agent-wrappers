@@ -215,6 +215,15 @@ fn shared_renderer_keeps_handoff_pr_summary_and_prompt_in_lockstep() {
         .contains("automation/codex-maintenance-0.98.0"));
     assert!(rendered_packet
         .handoff_contents
+        .contains("## Dry-run to write relay"));
+    assert!(rendered_packet.handoff_contents.contains(
+        "cargo run -p xtask -- execute-agent-maintenance --dry-run --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml"
+    ));
+    assert!(rendered_packet.handoff_contents.contains(
+        "cargo run -p xtask -- execute-agent-maintenance --write --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml --run-id <run-id-from-dry-run>"
+    ));
+    assert!(rendered_packet
+        .handoff_contents
         .contains(&rendered_packet.prompt_contents));
     assert!(rendered_packet
         .pr_summary_contents
