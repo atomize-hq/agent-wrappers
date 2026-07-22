@@ -214,6 +214,46 @@ future fix.
   deliberate contract (owner: xtask). Priority: low.
 - Blocking: follow-up only.
 
+## Entry 6c — worker worktrees are created at session-start HEAD, not the current candidate
+
+- Workflow step / timestamp: remediation dispatch, 2026-07-21.
+- Observed issue: background worker worktrees were provisioned at the
+  session-start commit (`1ae6ee12`, staging HEAD) rather than the branch tip
+  current at dispatch time. The parser-fix packet ran against a 1-commit-stale
+  base (benign, docs-only delta) and the review-remediation packet initially
+  blocked outright because its base `0b613a42` and the packet's target files
+  did not exist in the worktree; the worker also mis-read the ancestry
+  (inverted `merge-base --is-ancestor` direction) and reported false
+  divergence.
+- Evidence: worker reports for both packets; ancestry verified by the lead
+  (`1ae6ee12` is an ancestor of `0b613a42`; the worktree branch had no unique
+  commits).
+- Impact: one fully wasted worker round-trip plus operator reconciliation on
+  every packet whose base advanced mid-session.
+- Workaround used: instructed the worker to fast-forward its own worktree
+  branch to the candidate SHA and relaunch the identical packet.
+- Likely root cause: worktree provisioning snapshots the session-start HEAD;
+  packets must therefore state an explicit checkout step, and workers must
+  verify base revision before launching (one did, one did not).
+- Proposed fix / owner / priority: make the worker launcher (or agent
+  definition) check out the packet's stated base revision as a hard precondition
+  and fail fast with a clear message (owner: .claude agents / launcher script).
+  Priority: medium.
+- Blocking: worked around.
+- Escalation (same run): resuming a completed worktree-isolated agent is
+  dangerous — the harness auto-cleans an unchanged worktree at completion, so
+  the resumed agent's relative paths silently resolved to the MAIN repository
+  checkout. The resumed worker switched the primary checkout from the
+  candidate branch to `staging` and stashed the operator's uncommitted
+  friction-log edit before stopping to ask for direction. No commits or refs
+  were lost; the lead restored the branch and popped the stash. Rule adopted
+  for the rest of the run: never resume a completed worktree-isolated worker
+  for new work — always spawn a fresh agent (fresh worktree); workers must
+  verify `git rev-parse --git-dir`/worktree identity and the packet base SHA
+  before any git mutation. Proposed fix: keep the worktree alive while an
+  agent can still be resumed, or fail resumes whose worktree is gone (owner:
+  harness/agent definitions). Priority: high.
+
 ## Entry 7a — executor's Codex host leaked an orphaned, unsandboxed nested process pair
 
 - Workflow step / timestamp: execute-canonical-lane / remediation, 2026-07-21
@@ -271,3 +311,42 @@ future fix.
 - Blocking: yes — the needed xtask change is outside this packet's frozen
   writable envelope; treat it as the packet's allowed
   `outside_registry_maintenance_write_envelope` follow-up.
+
+## Entry 8 — sandboxed Codex worker cannot commit inside its own worktree; wrapper agent ends before collecting the result
+
+- Workflow step / timestamp: review-remediation dispatch, 2026-07-22.
+- Observed issue: the remediation worker ran the Codex CLI under
+  `--sandbox workspace-write` whose writable roots were `[workdir, /tmp,
+  $TMPDIR]`. Codex completed all functional work and self-verified green, but
+  the final `git commit` failed: `fatal: Unable to create
+  '.../.git/worktrees/agent-a136c0118b9272b87/index.lock': Operation not
+  permitted`. A linked worktree keeps its index under the MAIN repo's
+  `.git/worktrees/<name>/`, which is outside the sandbox's writable roots, so
+  no commit could be produced. Separately, the wrapping Claude sub-agent
+  reached `end_turn` ("still running… I'll resume once notified") and its task
+  was marked completed without ever re-waking to collect Codex's final
+  message; its last logged report is therefore stale and carries no commit
+  hash or verification evidence.
+- Evidence: Codex `--output-last-message` file shows all four findings
+  implemented, `cargo fmt/clippy/test/support-matrix --check/codex-validate`
+  passing (under the correct package id `unified-agent-api-codex`), and the
+  explicit `index.lock … Operation not permitted` commit failure; the
+  sub-agent transcript ends at the pre-completion "still running" message.
+- Impact: the lead cannot rely on worker prose for the commit; the candidate
+  exists only as uncommitted working-tree changes in the linked worktree and
+  must be integrated by the (unsandboxed) lead session. One monitor round-trip
+  was effectively wasted.
+- Workaround used: lead inspected the worktree diff directly with
+  `git -C <worktree> diff HEAD`, verified it against the allowed write set and
+  the four findings, and integrated it into the candidate branch from the main
+  repo (which is not sandboxed) rather than resuming the worker.
+- Likely root cause: `workspace-write` sandbox roots do not include the linked
+  worktree's git index directory under the main `.git/worktrees/<name>/`; and
+  the worker launch pattern lets the wrapping agent reach `end_turn` before the
+  background completion monitor fires, so results are never harvested.
+- Proposed fix / owner / priority: either add the worktree's
+  `.git/worktrees/<name>/` index path to the sandbox writable set, or have the
+  launcher stage-and-commit outside the sandbox after Codex exits; and require
+  the wrapping agent to block on the completion monitor (not `end_turn`) before
+  reporting (owner: launcher script / agent definitions). Priority: medium.
+- Blocking: worked around — no closeout impact.
