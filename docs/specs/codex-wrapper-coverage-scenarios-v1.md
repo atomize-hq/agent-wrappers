@@ -554,3 +554,22 @@ Wrapper API family:
 
 The generator MUST NOT emit any command-specific flags or positional args under:
 - `path=["update"]`
+
+## Scenario 22: 0.144.6 packet non-TUI compatibility surface
+
+Wrapper API family:
+- `CodexClient::run_non_tui_command`
+- `NonTuiCommand`
+- `NonTuiCommandRequest`
+
+`NonTuiCommand` is the bounded allowlist for the newly discovered command
+paths and for existing command paths with newly discovered flags. Its request
+forwards command-specific flags and positional arguments verbatim after that
+allowlisted path, so these entries are recorded as `passthrough` rather than
+claiming typed support. `completion` is intentionally absent from the enum and
+remains governed by the non-TUI support-debt record.
+
+The generator MUST record this request's two root flags and all packet-owned
+new flags/arguments as `passthrough`, and must record newly discovered command
+paths as `passthrough`. Existing typed command entries remain `explicit` while
+their newly added packet flags can be `passthrough`.

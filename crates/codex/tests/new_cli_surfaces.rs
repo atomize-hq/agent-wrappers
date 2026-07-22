@@ -9,8 +9,9 @@ use std::{
 use codex::{
     AppServerCodegenRequest, AppServerProxyRequest, AppServerRequest, CodexClient,
     DebugAppServerSendMessageV2Request, DebugModelsRequest, DebugPromptInputRequest,
-    ExecServerRequest, FeaturesDisableRequest, FeaturesEnableRequest, PluginCommandRequest,
-    PluginMarketplaceAddRequest, PluginMarketplaceCommandRequest, PluginMarketplaceRemoveRequest,
+    ExecServerRequest, FeaturesDisableRequest, FeaturesEnableRequest, NonTuiCommand,
+    NonTuiCommandRequest, PluginCommandRequest, PluginMarketplaceAddRequest,
+    PluginMarketplaceCommandRequest, PluginMarketplaceRemoveRequest,
     PluginMarketplaceUpgradeRequest, SandboxCommandRequest, SandboxPlatform, UpdateCommandRequest,
 };
 use serde::Deserialize;
@@ -307,6 +308,50 @@ async fn new_0125_surfaces_spawn_expected_subcommands() -> Result<(), Box<dyn st
 }
 
 #[tokio::test]
+async fn packet_non_tui_commands_are_bounded_and_forward_arguments(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp = tempfile::tempdir()?;
+    let log_path = temp.path().join("invocations.jsonl");
+    let fake_codex = write_fake_codex(&log_path)?;
+    let client = CodexClient::builder()
+        .binary(&fake_codex)
+        .mirror_stdout(false)
+        .quiet(true)
+        .build();
+
+    for command in NonTuiCommand::all() {
+        client
+            .run_non_tui_command(
+                NonTuiCommandRequest::new(*command).args(["--packet-flag", "packet-value"]),
+            )
+            .await?;
+    }
+    client
+        .run_non_tui_command(
+            NonTuiCommandRequest::new(NonTuiCommand::Doctor)
+                .dangerously_bypass_hook_trust(true)
+                .strict_config(true),
+        )
+        .await?;
+
+    let invocations = read_invocations(&log_path)?;
+    assert_eq!(invocations.len(), NonTuiCommand::all().len() + 1);
+    assert!(invocations.iter().all(|invocation| {
+        invocation
+            .argv
+            .iter()
+            .any(|argument| argument == "--packet-flag")
+            || invocation.argv
+                == [
+                    "--dangerously-bypass-hook-trust",
+                    "--strict-config",
+                    "doctor",
+                ]
+    }));
+    Ok(())
+}
+
+#[tokio::test]
 async fn new_0129_surfaces_spawn_expected_subcommands() -> Result<(), Box<dyn std::error::Error>> {
     let temp = tempfile::tempdir()?;
     let log_path = temp.path().join("invocations.jsonl");
@@ -524,8 +569,8 @@ if [[ $# -ge 1 && $1 == "update" ]]; then
   exit 0
 fi
 
-echo "unknown command: $@" >&2
-exit 1
+echo "generic-ok"
+exit 0
 "#,
         log = log_path.display()
     );

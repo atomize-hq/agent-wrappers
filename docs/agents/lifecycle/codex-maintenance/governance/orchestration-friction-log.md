@@ -170,6 +170,33 @@ future fix.
   Priority: high.
 - Blocking: worked around for this run.
 
+## Entry 6a — refresh-agent cannot represent a completed uplift run
+
+- Workflow step / timestamp: post-uplift validation, 2026-07-21.
+- Observed issue: after the packet host landed all 68 required uplifts (the
+  coverage report shows 0 missing rows), `refresh-agent --dry-run` refuses:
+  "field `support_surface_audit` must match the shared derived maintenance
+  contract". The frozen request records the pre-uplift discovery (68 rows);
+  the post-uplift derivation records none; the tool has no state
+  distinguishing "stale request" from "request satisfied by landed uplifts",
+  so packet docs cannot be regenerated after the work lands.
+- Evidence: refusal output above; identical mechanism previously (correctly)
+  blocked the run when the mismatch pointed the other way.
+- Impact: any post-uplift packet-doc refresh is impossible without rewriting
+  the frozen request to a zero-discovery state, which would erase the run's
+  audit record; operators must treat the frozen 68-row request as the
+  historical contract and skip refresh.
+- Workaround used: left the frozen request untouched as the run's contract of
+  record and proceeded to review/closeout, which own post-run validation.
+- Likely root cause: the derived-audit equality check compares against live
+  repo state with no "satisfied" classification for rows whose uplift landed
+  in this same run.
+- Proposed fix / owner / priority: teach the derivation to classify frozen
+  required-uplift rows that are now covered as `satisfied` (still matching),
+  or add an explicit post-run mode (owner: xtask agent-maintenance).
+  Priority: medium.
+- Blocking: no.
+
 ## Entry 6b — watcher release-history window is first-page-only
 
 - Workflow step / timestamp: establish-maintenance-truth, 2026-07-21.

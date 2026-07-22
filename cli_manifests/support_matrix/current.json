@@ -48,7 +48,7 @@
       "version": "0.144.6",
       "target": "aarch64-apple-darwin",
       "manifest_support": "unsupported",
-      "backend_support": "unsupported",
+      "backend_support": "partial",
       "uaa_support": "unsupported",
       "pointer_promotion": "none",
       "evidence_notes": [
@@ -270,7 +270,7 @@
       "version": "0.144.6",
       "target": "x86_64-unknown-linux-musl",
       "manifest_support": "unsupported",
-      "backend_support": "unsupported",
+      "backend_support": "partial",
       "uaa_support": "unsupported",
       "pointer_promotion": "none",
       "evidence_notes": [

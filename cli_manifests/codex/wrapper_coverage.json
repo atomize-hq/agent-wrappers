@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-21T23:54:17.56618Z",
+  "generated_at": "2026-07-23T00:00:00Z",
   "wrapper_version": "0.3.7",
   "coverage": [
     {
@@ -28,6 +28,11 @@
         {
           "key": "--dangerously-bypass-approvals-and-sandbox",
           "level": "explicit"
+        },
+        {
+          "key": "--dangerously-bypass-hook-trust",
+          "level": "passthrough",
+          "note": "Forwarded by NonTuiCommandRequest for packet-maintained non-TUI commands."
         },
         {
           "key": "--disable",
@@ -84,6 +89,11 @@
           "level": "explicit"
         },
         {
+          "key": "--strict-config",
+          "level": "passthrough",
+          "note": "Forwarded by NonTuiCommandRequest for packet-maintained non-TUI commands."
+        },
+        {
           "key": "--version",
           "level": "explicit"
         }
@@ -102,6 +112,11 @@
         {
           "key": "--listen",
           "level": "explicit"
+        },
+        {
+          "key": "--stdio",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
         },
         {
           "key": "--ws-audience",
@@ -132,6 +147,100 @@
           "level": "explicit"
         }
       ]
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest."
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "bootstrap"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "flags": [
+        {
+          "key": "--remote-control",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "disable-remote-control"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest."
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "enable-remote-control"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest."
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "help"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "restart"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest."
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "start"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest."
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "stop"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest."
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "version"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest."
     },
     {
       "path": [
@@ -206,6 +315,20 @@
         {
           "name": "TASK_ID",
           "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "archive"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "args": [
+        {
+          "name": "SESSION",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
         }
       ]
     },
@@ -433,6 +556,61 @@
     },
     {
       "path": [
+        "delete"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "flags": [
+        {
+          "key": "--force",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ],
+      "args": [
+        {
+          "name": "SESSION",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ]
+    },
+    {
+      "path": [
+        "doctor"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "flags": [
+        {
+          "key": "--all",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--ascii",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--no-color",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--summary",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ]
+    },
+    {
+      "path": [
         "exec"
       ],
       "level": "explicit",
@@ -527,6 +705,11 @@
           "level": "explicit"
         },
         {
+          "key": "--output-schema",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
           "key": "--skip-git-repo-check",
           "level": "explicit"
         }
@@ -578,6 +761,11 @@
           "level": "explicit"
         },
         {
+          "key": "--output-schema",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
           "key": "--skip-git-repo-check",
           "level": "explicit"
         },
@@ -604,6 +792,11 @@
       "level": "explicit",
       "flags": [
         {
+          "key": "--environment-id",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
           "key": "--executor-id",
           "level": "explicit"
         },
@@ -614,6 +807,11 @@
         {
           "key": "--name",
           "level": "explicit"
+        },
+        {
+          "key": "--use-agent-identity-auth",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
         }
       ]
     },
@@ -807,6 +1005,16 @@
           "level": "explicit"
         },
         {
+          "key": "--oauth-client-id",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--oauth-resource",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
           "key": "--url",
           "level": "explicit"
         }
@@ -927,6 +1135,33 @@
     {
       "path": [
         "plugin",
+        "add"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "flags": [
+        {
+          "key": "--json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--marketplace",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ],
+      "args": [
+        {
+          "name": "PLUGIN[@MARKETPLACE]",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
         "help"
       ],
       "level": "explicit",
@@ -934,6 +1169,31 @@
         {
           "name": "COMMAND",
           "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "list"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "flags": [
+        {
+          "key": "--available",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--marketplace",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
         }
       ]
     },
@@ -952,6 +1212,11 @@
       ],
       "level": "explicit",
       "flags": [
+        {
+          "key": "--json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
         {
           "key": "--ref",
           "level": "explicit"
@@ -986,9 +1251,32 @@
       "path": [
         "plugin",
         "marketplace",
+        "list"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "flags": [
+        {
+          "key": "--json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
         "remove"
       ],
       "level": "explicit",
+      "flags": [
+        {
+          "key": "--json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ],
       "args": [
         {
           "name": "MARKETPLACE_NAME",
@@ -1003,10 +1291,118 @@
         "upgrade"
       ],
       "level": "explicit",
+      "flags": [
+        {
+          "key": "--json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ],
       "args": [
         {
           "name": "MARKETPLACE_NAME",
           "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "remove"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "flags": [
+        {
+          "key": "--json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--marketplace",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ],
+      "args": [
+        {
+          "name": "PLUGIN[@MARKETPLACE]",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ]
+    },
+    {
+      "path": [
+        "remote-control"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "flags": [
+        {
+          "key": "--json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ]
+    },
+    {
+      "path": [
+        "remote-control",
+        "help"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ]
+    },
+    {
+      "path": [
+        "remote-control",
+        "pair"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "flags": [
+        {
+          "key": "--json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ]
+    },
+    {
+      "path": [
+        "remote-control",
+        "start"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "flags": [
+        {
+          "key": "--json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ]
+    },
+    {
+      "path": [
+        "remote-control",
+        "stop"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "flags": [
+        {
+          "key": "--json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
         }
       ]
     },
@@ -1098,7 +1494,51 @@
       "path": [
         "sandbox"
       ],
-      "level": "explicit"
+      "level": "explicit",
+      "flags": [
+        {
+          "key": "--allow-unix-socket",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--include-managed-config",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--log-denials",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--permission-profile",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--sandbox-state-disable-network",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--sandbox-state-json",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        },
+        {
+          "key": "--sandbox-state-readable-root",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ],
+      "args": [
+        {
+          "name": "COMMAND",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
+        }
+      ]
     },
     {
       "path": [
@@ -1199,6 +1639,20 @@
         {
           "name": "SOCKET_PATH",
           "level": "explicit"
+        }
+      ]
+    },
+    {
+      "path": [
+        "unarchive"
+      ],
+      "level": "passthrough",
+      "note": "Forwarded by NonTuiCommandRequest.",
+      "args": [
+        {
+          "name": "SESSION",
+          "level": "passthrough",
+          "note": "Forwarded verbatim by NonTuiCommandRequest."
         }
       ]
     },

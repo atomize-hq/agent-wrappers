@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+mod wrapper_coverage_packet;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CoverageLevel {
@@ -124,11 +126,7 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
         }
     }
 
-    WrapperCoverageManifestV1 {
-        schema_version: 1,
-        generated_at: None,
-        wrapper_version: None,
-        coverage: vec![
+    let mut coverage = vec![
             // Scenario 0: root/global flags and probe flags.
             command(
                 &[],
@@ -169,6 +167,16 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                     flag("--local-provider", CoverageLevel::Explicit),
                     flag("--oss", CoverageLevel::Explicit),
                     flag("--search", CoverageLevel::Explicit),
+                    flag_note(
+                        "--dangerously-bypass-hook-trust",
+                        CoverageLevel::Passthrough,
+                        "Forwarded by NonTuiCommandRequest for packet-maintained non-TUI commands.",
+                    ),
+                    flag_note(
+                        "--strict-config",
+                        CoverageLevel::Passthrough,
+                        "Forwarded by NonTuiCommandRequest for packet-maintained non-TUI commands.",
+                    ),
                 ],
                 vec![],
             ),
@@ -204,6 +212,11 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                     flag("--ignore-user-config", CoverageLevel::Explicit),
                     flag("--json", CoverageLevel::Explicit),
                     flag("--output-last-message", CoverageLevel::Explicit),
+                    flag_note(
+                        "--output-schema",
+                        CoverageLevel::Passthrough,
+                        "Forwarded verbatim by NonTuiCommandRequest.",
+                    ),
                     flag("--skip-git-repo-check", CoverageLevel::Explicit),
                     flag("--last", CoverageLevel::Explicit),
                     flag("--all", CoverageLevel::Explicit),
@@ -340,7 +353,21 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                 vec![arg("SOCKET_PATH", CoverageLevel::Explicit)],
             ),
             // Scenario 10: `codex sandbox <platform>`.
-            command(&["sandbox"], CoverageLevel::Explicit, None, vec![], vec![]),
+            command(
+                &["sandbox"],
+                CoverageLevel::Explicit,
+                None,
+                vec![
+                    flag_note("--allow-unix-socket", CoverageLevel::Passthrough, "Forwarded verbatim by NonTuiCommandRequest."),
+                    flag_note("--include-managed-config", CoverageLevel::Passthrough, "Forwarded verbatim by NonTuiCommandRequest."),
+                    flag_note("--log-denials", CoverageLevel::Passthrough, "Forwarded verbatim by NonTuiCommandRequest."),
+                    flag_note("--permission-profile", CoverageLevel::Passthrough, "Forwarded verbatim by NonTuiCommandRequest."),
+                    flag_note("--sandbox-state-disable-network", CoverageLevel::Passthrough, "Forwarded verbatim by NonTuiCommandRequest."),
+                    flag_note("--sandbox-state-json", CoverageLevel::Passthrough, "Forwarded verbatim by NonTuiCommandRequest."),
+                    flag_note("--sandbox-state-readable-root", CoverageLevel::Passthrough, "Forwarded verbatim by NonTuiCommandRequest."),
+                ],
+                vec![arg_note("COMMAND", CoverageLevel::Passthrough, "Forwarded verbatim by NonTuiCommandRequest.")],
+            ),
             command(
                 &["sandbox", "macos"],
                 CoverageLevel::Explicit,
@@ -399,6 +426,11 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                 vec![
                     flag("--analytics-default-enabled", CoverageLevel::Explicit),
                     flag("--listen", CoverageLevel::Explicit),
+                    flag_note(
+                        "--stdio",
+                        CoverageLevel::Passthrough,
+                        "Forwarded verbatim by NonTuiCommandRequest.",
+                    ),
                     flag("--ws-audience", CoverageLevel::Explicit),
                     flag("--ws-auth", CoverageLevel::Explicit),
                     flag("--ws-issuer", CoverageLevel::Explicit),
@@ -423,8 +455,18 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                 None,
                 vec![
                     flag("--executor-id", CoverageLevel::Explicit),
+                    flag_note(
+                        "--environment-id",
+                        CoverageLevel::Passthrough,
+                        "Forwarded verbatim by NonTuiCommandRequest.",
+                    ),
                     flag("--listen", CoverageLevel::Explicit),
                     flag("--name", CoverageLevel::Explicit),
+                    flag_note(
+                        "--use-agent-identity-auth",
+                        CoverageLevel::Passthrough,
+                        "Forwarded verbatim by NonTuiCommandRequest.",
+                    ),
                 ],
                 vec![],
             ),
@@ -452,6 +494,16 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                     flag("--url", CoverageLevel::Explicit),
                     flag("--bearer-token-env-var", CoverageLevel::Explicit),
                     flag("--env", CoverageLevel::Explicit),
+                    flag_note(
+                        "--oauth-client-id",
+                        CoverageLevel::Passthrough,
+                        "Forwarded verbatim by NonTuiCommandRequest.",
+                    ),
+                    flag_note(
+                        "--oauth-resource",
+                        CoverageLevel::Passthrough,
+                        "Forwarded verbatim by NonTuiCommandRequest.",
+                    ),
                 ],
                 vec![
                     arg("NAME", CoverageLevel::Explicit),
@@ -536,6 +588,9 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                 vec![],
                 vec![arg("COMMAND", CoverageLevel::Explicit)],
             ),
+            // 0.144.6 non-TUI compatibility surface. Command-specific
+            // arguments are bounded to NonTuiCommand and otherwise forwarded
+            // verbatim while the API grows dedicated typed requests.
             // New 0.92.0+ command surfaces.
             command(&["features"], CoverageLevel::Explicit, None, vec![], vec![]),
             // New 0.97.0 command surfaces.
@@ -608,6 +663,11 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                     flag("--ignore-user-config", CoverageLevel::Explicit),
                     flag("--json", CoverageLevel::Explicit),
                     flag("--output-last-message", CoverageLevel::Explicit),
+                    flag_note(
+                        "--output-schema",
+                        CoverageLevel::Passthrough,
+                        "Forwarded verbatim by NonTuiCommandRequest.",
+                    ),
                     flag("--skip-git-repo-check", CoverageLevel::Explicit),
                     flag("--title", CoverageLevel::Explicit),
                     flag("--uncommitted", CoverageLevel::Explicit),
@@ -653,66 +713,13 @@ pub fn wrapper_coverage_manifest() -> WrapperCoverageManifestV1 {
                     arg("SESSION_ID", CoverageLevel::Explicit),
                 ],
             ),
-            command(&["plugin"], CoverageLevel::Explicit, None, vec![], vec![]),
-            command(
-                &["plugin", "help"],
-                CoverageLevel::Explicit,
-                None,
-                vec![],
-                vec![arg("COMMAND", CoverageLevel::Explicit)],
-            ),
-            command(
-                &["plugin", "marketplace"],
-                CoverageLevel::Explicit,
-                None,
-                vec![],
-                vec![],
-            ),
-            command(
-                &["plugin", "marketplace", "add"],
-                CoverageLevel::Explicit,
-                None,
-                vec![
-                    flag("--ref", CoverageLevel::Explicit),
-                    flag("--sparse", CoverageLevel::Explicit),
-                ],
-                vec![arg("SOURCE", CoverageLevel::Explicit)],
-            ),
-            command(
-                &["plugin", "marketplace", "help"],
-                CoverageLevel::Explicit,
-                None,
-                vec![],
-                vec![arg("COMMAND", CoverageLevel::Explicit)],
-            ),
-            command(
-                &["plugin", "marketplace", "remove"],
-                CoverageLevel::Explicit,
-                None,
-                vec![],
-                vec![arg("MARKETPLACE_NAME", CoverageLevel::Explicit)],
-            ),
-            command(
-                &["plugin", "marketplace", "upgrade"],
-                CoverageLevel::Explicit,
-                None,
-                vec![],
-                vec![arg("MARKETPLACE_NAME", CoverageLevel::Explicit)],
-            ),
-            WrapperCommandCoverageV1 {
-                path: vec!["completion".to_string()],
-                level: CoverageLevel::IntentionallyUnsupported,
-                note: Some(
-                    "Shell completion generation is out of scope for the wrapper.".to_string(),
-                ),
-                scope: None,
-                flags: None,
-                args: Some(vec![arg_note(
-                    "SHELL",
-                    CoverageLevel::IntentionallyUnsupported,
-                    "Shell completion generation is out of scope for the wrapper.",
-                )]),
-            },
-        ],
+    ];
+    coverage.extend(wrapper_coverage_packet::packet_non_tui_coverage());
+    coverage.extend(wrapper_coverage_packet::plugin_and_debt_coverage());
+    WrapperCoverageManifestV1 {
+        schema_version: 1,
+        generated_at: None,
+        wrapper_version: None,
+        coverage,
     }
 }

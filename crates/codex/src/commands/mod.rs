@@ -7,6 +7,7 @@ mod features;
 mod fork;
 mod help;
 mod mcp;
+mod non_tui;
 mod plugin;
 mod proxy;
 mod review;
