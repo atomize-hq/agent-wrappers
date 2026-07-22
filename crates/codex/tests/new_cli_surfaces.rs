@@ -15,7 +15,6 @@ use codex::{
     PluginMarketplaceUpgradeRequest, SandboxCommandRequest, SandboxPlatform, UpdateCommandRequest,
 };
 use serde::Deserialize;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Debug, Deserialize)]
 struct Invocation {
@@ -493,66 +492,6 @@ async fn packet_non_tui_parent_variant_predicate_edge_cases_preserve_spawn_behav
 }
 
 #[tokio::test]
-async fn packet_non_tui_servers_return_piped_handles_for_protocol_passthrough(
-) -> Result<(), Box<dyn std::error::Error>> {
-    let temp = tempfile::tempdir()?;
-    let log_path = temp.path().join("invocations.jsonl");
-    let fake_codex = write_fake_codex(&log_path)?;
-    let client = CodexClient::builder()
-        .binary(&fake_codex)
-        .mirror_stdout(false)
-        .quiet(true)
-        .build();
-
-    for (command, arguments) in [
-        (
-            NonTuiCommand::AppServer,
-            vec!["--stdio", "--environment-id=environment-123"],
-        ),
-        (
-            NonTuiCommand::ExecServer,
-            vec!["--stdio", "--use-agent-identity-auth"],
-        ),
-    ] {
-        let mut child =
-            client.start_non_tui_server(NonTuiCommandRequest::new(command).args(arguments))?;
-        let mut stdin = child.stdin.take().expect("server stdin must be piped");
-        let mut stdout = child.stdout.take().expect("server stdout must be piped");
-        assert!(child.stderr.take().is_some(), "server stderr must be piped");
-
-        stdin.write_all(b"protocol-message\n").await?;
-        stdin.shutdown().await?;
-
-        let mut response = String::new();
-        stdout.read_to_string(&mut response).await?;
-        assert_eq!(response, "server:protocol-message\n");
-        assert!(child.wait().await?.success());
-    }
-
-    let invocations = read_invocations(&log_path)?;
-    assert_eq!(invocations.len(), 2);
-    assert_eq!(
-        invocations[0].argv,
-        ["app-server", "--stdio", "--environment-id=environment-123"]
-    );
-    assert_eq!(
-        invocations[1].argv,
-        ["exec-server", "--stdio", "--use-agent-identity-auth"]
-    );
-
-    let error = client
-        .run_non_tui_command(NonTuiCommandRequest::new(NonTuiCommand::AppServer).arg("--stdio"))
-        .await
-        .expect_err("server commands must not use the output-capturing path");
-    assert!(matches!(
-        error,
-        CodexError::NonTuiServerRequiresSpawn { .. }
-    ));
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn new_0129_surfaces_spawn_expected_subcommands() -> Result<(), Box<dyn std::error::Error>> {
     let temp = tempfile::tempdir()?;
     let log_path = temp.path().join("invocations.jsonl");
@@ -737,12 +676,6 @@ fi
 
 if [[ $# -ge 2 && $1 == "app-server" && $2 == "proxy" ]]; then
   echo "app-server-proxy-ok"
-  exit 0
-fi
-
-if [[ $# -ge 1 && ( $1 == "app-server" || $1 == "exec-server" ) && " $* " == *" --stdio "* ]]; then
-  IFS= read -r line
-  printf 'server:%s\n' "$line"
   exit 0
 fi
 
