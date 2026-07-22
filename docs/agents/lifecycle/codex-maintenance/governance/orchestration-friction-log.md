@@ -350,3 +350,40 @@ future fix.
   the wrapping agent to block on the completion monitor (not `end_turn`) before
   reporting (owner: launcher script / agent definitions). Priority: medium.
 - Blocking: worked around — no closeout impact.
+
+## Entry 9 — regenerating coverage without re-deriving the audit silently invalidates the frozen request at closeout
+
+- Workflow step / timestamp: closeout, 2026-07-22.
+- Observed issue: `close-agent-maintenance` refused the run with
+  `field support_surface_audit must match the shared derived maintenance
+  contract`. The passthrough-surface commit (`0b613a42`) had regenerated
+  `cli_manifests/codex/reports/0.144.6/coverage.any.json` to record the 68
+  discovered surfaces as covered passthrough, but did not re-derive the
+  request's `support_surface_audit`. Because `derive_support_surface_audit`
+  reads `coverage.any.json`, the frozen request (68 discovered / 68 required
+  uplifts, last regenerated at `b430c419`) no longer matched the live
+  derivation (0 discovered / 0 required uplifts), and every request load —
+  including closeout — failed the equality check.
+- Evidence: `git log staging..HEAD -- coverage.any.json` shows `0b613a42`
+  touched it after the last request regen `b430c419`; a fresh
+  `prepare-agent-maintenance --write` with the identical frozen identity
+  values re-derived the audit to `discovered_upstream_surface=0`,
+  `required_uplifts_this_run=0`, `deferred_preexisting_gaps=2`; no identity
+  field changed.
+- Impact: closeout is blocked until the audit is reconciled; none of the
+  green gates catch this drift because they validate manifests/publications,
+  not request-vs-derivation consistency.
+- Workaround used: regenerated the request and packet docs via
+  `prepare-agent-maintenance --dry-run`/`--write` then `refresh-agent`
+  (idempotent), re-ran green gates, then recorded the closeout.
+- Likely root cause: the step that lands the passthrough surface and
+  regenerates coverage does not also re-run `prepare-agent-maintenance`
+  (or an audit re-derive) to keep `support_surface_audit` in sync with the
+  coverage it just rewrote; the frozen contract and its own derivation
+  inputs drift apart within a single run.
+- Proposed fix / owner / priority: after any coverage/gap regeneration,
+  re-derive `support_surface_audit` (or fail a pre-closeout consistency
+  check that runs `validate_support_surface_audit` and points at
+  `prepare-agent-maintenance`) so the request never lags its derivation
+  inputs (owner: xtask executor / agent-maintenance). Priority: medium-high.
+- Blocking: worked around — closeout completed after reconciliation.
