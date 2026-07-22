@@ -41,6 +41,7 @@ fn build_watch_queue_emits_frozen_fields_for_stale_agents() {
 
     assert_eq!(queue.schema_version, 1);
     assert!(!queue.generated_at.is_empty());
+    assert!(queue.failed_agents.is_empty());
     assert_eq!(
         queue.stale_agents,
         vec![
@@ -113,6 +114,7 @@ fn run_in_workspace_emits_json_queue_file() {
         Args {
             check: false,
             emit_json: Some(PathBuf::from("_ci_tmp/maintenance-watch.json")),
+            agent: None,
         },
         &mut stdout,
         resolver_for_queue,
@@ -121,6 +123,7 @@ fn run_in_workspace_emits_json_queue_file() {
 
     let output = String::from_utf8(stdout).expect("stdout utf8");
     assert!(output.contains("stale_agents: 3"));
+    assert!(output.contains("failed_agents: 0"));
     assert!(output.contains("emitted_json: _ci_tmp/maintenance-watch.json"));
 
     let written = fs::read_to_string(fixture.join("_ci_tmp/maintenance-watch.json"))
@@ -129,6 +132,7 @@ fn run_in_workspace_emits_json_queue_file() {
         serde_json::from_str(&written).expect("parse queue json");
     assert_eq!(parsed.schema_version, 1);
     assert_eq!(parsed.stale_agents.len(), 3);
+    assert!(parsed.failed_agents.is_empty());
 }
 
 #[test]
@@ -145,6 +149,7 @@ fn run_in_workspace_check_fails_when_stale_agents_are_present() {
         Args {
             check: true,
             emit_json: None,
+            agent: None,
         },
         &mut stdout,
         resolver_for_queue,
@@ -156,6 +161,7 @@ fn run_in_workspace_check_fails_when_stale_agents_are_present() {
 
     let output = String::from_utf8(stdout).expect("stdout utf8");
     assert!(output.contains("stale_agents: 3"));
+    assert!(output.contains("failed_agents: 0"));
 }
 
 #[test]
@@ -168,17 +174,18 @@ fn clean_or_not_newer_agents_are_not_emitted() {
 
     let queue = build_watch_queue_with_resolver(&fixture, resolver_for_queue).expect("queue");
     assert!(queue.stale_agents.is_empty());
+    assert!(queue.failed_agents.is_empty());
 }
 
 #[test]
-fn malformed_upstream_history_fails_closed() {
-    let fixture = fixture_root("agent-maintenance-watch-malformed");
+fn partial_upstream_failures_are_isolated_into_failed_agents() {
+    let fixture = fixture_root("agent-maintenance-watch-partial-failure");
     seed_registry(&fixture);
     seed_latest_validated(&fixture, "cli_manifests/codex", "0.97.0");
     seed_latest_validated(&fixture, "cli_manifests/claude_code", "1.2.3");
     seed_latest_validated(&fixture, "cli_manifests/opencode", "1.4.9");
 
-    let err = build_watch_queue_with_resolver(&fixture, |entry, _| {
+    let queue = build_watch_queue_with_resolver(&fixture, |entry, _| {
         if entry.agent_id == "codex" {
             Err(Error::Validation("synthetic upstream failure".to_string()))
         } else if entry.agent_id == "opencode" {
@@ -187,9 +194,23 @@ fn malformed_upstream_history_fails_closed() {
             Ok(vec!["1.2.5".parse().unwrap(), "1.2.4".parse().unwrap()])
         }
     })
-    .unwrap_err();
+    .expect("partial failures should not abort queue");
 
-    assert!(err.to_string().contains("synthetic upstream failure"));
+    assert_eq!(
+        queue
+            .stale_agents
+            .iter()
+            .map(|entry| entry.agent_id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["claude_code", "opencode"]
+    );
+    assert_eq!(
+        queue.failed_agents,
+        vec![watch::MaintenanceWatchQueueFailure {
+            agent_id: "codex".to_string(),
+            error: "synthetic upstream failure".to_string(),
+        }]
+    );
 }
 
 #[test]
@@ -201,6 +222,7 @@ fn enrolled_agents_use_generic_open_pr_workflow() {
     seed_latest_validated(&fixture, "cli_manifests/opencode", "1.4.9");
 
     let queue = build_watch_queue_with_resolver(&fixture, resolver_for_queue).expect("queue");
+    assert!(queue.failed_agents.is_empty());
     for agent_id in ["codex", "claude_code", "opencode"] {
         let entry = queue
             .stale_agents
@@ -254,6 +276,89 @@ fn gcs_page_tokens_are_percent_encoded_for_pagination() {
     );
     assert_eq!(urls.len(), 2);
     assert!(urls[1].contains("pageToken=token%2B%2F%3D"));
+}
+
+#[test]
+fn agent_filter_scopes_queue_to_single_enrolled_agent() {
+    let fixture = fixture_root("agent-maintenance-watch-agent-filter");
+    seed_registry(&fixture);
+    seed_latest_validated(&fixture, "cli_manifests/codex", "0.97.0");
+    seed_latest_validated(&fixture, "cli_manifests/claude_code", "1.2.3");
+    seed_latest_validated(&fixture, "cli_manifests/opencode", "1.4.9");
+
+    let mut stdout = Vec::new();
+    run_in_workspace_with_resolver(
+        &fixture,
+        Args {
+            check: false,
+            emit_json: None,
+            agent: Some("claude_code".to_string()),
+        },
+        &mut stdout,
+        |entry, _| match entry.agent_id.as_str() {
+            "claude_code" => Ok(vec!["1.2.5".parse().unwrap(), "1.2.4".parse().unwrap()]),
+            other => panic!("unexpected filtered agent {other}"),
+        },
+    )
+    .expect("agent-scoped queue");
+
+    let output = String::from_utf8(stdout).expect("stdout utf8");
+    assert!(output.contains("stale_agents: 1"));
+    assert!(output.contains("failed_agents: 0"));
+    assert!(output.contains("claude_code -> 1.2.4"));
+    assert!(!output.contains("codex ->"));
+    assert!(!output.contains("opencode ->"));
+}
+
+#[test]
+fn github_release_pagination_assembles_all_pages() {
+    let fixture = fixture_root("agent-maintenance-watch-github-pagination");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "codex")
+        .expect("codex registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("codex release watch");
+
+    let mut urls = Vec::new();
+    let page_one = format!(
+        "[{}]",
+        (0..100)
+            .map(|patch| format!(
+                r#"{{"tag_name":"rust-v0.98.{patch}","draft":false,"prerelease":false}}"#
+            ))
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+    let versions = watch::fetch_github_releases_with_fetcher(entry, release_watch, |url| {
+        urls.push(url.to_string());
+        if url.ends_with("page=1") {
+            Ok(page_one.clone())
+        } else if url.ends_with("page=2") {
+            Ok(
+                r#"[{"tag_name":"rust-v0.99.0","draft":false,"prerelease":false},{"tag_name":"rust-v0.99.1","draft":false,"prerelease":false}]"#
+                    .to_string(),
+            )
+        } else {
+            panic!("unexpected GitHub releases URL {url}");
+        }
+    })
+    .expect("github pagination fetch succeeds");
+
+    assert_eq!(urls.len(), 2);
+    assert!(urls[0].ends_with("per_page=100&page=1"));
+    assert!(urls[1].ends_with("per_page=100&page=2"));
+    assert_eq!(versions.len(), 102);
+    assert!(versions.contains(&"0.98.0".parse().unwrap()));
+    assert!(versions.contains(&"0.99.1".parse().unwrap()));
 }
 
 fn resolver_for_queue(

@@ -1,5 +1,5 @@
 use std::{
-    fs,
+    env, fs,
     io::{self, Write},
     path::{Path, PathBuf},
     process::Command,
@@ -38,6 +38,9 @@ pub struct Args {
 
     #[arg(long)]
     pub emit_json: Option<PathBuf>,
+
+    #[arg(long)]
+    pub agent: Option<String>,
 }
 
 #[derive(Debug)]
@@ -82,6 +85,8 @@ pub struct MaintenanceWatchQueue {
     pub schema_version: u32,
     pub generated_at: String,
     pub stale_agents: Vec<MaintenanceWatchQueueEntry>,
+    #[serde(default)]
+    pub failed_agents: Vec<MaintenanceWatchQueueFailure>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -99,6 +104,12 @@ pub struct MaintenanceWatchQueueEntry {
     pub opened_from: String,
     pub detected_by: String,
     pub branch_name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MaintenanceWatchQueueFailure {
+    pub agent_id: String,
+    pub error: String,
 }
 
 pub fn run(args: Args) -> Result<(), Error> {
@@ -125,14 +136,18 @@ where
     W: Write,
     F: FnMut(&AgentRegistryEntry, &ReleaseWatchMetadata) -> Result<Vec<Version>, Error>,
 {
-    let queue = build_watch_queue_with_resolver(workspace_root, |entry, release_watch| {
-        resolve_versions(entry, release_watch)
-    })?;
+    let queue = build_watch_queue_with_resolver_and_filter(
+        workspace_root,
+        args.agent.as_deref(),
+        |entry, release_watch| resolve_versions(entry, release_watch),
+    )?;
     writeln!(writer, "schema_version: {}", queue.schema_version)
         .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
     writeln!(writer, "generated_at: {}", queue.generated_at)
         .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
     writeln!(writer, "stale_agents: {}", queue.stale_agents.len())
+        .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
+    writeln!(writer, "failed_agents: {}", queue.failed_agents.len())
         .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
     for entry in &queue.stale_agents {
         writeln!(
@@ -145,6 +160,10 @@ where
             entry.dispatch_workflow
         )
         .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
+    }
+    for failure in &queue.failed_agents {
+        writeln!(writer, "{} failed: {}", failure.agent_id, failure.error)
+            .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
     }
 
     if let Some(path) = args.emit_json.as_ref() {
@@ -174,9 +193,34 @@ pub fn build_watch_queue_with_resolver<F>(
 where
     F: FnMut(&AgentRegistryEntry, &ReleaseWatchMetadata) -> Result<Vec<Version>, Error>,
 {
+    build_watch_queue_with_resolver_and_filter(workspace_root, None, |entry, release_watch| {
+        resolve_versions(entry, release_watch)
+    })
+}
+
+fn build_watch_queue_with_resolver_and_filter<F>(
+    workspace_root: &Path,
+    agent_filter: Option<&str>,
+    mut resolve_versions: F,
+) -> Result<MaintenanceWatchQueue, Error>
+where
+    F: FnMut(&AgentRegistryEntry, &ReleaseWatchMetadata) -> Result<Vec<Version>, Error>,
+{
     let registry = AgentRegistry::load(workspace_root)?;
     let mut stale_agents = Vec::new();
-    for entry in &registry.agents {
+    let mut failed_agents = Vec::new();
+
+    let entries: Vec<&AgentRegistryEntry> = if let Some(agent_id) = agent_filter {
+        vec![registry.find(agent_id).ok_or_else(|| {
+            Error::Validation(format!(
+                "maintenance-watch references unknown agent_id `{agent_id}`"
+            ))
+        })?]
+    } else {
+        registry.agents.iter().collect()
+    };
+
+    for entry in entries {
         let Some(release_watch) = entry.maintenance.release_watch.as_ref() else {
             continue;
         };
@@ -184,50 +228,19 @@ where
             continue;
         }
 
-        let current_validated = read_current_validated(workspace_root, entry)?;
-        let mut versions = resolve_versions(entry, release_watch)?;
-        versions.sort();
-        versions.dedup();
-        if versions.is_empty() {
-            return Err(Error::Validation(format!(
-                "maintenance-watch found no stable upstream versions for agent `{}`",
-                entry.agent_id
-            )));
+        match evaluate_agent_watch_entry(
+            workspace_root,
+            entry,
+            release_watch,
+            &mut resolve_versions,
+        ) {
+            Ok(Some(queue_entry)) => stale_agents.push(queue_entry),
+            Ok(None) => {}
+            Err(error) => failed_agents.push(MaintenanceWatchQueueFailure {
+                agent_id: entry.agent_id.clone(),
+                error: error.to_string(),
+            }),
         }
-
-        let latest_stable = versions
-            .last()
-            .cloned()
-            .ok_or_else(|| Error::Internal("latest stable missing after sort".to_string()))?;
-        let Some(target_version) = select_target_version(&versions, release_watch.version_policy)
-        else {
-            continue;
-        };
-        if target_version <= current_validated {
-            continue;
-        }
-
-        let dispatch_workflow =
-            dispatch_workflow_value(&entry.agent_id, release_watch).map_err(Error::Validation)?;
-        let maintenance_root = format!("docs/agents/lifecycle/{}-maintenance", entry.agent_id);
-        stale_agents.push(MaintenanceWatchQueueEntry {
-            agent_id: entry.agent_id.clone(),
-            manifest_root: entry.manifest_root.clone(),
-            current_validated: current_validated.to_string(),
-            latest_stable: latest_stable.to_string(),
-            target_version: target_version.to_string(),
-            version_policy: version_policy_str(release_watch.version_policy).to_string(),
-            dispatch_kind: dispatch_kind_str(release_watch.dispatch_kind).to_string(),
-            dispatch_workflow: dispatch_workflow.clone(),
-            maintenance_root: maintenance_root.clone(),
-            request_path: maintenance_request_path(&entry.agent_id),
-            opened_from: opened_from_path(&dispatch_workflow),
-            detected_by: GENERATED_BY_WORKFLOW.to_string(),
-            branch_name: format!(
-                "automation/{}-maintenance-{}",
-                entry.agent_id, target_version
-            ),
-        });
     }
 
     Ok(MaintenanceWatchQueue {
@@ -236,7 +249,63 @@ where
             .format(&Rfc3339)
             .map_err(|err| Error::Internal(format!("format queue timestamp: {err}")))?,
         stale_agents,
+        failed_agents,
     })
+}
+
+fn evaluate_agent_watch_entry<F>(
+    workspace_root: &Path,
+    entry: &AgentRegistryEntry,
+    release_watch: &ReleaseWatchMetadata,
+    resolve_versions: &mut F,
+) -> Result<Option<MaintenanceWatchQueueEntry>, Error>
+where
+    F: FnMut(&AgentRegistryEntry, &ReleaseWatchMetadata) -> Result<Vec<Version>, Error>,
+{
+    let current_validated = read_current_validated(workspace_root, entry)?;
+    let mut versions = resolve_versions(entry, release_watch)?;
+    versions.sort();
+    versions.dedup();
+    if versions.is_empty() {
+        return Err(Error::Validation(format!(
+            "maintenance-watch found no stable upstream versions for agent `{}`",
+            entry.agent_id
+        )));
+    }
+
+    let latest_stable = versions
+        .last()
+        .cloned()
+        .ok_or_else(|| Error::Internal("latest stable missing after sort".to_string()))?;
+    let Some(target_version) = select_target_version(&versions, release_watch.version_policy)
+    else {
+        return Ok(None);
+    };
+    if target_version <= current_validated {
+        return Ok(None);
+    }
+
+    let dispatch_workflow =
+        dispatch_workflow_value(&entry.agent_id, release_watch).map_err(Error::Validation)?;
+    let maintenance_root = format!("docs/agents/lifecycle/{}-maintenance", entry.agent_id);
+    Ok(Some(MaintenanceWatchQueueEntry {
+        agent_id: entry.agent_id.clone(),
+        manifest_root: entry.manifest_root.clone(),
+        current_validated: current_validated.to_string(),
+        latest_stable: latest_stable.to_string(),
+        target_version: target_version.to_string(),
+        version_policy: version_policy_str(release_watch.version_policy).to_string(),
+        dispatch_kind: dispatch_kind_str(release_watch.dispatch_kind).to_string(),
+        dispatch_workflow: dispatch_workflow.clone(),
+        maintenance_root: maintenance_root.clone(),
+        request_path: maintenance_request_path(&entry.agent_id),
+        opened_from: opened_from_path(&dispatch_workflow),
+        detected_by: GENERATED_BY_WORKFLOW.to_string(),
+        branch_name: format!(
+            "automation/{}-maintenance-{}",
+            entry.agent_id, target_version
+        ),
+    }))
 }
 
 fn read_current_validated(
@@ -287,6 +356,17 @@ fn fetch_github_releases(
     entry: &AgentRegistryEntry,
     release_watch: &ReleaseWatchMetadata,
 ) -> Result<Vec<Version>, Error> {
+    fetch_github_releases_with_fetcher(entry, release_watch, fetch_text)
+}
+
+pub(crate) fn fetch_github_releases_with_fetcher<F>(
+    entry: &AgentRegistryEntry,
+    release_watch: &ReleaseWatchMetadata,
+    mut fetch: F,
+) -> Result<Vec<Version>, Error>
+where
+    F: FnMut(&str) -> Result<String, Error>,
+{
     let owner = release_watch.upstream.owner.as_deref().ok_or_else(|| {
         Error::Validation(format!(
             "release_watch owner missing for github_releases agent `{}`",
@@ -309,29 +389,39 @@ fn fetch_github_releases(
                 entry.agent_id
             ))
         })?;
-    let url = format!("https://api.github.com/repos/{owner}/{repo}/releases?per_page=100");
-    let body = fetch_text(&url)?;
-    let releases: Vec<GithubRelease> = serde_json::from_str(&body).map_err(|err| {
-        Error::Validation(format!(
-            "parse GitHub releases for agent `{}` from {url}: {err}",
-            entry.agent_id
-        ))
-    })?;
     let mut versions = Vec::new();
-    for release in releases {
-        if release.draft || release.prerelease {
-            continue;
+    let mut page = 1usize;
+    loop {
+        let url = format!(
+            "https://api.github.com/repos/{owner}/{repo}/releases?per_page=100&page={page}"
+        );
+        let body = fetch(&url)?;
+        let releases: Vec<GithubRelease> = serde_json::from_str(&body).map_err(|err| {
+            Error::Validation(format!(
+                "parse GitHub releases for agent `{}` from {url}: {err}",
+                entry.agent_id
+            ))
+        })?;
+        let release_count = releases.len();
+        for release in releases {
+            if release.draft || release.prerelease {
+                continue;
+            }
+            let Some(tag_name) = release.tag_name else {
+                continue;
+            };
+            let Some(raw_version) = tag_name.strip_prefix(tag_prefix) else {
+                continue;
+            };
+            versions.push(parse_semver(
+                raw_version,
+                &format!("GitHub tag `{tag_name}` for agent `{}`", entry.agent_id),
+            )?);
         }
-        let Some(tag_name) = release.tag_name else {
-            continue;
-        };
-        let Some(raw_version) = tag_name.strip_prefix(tag_prefix) else {
-            continue;
-        };
-        versions.push(parse_semver(
-            raw_version,
-            &format!("GitHub tag `{tag_name}` for agent `{}`", entry.agent_id),
-        )?);
+        if release_count < 100 {
+            break;
+        }
+        page += 1;
     }
     Ok(versions)
 }
@@ -436,8 +526,27 @@ fn percent_encode_query_value(value: &str) -> String {
 }
 
 fn fetch_text(url: &str) -> Result<String, Error> {
-    let output = Command::new("curl")
-        .args(["-fsSL", url])
+    let mut command = Command::new("curl");
+    command.args([
+        "-fsSL",
+        "--retry",
+        "3",
+        "--retry-all-errors",
+        "--retry-max-time",
+        "20",
+        "-H",
+        "User-Agent: unified-agent-api-maintenance-watch/1.0",
+    ]);
+    if url.starts_with("https://api.github.com/") {
+        if let Ok(token) = env::var("GITHUB_TOKEN") {
+            let token = token.trim();
+            if !token.is_empty() {
+                command.args(["-H", &format!("Authorization: Bearer {token}")]);
+            }
+        }
+    }
+    command.arg(url);
+    let output = command
         .output()
         .map_err(|err| Error::Internal(format!("spawn curl for {url}: {err}")))?;
     if !output.status.success() {
