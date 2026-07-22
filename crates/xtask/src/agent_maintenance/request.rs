@@ -4,6 +4,8 @@ mod automation;
 mod paths;
 #[path = "request/raw.rs"]
 mod raw;
+#[path = "request/support_surface_audit_reconcile.rs"]
+mod support_surface_audit_reconcile;
 #[path = "request/validate.rs"]
 mod validate;
 
@@ -24,10 +26,10 @@ use crate::{
 use self::{
     automation::{
         validate_automated_watch_request, validate_detected_release, validate_execution_contract,
-        validate_support_surface_audit,
     },
     paths::{normalize_repo_relative_path, validate_request_path},
     raw::RawMaintenanceRequest,
+    support_surface_audit_reconcile::validate_support_surface_audit,
     validate::{map_jail_error, validate_actions, validate_runtime_followup_required},
 };
 
