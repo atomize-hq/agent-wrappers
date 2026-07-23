@@ -6,8 +6,8 @@ opened_from = ".github/workflows/agent-maintenance-open-pr.yml"
 requested_control_plane_actions = [
   "packet_doc_refresh",
 ]
-request_recorded_at = "2026-07-22T00:14:53Z"
-request_commit = "df0762ea109af1206b85c585a87030a8e3bbfe38"
+request_recorded_at = "2026-07-23T18:18:43Z"
+request_commit = "a225af1db6d1f713f5be433338671ecf09043c8b"
 
 [runtime_followup_required]
 required = false
