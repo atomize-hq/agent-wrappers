@@ -207,6 +207,28 @@ pub(super) fn diff_snapshots(before: &WorkspaceSnapshot, after: &WorkspaceSnapsh
         .collect()
 }
 
+pub(super) fn operator_governance_diff_exclusions(maintenance_root: &str) -> Vec<String> {
+    vec![
+        format!("{maintenance_root}/governance/orchestration-friction-log.md"),
+        format!("{maintenance_root}/governance/maintainer-follow-up.md"),
+    ]
+}
+
+pub(super) fn exclude_explicit_diff_paths(
+    changed_paths: &[String],
+    excluded_paths: &[String],
+) -> Vec<String> {
+    let excluded = excluded_paths
+        .iter()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>();
+    changed_paths
+        .iter()
+        .filter(|path| !excluded.contains(path.as_str()))
+        .cloned()
+        .collect()
+}
+
 fn matches_any_surface(path: &str, surfaces: &[String]) -> Result<bool, Error> {
     surfaces.iter().try_fold(false, |matched, surface| {
         if matched {

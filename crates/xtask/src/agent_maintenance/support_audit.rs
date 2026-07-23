@@ -126,6 +126,73 @@ impl SurfaceIdentity {
             surface_id,
         }
     }
+
+    pub(crate) fn describe(&self) -> String {
+        format!(
+            "surface_kind={} command_path={} surface_id={}",
+            self.surface_kind, self.command_path, self.surface_id
+        )
+    }
+}
+
+impl EvidenceBackedSurface {
+    pub(crate) fn identity(&self) -> SurfaceIdentity {
+        SurfaceIdentity::new(
+            self.surface_kind.clone(),
+            self.command_path.clone(),
+            self.surface_id.clone(),
+        )
+    }
+}
+
+impl DebtBackedSurface {
+    pub(crate) fn identity(&self) -> SurfaceIdentity {
+        SurfaceIdentity::new(
+            self.surface_kind.clone(),
+            self.command_path.clone(),
+            self.surface_id.clone(),
+        )
+    }
+}
+
+impl EligibleSurface {
+    pub(crate) fn identity(&self) -> SurfaceIdentity {
+        SurfaceIdentity::new(
+            self.surface_kind.clone(),
+            self.command_path.clone(),
+            self.surface_id.clone(),
+        )
+    }
+}
+
+impl RequiredUplift {
+    pub(crate) fn identity(&self) -> SurfaceIdentity {
+        SurfaceIdentity::new(
+            self.surface_kind.clone(),
+            self.command_path.clone(),
+            self.surface_id.clone(),
+        )
+    }
+}
+
+impl DeferredGap {
+    pub(crate) fn identity(&self) -> SurfaceIdentity {
+        SurfaceIdentity::new(
+            self.surface_kind.clone(),
+            self.command_path.clone(),
+            self.surface_id.clone(),
+        )
+    }
+}
+
+impl PublicationImpact {
+    pub(crate) fn identity(&self) -> SurfaceIdentity {
+        SurfaceIdentity::new(
+            self.surface_kind.clone(),
+            self.command_path.clone(),
+            self.surface_id.clone(),
+        )
+    }
 }
 
 impl DebtInventoryRow {
@@ -264,6 +331,25 @@ pub(crate) fn derive_support_surface_audit(
     })
 }
 
+pub(crate) fn coverage_report_present_for_target(
+    workspace_root: &Path,
+    entry: &AgentRegistryEntry,
+    target_version: &str,
+) -> Result<bool, String> {
+    let version_dir = coverage_report_version_dir(workspace_root, entry, target_version);
+    if !version_dir.is_dir() {
+        return Ok(false);
+    }
+
+    let report_path = match select_report_path(&version_dir) {
+        Ok(path) => path,
+        Err(error) if error.starts_with("no coverage report found under") => return Ok(false),
+        Err(error) => return Err(error),
+    };
+    fs::File::open(&report_path).map_err(|err| format!("open {}: {err}", report_path.display()))?;
+    Ok(true)
+}
+
 pub(crate) fn load_debt_inventory(workspace_root: &Path) -> Result<Vec<DebtInventoryRow>, String> {
     let path = workspace_root.join(NON_TUI_SUPPORT_DEBT_PATH);
     let text =
@@ -306,10 +392,7 @@ fn load_current_gap_surfaces_if_present(
     entry: &AgentRegistryEntry,
     target_version: &str,
 ) -> Result<Option<(PathBuf, Vec<SurfaceIdentity>)>, String> {
-    let version_dir = workspace_root
-        .join(&entry.manifest_root)
-        .join("reports")
-        .join(target_version);
+    let version_dir = coverage_report_version_dir(workspace_root, entry, target_version);
     if !version_dir.is_dir() {
         return Ok(None);
     }
@@ -386,10 +469,7 @@ fn load_current_gap_surfaces(
     entry: &AgentRegistryEntry,
     target_version: &str,
 ) -> Result<(PathBuf, Vec<SurfaceIdentity>), String> {
-    let version_dir = workspace_root
-        .join(&entry.manifest_root)
-        .join("reports")
-        .join(target_version);
+    let version_dir = coverage_report_version_dir(workspace_root, entry, target_version);
     let report_path = select_report_path(&version_dir)?;
     let text = fs::read_to_string(&report_path)
         .map_err(|err| format!("read {}: {err}", report_path.display()))?;
@@ -417,6 +497,17 @@ fn load_current_gap_surfaces(
     }
 
     Ok((report_path, surfaces.into_iter().collect()))
+}
+
+fn coverage_report_version_dir(
+    workspace_root: &Path,
+    entry: &AgentRegistryEntry,
+    target_version: &str,
+) -> PathBuf {
+    workspace_root
+        .join(&entry.manifest_root)
+        .join("reports")
+        .join(target_version)
 }
 
 fn select_report_path(version_dir: &Path) -> Result<PathBuf, String> {

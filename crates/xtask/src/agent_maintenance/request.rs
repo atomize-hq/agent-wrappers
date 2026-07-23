@@ -4,6 +4,8 @@ mod automation;
 mod paths;
 #[path = "request/raw.rs"]
 mod raw;
+#[path = "request/support_surface_audit_reconcile.rs"]
+mod support_surface_audit_reconcile;
 #[path = "request/validate.rs"]
 mod validate;
 
@@ -24,10 +26,10 @@ use crate::{
 use self::{
     automation::{
         validate_automated_watch_request, validate_detected_release, validate_execution_contract,
-        validate_support_surface_audit,
     },
     paths::{normalize_repo_relative_path, validate_request_path},
     raw::RawMaintenanceRequest,
+    support_surface_audit_reconcile::validate_support_surface_audit,
     validate::{map_jail_error, validate_actions, validate_runtime_followup_required},
 };
 
@@ -58,6 +60,18 @@ pub struct MaintenanceRequest {
 pub struct MaintenanceRequestEnvelope {
     pub request: MaintenanceRequest,
     pub execution_contract: Option<ExecutionContract>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AuditReconciliation {
+    Exact,
+    Satisfied,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidatedMaintenanceRequestEnvelope {
+    pub envelope: MaintenanceRequestEnvelope,
+    pub support_surface_audit_reconciliation: Option<AuditReconciliation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -177,6 +191,15 @@ impl MaintenanceRequestEnvelope {
     }
 }
 
+impl AuditReconciliation {
+    pub fn human_status(self) -> &'static str {
+        match self {
+            Self::Exact => "exact",
+            Self::Satisfied => "satisfied (frozen discovery preserved)",
+        }
+    }
+}
+
 impl MaintenanceAction {
     fn parse(value: &str, request_path: &Path) -> Result<Self, MaintenanceRequestError> {
         match value {
@@ -205,7 +228,11 @@ pub fn load_request(
     workspace_root: &Path,
     request_path: &Path,
 ) -> Result<MaintenanceRequest, MaintenanceRequestError> {
-    Ok(load_request_envelope(workspace_root, request_path)?.request)
+    Ok(
+        load_request_envelope_validated(workspace_root, request_path)?
+            .envelope
+            .request,
+    )
 }
 
 pub(crate) use self::validate::{
@@ -217,6 +244,13 @@ pub fn load_request_envelope(
     workspace_root: &Path,
     request_path: &Path,
 ) -> Result<MaintenanceRequestEnvelope, MaintenanceRequestError> {
+    Ok(load_request_envelope_validated(workspace_root, request_path)?.envelope)
+}
+
+pub fn load_request_envelope_validated(
+    workspace_root: &Path,
+    request_path: &Path,
+) -> Result<ValidatedMaintenanceRequestEnvelope, MaintenanceRequestError> {
     let workspace_root = fs::canonicalize(workspace_root).map_err(|err| {
         MaintenanceRequestError::Internal(format!(
             "canonicalize {}: {err}",
@@ -304,7 +338,7 @@ pub fn load_request_envelope(
         trigger_kind,
         raw.detected_release,
     )?;
-    let support_surface_audit = validate_support_surface_audit(
+    let support_surface_audit_validation = validate_support_surface_audit(
         &workspace_root,
         &relative_path,
         registry_entry,
@@ -335,24 +369,27 @@ pub fn load_request_envelope(
     )?;
     validate_commit_value(&relative_path, "request_commit", &raw.request_commit)?;
 
-    Ok(MaintenanceRequestEnvelope {
-        request: MaintenanceRequest {
-            relative_path: relative_path.display().to_string(),
-            canonical_path,
-            sha256: hex::encode(Sha256::digest(&bytes)),
-            maintenance_pack_prefix,
-            maintenance_root: maintenance_root.display().to_string(),
-            agent_id: raw.agent_id,
-            trigger_kind,
-            basis_ref: raw.basis_ref,
-            opened_from: raw.opened_from,
-            requested_control_plane_actions,
-            runtime_followup_required,
-            detected_release,
-            support_surface_audit,
-            request_recorded_at: raw.request_recorded_at,
-            request_commit: raw.request_commit,
+    Ok(ValidatedMaintenanceRequestEnvelope {
+        envelope: MaintenanceRequestEnvelope {
+            request: MaintenanceRequest {
+                relative_path: relative_path.display().to_string(),
+                canonical_path,
+                sha256: hex::encode(Sha256::digest(&bytes)),
+                maintenance_pack_prefix,
+                maintenance_root: maintenance_root.display().to_string(),
+                agent_id: raw.agent_id,
+                trigger_kind,
+                basis_ref: raw.basis_ref,
+                opened_from: raw.opened_from,
+                requested_control_plane_actions,
+                runtime_followup_required,
+                detected_release,
+                support_surface_audit: support_surface_audit_validation.audit,
+                request_recorded_at: raw.request_recorded_at,
+                request_commit: raw.request_commit,
+            },
+            execution_contract,
         },
-        execution_contract,
+        support_surface_audit_reconciliation: support_surface_audit_validation.reconciliation,
     })
 }

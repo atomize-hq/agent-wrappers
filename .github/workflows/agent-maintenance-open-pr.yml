@@ -116,6 +116,69 @@ jobs:
           body-path: docs/agents/lifecycle/${{ inputs.agent_id }}-maintenance/governance/pr-summary.md
           add-paths: ${{ inputs.add_paths }}
           delete-branch: true
+      - name: Close superseded same-agent PRs
+        if: ${{ steps.create_pr.outcome == 'success' && steps.create_pr.outputs.pull-request-number != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMATION_TOKEN || github.token }}
+          AGENT_ID: ${{ inputs.agent_id }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+          NEW_PR_NUMBER: ${{ steps.create_pr.outputs.pull-request-number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch_prefix="automation/${AGENT_ID}-maintenance-"
+          strict_version_regex='^[0-9]+\.[0-9]+\.[0-9]+$'
+
+          if [[ ! "$TARGET_VERSION" =~ $strict_version_regex ]]; then
+            echo "::warning::Skipping supersession because TARGET_VERSION is not strict semver: ${TARGET_VERSION}"
+            exit 0
+          fi
+
+          pr_json="$(gh pr list --state open --limit 500 --json number,headRefName)"
+
+          mapfile -t candidate_prs < <(
+            jq -r --arg prefix "$branch_prefix" --argjson new_pr "$NEW_PR_NUMBER" '
+              .[]
+              | select(.number != $new_pr)
+              | select(.headRefName | startswith($prefix))
+              | [.number, .headRefName]
+              | @tsv
+            ' <<< "$pr_json"
+          )
+
+          if [[ ${#candidate_prs[@]} -eq 0 ]]; then
+            echo "No open same-agent maintenance PRs to evaluate for supersession."
+            exit 0
+          fi
+
+          superseded_prs=()
+          for candidate in "${candidate_prs[@]}"; do
+            IFS=$'\t' read -r pr_number head_ref_name <<< "$candidate"
+            candidate_version="${head_ref_name#${branch_prefix}}"
+
+            if [[ -z "$candidate_version" || "$candidate_version" == "$head_ref_name" ]]; then
+              continue
+            fi
+
+            if [[ ! "$candidate_version" =~ $strict_version_regex ]]; then
+              echo "Skipping non-version branch: ${head_ref_name}"
+              continue
+            fi
+
+            lower_version="$(printf '%s\n%s\n' "$candidate_version" "$TARGET_VERSION" | sort -V | head -n1)"
+            if [[ "$candidate_version" != "$TARGET_VERSION" && "$lower_version" == "$candidate_version" ]]; then
+              superseded_prs+=("$pr_number")
+            fi
+          done
+
+          if [[ ${#superseded_prs[@]} -eq 0 ]]; then
+            echo "No older open same-agent maintenance PRs to supersede."
+            exit 0
+          fi
+
+          for pr_number in "${superseded_prs[@]}"; do
+            gh pr close "$pr_number" --comment "Superseded by #${NEW_PR_NUMBER} for ${AGENT_ID} ${TARGET_VERSION}." || echo "::warning::could not close #$pr_number (already closed?)"
+          done
       - name: Print recovery guidance
         if: ${{ steps.create_pr.outcome == 'failure' }}
         shell: bash

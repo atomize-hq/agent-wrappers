@@ -25,6 +25,8 @@ jobs:
           ref: staging
       - uses: dtolnay/rust-toolchain@stable
       - name: Emit stale-agent queue
+        id: emit_queue
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -32,18 +34,108 @@ jobs:
           cargo run -p xtask -- maintenance-watch --emit-json _ci_tmp/maintenance-watch.json
       - name: Convert stale_agents to matrix include list
         id: queue
+        if: ${{ always() }}
         shell: bash
         run: |
           set -euo pipefail
-          jq -c '{include: [.stale_agents[] | . + {
-            current_version: .current_validated,
-            dispatch_ref: "staging"
-          }]}' _ci_tmp/maintenance-watch.json > _ci_tmp/maintenance-watch-matrix.json
+          mkdir -p _ci_tmp
+          if [[ -f _ci_tmp/maintenance-watch.json ]]; then
+            jq -c '{include: [.stale_agents[]? | . + {
+              current_version: .current_validated,
+              dispatch_ref: "staging"
+            }]}' _ci_tmp/maintenance-watch.json > _ci_tmp/maintenance-watch-matrix.json
+          else
+            printf '{"include":[]}\n' > _ci_tmp/maintenance-watch-matrix.json
+          fi
           {
             echo 'queue<<EOF'
             cat _ci_tmp/maintenance-watch-matrix.json
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
+      - name: Write watcher summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "## Release watch queue"
+            echo
+            if [[ ! -f _ci_tmp/maintenance-watch.json ]]; then
+              echo ":warning: _ci_tmp/maintenance-watch.json was not produced."
+              exit 0
+            fi
+
+            if ! jq -e . _ci_tmp/maintenance-watch.json >/dev/null 2>&1; then
+              echo ":warning: _ci_tmp/maintenance-watch.json exists but is not valid JSON."
+              exit 0
+            fi
+
+            echo "### stale_agents"
+            jq -r '
+              if (.stale_agents // []) | length == 0 then
+                "- none"
+              else
+                (.stale_agents // [])[]
+                | "- `\(.agent_id)` current=\(.current_validated // "unknown") target=\(.target_version // "unknown") workflow=\(.dispatch_workflow // "agent-maintenance-open-pr.yml")"
+              end
+            ' _ci_tmp/maintenance-watch.json
+
+            if (( $(jq '(.failed_agents // []) | length' _ci_tmp/maintenance-watch.json) > 0 )); then
+              echo
+              echo "### failed_agents"
+              jq -r '(.failed_agents // [])[] | "- `\(.agent_id)` error: \(.error // "unknown error")"' _ci_tmp/maintenance-watch.json
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload watcher queue artifact
+        if: ${{ always() && hashFiles('_ci_tmp/maintenance-watch.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: maintenance-watch-queue
+          path: _ci_tmp/maintenance-watch.json
+          if-no-files-found: error
+      - name: Annotate upstream release-watch failures
+        if: ${{ always() && hashFiles('_ci_tmp/maintenance-watch.json') != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! jq -e . _ci_tmp/maintenance-watch.json >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          while IFS= read -r failure; do
+            [[ -n "$failure" ]] || continue
+            echo "::warning title=maintenance-watch upstream failure::${failure}"
+          done < <(
+            jq -r '(.failed_agents // [])[] | "\(.agent_id): \(.error // "unknown error")"' \
+              _ci_tmp/maintenance-watch.json
+          )
+
+          stale_count="$(jq '(.stale_agents // []) | length' _ci_tmp/maintenance-watch.json)"
+          failed_count="$(jq '(.failed_agents // []) | length' _ci_tmp/maintenance-watch.json)"
+
+          if (( stale_count == 0 && failed_count > 0 )); then
+            echo "::error title=maintenance-watch systemic outage::No stale agents were emitted and ${failed_count} upstream watcher failures were recorded."
+            exit 1
+          fi
+      - name: Fail queue job if watcher emission failed
+        if: ${{ always() && steps.emit_queue.outcome == 'failure' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::error title=Release watch failed::maintenance-watch exited non-zero; see job summary and artifact for details."
+          exit 1
+      - name: Surface release-watch failure
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo
+            echo "## :rotating_light: Release watch failed"
+            echo
+            echo 'The watcher job failed. Inspect the logs and the `maintenance-watch-queue` artifact if it was uploaded.'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   dispatch:
     name: Fan out ${{ matrix.agent_id }}
@@ -82,10 +174,15 @@ jobs:
               add_paths: `${process.env.MAINTENANCE_ROOT}\n`,
             };
 
+            const workflowId =
+              process.env.DISPATCH_WORKFLOW && process.env.DISPATCH_WORKFLOW.trim() !== ""
+                ? process.env.DISPATCH_WORKFLOW
+                : "agent-maintenance-open-pr.yml";
+
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: "agent-maintenance-open-pr.yml",
+              workflow_id: workflowId,
               ref: process.env.DISPATCH_REF,
               inputs,
             });

@@ -9,13 +9,16 @@ use super::{
     runtime::{execute_codex_write, run_codex_preflight, run_green_gates},
     types::{Context, InputContract, RecoveryContract, ValidationCheck, ValidationReport},
     validate::{
-        diff_snapshots, snapshot_workspace, validate_prepared_packet, validate_written_paths,
+        diff_snapshots, exclude_explicit_diff_paths, operator_governance_diff_exclusions,
+        snapshot_workspace, validate_prepared_packet, validate_written_paths,
     },
     Args, Error, EXECUTION_RUNS_ROOT, WORKFLOW_VERSION,
 };
 
 pub(super) fn build_context(workspace_root: &Path, args: &Args) -> Result<Context, Error> {
-    let envelope = request::load_request_envelope(workspace_root, &args.request)?;
+    let validated_envelope =
+        request::load_request_envelope_validated(workspace_root, &args.request)?;
+    let envelope = validated_envelope.envelope;
     if !envelope.request.is_automated_watch_request() {
         return Err(Error::Validation(format!(
             "execute-agent-maintenance only supports automated upstream-release requests; `{}` has trigger_kind `{}`",
@@ -96,8 +99,18 @@ pub(super) fn execute_dry_run<W: Write>(
     context: &Context,
     writer: &mut W,
 ) -> Result<(), Error> {
+    let current_reconciliation =
+        load_current_support_surface_reconciliation(workspace_root, context)?;
     let preflight = run_codex_preflight(workspace_root, context)?;
     let preflight_ok = preflight.errors.is_empty();
+    let mut checks = preflight.checks.clone();
+    if let Some(reconciliation) = current_reconciliation {
+        checks.push(ValidationCheck {
+            name: "support_surface_audit".to_string(),
+            ok: true,
+            message: format!("support_surface_audit: {}", reconciliation.human_status()),
+        });
+    }
     let report = ValidationReport {
         workflow_version: WORKFLOW_VERSION.to_string(),
         run_id: context.run_id.clone(),
@@ -106,7 +119,7 @@ pub(super) fn execute_dry_run<W: Write>(
         } else {
             "fail".to_string()
         },
-        checks: preflight.checks.clone(),
+        checks,
         errors: preflight.errors.clone(),
         preflight: Some(preflight.evidence.clone()),
         codex_execution: None,
@@ -141,6 +154,14 @@ pub(super) fn execute_dry_run<W: Write>(
         .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
     writeln!(writer, "closeout_command: {}", context.closeout_command)
         .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
+    if let Some(reconciliation) = current_reconciliation {
+        writeln!(
+            writer,
+            "support_surface_audit: {}",
+            reconciliation.human_status()
+        )
+        .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
+    }
     writeln!(
         writer,
         "closeout remains manual; it is not run automatically."
@@ -161,6 +182,10 @@ pub(super) fn execute_write_mode<W: Write>(
     let mut checks = preflight.checks.clone();
     let mut errors = preflight.errors.clone();
     let mut gate_results = Vec::new();
+    let mut post_write_reconciliation =
+        load_current_support_surface_reconciliation(workspace_root, context)?;
+    let diff_exclusions =
+        operator_governance_diff_exclusions(&context.envelope.request.maintenance_root);
 
     let codex_execution = if errors.is_empty() {
         Some(execute_codex_write(
@@ -194,7 +219,10 @@ pub(super) fn execute_write_mode<W: Write>(
 
         let snapshot_after_codex =
             snapshot_workspace(workspace_root, &[Path::new(EXECUTION_RUNS_ROOT)])?;
-        let diff_after_codex = diff_snapshots(&prepared_contract.baseline, &snapshot_after_codex);
+        let diff_after_codex = exclude_explicit_diff_paths(
+            &diff_snapshots(&prepared_contract.baseline, &snapshot_after_codex),
+            &diff_exclusions,
+        );
         validate_written_paths(
             workspace_root,
             context,
@@ -213,7 +241,10 @@ pub(super) fn execute_write_mode<W: Write>(
             )?;
             let snapshot_after_gates =
                 snapshot_workspace(workspace_root, &[Path::new(EXECUTION_RUNS_ROOT)])?;
-            written_paths = diff_snapshots(&prepared_contract.baseline, &snapshot_after_gates);
+            written_paths = exclude_explicit_diff_paths(
+                &diff_snapshots(&prepared_contract.baseline, &snapshot_after_gates),
+                &diff_exclusions,
+            );
             validate_written_paths(
                 workspace_root,
                 context,
@@ -222,6 +253,14 @@ pub(super) fn execute_write_mode<W: Write>(
                 &mut checks,
                 &mut errors,
             )?;
+            if errors.is_empty() {
+                post_write_reconciliation = revalidate_request_after_write(
+                    workspace_root,
+                    context,
+                    &mut checks,
+                    &mut errors,
+                )?;
+            }
         } else {
             written_paths = diff_after_codex;
         }
@@ -274,10 +313,64 @@ pub(super) fn execute_write_mode<W: Write>(
         .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
     writeln!(writer, "closeout_command: {}", context.closeout_command)
         .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
+    if let Some(reconciliation) = post_write_reconciliation {
+        writeln!(
+            writer,
+            "support_surface_audit: {}",
+            reconciliation.human_status()
+        )
+        .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
+    }
     writeln!(
         writer,
         "closeout remains manual; it is not run automatically."
     )
     .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
     Ok(())
+}
+
+fn revalidate_request_after_write(
+    workspace_root: &Path,
+    context: &Context,
+    checks: &mut Vec<ValidationCheck>,
+    errors: &mut Vec<String>,
+) -> Result<Option<request::AuditReconciliation>, Error> {
+    let request_path = Path::new(&context.envelope.request.relative_path);
+    match request::load_request_envelope_validated(workspace_root, request_path) {
+        Ok(validated_envelope) => {
+            let reconciliation = validated_envelope
+                .support_surface_audit_reconciliation
+                .map(|state| state.human_status())
+                .unwrap_or("not_applicable");
+            checks.push(ValidationCheck {
+                name: "request_revalidation".to_string(),
+                ok: true,
+                message: format!(
+                    "frozen request revalidated after runtime writes and green gates; support_surface_audit: {reconciliation}"
+                ),
+            });
+            Ok(validated_envelope.support_surface_audit_reconciliation)
+        }
+        Err(request::MaintenanceRequestError::Validation(message)) => {
+            checks.push(ValidationCheck {
+                name: "request_revalidation".to_string(),
+                ok: false,
+                message: "frozen request became stale after runtime writes and green gates"
+                    .to_string(),
+            });
+            errors.push(message);
+            Ok(None)
+        }
+        Err(request::MaintenanceRequestError::Internal(message)) => Err(Error::Internal(message)),
+    }
+}
+
+fn load_current_support_surface_reconciliation(
+    workspace_root: &Path,
+    context: &Context,
+) -> Result<Option<request::AuditReconciliation>, Error> {
+    let request_path = Path::new(&context.envelope.request.relative_path);
+    let validated_envelope = request::load_request_envelope_validated(workspace_root, request_path)
+        .map_err(Error::from)?;
+    Ok(validated_envelope.support_surface_audit_reconciliation)
 }
