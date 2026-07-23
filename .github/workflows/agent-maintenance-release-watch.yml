@@ -24,6 +24,9 @@ jobs:
         with:
           ref: staging
       - uses: dtolnay/rust-toolchain@stable
+      - name: Build xtask
+        shell: bash
+        run: cargo build -p xtask
       - name: Emit stale-agent queue
         id: emit_queue
         continue-on-error: true

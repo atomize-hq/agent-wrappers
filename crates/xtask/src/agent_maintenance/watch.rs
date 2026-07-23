@@ -462,7 +462,13 @@ where
             entry.agent_id
         ))
     })?;
-    let url = format!("https://registry.npmjs.org/{package}");
+    // npm scoped packages contain `/` (e.g. `@scope/name`). Encode the package as a
+    // single path segment so the scope separator is never transmitted as a path
+    // separator by a stricter registry, CDN, or proxy.
+    let url = format!(
+        "https://registry.npmjs.org/{}",
+        percent_encode_query_value(package)
+    );
     let body = fetch(&url)?;
     let metadata: NpmPackageMetadata = serde_json::from_str(&body).map_err(|err| {
         Error::Validation(format!(

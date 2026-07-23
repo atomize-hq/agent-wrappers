@@ -339,7 +339,10 @@ fn npm_dist_tag_fetcher_returns_requested_stable_pointer() {
         .expect("claude_code release watch");
 
     let versions = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |url| {
-        assert_eq!(url, "https://registry.npmjs.org/@anthropic-ai/claude-code");
+        assert_eq!(
+            url,
+            "https://registry.npmjs.org/%40anthropic-ai%2Fclaude-code"
+        );
         Ok(r#"{"dist-tags":{"stable":"2.1.206","latest":"2.1.218"}}"#.to_string())
     })
     .expect("npm dist-tag fetch succeeds");
@@ -399,6 +402,58 @@ fn npm_dist_tag_fetcher_fails_closed_on_malformed_json() {
 
     assert!(matches!(err, Error::Validation(_)));
     assert!(err.to_string().contains("parse npm metadata"));
+}
+
+#[test]
+fn npm_dist_tag_fetcher_fails_closed_on_blank_version() {
+    let fixture = fixture_root("agent-maintenance-watch-npm-blank-version");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "claude_code")
+        .expect("claude_code registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code release watch");
+
+    let err = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |_| {
+        Ok(r#"{"dist-tags":{"stable":"  "}}"#.to_string())
+    })
+    .expect_err("blank dist-tag version should fail");
+
+    assert!(matches!(err, Error::Validation(_)));
+}
+
+#[test]
+fn npm_dist_tag_fetcher_fails_closed_when_dist_tags_object_missing() {
+    let fixture = fixture_root("agent-maintenance-watch-npm-no-dist-tags");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "claude_code")
+        .expect("claude_code registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code release watch");
+
+    let err = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |_| {
+        Ok(r#"{"versions":{}}"#.to_string())
+    })
+    .expect_err("missing dist-tags object should fail");
+
+    assert!(matches!(err, Error::Validation(_)));
 }
 
 #[test]
