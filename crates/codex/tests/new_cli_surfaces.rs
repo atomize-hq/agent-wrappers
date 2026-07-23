@@ -7,10 +7,11 @@ use std::{
 };
 
 use codex::{
-    AppServerCodegenRequest, AppServerProxyRequest, AppServerRequest, CodexClient,
+    AppServerCodegenRequest, AppServerProxyRequest, AppServerRequest, CodexClient, CodexError,
     DebugAppServerSendMessageV2Request, DebugModelsRequest, DebugPromptInputRequest,
-    ExecServerRequest, FeaturesDisableRequest, FeaturesEnableRequest, PluginCommandRequest,
-    PluginMarketplaceAddRequest, PluginMarketplaceCommandRequest, PluginMarketplaceRemoveRequest,
+    ExecServerRequest, FeaturesDisableRequest, FeaturesEnableRequest, NonTuiCommand,
+    NonTuiCommandRequest, PluginCommandRequest, PluginMarketplaceAddRequest,
+    PluginMarketplaceCommandRequest, PluginMarketplaceRemoveRequest,
     PluginMarketplaceUpgradeRequest, SandboxCommandRequest, SandboxPlatform, UpdateCommandRequest,
 };
 use serde::Deserialize;
@@ -307,6 +308,190 @@ async fn new_0125_surfaces_spawn_expected_subcommands() -> Result<(), Box<dyn st
 }
 
 #[tokio::test]
+async fn packet_non_tui_commands_are_bounded_and_forward_arguments(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp = tempfile::tempdir()?;
+    let log_path = temp.path().join("invocations.jsonl");
+    let fake_codex = write_fake_codex(&log_path)?;
+    let client = CodexClient::builder()
+        .binary(&fake_codex)
+        .mirror_stdout(false)
+        .quiet(true)
+        .build();
+
+    for command in NonTuiCommand::all() {
+        let request = NonTuiCommandRequest::new(*command).args(non_tui_passthrough_args(*command));
+        if matches!(
+            command,
+            NonTuiCommand::AppServer | NonTuiCommand::ExecServer
+        ) {
+            let mut child = client.start_non_tui_server(request)?;
+            assert!(child.wait().await?.success());
+        } else {
+            client.run_non_tui_command(request).await?;
+        }
+    }
+    client
+        .run_non_tui_command(
+            NonTuiCommandRequest::new(NonTuiCommand::RemoteControlHelp)
+                .arg("sessions")
+                .dangerously_bypass_hook_trust(true)
+                .strict_config(true),
+        )
+        .await?;
+
+    let invocations = read_invocations(&log_path)?;
+    assert_eq!(invocations.len(), NonTuiCommand::all().len() + 1);
+
+    for (command, invocation) in NonTuiCommand::all()
+        .iter()
+        .zip(invocations.iter().take(NonTuiCommand::all().len()))
+    {
+        let expected_path = command.path();
+        let expected_args = non_tui_passthrough_args(*command);
+        let actual_path = invocation.argv[..expected_path.len()]
+            .iter()
+            .map(|value| value.as_str())
+            .collect::<Vec<_>>();
+        let actual_args = invocation.argv[expected_path.len()..]
+            .iter()
+            .map(|value| value.as_str())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            actual_path, expected_path,
+            "command path must lead argv for {command:?}: {:?}",
+            invocation.argv
+        );
+        assert_eq!(
+            actual_args, expected_args,
+            "verbatim args must immediately follow command path for {command:?}: {:?}",
+            invocation.argv
+        );
+    }
+
+    assert_eq!(
+        invocations.last().expect("root-flag invocation").argv,
+        [
+            "--dangerously-bypass-hook-trust",
+            "--strict-config",
+            "remote-control",
+            "help",
+            "sessions",
+        ]
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn packet_non_tui_parent_variants_reject_bare_descendant_tokens(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp = tempfile::tempdir()?;
+    let log_path = temp.path().join("invocations.jsonl");
+    let fake_codex = write_fake_codex(&log_path)?;
+    let client = CodexClient::builder()
+        .binary(&fake_codex)
+        .mirror_stdout(false)
+        .quiet(true)
+        .build();
+
+    for (command, bare_token) in [
+        (NonTuiCommand::AppServer, "proxy"),
+        (NonTuiCommand::AppServerDaemon, "help"),
+        (NonTuiCommand::RemoteControl, "start"),
+    ] {
+        let error = client
+            .run_non_tui_command(NonTuiCommandRequest::new(command).arg(bare_token))
+            .await
+            .expect_err("parent variant should reject bare descendant token");
+
+        match error {
+            CodexError::InvalidNonTuiPassthrough {
+                command: actual_command,
+                token,
+            } => {
+                assert_eq!(actual_command, command.path().join(" "));
+                assert_eq!(token, bare_token);
+            }
+            other => panic!("unexpected error for {command:?}: {other:?}"),
+        }
+    }
+
+    assert!(
+        !log_path.exists(),
+        "validation should reject before spawn, but got invocations: {:?}",
+        read_invocations(&log_path).unwrap_or_default()
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn packet_non_tui_parent_variants_accept_flag_only_passthrough_arguments(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp = tempfile::tempdir()?;
+    let log_path = temp.path().join("invocations.jsonl");
+    let fake_codex = write_fake_codex(&log_path)?;
+    let client = CodexClient::builder()
+        .binary(&fake_codex)
+        .mirror_stdout(false)
+        .quiet(true)
+        .build();
+
+    let mut child = client.start_non_tui_server(
+        NonTuiCommandRequest::new(NonTuiCommand::AppServer).arg("--listen=127.0.0.1:9090"),
+    )?;
+    assert!(child.wait().await?.success());
+
+    let invocations = read_invocations(&log_path)?;
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(
+        invocations[0].argv,
+        ["app-server", "--listen=127.0.0.1:9090"]
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn packet_non_tui_parent_variant_predicate_edge_cases_preserve_spawn_behavior(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let temp = tempfile::tempdir()?;
+    let log_path = temp.path().join("invocations.jsonl");
+    let fake_codex = write_fake_codex(&log_path)?;
+    let client = CodexClient::builder()
+        .binary(&fake_codex)
+        .mirror_stdout(false)
+        .quiet(true)
+        .build();
+
+    let mut dash_child = client
+        .start_non_tui_server(NonTuiCommandRequest::new(NonTuiCommand::AppServer).arg("-"))?;
+    assert!(dash_child.wait().await?.success());
+    let mut double_dash_child = client
+        .start_non_tui_server(NonTuiCommandRequest::new(NonTuiCommand::AppServer).arg("--"))?;
+    assert!(double_dash_child.wait().await?.success());
+
+    let error = client
+        .run_non_tui_command(NonTuiCommandRequest::new(NonTuiCommand::AppServer).arg(""))
+        .await
+        .expect_err("empty passthrough should be rejected before spawn");
+
+    match error {
+        CodexError::InvalidNonTuiPassthrough { command, token } => {
+            assert_eq!(command, NonTuiCommand::AppServer.path().join(" "));
+            assert_eq!(token, "");
+        }
+        other => panic!("unexpected error for empty passthrough: {other:?}"),
+    }
+
+    let invocations = read_invocations(&log_path)?;
+    assert_eq!(invocations.len(), 2);
+    assert_eq!(invocations[0].argv, ["app-server", "-"]);
+    assert_eq!(invocations[1].argv, ["app-server", "--"]);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn new_0129_surfaces_spawn_expected_subcommands() -> Result<(), Box<dyn std::error::Error>> {
     let temp = tempfile::tempdir()?;
     let log_path = temp.path().join("invocations.jsonl");
@@ -524,8 +709,8 @@ if [[ $# -ge 1 && $1 == "update" ]]; then
   exit 0
 fi
 
-echo "unknown command: $@" >&2
-exit 1
+echo "generic-ok"
+exit 0
 "#,
         log = log_path.display()
     );
@@ -535,6 +720,15 @@ exit 1
     permissions.set_mode(0o755);
     fs::set_permissions(&script_path, permissions)?;
     Ok(script_path)
+}
+
+fn non_tui_passthrough_args(command: NonTuiCommand) -> &'static [&'static str] {
+    match command {
+        NonTuiCommand::AppServer
+        | NonTuiCommand::AppServerDaemon
+        | NonTuiCommand::RemoteControl => &["--packet-flag=packet-value"],
+        _ => &["--packet-flag", "packet-value"],
+    }
 }
 
 fn read_invocations(log_path: &Path) -> Result<Vec<Invocation>, Box<dyn std::error::Error>> {

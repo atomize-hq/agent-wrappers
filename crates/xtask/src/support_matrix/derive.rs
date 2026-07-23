@@ -99,6 +99,8 @@ struct SupportReportDeltas {
     #[serde(default)]
     missing_args: Vec<serde_json::Value>,
     #[serde(default)]
+    passthrough_candidates: Vec<serde_json::Value>,
+    #[serde(default)]
     intentionally_unsupported: Vec<serde_json::Value>,
     #[serde(default)]
     wrapper_only_commands: Vec<serde_json::Value>,
@@ -675,6 +677,11 @@ pub(super) fn build_evidence_notes(
                     .to_string(),
             );
         }
+        if !report.deltas.passthrough_candidates.is_empty() {
+            notes.push(
+                "backend report includes passthrough surface outside unified support".to_string(),
+            );
+        }
         if !report.deltas.wrapper_only_commands.is_empty()
             || !report.deltas.wrapper_only_flags.is_empty()
             || !report.deltas.wrapper_only_args.is_empty()
@@ -736,4 +743,46 @@ where
     let text =
         fs::read_to_string(path).map_err(|err| format!("read({}): {err}", path.display()))?;
     serde_json::from_str(&text).map_err(|err| format!("parse({}): {err}", path.display()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn evidence_notes_include_passthrough_caveat_in_stable_order() {
+        let mut report = SupportReport::default();
+        report
+            .deltas
+            .intentionally_unsupported
+            .push(json!({ "path": ["unsupported"] }));
+        report
+            .deltas
+            .passthrough_candidates
+            .push(json!({ "path": ["app-server"] }));
+        report
+            .deltas
+            .wrapper_only_commands
+            .push(json!({ "path": ["backend-only"] }));
+
+        let posture = CurrentRootPosture {
+            expected_targets: vec!["linux-x64".to_string(), "win32-x64".to_string()],
+            current_version: Some("1.0.0".to_string()),
+            current_targets: BTreeSet::from(["linux-x64".to_string()]),
+        };
+
+        let notes = build_evidence_notes(Some(&report), &posture, "win32-x64", "1.0.0");
+
+        assert_eq!(
+            notes,
+            vec![
+                "backend report includes intentionally unsupported surface outside unified support"
+                    .to_string(),
+                "backend report includes passthrough surface outside unified support".to_string(),
+                "backend report includes backend-only surface outside unified support".to_string(),
+                "current root snapshot omits this target".to_string(),
+            ]
+        );
+    }
 }

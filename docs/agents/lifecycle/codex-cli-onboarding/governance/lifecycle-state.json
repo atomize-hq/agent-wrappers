@@ -21,7 +21,8 @@
     "support_matrix_check_green",
     "capability_matrix_check_green",
     "capability_matrix_audit_green",
-    "preflight_green"
+    "preflight_green",
+    "maintenance_closeout_written"
   ],
   "satisfied_evidence": [
     "registry_entry",
@@ -33,7 +34,8 @@
     "support_matrix_check_green",
     "capability_matrix_check_green",
     "capability_matrix_audit_green",
-    "preflight_green"
+    "preflight_green",
+    "maintenance_closeout_written"
   ],
   "blocking_issues": [],
   "retryable_failures": [],
