@@ -126,6 +126,131 @@ fn opencode_automated_request_with_execution_contract_toml(
     )
 }
 
+const FROZEN_DISCOVERY_ROW: &str = concat!(
+    "\n",
+    "[[support_surface_audit.discovered_upstream_surface]]\n",
+    "surface_kind = \"commands\"\n",
+    "command_path = \"opencode status\"\n",
+    "surface_id = \"status\"\n",
+    "evidence_ref = \"cli_manifests/opencode/reports/0.98.0/coverage.any.json\"\n",
+    "\n",
+    "[[support_surface_audit.required_uplifts_this_run]]\n",
+    "surface_kind = \"commands\"\n",
+    "command_path = \"opencode status\"\n",
+    "surface_id = \"status\"\n",
+    "reason = \"new_upstream_surface\"\n",
+    "required_writes = [\"wrapper\", \"backend\", \"manifest\", \"publication\", \"packet_docs\"]\n"
+);
+
+const FROZEN_DEFERRED_ROW: &str = concat!(
+    "\n",
+    "[[support_surface_audit.preexisting_unsupported_surface]]\n",
+    "surface_kind = \"commands\"\n",
+    "command_path = \"opencode status\"\n",
+    "surface_id = \"status\"\n",
+    "debt_ref = \"docs/specs/unified-agent-api/non-tui-support-debt.md#opencode-status-command\"\n",
+    "\n",
+    "[[support_surface_audit.missing_wrapper_support]]\n",
+    "surface_kind = \"commands\"\n",
+    "command_path = \"opencode status\"\n",
+    "surface_id = \"status\"\n",
+    "\n",
+    "[[support_surface_audit.missing_backend_support]]\n",
+    "surface_kind = \"commands\"\n",
+    "command_path = \"opencode status\"\n",
+    "surface_id = \"status\"\n",
+    "\n",
+    "[[support_surface_audit.deferred_preexisting_gaps]]\n",
+    "surface_kind = \"commands\"\n",
+    "command_path = \"opencode status\"\n",
+    "surface_id = \"status\"\n",
+    "defer_reason = \"requires_new_infra\"\n",
+    "blocking_follow_on = \"TODOS.md#close-opencode-status-gap\"\n",
+    "\n",
+    "[[support_surface_audit.publication_impacts]]\n",
+    "surface_kind = \"commands\"\n",
+    "command_path = \"opencode status\"\n",
+    "surface_id = \"status\"\n",
+    "surface_doc = \"docs/specs/unified-agent-api/support-matrix.md\"\n"
+);
+
+fn seed_live_new_discovery(fixture: &std::path::Path) {
+    write_text(
+        &fixture.join("cli_manifests/opencode/reports/0.98.0/coverage.any.json"),
+        concat!(
+            "{\n",
+            "  \"deltas\": {\n",
+            "    \"missing_commands\": [\n",
+            "      {\n",
+            "        \"path\": [\"status\"]\n",
+            "      }\n",
+            "    ],\n",
+            "    \"missing_flags\": [],\n",
+            "    \"missing_args\": [],\n",
+            "    \"intentionally_unsupported\": []\n",
+            "  }\n",
+            "}\n"
+        ),
+    );
+}
+
+fn seed_live_clean_report(fixture: &std::path::Path) {
+    write_text(
+        &fixture.join("cli_manifests/opencode/reports/0.98.0/coverage.any.json"),
+        concat!(
+            "{\n",
+            "  \"deltas\": {\n",
+            "    \"missing_commands\": [],\n",
+            "    \"missing_flags\": [],\n",
+            "    \"missing_args\": [],\n",
+            "    \"intentionally_unsupported\": []\n",
+            "  }\n",
+            "}\n"
+        ),
+    );
+}
+
+fn seed_live_deferred_row(fixture: &std::path::Path, blocker_class: &str) {
+    write_text(
+        &fixture.join("cli_manifests/opencode/reports/0.98.0/coverage.any.json"),
+        concat!(
+            "{\n",
+            "  \"deltas\": {\n",
+            "    \"missing_commands\": [\n",
+            "      {\n",
+            "        \"path\": [\"status\"]\n",
+            "      }\n",
+            "    ],\n",
+            "    \"missing_flags\": [],\n",
+            "    \"missing_args\": [],\n",
+            "    \"intentionally_unsupported\": []\n",
+            "  }\n",
+            "}\n"
+        ),
+    );
+    write_text(
+        &fixture.join("docs/specs/unified-agent-api/non-tui-support-debt.md"),
+        &format!(
+            concat!(
+                "# Non-TUI Support Debt Inventory\n\n",
+                "## Inventory\n\n",
+                "### `opencode-status-command`\n\n",
+                "- `agent_id`: `opencode`\n",
+                "- `surface_kind`: `commands`\n",
+                "- `command_path`: `opencode status`\n",
+                "- `surface_id`: `status`\n",
+                "- `current_reason`: `The status command remains deferred.`\n",
+                "- `blocker_class`: `{blocker_class}`\n",
+                "- `owner`: `wrappers team`\n",
+                "- `milestone`: `post packet-pr convergence follow-on`\n",
+                "- `follow_on`: `TODOS.md#close-opencode-status-gap`\n",
+                "- `evidence_ref`: `cli_manifests/opencode/reports/0.98.0/coverage.any.json`\n"
+            ),
+            blocker_class = blocker_class
+        ),
+    );
+}
+
 #[test]
 fn automated_request_v2_with_detected_release_parses() {
     let fixture = fixture_root("agent-maintenance-automated-request-v2");
@@ -383,6 +508,13 @@ fn automated_packet_refresh_renders_canonical_handoff_and_pr_summary() {
     assert!(handoff.contains("## Read-only inputs"));
     assert!(handoff.contains("## Ordered repo commands"));
     assert!(handoff.contains("## Exact green gates"));
+    assert!(handoff.contains("## Dry-run to write relay"));
+    assert!(handoff.contains(
+        "cargo run -p xtask -- execute-agent-maintenance --dry-run --request docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml"
+    ));
+    assert!(handoff.contains(
+        "cargo run -p xtask -- execute-agent-maintenance --write --request docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml --run-id RUN_ID_FROM_DRY_RUN"
+    ));
     assert!(handoff.contains("## Exact closeout command"));
     assert!(handoff.contains("## Exact maintained-agent prompt"));
     assert!(handoff
@@ -400,4 +532,211 @@ fn automated_packet_refresh_renders_canonical_handoff_and_pr_summary() {
         .contains("Execute the automated maintenance packet for `opencode` target `0.98.0`."));
     assert!(pr_summary.contains("## Exact maintained-agent prompt"));
     assert!(!pr_summary.contains("## Work Queue Summary (autogenerated)"));
+}
+
+#[test]
+fn automated_packet_refresh_allowlist_matches_renderer_paths() {
+    let fixture = fixture_root("agent-maintenance-automated-allowlist");
+    seed_publication_inputs(&fixture);
+    seed_opencode_packet_pr_workflow(&fixture);
+
+    let request_path =
+        "docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml";
+    write_text(
+        &fixture.join(request_path),
+        &opencode_automated_request_toml(
+            "docs/integrations/opencode/governance/seam-2-closeout.md",
+        ),
+    );
+
+    let request = load_request(&fixture, Path::new(request_path)).expect("load request");
+    let renderer_paths = docs::packet_doc_relative_paths(&fixture, &request)
+        .expect("derive renderer packet doc paths")
+        .into_iter()
+        .collect::<BTreeSet<_>>();
+    let plan = build_refresh_plan(&fixture, Path::new(request_path)).expect("build refresh plan");
+    let planned_paths = plan
+        .planned_paths()
+        .into_iter()
+        .map(str::to_string)
+        .collect::<BTreeSet<_>>();
+
+    assert_eq!(planned_paths, renderer_paths);
+}
+
+#[test]
+fn automated_request_support_surface_audit_satisfied_state_keeps_frozen_discovery_for_refresh() {
+    let fixture = fixture_root("agent-maintenance-automated-request-satisfied");
+    seed_publication_inputs(&fixture);
+    seed_opencode_packet_pr_workflow(&fixture);
+    seed_live_clean_report(&fixture);
+
+    let request_path =
+        "docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml";
+    write_text(
+        &fixture.join(request_path),
+        &(opencode_automated_request_toml(
+            "docs/integrations/opencode/governance/seam-2-closeout.md",
+        ) + FROZEN_DISCOVERY_ROW),
+    );
+
+    let envelope = request::load_request_envelope_validated(&fixture, Path::new(request_path))
+        .expect("load satisfied request");
+    assert_eq!(
+        envelope.support_surface_audit_reconciliation,
+        Some(request::AuditReconciliation::Satisfied)
+    );
+
+    let plan = build_refresh_plan(&fixture, Path::new(request_path)).expect("build refresh plan");
+    assert_eq!(
+        plan.support_surface_audit_reconciliation,
+        Some(request::AuditReconciliation::Satisfied)
+    );
+    let handoff = planned_utf8(
+        &plan,
+        "docs/agents/lifecycle/opencode-maintenance/HANDOFF.md",
+    );
+    assert!(handoff.contains("- discovered upstream surface rows: `1`"));
+    assert!(handoff.contains("- `opencode status` `status` via `new_upstream_surface`"));
+
+    let mut stdout = Vec::new();
+    refresh::run_in_workspace(
+        &fixture,
+        refresh::Args {
+            request: std::path::PathBuf::from(request_path),
+            dry_run: true,
+            write: false,
+        },
+        &mut stdout,
+    )
+    .expect("refresh dry-run");
+    let stdout = String::from_utf8(stdout).expect("utf8 stdout");
+    assert!(stdout.contains("support_surface_audit: satisfied (frozen discovery preserved)"));
+}
+
+#[test]
+fn automated_request_support_surface_audit_rejects_missing_live_report_after_frozen_discovery() {
+    let fixture = fixture_root("agent-maintenance-automated-request-missing-report");
+    seed_publication_inputs(&fixture);
+    seed_opencode_packet_pr_workflow(&fixture);
+    seed_live_clean_report(&fixture);
+    fs::remove_file(fixture.join("cli_manifests/opencode/reports/0.98.0/coverage.any.json"))
+        .expect("remove live report");
+
+    let request_path =
+        "docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml";
+    write_text(
+        &fixture.join(request_path),
+        &(opencode_automated_request_toml(
+            "docs/integrations/opencode/governance/seam-2-closeout.md",
+        ) + FROZEN_DISCOVERY_ROW),
+    );
+
+    let err = request::load_request_envelope_validated(&fixture, Path::new(request_path))
+        .expect_err("missing live report should invalidate the frozen request");
+    let message = err.to_string();
+    assert!(message.contains("cannot confirm reconciliation"));
+    assert!(message.contains("target version `0.98.0`"));
+    assert!(message.contains("cli_manifests/opencode/reports/0.98.0"));
+
+    let refresh_err = build_refresh_plan(&fixture, Path::new(request_path))
+        .expect_err("refresh should reject missing report evidence");
+    let refresh_message = refresh_err.to_string();
+    assert!(refresh_message.contains("cannot confirm reconciliation"));
+    assert!(refresh_message.contains("cli_manifests/opencode/reports/0.98.0"));
+}
+
+#[test]
+fn automated_request_support_surface_audit_exact_state_survives_when_live_matches_frozen() {
+    let fixture = fixture_root("agent-maintenance-automated-request-exact");
+    seed_publication_inputs(&fixture);
+    seed_opencode_packet_pr_workflow(&fixture);
+
+    let request_path =
+        "docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml";
+    write_text(
+        &fixture.join(request_path),
+        &opencode_automated_request_toml(
+            "docs/integrations/opencode/governance/seam-2-closeout.md",
+        ),
+    );
+
+    let envelope = request::load_request_envelope_validated(&fixture, Path::new(request_path))
+        .expect("load exact request");
+    assert_eq!(
+        envelope.support_surface_audit_reconciliation,
+        Some(request::AuditReconciliation::Exact)
+    );
+
+    let plan = build_refresh_plan(&fixture, Path::new(request_path)).expect("build refresh plan");
+    assert_eq!(
+        plan.support_surface_audit_reconciliation,
+        Some(request::AuditReconciliation::Exact)
+    );
+}
+
+#[test]
+fn automated_request_support_surface_audit_rejects_new_live_discovery_with_named_row() {
+    let fixture = fixture_root("agent-maintenance-automated-request-live-new-discovery");
+    seed_publication_inputs(&fixture);
+    seed_opencode_packet_pr_workflow(&fixture);
+    seed_live_new_discovery(&fixture);
+
+    let request_path =
+        "docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml";
+    write_text(
+        &fixture.join(request_path),
+        &opencode_automated_request_toml(
+            "docs/integrations/opencode/governance/seam-2-closeout.md",
+        ),
+    );
+
+    let err = request::load_request_envelope_validated(&fixture, Path::new(request_path))
+        .expect_err("new live discovery should invalidate the frozen request");
+    let message = err.to_string();
+    assert!(message.contains("support_surface_audit.discovered_upstream_surface added"));
+    assert!(
+        message.contains("surface_kind=commands command_path=opencode status surface_id=status")
+    );
+
+    let refresh_err = build_refresh_plan(&fixture, Path::new(request_path))
+        .expect_err("refresh should reject stale discovery");
+    assert!(refresh_err
+        .to_string()
+        .contains("surface_kind=commands command_path=opencode status surface_id=status"));
+}
+
+#[test]
+fn automated_request_support_surface_audit_rejects_deferred_reason_mismatch() {
+    let fixture = fixture_root("agent-maintenance-automated-request-deferred-mismatch");
+    seed_publication_inputs(&fixture);
+    seed_opencode_packet_pr_workflow(&fixture);
+    seed_live_deferred_row(&fixture, "requires_new_architectural_seam");
+
+    let request_path =
+        "docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml";
+    write_text(
+        &fixture.join(request_path),
+        &(opencode_automated_request_toml(
+            "docs/integrations/opencode/governance/seam-2-closeout.md",
+        )
+        .replace("pre_run_debt_count = 0", "pre_run_debt_count = 1")
+        .replace(
+            "expected_post_run_debt_count = 0",
+            "expected_post_run_debt_count = 1",
+        ) + FROZEN_DEFERRED_ROW),
+    );
+
+    let err = request::load_request_envelope_validated(&fixture, Path::new(request_path))
+        .expect_err("deferred reason mismatch should invalidate the frozen request");
+    let message = err.to_string();
+    assert!(
+        message.contains("support_surface_audit.deferred_preexisting_gaps changed"),
+        "{message}"
+    );
+    assert!(
+        message.contains("surface_kind=commands command_path=opencode status surface_id=status")
+    );
+    assert!(message.contains("requires_new_infra"));
+    assert!(message.contains("requires_new_architectural_seam"));
 }

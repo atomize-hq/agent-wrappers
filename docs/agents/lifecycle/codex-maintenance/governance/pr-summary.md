@@ -2,13 +2,13 @@
 
 # PR summary
 
-Automated maintenance packet for `codex` target `0.129.0`.
+Automated maintenance packet for `codex` target `0.144.6`.
 
 - canonical execution contract: `docs/agents/lifecycle/codex-maintenance/HANDOFF.md`
 - request artifact: `docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml`
-- branch: `automation/codex-maintenance-0.129.0`
+- branch: `automation/codex-maintenance-0.144.6`
 - opened from: `.github/workflows/agent-maintenance-open-pr.yml`
-- prompt sha256: `231107d2a7bdc7ad9e75c2bb295924951e2dd001964779fe9dd186e616523031`
+- prompt sha256: `9e7a6f4055d32dabd4235ec29f45b909066e992d47983275f5fd38f1ea5f0a1a`
 
 ## Support-surface audit
 
@@ -31,7 +31,7 @@ Follow `docs/agents/lifecycle/codex-maintenance/HANDOFF.md` exactly. This PR sum
 ## Exact maintained-agent prompt
 
 ```md
-# Packet PR Maintenance Prompt (`0.129.0`)
+# Packet PR Maintenance Prompt (`0.144.6`)
 
 This template renders the exact maintained-agent prompt for `codex` packet execution.
 `docs/agents/lifecycle/codex-maintenance/HANDOFF.md` remains canonical and `governance/pr-summary.md` is derivative.
@@ -40,7 +40,7 @@ This template renders the exact maintained-agent prompt for `codex` packet execu
 
 ## Goal
 
-Execute the automated maintenance packet for `codex` target `0.129.0`.
+Execute the automated maintenance packet for `codex` target `0.144.6`.
 
 ## Frozen request contract
 
@@ -62,10 +62,10 @@ Execute the automated maintenance packet for `codex` target `0.129.0`.
 
 ## Required workflow
 
-1. Compare the current validated baseline from `cli_manifests/codex/latest_validated.txt` against the target `0.129.0` artifacts.
+1. Compare the current validated baseline from `cli_manifests/codex/latest_validated.txt` against the target `0.144.6` artifacts.
 2. Use `support_surface_audit` to classify newly discovered non-TUI surface, preexisting non-TUI debt, required uplifts, and allowed deferrals.
 3. Land bounded wrapper/backend/manifest/publication updates for every row in `required_uplifts_this_run`.
-4. Refresh or create version-scoped manifest artifacts under `cli_manifests/codex/snapshots/0.129.0/`, `cli_manifests/codex/reports/0.129.0/`, and `cli_manifests/codex/versions/0.129.0.json` as required by the packet.
+4. Refresh or create version-scoped manifest artifacts under `cli_manifests/codex/snapshots/0.144.6/`, `cli_manifests/codex/reports/0.144.6/`, and `cli_manifests/codex/versions/0.144.6.json` as required by the packet.
 5. Leave closeout manual; record it only with `close-agent-maintenance` after the declared green gates pass.
 
 ## Done criteria

@@ -295,6 +295,7 @@ fn parse_help(help: &str) -> ParsedHelp {
     let mut args = Vec::new();
 
     let mut section: Option<Section> = None;
+    let mut command_indent: Option<usize> = None;
 
     for line in lines {
         let t = line.trim();
@@ -303,13 +304,15 @@ fn parse_help(help: &str) -> ParsedHelp {
         }
 
         if let Some(s) = parse_section_header(t) {
+            command_indent = None;
             section = Some(s);
             continue;
         }
 
         match section {
             Some(Section::Commands) => {
-                if let Some(token) = parse_command_token(line) {
+                if let Some((token, indent)) = parse_command_token(line, command_indent) {
+                    command_indent.get_or_insert(indent);
                     subcommands.push(token);
                 }
             }
@@ -367,8 +370,12 @@ fn parse_section_header(t: &str) -> Option<Section> {
     }
 }
 
-fn parse_command_token(line: &str) -> Option<String> {
-    if !line.starts_with(' ') && !line.starts_with('\t') {
+fn parse_command_token(line: &str, command_indent: Option<usize>) -> Option<(String, usize)> {
+    let indent = line.chars().take_while(|c| c.is_ascii_whitespace()).count();
+    if indent == 0 {
+        return None;
+    }
+    if command_indent.is_some_and(|expected| indent > expected) {
         return None;
     }
     let trimmed = line.trim_start();
@@ -387,7 +394,7 @@ fn parse_command_token(line: &str) -> Option<String> {
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     {
-        Some(token.to_string())
+        Some((token.to_string(), indent))
     } else {
         None
     }
@@ -708,4 +715,48 @@ fn parse_usage_arg_token(token: &str) -> Option<(String, bool, bool)> {
     }
 
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_help;
+
+    #[test]
+    fn ignores_deeper_indented_wrapped_command_description_lines() {
+        let help = r#"
+Manage the local app-server daemon
+
+Usage: codex app-server daemon [OPTIONS] <COMMAND>
+
+Commands:
+  bootstrap               Install durable local app-server management for SSH-driven use
+  start                   Start the local app server daemon if it is not already running
+  restart                 Restart the local app server daemon
+  enable-remote-control   Enable remote control for future starts and a currently running managed
+                          daemon
+  disable-remote-control  Disable remote control for future starts and a currently running managed
+                          daemon
+  stop                    Stop the local app server daemon
+  version                 Print local CLI and running app-server versions as JSON
+  help                    Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help              Print help
+"#;
+
+        let parsed = parse_help(help);
+        assert_eq!(
+            parsed.subcommands,
+            vec![
+                "bootstrap".to_string(),
+                "start".to_string(),
+                "restart".to_string(),
+                "enable-remote-control".to_string(),
+                "disable-remote-control".to_string(),
+                "stop".to_string(),
+                "version".to_string(),
+                "help".to_string(),
+            ]
+        );
+    }
 }

@@ -333,6 +333,67 @@ printf "%s\n" "$@"
 
 #[cfg(unix)]
 #[tokio::test]
+async fn non_tui_server_passthrough_preserves_piped_stdio() {
+    let dir = tempfile::tempdir().unwrap();
+    let script_path = write_fake_codex(
+        dir.path(),
+        r#"#!/usr/bin/env bash
+printf "%s\n" "$@"
+IFS= read -r line
+printf 'server:%s\n' "$line"
+"#,
+    );
+    let client = CodexClient::builder()
+        .binary(&script_path)
+        .mirror_stdout(false)
+        .quiet(true)
+        .build();
+
+    for (command, args) in [
+        (
+            NonTuiCommand::AppServer,
+            ["--stdio", "--environment-id=environment-123"].as_slice(),
+        ),
+        (
+            NonTuiCommand::ExecServer,
+            ["--stdio", "--use-agent-identity-auth"].as_slice(),
+        ),
+    ] {
+        let mut child = client
+            .start_non_tui_server(NonTuiCommandRequest::new(command).args(args))
+            .unwrap();
+        let mut stdin = child.stdin.take().unwrap();
+        let stdout = child.stdout.take().unwrap();
+        assert!(child.stderr.take().is_some());
+        stdin.write_all(b"protocol-message\n").await.unwrap();
+        stdin.shutdown().await.unwrap();
+
+        let mut lines = BufReader::new(stdout).lines();
+        let actual = [
+            lines.next_line().await.unwrap().unwrap(),
+            lines.next_line().await.unwrap().unwrap(),
+            lines.next_line().await.unwrap().unwrap(),
+        ];
+        assert_eq!(actual, [command.path()[0], args[0], args[1]]);
+        assert_eq!(
+            lines.next_line().await.unwrap().as_deref(),
+            Some("server:protocol-message")
+        );
+        assert!(child.wait().await.unwrap().success());
+    }
+
+    let error = client
+        .run_non_tui_command(NonTuiCommandRequest::new(NonTuiCommand::AppServer).arg("--stdio"))
+        .await
+        .unwrap_err();
+    assert!(matches!(
+        error,
+        CodexError::NonTuiServerRequiresSpawn { .. }
+    ));
+}
+
+#[cfg(unix)]
+#[tokio::test]
 async fn stdio_to_uds_maps_args_and_pipes_stdio() {
     let dir = tempfile::tempdir().unwrap();
     let socket_path = dir.path().join("bridge.sock");

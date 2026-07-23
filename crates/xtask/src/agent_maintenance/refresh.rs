@@ -17,8 +17,11 @@ use crate::{
 };
 
 use super::{
-    docs::build_packet_docs,
-    request::{load_request, MaintenanceAction, MaintenanceRequest, MaintenanceRequestError},
+    docs::{build_packet_docs, packet_doc_relative_paths},
+    request::{
+        load_request_envelope_validated, AuditReconciliation, MaintenanceAction,
+        MaintenanceRequest, MaintenanceRequestError,
+    },
 };
 
 #[derive(Debug, Parser, Clone)]
@@ -50,6 +53,7 @@ pub enum Error {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RefreshPlan {
     pub request: MaintenanceRequest,
+    pub support_surface_audit_reconciliation: Option<AuditReconciliation>,
     pub files: Vec<PlannedFile>,
 }
 
@@ -134,7 +138,14 @@ pub fn build_refresh_plan(
     workspace_root: &Path,
     request_path: &Path,
 ) -> Result<RefreshPlan, Error> {
-    let request = load_request(workspace_root, request_path)?;
+    let validated_envelope = load_request_envelope_validated(workspace_root, request_path)?;
+    let request = validated_envelope.envelope.request;
+    let support_surface_audit_reconciliation =
+        validated_envelope.support_surface_audit_reconciliation;
+    let allowed_packet_paths = packet_doc_relative_paths(workspace_root, &request)
+        .map_err(|err| Error::Internal(format!("render maintenance packet doc paths: {err}")))?
+        .into_iter()
+        .collect::<BTreeSet<_>>();
     let mut files = Vec::new();
     let mut seen_paths = BTreeSet::new();
 
@@ -145,7 +156,7 @@ pub fn build_refresh_plan(
                     Error::Internal(format!("render maintenance packet docs: {err}"))
                 })? {
                     push_file(
-                        &request,
+                        &allowed_packet_paths,
                         &mut seen_paths,
                         &mut files,
                         action,
@@ -157,7 +168,7 @@ pub fn build_refresh_plan(
             MaintenanceAction::SupportMatrixRefresh => {
                 push_publication_action_files(
                     workspace_root,
-                    &request,
+                    &allowed_packet_paths,
                     &mut seen_paths,
                     &mut files,
                     action,
@@ -168,7 +179,7 @@ pub fn build_refresh_plan(
             MaintenanceAction::CapabilityMatrixRefresh => {
                 push_publication_action_files(
                     workspace_root,
-                    &request,
+                    &allowed_packet_paths,
                     &mut seen_paths,
                     &mut files,
                     action,
@@ -180,7 +191,7 @@ pub fn build_refresh_plan(
                 let markdown =
                     release_doc::render_release_doc(workspace_root).map_err(Error::Validation)?;
                 push_file(
-                    &request,
+                    &allowed_packet_paths,
                     &mut seen_paths,
                     &mut files,
                     action,
@@ -191,7 +202,11 @@ pub fn build_refresh_plan(
         }
     }
 
-    Ok(RefreshPlan { request, files })
+    Ok(RefreshPlan {
+        request,
+        support_surface_audit_reconciliation,
+        files,
+    })
 }
 
 pub fn apply_refresh_plan(
@@ -253,6 +268,14 @@ fn write_plan_preview<W: Write>(
         plan.request.trigger_kind.as_str()
     )
     .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
+    if let Some(reconciliation) = plan.support_surface_audit_reconciliation {
+        writeln!(
+            writer,
+            "support_surface_audit: {}",
+            reconciliation.human_status()
+        )
+        .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
+    }
     writeln!(writer, "requested_control_plane_actions:")
         .map_err(|err| Error::Internal(format!("write stdout: {err}")))?;
     for action in &plan.request.requested_control_plane_actions {
@@ -275,7 +298,7 @@ fn write_plan_preview<W: Write>(
 
 fn push_publication_action_files(
     workspace_root: &Path,
-    request: &MaintenanceRequest,
+    allowed_packet_paths: &BTreeSet<String>,
     seen_paths: &mut BTreeSet<String>,
     files: &mut Vec<PlannedFile>,
     action: MaintenanceAction,
@@ -290,7 +313,7 @@ fn push_publication_action_files(
     .map_err(Error::Validation)?
     {
         push_file(
-            request,
+            allowed_packet_paths,
             seen_paths,
             files,
             action,
@@ -302,14 +325,14 @@ fn push_publication_action_files(
 }
 
 fn push_file(
-    request: &MaintenanceRequest,
+    allowed_packet_paths: &BTreeSet<String>,
     seen_paths: &mut BTreeSet<String>,
     files: &mut Vec<PlannedFile>,
     action: MaintenanceAction,
     relative_path: String,
     contents: Vec<u8>,
 ) -> Result<(), Error> {
-    ensure_allowed_write_path(request, &relative_path)?;
+    ensure_allowed_write_path(allowed_packet_paths, &relative_path)?;
     if !seen_paths.insert(relative_path.clone()) {
         return Err(Error::Internal(format!(
             "refresh plan attempted to write `{relative_path}` more than once"
@@ -324,25 +347,9 @@ fn push_file(
 }
 
 fn ensure_allowed_write_path(
-    request: &MaintenanceRequest,
+    allowed_packet_paths: &BTreeSet<String>,
     relative_path: &str,
 ) -> Result<(), Error> {
-    let allowed_packet_paths = [
-        format!("{}/README.md", request.maintenance_root),
-        format!("{}/scope_brief.md", request.maintenance_root),
-        format!("{}/seam_map.md", request.maintenance_root),
-        format!("{}/threading.md", request.maintenance_root),
-        format!("{}/review_surfaces.md", request.maintenance_root),
-        format!("{}/OPS_PLAYBOOK.md", request.maintenance_root),
-        format!("{}/CI_WORKFLOWS_PLAN.md", request.maintenance_root),
-        format!("{}/HANDOFF.md", request.maintenance_root),
-        format!(
-            "{}/governance/execute-agent-maintenance-prompt.md",
-            request.maintenance_root
-        ),
-        format!("{}/governance/pr-summary.md", request.maintenance_root),
-        format!("{}/governance/remediation-log.md", request.maintenance_root),
-    ];
     let is_generated_surface = matches!(
         relative_path,
         publication_refresh::SUPPORT_MATRIX_JSON_OUTPUT_PATH
@@ -351,11 +358,7 @@ fn ensure_allowed_write_path(
             | publication_refresh::CAPABILITY_MATRIX_OUTPUT_PATH
     ) || relative_path == release_doc::RELEASE_DOC_PATH;
 
-    if allowed_packet_paths
-        .iter()
-        .any(|path| path == relative_path)
-        || is_generated_surface
-    {
+    if allowed_packet_paths.contains(relative_path) || is_generated_surface {
         return Ok(());
     }
 

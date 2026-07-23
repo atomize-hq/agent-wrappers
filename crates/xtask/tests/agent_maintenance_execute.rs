@@ -122,6 +122,13 @@ fn execute_agent_maintenance_dry_run_locks_relay_wording_and_distinction() {
     assert!(handoff.contains(
         "If the local execution-host preflight (local Codex CLI host via execute-agent-maintenance) fails, fix the Codex binary/auth state and rerun `execute-agent-maintenance --dry-run` before write mode."
     ));
+    assert!(handoff.contains("## Dry-run to write relay"));
+    assert!(handoff.contains(
+        "cargo run -p xtask -- execute-agent-maintenance --dry-run --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml"
+    ));
+    assert!(handoff.contains(
+        "cargo run -p xtask -- execute-agent-maintenance --write --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml --run-id RUN_ID_FROM_DRY_RUN"
+    ));
 }
 
 #[test]
@@ -143,6 +150,81 @@ fn execute_agent_maintenance_write_requires_run_id() {
 
     assert_eq!(output.exit_code, 2);
     assert!(output.stderr.contains("--run-id is required"));
+}
+
+#[test]
+fn execute_agent_maintenance_write_ignores_operator_governance_edits_but_still_fails_runtime_out_of_bounds_writes(
+) {
+    let ignored_fixture = prepare_execute_fixture("agent-maintenance-execute-operator-governance");
+    let codex_binary = fake_execute_codex_binary(&ignored_fixture);
+    let dry_run = run_execute_cli(
+        execute_args("--dry-run", Some(&codex_binary)),
+        &ignored_fixture,
+    );
+    assert_eq!(dry_run.exit_code, 0, "stderr:\n{}", dry_run.stderr);
+    harness::write_text(
+        &ignored_fixture.join(
+            "docs/agents/lifecycle/codex-maintenance/governance/orchestration-friction-log.md",
+        ),
+        "# Friction log\n\n- operator note between dry-run and write\n",
+    );
+    write_fake_execute_codex_scenario(&ignored_fixture, "success");
+
+    let ignored_output = run_execute_cli(
+        execute_args("--write", Some(&codex_binary)),
+        &ignored_fixture,
+    );
+
+    assert_eq!(
+        ignored_output.exit_code, 0,
+        "stderr:\n{}",
+        ignored_output.stderr
+    );
+    let ignored_run_dir = ignored_fixture
+        .join(EXECUTE_RUNS_ROOT)
+        .join(EXECUTE_WRITE_RUN_ID);
+    let ignored_written_paths: Vec<String> = serde_json::from_slice(
+        &fs::read(ignored_run_dir.join("written-paths.json")).expect("read written paths"),
+    )
+    .expect("parse written paths");
+    assert!(!ignored_written_paths
+        .iter()
+        .any(|path| path.ends_with("governance/orchestration-friction-log.md")));
+    assert!(ignored_written_paths
+        .iter()
+        .any(|path| path == "docs/agents/lifecycle/codex-maintenance/runtime-note.md"));
+
+    let violating_fixture =
+        prepare_execute_fixture("agent-maintenance-execute-operator-governance-violation");
+    let violating_codex_binary = fake_execute_codex_binary(&violating_fixture);
+    let violating_dry_run = run_execute_cli(
+        execute_args("--dry-run", Some(&violating_codex_binary)),
+        &violating_fixture,
+    );
+    assert_eq!(
+        violating_dry_run.exit_code, 0,
+        "stderr:\n{}",
+        violating_dry_run.stderr
+    );
+    harness::write_text(
+        &violating_fixture.join(
+            "docs/agents/lifecycle/codex-maintenance/governance/orchestration-friction-log.md",
+        ),
+        "# Friction log\n\n- operator note between dry-run and write\n",
+    );
+    write_fake_execute_codex_scenario(&violating_fixture, "out_of_bounds");
+
+    let violating_output = run_execute_cli(
+        execute_args("--write", Some(&violating_codex_binary)),
+        &violating_fixture,
+    );
+
+    assert_eq!(violating_output.exit_code, 2);
+    assert!(violating_output.stderr.contains("write boundary violation"));
+    assert!(violating_output.stderr.contains("docs/unowned.md"));
+    assert!(!violating_output
+        .stderr
+        .contains("orchestration-friction-log.md"));
 }
 
 #[test]
@@ -294,6 +376,53 @@ fn execute_agent_maintenance_write_ignores_generated_python_bytecode_caches() {
         .any(|path| path.ends_with(".pyc") || path.contains("__pycache__")));
     let report = read_json(&run_dir.join("validation-report.json"));
     assert_eq!(report.get("status").and_then(Value::as_str), Some("pass"));
+}
+
+#[test]
+fn execute_agent_maintenance_write_fails_when_support_surface_audit_goes_stale_after_gates() {
+    let fixture = prepare_execute_fixture("agent-maintenance-execute-support-audit-stale");
+    let request_path =
+        fixture.join("docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml");
+    let request_text = fs::read_to_string(&request_path).expect("read request");
+    harness::write_text(
+        &request_path,
+        &request_text.replace(
+            "  \"cli_manifests/codex/versions/0.98.0.json\",\n",
+            "  \"cli_manifests/codex/versions/0.98.0.json\",\n  \"cli_manifests/codex/reports/0.98.0/**\",\n",
+        ),
+    );
+    harness::write_text(
+        &fixture.join("gate-command.sh"),
+        "#!/usr/bin/env sh\nset -eu\nlabel=\"$1\"\nlog_path=\"$2\"\nmkdir -p \"$(dirname \"$log_path\")\"\nprintf '%s\\n' \"$label\" >> \"$log_path\"\ncat > \"cli_manifests/codex/reports/0.98.0/coverage.any.json\" <<'EOF'\n{\n  \"deltas\": {\n    \"missing_commands\": [\n      {\n        \"path\": [\"status\"]\n      }\n    ],\n    \"missing_flags\": [],\n    \"missing_args\": [],\n    \"intentionally_unsupported\": []\n  }\n}\nEOF\n",
+    );
+
+    let codex_binary = fake_execute_codex_binary(&fixture);
+    let dry_run = run_execute_cli(execute_args("--dry-run", Some(&codex_binary)), &fixture);
+    assert_eq!(dry_run.exit_code, 0, "stderr:\n{}", dry_run.stderr);
+
+    let output = run_execute_cli(execute_args("--write", Some(&codex_binary)), &fixture);
+
+    assert_eq!(output.exit_code, 2);
+    assert!(output
+        .stderr
+        .contains("support_surface_audit.discovered_upstream_surface added"));
+    assert!(output
+        .stderr
+        .contains("surface_kind=commands command_path=codex status surface_id=status"));
+
+    let run_dir = fixture.join(EXECUTE_RUNS_ROOT).join(EXECUTE_WRITE_RUN_ID);
+    let report = read_json(&run_dir.join("validation-report.json"));
+    assert_eq!(report.get("status").and_then(Value::as_str), Some("fail"));
+    assert!(
+        report
+            .get("errors")
+            .and_then(Value::as_array)
+            .expect("errors array")
+            .iter()
+            .filter_map(Value::as_str)
+            .any(|message| message
+                .contains("support_surface_audit.discovered_upstream_surface added"))
+    );
 }
 
 #[test]

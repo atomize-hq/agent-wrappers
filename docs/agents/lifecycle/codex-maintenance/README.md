@@ -10,21 +10,21 @@ This packet tracks automated upstream-release maintenance for `codex`.
 - trigger kind: `upstream_release_detected`
 - basis ref: `cli_manifests/codex/latest_validated.txt`
 - opened from: `.github/workflows/agent-maintenance-open-pr.yml`
-- recorded at: `2026-05-14T18:37:34Z`
-- request commit: `4a6073bc7b7500441d8db170d5e5e3c9c9942366`
+- recorded at: `2026-07-22T00:14:53Z`
+- request commit: `df0762ea109af1206b85c585a87030a8e3bbfe38`
 
 ## Trigger context
 
 - detected_by: `.github/workflows/agent-maintenance-release-watch.yml`
 - current_validated: `0.125.0`
-- target_version: `0.129.0`
-- latest_stable: `0.130.0`
+- target_version: `0.144.6`
+- latest_stable: `0.145.0`
 - version_policy: `latest_stable_minus_one`
 - source_kind: `github_releases`
 - source_ref: `openai/codex`
 - dispatch_kind: `packet_pr`
 - dispatch_workflow: `agent-maintenance-open-pr.yml`
-- branch_name: `automation/codex-maintenance-0.129.0`
+- branch_name: `automation/codex-maintenance-0.144.6`
 
 ## Support-surface audit
 

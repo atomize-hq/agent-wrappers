@@ -6,6 +6,7 @@ mod exec_server;
 mod features;
 mod help;
 mod mcp;
+mod non_tui;
 mod plugin;
 mod responses_api_proxy;
 mod review;
@@ -36,6 +37,7 @@ pub use mcp::{
     McpAddRequest, McpAddTransport, McpGetRequest, McpListOutput, McpListRequest, McpLogoutRequest,
     McpOauthLoginRequest, McpOverviewRequest, McpRemoveRequest,
 };
+pub use non_tui::{NonTuiCommand, NonTuiCommandRequest};
 pub use plugin::{
     PluginCommandRequest, PluginHelpRequest, PluginMarketplaceAddRequest,
     PluginMarketplaceCommandRequest, PluginMarketplaceHelpRequest, PluginMarketplaceRemoveRequest,

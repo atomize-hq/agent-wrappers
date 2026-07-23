@@ -111,11 +111,12 @@ pub use cli::{
     FeaturesEnableRequest, FeaturesListFormat, FeaturesListOutput, FeaturesListRequest,
     ForkSessionRequest, HelpCommandRequest, HelpScope, McpAddRequest, McpAddTransport,
     McpGetRequest, McpListOutput, McpListRequest, McpLogoutRequest, McpOauthLoginRequest,
-    McpOverviewRequest, McpRemoveRequest, PluginCommandRequest, PluginHelpRequest,
-    PluginMarketplaceAddRequest, PluginMarketplaceCommandRequest, PluginMarketplaceHelpRequest,
-    PluginMarketplaceRemoveRequest, PluginMarketplaceUpgradeRequest, ResponsesApiProxyHandle,
-    ResponsesApiProxyInfo, ResponsesApiProxyRequest, ResumeSessionRequest, ReviewCommandRequest,
-    SandboxCommandRequest, SandboxPlatform, SandboxRun, StdioToUdsRequest, UpdateCommandRequest,
+    McpOverviewRequest, McpRemoveRequest, NonTuiCommand, NonTuiCommandRequest,
+    PluginCommandRequest, PluginHelpRequest, PluginMarketplaceAddRequest,
+    PluginMarketplaceCommandRequest, PluginMarketplaceHelpRequest, PluginMarketplaceRemoveRequest,
+    PluginMarketplaceUpgradeRequest, ResponsesApiProxyHandle, ResponsesApiProxyInfo,
+    ResponsesApiProxyRequest, ResumeSessionRequest, ReviewCommandRequest, SandboxCommandRequest,
+    SandboxPlatform, SandboxRun, StdioToUdsRequest, UpdateCommandRequest,
 };
 pub use events::{
     CommandExecutionDelta, CommandExecutionState, EventError, FileChangeDelta, FileChangeKind,
