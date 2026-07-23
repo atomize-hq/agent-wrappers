@@ -327,7 +327,7 @@ fn read_current_validated(
     )
 }
 
-fn select_target_version(
+pub(crate) fn select_target_version(
     versions: &[Version],
     version_policy: ReleaseWatchVersionPolicy,
 ) -> Option<Version> {
@@ -339,6 +339,7 @@ fn select_target_version(
                 versions.get(versions.len() - 2).cloned()
             }
         }
+        ReleaseWatchVersionPolicy::UpstreamStablePointer => versions.last().cloned(),
     }
 }
 
@@ -349,6 +350,7 @@ fn resolve_release_history(
     match release_watch.upstream.source_kind {
         ReleaseWatchSourceKind::GithubReleases => fetch_github_releases(entry, release_watch),
         ReleaseWatchSourceKind::GcsObjectListing => fetch_gcs_versions(entry, release_watch),
+        ReleaseWatchSourceKind::NpmDistTag => fetch_npm_dist_tag_version(entry, release_watch),
     }
 }
 
@@ -431,6 +433,57 @@ fn fetch_gcs_versions(
     release_watch: &ReleaseWatchMetadata,
 ) -> Result<Vec<Version>, Error> {
     fetch_gcs_versions_with_fetcher(entry, release_watch, fetch_text)
+}
+
+fn fetch_npm_dist_tag_version(
+    entry: &AgentRegistryEntry,
+    release_watch: &ReleaseWatchMetadata,
+) -> Result<Vec<Version>, Error> {
+    fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, fetch_text)
+}
+
+pub(crate) fn fetch_npm_dist_tag_version_with_fetcher<F>(
+    entry: &AgentRegistryEntry,
+    release_watch: &ReleaseWatchMetadata,
+    mut fetch: F,
+) -> Result<Vec<Version>, Error>
+where
+    F: FnMut(&str) -> Result<String, Error>,
+{
+    let package = release_watch.upstream.package.as_deref().ok_or_else(|| {
+        Error::Validation(format!(
+            "release_watch package missing for npm_dist_tag agent `{}`",
+            entry.agent_id
+        ))
+    })?;
+    let dist_tag = release_watch.upstream.dist_tag.as_deref().ok_or_else(|| {
+        Error::Validation(format!(
+            "release_watch dist_tag missing for npm_dist_tag agent `{}`",
+            entry.agent_id
+        ))
+    })?;
+    let url = format!("https://registry.npmjs.org/{package}");
+    let body = fetch(&url)?;
+    let metadata: NpmPackageMetadata = serde_json::from_str(&body).map_err(|err| {
+        Error::Validation(format!(
+            "parse npm metadata for agent `{}` from {url}: {err}",
+            entry.agent_id
+        ))
+    })?;
+    let raw_version = metadata.dist_tags.get(dist_tag).ok_or_else(|| {
+        Error::Validation(format!(
+            "npm dist-tag `{dist_tag}` missing for package `{package}` on agent `{}`",
+            entry.agent_id
+        ))
+    })?;
+
+    Ok(vec![parse_semver(
+        raw_version,
+        &format!(
+            "npm dist-tag `{dist_tag}` for package `{package}` on agent `{}`",
+            entry.agent_id
+        ),
+    )?])
 }
 
 pub(crate) fn fetch_gcs_versions_with_fetcher<F>(
@@ -611,4 +664,10 @@ struct GcsListingResponse {
 #[derive(Debug, Deserialize)]
 struct GcsObject {
     name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct NpmPackageMetadata {
+    #[serde(rename = "dist-tags")]
+    dist_tags: std::collections::BTreeMap<String, String>,
 }

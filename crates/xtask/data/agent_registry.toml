@@ -147,14 +147,13 @@ onboarding_pack_prefix = "claude-code-cli-onboarding"
 [agents.maintenance]
 [agents.maintenance.release_watch]
 enabled = true
-version_policy = "latest_stable_minus_one"
+version_policy = "upstream_stable_pointer"
 dispatch_kind = "packet_pr"
 
 [agents.maintenance.release_watch.upstream]
-source_kind = "gcs_object_listing"
-bucket = "claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819"
-prefix = "claude-code-releases"
-version_marker = "manifest.json"
+source_kind = "npm_dist_tag"
+package = "@anthropic-ai/claude-code"
+dist_tag = "stable"
 
 [[agents]]
 agent_id = "opencode"

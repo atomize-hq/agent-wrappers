@@ -145,6 +145,8 @@ fn parse_release_watch_metadata(
             bucket: optional_string(upstream, "bucket", relative_path)?,
             prefix: optional_string(upstream, "prefix", relative_path)?,
             version_marker: optional_string(upstream, "version_marker", relative_path)?,
+            package: optional_string(upstream, "package", relative_path)?,
+            dist_tag: optional_string(upstream, "dist_tag", relative_path)?,
         },
     };
     validate_release_watch_metadata(&release_watch)
@@ -158,6 +160,7 @@ fn parse_release_watch_version_policy(
 ) -> Result<ReleaseWatchVersionPolicy, ApprovalArtifactError> {
     match value {
         "latest_stable_minus_one" => Ok(ReleaseWatchVersionPolicy::LatestStableMinusOne),
+        "upstream_stable_pointer" => Ok(ReleaseWatchVersionPolicy::UpstreamStablePointer),
         _ => Err(ApprovalArtifactError::Validation(format!(
             "approval artifact `{}` field `descriptor.maintenance.release_watch.version_policy` has invalid value `{value}`",
             relative_path.display()
@@ -186,6 +189,7 @@ fn parse_release_watch_source_kind(
     match value {
         "github_releases" => Ok(ReleaseWatchSourceKind::GithubReleases),
         "gcs_object_listing" => Ok(ReleaseWatchSourceKind::GcsObjectListing),
+        "npm_dist_tag" => Ok(ReleaseWatchSourceKind::NpmDistTag),
         _ => Err(ApprovalArtifactError::Validation(format!(
             "approval artifact `{}` field `descriptor.maintenance.release_watch.upstream.source_kind` has invalid value `{value}`",
             relative_path.display()
