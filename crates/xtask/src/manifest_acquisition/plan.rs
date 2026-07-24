@@ -27,6 +27,10 @@ pub struct AcquisitionPlan {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tag: Option<String>,
     pub required_target: String,
+    /// Whether the manifest permits promoting a version whose union is incomplete.
+    ///
+    /// `promotion_policy.allow_promote_when_incomplete` in `RULES.json`; false when unstated.
+    pub allow_promote_when_incomplete: bool,
     pub snapshot: PlannedSnapshotCommand,
     pub lockfile_version_key: String,
     pub union_command: String,
@@ -71,12 +75,14 @@ pub struct PlannedEnvVar {
 }
 
 /// Resolve a validated descriptor against one concrete version.
+#[allow(clippy::too_many_arguments)]
 pub fn resolve(
     agent_id: &str,
     manifest_root: &str,
     version: &str,
     required_target: &str,
     expected_targets: &[String],
+    allow_promote_when_incomplete: bool,
     descriptor: &AcquisitionDescriptor,
 ) -> Result<AcquisitionPlan, AcquisitionError> {
     let tag = match descriptor.source_kind {
@@ -137,6 +143,7 @@ pub fn resolve(
         release_metadata_url,
         tag,
         required_target: required_target.to_string(),
+        allow_promote_when_incomplete,
         snapshot: PlannedSnapshotCommand {
             command: descriptor.snapshot.command.clone(),
             binary_arg: descriptor.snapshot.binary_arg.clone(),

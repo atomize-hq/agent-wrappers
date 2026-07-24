@@ -92,6 +92,17 @@ jobs:
           test -f "$UNION"
           test -f "${ROOT}/artifacts.lock.json"
 
+          # `union.promotion_policy.allow_promote_when_incomplete` is committed policy, so honor it
+          # rather than assuming either answer. codex and claude_code deliberately allow a
+          # linux-first promotion; an agent that has not declared a stance does not get one.
+          COMPLETE="$(jq -r '.complete' "$UNION")"
+          ALLOW_INCOMPLETE="$(jq -r '.allow_promote_when_incomplete' _ci_tmp/acquisition-plan.json)"
+          if [ "$COMPLETE" != "true" ] && [ "$ALLOW_INCOMPLETE" != "true" ]; then
+            echo "::error title=Incomplete union::${UNION} has complete=false and ${ROOT}/RULES.json does not set union.promotion_policy.allow_promote_when_incomplete. Re-run parity-acquire until the union is complete." >&2
+            exit 1
+          fi
+          echo "union complete=${COMPLETE}; manifest allows incomplete promotion=${ALLOW_INCOMPLETE}"
+
           # Only promote targets the committed union actually contains: promoting a pointer for a
           # target that never produced a snapshot would publish a support claim with no evidence.
           jq -c \

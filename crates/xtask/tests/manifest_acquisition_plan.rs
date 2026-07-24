@@ -429,3 +429,50 @@ fn path_shaped_descriptor_fields_cannot_escape_the_workspace() {
         );
     }
 }
+
+#[test]
+fn gate_misses_and_real_failures_use_distinguishable_exit_codes() {
+    // The packet opener uses the planner as a boolean gate. If a malformed descriptor exited the
+    // same way as "this agent is docs-only", a real regression would silently downgrade an
+    // enrolled agent instead of failing the run.
+    let expected_gate_miss = plan_for_agent(&repo_root(), "gemini_cli", "1.2.3")
+        .expect_err("gemini_cli is not enrolled");
+    assert_eq!(expected_gate_miss.exit_code(), 3);
+
+    let fixture = tempfile::tempdir().expect("tempdir");
+    write_fixture_workspace(fixture.path(), &rules_without_acquisition());
+    let no_block = plan_for_agent(fixture.path(), "fixture", "1.2.3").expect_err("no descriptor");
+    assert_eq!(no_block.exit_code(), 3);
+
+    let fixture = tempfile::tempdir().expect("tempdir");
+    let mut rules = rules_with_acquisition();
+    rules["acquisition"]["targets"]["linux-x64"]["runs_on"] =
+        serde_json::Value::String("ubuntu-latest; curl evil".into());
+    write_fixture_workspace(fixture.path(), &rules);
+    let malformed = plan_for_agent(fixture.path(), "fixture", "1.2.3")
+        .expect_err("a malformed descriptor is a real failure");
+    assert_eq!(
+        malformed.exit_code(),
+        1,
+        "a malformed descriptor must not read as a gate miss"
+    );
+}
+
+#[test]
+fn promotion_stance_is_carried_from_the_manifest_not_assumed() {
+    // codex and claude_code deliberately allow a linux-first promotion on an incomplete union.
+    for agent in ["codex", "claude_code"] {
+        let plan = plan_for_agent(&repo_root(), agent, "1.2.3").expect("plan");
+        assert!(
+            plan.allow_promote_when_incomplete,
+            "{agent} declares union.promotion_policy.allow_promote_when_incomplete = true"
+        );
+    }
+
+    // opencode declares no stance, so it does not get one.
+    let plan = plan_for_agent(&repo_root(), "opencode", "1.2.3").expect("plan");
+    assert!(
+        !plan.allow_promote_when_incomplete,
+        "an agent with no declared promotion policy must not be permitted an incomplete promotion"
+    );
+}

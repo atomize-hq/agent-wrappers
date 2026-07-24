@@ -66,6 +66,24 @@ pub enum AcquisitionError {
     InvalidVersion(String),
 }
 
+/// Exit code meaning "this agent is simply not on the acquisition lane".
+///
+/// Callers use the planner as a gate. Collapsing an expected gate miss and a genuine regression
+/// (a malformed descriptor, a broken registry) into one non-zero code would let a real defect
+/// silently downgrade an enrolled agent to the docs-only path.
+pub const EXIT_NOT_ELIGIBLE: i32 = 3;
+
+impl AcquisitionError {
+    pub fn exit_code(&self) -> i32 {
+        match self {
+            Self::UnknownAgent(_) | Self::NotEnrolled(_) | Self::NoAcquisitionBlock { .. } => {
+                EXIT_NOT_ELIGIBLE
+            }
+            _ => 1,
+        }
+    }
+}
+
 /// Minimal view of `RULES.json`: the union target model plus the optional acquisition descriptor.
 #[derive(Debug, Deserialize)]
 struct RulesFile {
@@ -78,6 +96,18 @@ struct RulesFile {
 struct RulesUnion {
     required_target: String,
     expected_targets: Vec<String>,
+    #[serde(default)]
+    promotion_policy: Option<RulesPromotionPolicy>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RulesPromotionPolicy {
+    /// Whether this agent permits promoting a version whose union is not complete.
+    ///
+    /// Absent policy means absent permission: an agent that has not declared its stance does not
+    /// get one by default.
+    #[serde(default)]
+    allow_promote_when_incomplete: bool,
 }
 
 pub fn run(args: Args) -> Result<(), AcquisitionError> {
@@ -144,6 +174,11 @@ pub fn plan_for_agent(
         version,
         &rules.union.required_target,
         &rules.union.expected_targets,
+        rules
+            .union
+            .promotion_policy
+            .map(|policy| policy.allow_promote_when_incomplete)
+            .unwrap_or(false),
         &descriptor,
     )
 }

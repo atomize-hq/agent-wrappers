@@ -493,27 +493,57 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
+      # Driven by the acquisition descriptor rather than hardcoded coordinates. Claude's asset is
+      # now an npm platform tarball, not a bare binary, so a hardcoded `asset_name: claude` would
+      # match no lockfile row and — if it did — would try to execute the tarball.
       - name: Acquire Claude Code CLI (required target)
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${{ needs.claude-versions.outputs.latest_validated }}"
-          TARGET="linux-x64"
-          ASSET="claude"
+          mkdir -p _ci_tmp
+          cargo run -p xtask -- manifest-acquisition-plan \
+            --agent claude_code --version "$VERSION" --emit-json _ci_tmp/plan.json
 
-          URL="$(jq -r --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" '.artifacts[] | select(.claude_code_version==$v and .target_triple==$t and .asset_name==$a) | .download_url' cli_manifests/claude_code/artifacts.lock.json)"
-          SHA="$(jq -r --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" '.artifacts[] | select(.claude_code_version==$v and .target_triple==$t and .asset_name==$a) | .sha256' cli_manifests/claude_code/artifacts.lock.json)"
-          SIZE="$(jq -r --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" '.artifacts[] | select(.claude_code_version==$v and .target_triple==$t and .asset_name==$a) | .size_bytes' cli_manifests/claude_code/artifacts.lock.json)"
+          REQUIRED_TARGET="$(jq -r '.required_target' _ci_tmp/plan.json)"
+          ROW="$(jq -c --arg t "$REQUIRED_TARGET" '.include[] | select(.target_triple==$t)' _ci_tmp/plan.json)"
+          ASSET="$(jq -r '.asset_name' <<<"$ROW")"
+          URL="$(jq -r '.download_url' <<<"$ROW")"
+          BIN="$(jq -r '.binary_path' <<<"$ROW")"
+          ARCHIVE="$(jq -r '.archive' <<<"$ROW")"
+          ARCHIVE_MEMBER="$(jq -r '.archive_member // empty' <<<"$ROW")"
+          VERSION_KEY="$(jq -r '.lockfile_version_key' _ci_tmp/plan.json)"
 
-          test -n "$URL" && test "$URL" != "null"
-          test -n "$SHA" && test "$SHA" != "null"
-          test -n "$SIZE" && test "$SIZE" != "null"
+          LOCK=cli_manifests/claude_code/artifacts.lock.json
+          SELECT='.artifacts[] | select(.[$key]==$v and .target_triple==$t and .asset_name==$a)'
+          SHA="$(jq -r --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$REQUIRED_TARGET" --arg a "$ASSET" "${SELECT} | .sha256" "$LOCK")"
+          SIZE="$(jq -r --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$REQUIRED_TARGET" --arg a "$ASSET" "${SELECT} | .size_bytes" "$LOCK")"
+
+          if [ -z "$SHA" ] || [ "$SHA" = "null" ]; then
+            echo "::error title=No usable lockfile pin::${LOCK} has no row for ${VERSION_KEY}=${VERSION} target=${REQUIRED_TARGET} asset=${ASSET}. Re-run parity-acquire for this version." >&2
+            exit 1
+          fi
 
           curl -fsSL -o claude.bin "$URL"
           test "$(wc -c < claude.bin)" = "$SIZE"
           echo "$SHA  claude.bin" | sha256sum -c -
-          install -m 0755 claude.bin ./claude-linux-x64
-          DISABLE_AUTOUPDATER=1 ./claude-linux-x64 --version
+
+          rm -rf _extract && mkdir -p _extract
+          case "$ARCHIVE" in
+            none)    cp claude.bin "$BIN" ;;
+            tar_gz|npm_tgz)
+              test -n "$ARCHIVE_MEMBER"
+              tar -xzf claude.bin -C _extract "$ARCHIVE_MEMBER"
+              cp "_extract/${ARCHIVE_MEMBER}" "$BIN"
+              ;;
+            *) echo "unsupported archive kind: ${ARCHIVE}" >&2; exit 1 ;;
+          esac
+          chmod +x "$BIN"
+
+          while read -r pair; do
+            export "$(jq -r '.name' <<<"$pair")=$(jq -r '.value' <<<"$pair")"
+          done < <(jq -c '.snapshot.env[]?' _ci_tmp/plan.json)
+          "$BIN" --version
 
       - name: Wrapper unit tests
         shell: bash

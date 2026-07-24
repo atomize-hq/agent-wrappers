@@ -245,7 +245,7 @@ impl AcquisitionDescriptor {
         target: &str,
         spec: &AcquisitionTarget,
     ) -> Result<(), AcquisitionError> {
-        non_empty(
+        safe_runner_label(
             &format!("acquisition.targets.{target}.runs_on"),
             &spec.runs_on,
         )?;
@@ -337,6 +337,23 @@ impl AcquisitionDescriptor {
         }
         Ok(())
     }
+}
+
+/// Constrain runner labels to the shape GitHub-hosted and self-hosted labels actually take.
+///
+/// `runs_on` is interpolated into the workflow's job definition, so it should not be able to
+/// carry arbitrary text out of a manifest edit.
+fn safe_runner_label(field: &str, value: &str) -> Result<(), AcquisitionError> {
+    non_empty(field, value)?;
+    let ok = value
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'));
+    if !ok {
+        return Err(AcquisitionError::Descriptor(format!(
+            "{field} must be a plain runner label (alphanumerics, `-`, `_`, `.`); got `{value}`"
+        )));
+    }
+    Ok(())
 }
 
 /// Reject path-shaped values that could escape the runner workspace.

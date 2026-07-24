@@ -178,7 +178,7 @@ fn main() {
             Ok(()) => 0,
             Err(err) => {
                 eprintln!("{err}");
-                1
+                err.exit_code()
             }
         },
         Command::ManifestUnion(args) => match manifest_union::run(args) {

@@ -133,13 +133,24 @@ jobs:
           gate_status=$?
           set -e
 
-          if [ "$gate_status" -eq 0 ]; then
-            echo "acquire=true" >> "$GITHUB_OUTPUT"
-            echo "${AGENT_ID} takes the multi-target acquisition lane."
-          else
-            echo "acquire=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Docs-only maintenance lane::${AGENT_ID} does not acquire binaries: $(cat _ci_tmp_gate.err)"
-          fi
+          # Exit 3 means "not on the acquisition lane", which is an expected answer. Any other
+          # non-zero exit is a real regression — a malformed descriptor, a broken registry — and
+          # must fail the run rather than quietly downgrading an enrolled agent to docs-only.
+          case "$gate_status" in
+            0)
+              echo "acquire=true" >> "$GITHUB_OUTPUT"
+              echo "${AGENT_ID} takes the multi-target acquisition lane."
+              ;;
+            3)
+              echo "acquire=false" >> "$GITHUB_OUTPUT"
+              echo "::notice title=Docs-only maintenance lane::${AGENT_ID} does not acquire binaries: $(cat _ci_tmp_gate.err)"
+              ;;
+            *)
+              echo "::error title=Acquisition planner failed::${AGENT_ID} is enrolled but its plan could not be resolved (exit ${gate_status}): $(cat _ci_tmp_gate.err)" >&2
+              rm -f _ci_tmp_gate.err _ci_tmp_gate.json
+              exit 1
+              ;;
+          esac
           rm -f _ci_tmp_gate.err _ci_tmp_gate.json
       - name: Create PR
         id: create_pr
