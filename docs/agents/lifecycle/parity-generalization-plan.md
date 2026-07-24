@@ -6,7 +6,9 @@
 xtask parity/maintenance system. Every claim below cites a verified `file:line` or a
 committed artifact; the workstream-A design was dug into against repo truth before this
 plan was written.
-**Status:** Draft for maintainer review. No code written; execution is gated on approval.
+**Status:** **In execution** on `feat/parity-acquisition-generalization` (branched from
+`origin/staging` @ `9400ee8e`). See §9 for live status, §10 for reconciliations against repo
+truth, and §11 for the maintainer-gated steps that remain.
 
 ---
 
@@ -270,3 +272,79 @@ maintainer.
   `opencode-linux-x64` is a **178.9 MB** real binary. Naming nuance for E: opencode uses
   `opencode-windows-x64` (not `win32-x64`), so the descriptor's `url_template` maps target →
   platform-package name per agent.
+
+---
+
+## 9. Execution status
+
+| Workstream | Status | Evidence |
+| --- | --- | --- |
+| **A1** — generalize + rename the engines | **done** | `manifest-union` reproduces the committed codex `0.144.6` and claude `2.1.29` unions byte-for-byte; `claude_union` deleted |
+| **A2** — `acquisition` descriptor + planner | **done** | `acquisition` block in all three `RULES.json`; `xtask manifest-acquisition-plan`; 9 contract tests |
+| **A3** — reusable workflows | **done** | `parity-acquire.yml` + `parity-promote.yml` added; the 4 per-agent copies deleted |
+| **B** — wire acquisition into the generic flow | **done** | `agent-maintenance-open-pr.yml` calls `parity-acquire` on the packet branch with `commit: true` |
+| **C** — `opencode-snapshot` adapter | in progress | delegated packet |
+| **D** — support-tier gate + onboarding | gate done | the gate is enforced by `manifest_acquisition::plan_for_agent`; onboarding routing pending |
+| **E** — drift + stuck packets | in progress | engine rename landed in A1; `claude_code` duplicate `scope` key removed |
+
+### What actually changed the shape of the system
+
+The generic flow's executor runs on one host, so it could only ever produce a partial,
+`complete:false` union. Three things now close that gap:
+
+1. **One engine, not one per agent.** `union.tool_name` and `union.raw_help_layout` moved the
+   only two agent-specific behaviors out of the union engine and into manifest data.
+2. **One descriptor, not four workflows.** `acquisition` describes *how to obtain* a release for
+   every expected target; `manifest-acquisition-plan` resolves it into a matrix.
+3. **One lane, called from the flow.** The watcher-opened packet PR now runs the full
+   cross-platform matrix in the runner and commits the complete union onto the packet branch.
+
+## 10. Reconciliations against repo truth
+
+These correct claims in §§1–8 that did not survive verification. Where this section and an
+earlier section disagree, this section is authoritative.
+
+1. **§2 / §3.1 — "engines are already generic, only codex-*named*" was not accurate.**
+   `codex_union` hardcoded the `codex-cli` tool name, and a near-verbatim `claude_union` copy
+   existed solely because claude needs a different `raw_help` directory layout (a hashed single
+   directory rather than nested path tokens). Renaming alone would have left opencode with no
+   union engine at all. **Consequence:** the rename was pulled forward from E into A and turned
+   into a real generalization. Both behaviors are now `RULES.json` data, `claude_union` is
+   deleted, and one `manifest-union` serves every agent. Equivalence was proven by regenerating
+   both agents' committed unions and diffing.
+
+2. **§5.B — the proposed registry field `maintenance.parity_acquisition = "reusable"` was not
+   added.** Settled decision §8.3 already defines the gate as *enrolled in `release_watch` **and**
+   carries an `acquisition` block*, and `docs/specs/agent-registry-contract.md` forbids a second
+   enrollment inventory outside the registry. A new enablement field would have been exactly that
+   second inventory, and could disagree with the manifest. **Consequence:** the gate is enforced
+   in `manifest_acquisition::plan_for_agent`, which fails closed with a distinct error for each
+   reason (`UnknownAgent`, `NotEnrolled`, `NoAcquisitionBlock`). `agent-maintenance-open-pr` uses
+   a clean planner exit as the gate, so committed truth is the only source.
+
+3. **§8.1 — "(+ `SCHEMA.json`)" mis-identified the file.** `cli_manifests/*/SCHEMA.json` is the
+   normative schema for the *artifacts* (snapshots, wrapper coverage, reports); the repo has no
+   JSON Schema for `RULES.json` at all. **Consequence:** the acquisition block is schema-validated
+   in tested Rust (`manifest_acquisition::descriptor`) instead. That is strictly stronger than a
+   JSON Schema here, because it also cross-checks the descriptor against the same file's
+   `union.expected_targets` / `union.required_target` — a constraint no standalone schema could
+   express.
+
+4. **New finding — `cli_manifests/claude_code/RULES.json` carried a duplicate `scope` key.**
+   A dead `"scope": "claude-code-cli-parity"` string shadowed by the real `"scope": { … }` object
+   later in the same file. Every parser silently took the last one. Removed, with a parse-equality
+   assertion proving the effective document is unchanged.
+
+5. **New finding — opencode has no wrapper-coverage generator.** `codex-wrapper-coverage` and
+   `claude-wrapper-coverage` are byte-identical apart from importing their own wrapper crate's
+   `wrapper_coverage_manifest` module, and `crates/opencode` has no such module. **Consequence:**
+   `acquisition.wrapper_coverage_command` is optional; when absent the acquire lane keeps the
+   committed `wrapper_coverage.json` and says so in the log. Giving opencode a generated
+   wrapper-coverage manifest is follow-on work, not part of this campaign.
+
+6. **The three `artifacts.lock.json` files have three different schemas** (`version` +
+   `upstream_repo`; `schema_version` + `upstream`; `schema_version` + `inventory`) and three
+   different per-row version keys (`codex_version`, `claude_code_version`, `semantic_version`).
+   **Consequence:** `acquisition.lockfile_version_key` names the row key, and the reusable lane
+   rewrites only `.artifacts`, so every committed lockfile keeps the exact top-level shape it
+   already has. No committed artifact is migrated to a new schema by this campaign.

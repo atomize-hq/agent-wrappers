@@ -1,6 +1,5 @@
 {
   "rules_schema_version": 1,
-  "scope": "claude-code-cli-parity",
   "identity": {
     "command": "path",
     "flag": "prefer_long_else_short",

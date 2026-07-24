@@ -14,6 +14,7 @@ mod manifest_snapshot_schema;
 mod manifest_union;
 mod manifest_validate;
 mod manifest_version_metadata;
+mod opencode_snapshot;
 mod version_bump;
 mod wrapper_coverage_shared;
 
@@ -60,6 +61,8 @@ enum Command {
     CodexSnapshot(codex_snapshot::Args),
     /// Generate a Claude Code CLI snapshot manifest under `cli_manifests/claude_code/`.
     ClaudeSnapshot(claude_snapshot::Args),
+    /// Generate an OpenCode CLI snapshot manifest under `cli_manifests/opencode/`.
+    OpencodeSnapshot(opencode_snapshot::Args),
     /// Validate a proving-run closeout artifact and refresh the onboarding packet docs.
     CloseProvingRun(close_proving_run::Args),
     /// Resolve the multi-target acquisition plan for one agent at one upstream version.
@@ -151,6 +154,13 @@ fn main() {
             }
         },
         Command::ClaudeSnapshot(args) => match claude_snapshot::run(args) {
+            Ok(()) => 0,
+            Err(err) => {
+                eprintln!("{err}");
+                1
+            }
+        },
+        Command::OpencodeSnapshot(args) => match opencode_snapshot::run(args) {
             Ok(()) => 0,
             Err(err) => {
                 eprintln!("{err}");
