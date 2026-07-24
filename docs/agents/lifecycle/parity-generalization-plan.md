@@ -6,9 +6,17 @@
 xtask parity/maintenance system. Every claim below cites a verified `file:line` or a
 committed artifact; the workstream-A design was dug into against repo truth before this
 plan was written.
-**Status:** **In execution** on `feat/parity-acquisition-generalization` (branched from
-`origin/staging` @ `9400ee8e`). See §9 for live status, §10 for reconciliations against repo
-truth, and §11 for the maintainer-gated steps that remain.
+**Status:** **Implementation complete; three acceptance criteria remain gated on maintainer-run
+CI.** Branch `feat/parity-acquisition-generalization`, off `origin/staging` @ `9400ee8e`, 6
+commits, nothing pushed. `make preflight` green; 431 tests passing. Both required review lanes ran
+and every finding is adjudicated (§11 Opus, §14 Codex).
+
+What still needs a human: proving the multi-OS matrix on real runners, reconciling the two stuck
+packets, and any promotion. None can be done from a laptop — they need macOS/Windows/ARM runners
+and a push. See §13 for the checklist.
+
+Map: §9 status · §10 reconciliations against repo truth · §11 Opus adjudication · §12 stuck
+packets · §13 maintainer checklist · §14 Codex adjudication.
 
 ---
 
