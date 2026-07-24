@@ -1,5 +1,7 @@
 use std::{
-    env, fs,
+    env,
+    ffi::OsString,
+    fs,
     io::{self, Write},
     path::{Path, PathBuf},
     process::Command,
@@ -592,29 +594,41 @@ fn percent_encode_query_value(value: &str) -> String {
 /// two JSON documents together and corrupts large responses — the
 /// `openai/codex` releases page is ~26 MB, so an interrupted transfer there
 /// yielded an unparseable body rather than a clean failure.
-pub(crate) fn build_curl_args(url: &str, response_path: &Path, token: Option<&str>) -> Vec<String> {
-    let mut args = vec![
-        "-fsSL".to_string(),
-        "--retry".to_string(),
-        "3".to_string(),
-        "--retry-all-errors".to_string(),
+///
+/// Arguments are `OsString`, not `String`: `Path::display` replaces non-Unicode
+/// bytes with U+FFFD, so a `TMPDIR` containing arbitrary bytes would send curl a
+/// *different* path than the one read back afterwards — turning a successful
+/// download into a spurious upstream failure.
+pub(crate) fn build_curl_args(
+    url: &str,
+    response_path: &Path,
+    token: Option<&str>,
+) -> Vec<OsString> {
+    let mut args: Vec<OsString> = vec![
+        OsString::from("-fsSL"),
+        OsString::from("--retry"),
+        OsString::from("3"),
+        OsString::from("--retry-all-errors"),
         // Multi-megabyte bodies routinely exceed a 20s window, and the retry timer
         // starts before the first attempt: too small a budget means a failed large
         // transfer is never retried at all.
-        "--retry-max-time".to_string(),
-        "120".to_string(),
-        "-H".to_string(),
-        "User-Agent: unified-agent-api-maintenance-watch/1.0".to_string(),
-        "-o".to_string(),
-        response_path.display().to_string(),
+        OsString::from("--retry-max-time"),
+        OsString::from("120"),
+        OsString::from("-H"),
+        OsString::from("User-Agent: unified-agent-api-maintenance-watch/1.0"),
+        // Never add `-C`/`--continue-at` or `-a`/`--append` here: those re-enable
+        // the resume/append semantics whose absence is what keeps a retried
+        // transfer from splicing onto a partial body.
+        OsString::from("-o"),
+        response_path.as_os_str().to_os_string(),
     ];
     if url.starts_with("https://api.github.com/") {
         if let Some(token) = token.map(str::trim).filter(|token| !token.is_empty()) {
-            args.push("-H".to_string());
-            args.push(format!("Authorization: Bearer {token}"));
+            args.push(OsString::from("-H"));
+            args.push(OsString::from(format!("Authorization: Bearer {token}")));
         }
     }
-    args.push(url.to_string());
+    args.push(OsString::from(url));
     args
 }
 
@@ -626,7 +640,7 @@ fn temp_response_path() -> PathBuf {
     ))
 }
 
-fn fetch_text(url: &str) -> Result<String, Error> {
+pub(crate) fn fetch_text(url: &str) -> Result<String, Error> {
     let response_path = temp_response_path();
     let token = env::var("GITHUB_TOKEN").ok();
     let args = build_curl_args(url, &response_path, token.as_deref());
