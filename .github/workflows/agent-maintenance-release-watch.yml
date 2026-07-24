@@ -17,6 +17,9 @@ jobs:
   queue:
     name: Build watcher queue
     runs-on: ubuntu-latest
+    # The upstream fetch has no per-attempt ceiling and paginates unbounded, so cap
+    # the job rather than inheriting the 6-hour default if an upstream stalls.
+    timeout-minutes: 30
     outputs:
       queue: ${{ steps.queue.outputs.queue }}
     steps:

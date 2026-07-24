@@ -371,35 +371,60 @@ fn curl_never_enables_resume_or_append_semantics() {
     );
 }
 
-fn watcher_temp_bodies() -> usize {
+/// A stalled-but-not-dead upstream must be abandoned, but a slow-yet-progressing
+/// multi-megabyte download must not be — which is why this is a throughput floor
+/// rather than a blunt `--max-time`.
+#[test]
+fn curl_aborts_stalled_transfers_without_capping_slow_ones() {
+    let args = watch::build_curl_args("https://registry.npmjs.org/x", Path::new("/tmp/b"), None);
+
+    let limit = args
+        .iter()
+        .position(|arg| arg == "--speed-limit")
+        .expect("a stall threshold is configured");
+    assert!(args[limit + 1].to_string_lossy().parse::<u64>().is_ok());
+
+    let window = args
+        .iter()
+        .position(|arg| arg == "--speed-time")
+        .expect("a stall window is configured");
+    assert!(args[window + 1].to_string_lossy().parse::<u64>().is_ok());
+
+    assert!(
+        !args.iter().any(|arg| arg == "--max-time"),
+        "a hard --max-time would fail slow-but-progressing large transfers"
+    );
+}
+
+fn watcher_temp_bodies() -> std::collections::BTreeSet<String> {
     fs::read_dir(std::env::temp_dir())
         .map(|entries| {
             entries
                 .filter_map(Result::ok)
-                .filter(|entry| {
-                    entry
-                        .file_name()
-                        .to_string_lossy()
-                        .starts_with("uaa-maintenance-watch-")
-                })
-                .count()
+                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .filter(|name| name.starts_with("uaa-maintenance-watch-"))
+                .collect()
         })
-        .unwrap_or(0)
+        .unwrap_or_default()
 }
 
 /// Exercises the real `fetch_text` path — spawn curl, write via `-o`, read the body
 /// back, clean up — over `file://` so it needs no network.
+///
+/// Success and failure are asserted in a single test on purpose: the temp-dir
+/// snapshot is process-global, so as separate `#[test]` functions they run
+/// concurrently and each observes the other's in-flight body file.
 #[test]
-fn fetch_text_reads_body_from_file_and_removes_it() {
+fn fetch_text_reads_body_and_never_leaks_its_temp_file() {
     let dir = std::env::temp_dir().join(format!("uaa-fetch-text-{}", std::process::id()));
     fs::create_dir_all(&dir).expect("fixture dir");
     let fixture = dir.join("body.json");
     fs::write(&fixture, r#"{"dist-tags":{"stable":"9.9.9"}}"#).expect("write fixture");
 
     let before = watcher_temp_bodies();
+
     let body = watch::fetch_text(&format!("file://{}", fixture.display()))
         .expect("fetch_text reads a file:// body");
-
     assert!(body.contains("9.9.9"));
     assert_eq!(
         watcher_temp_bodies(),
@@ -407,21 +432,16 @@ fn fetch_text_reads_body_from_file_and_removes_it() {
         "fetch_text must remove its temp body file on success"
     );
 
-    fs::remove_dir_all(&dir).ok();
-}
-
-#[test]
-fn fetch_text_fails_closed_without_leaking_a_temp_body() {
-    let before = watcher_temp_bodies();
     let err = watch::fetch_text("file:///nonexistent/uaa-missing-source.json")
         .expect_err("unreadable source must fail");
-
     assert!(matches!(err, Error::Validation(_)));
     assert_eq!(
         watcher_temp_bodies(),
         before,
         "a failed fetch must not leak a temp body file"
     );
+
+    fs::remove_dir_all(&dir).ok();
 }
 
 /// The retry timer starts before the first attempt, so a budget shorter than a
