@@ -128,9 +128,9 @@ Contract requirement:
 - The generator MUST include a `coverage[]` entry for `path=[]` when the wrapper supports any global flags (as defined in the scenario catalog).
 - The generator MUST NOT duplicate global flags across every subcommand entry as a workaround.
 
-The upstream union snapshot generator (`xtask codex-union`) MUST apply `globals.effective_flags_model.union_normalization.dedupe_per_command_flags_against_root=true` so global flags appear only at `path=[]` in union snapshots.
+The upstream union snapshot generator (`xtask manifest-union`) MUST apply `globals.effective_flags_model.union_normalization.dedupe_per_command_flags_against_root=true` so global flags appear only at `path=[]` in union snapshots.
 
-The report generator (`xtask codex-report`) MUST apply `globals.effective_flags_model.reporting` semantics so coverage deltas for global flags are reported only under `path=[]`.
+The report generator (`xtask manifest-report`) MUST apply `globals.effective_flags_model.reporting` semantics so coverage deltas for global flags are reported only under `path=[]`.
 
 ## Derivation algorithm (normative)
 
@@ -284,7 +284,7 @@ This produces monotonic support-does-not-regress behavior when scenarios overlap
 Generated artifacts MUST satisfy:
 
 - JSON Schema validation (`WrapperCoverageV1`) via `cli_manifests/codex/SCHEMA.json`.
-- Validator invariants via `xtask codex-validate` and `cli_manifests/codex/VALIDATOR_SPEC.md`, including:
+- Validator invariants via `xtask manifest-validate` and `cli_manifests/codex/VALIDATOR_SPEC.md`, including:
   - `intentionally_unsupported` requires non-empty `note`,
   - scope overlap constraints (single best match).
 
@@ -296,7 +296,7 @@ This generator is considered correct when:
 2. The output is deterministic:
    - byte-identical across two runs given the same source tree and `SOURCE_DATE_EPOCH`.
 3. The output passes:
-   - `xtask codex-validate` (all checks).
+   - `xtask manifest-validate` (all checks).
 4. Coverage reports become actionable deltas:
    - For a new upstream version, the report no longer lists everything missing due solely to empty wrapper coverage.
 5. Scenario catalog completeness:

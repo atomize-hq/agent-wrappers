@@ -10,6 +10,10 @@ name: Parity promote
 # read from `cli_manifests/<agent>/RULES.json` through `xtask manifest-acquisition-plan`. The
 # validation matrix is intersected with the committed union's `inputs[]`, so only targets that
 # actually produced a snapshot are validated and promoted.
+#
+# Migration note: a version acquired before this lane existed has lockfile rows keyed on the old
+# per-agent asset names, which this workflow cannot match. Re-run `parity-acquire.yml` for such a
+# version before promoting it; the job fails with an explicit message rather than silently.
 
 on:
   workflow_call:
@@ -158,8 +162,14 @@ jobs:
           SELECT='.artifacts[] | select(.[$key]==$v and .target_triple==$t and .asset_name==$a)'
           SHA="$(jq -r --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" "${SELECT} | .sha256" "$LOCK")"
           SIZE="$(jq -r --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" "${SELECT} | .size_bytes" "$LOCK")"
-          test -n "$SHA" && test "$SHA" != "null"
-          test -n "$SIZE" && test "$SIZE" != "null"
+
+          # Versions acquired before the reusable lane existed carry the old per-agent asset names
+          # (e.g. `claude`, `bin/.opencode`) and, for claude, GCS download URLs. Those rows cannot
+          # be matched or re-verified, so say exactly that instead of failing on an empty variable.
+          if [ -z "$SHA" ] || [ "$SHA" = "null" ] || [ -z "$SIZE" ] || [ "$SIZE" = "null" ]; then
+            echo "::error title=No usable lockfile pin::${LOCK} has no row for ${VERSION_KEY}=${VERSION} target_triple=${TARGET} asset_name=${ASSET}. Versions acquired before parity-acquire.yml existed used different asset names; re-run parity-acquire for this version before promoting it." >&2
+            exit 1
+          fi
 
           curl -fsSL -o _download.bin "$URL"
           python -c 'import hashlib, sys; p, exp_sha, exp_size = sys.argv[1], sys.argv[2], int(sys.argv[3]); b = open(p, "rb").read(); got_sha = hashlib.sha256(b).hexdigest(); assert got_sha == exp_sha, f"sha256 mismatch: expected={exp_sha} got={got_sha}"; assert len(b) == exp_size, f"size mismatch: expected={exp_size} got={len(b)}"; print(f"ok: {p} sha256={got_sha} size_bytes={len(b)}")' _download.bin "$SHA" "$SIZE"

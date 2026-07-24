@@ -14,11 +14,6 @@ use serde::Deserialize;
 
 use super::AcquisitionError;
 
-/// Placeholder resolved by the caller at runtime rather than by the planner.
-///
-/// Validation env values may reference a scratch directory that only exists inside the job.
-pub const SCRATCH_DIR_PLACEHOLDER: &str = "{scratch_dir}";
-
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AcquisitionDescriptor {
@@ -84,6 +79,13 @@ pub struct SnapshotCommand {
     pub binary_arg: String,
     #[serde(default)]
     pub extra_args: Vec<String>,
+    /// Environment applied whenever the acquired binary is executed during acquisition.
+    ///
+    /// This is where an agent disables a self-updater. Without it, a CLI could replace itself
+    /// between the pin check and the capture, making the recorded sha256 a lie about the surface
+    /// that was actually snapshotted.
+    #[serde(default)]
+    pub env: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -171,8 +173,8 @@ impl AcquisitionDescriptor {
                             .to_string(),
                     )
                 })?;
-                non_empty("acquisition.github_releases.owner", &source.owner)?;
-                non_empty("acquisition.github_releases.repo", &source.repo)?;
+                safe_relative_path("acquisition.github_releases.owner", &source.owner)?;
+                safe_relative_path("acquisition.github_releases.repo", &source.repo)?;
                 non_empty(
                     "acquisition.github_releases.tag_template",
                     &source.tag_template,
@@ -191,7 +193,7 @@ impl AcquisitionDescriptor {
                         "acquisition.npm is required when source_kind = `npm`".to_string(),
                     )
                 })?;
-                non_empty("acquisition.npm.package", &source.package)?;
+                safe_relative_path("acquisition.npm.package", &source.package)?;
                 forbid(
                     "acquisition.github_releases",
                     self.github_releases.is_some(),
@@ -247,10 +249,16 @@ impl AcquisitionDescriptor {
             &format!("acquisition.targets.{target}.runs_on"),
             &spec.runs_on,
         )?;
-        non_empty(
+        safe_relative_path(
             &format!("acquisition.targets.{target}.binary_path"),
             &spec.binary_path,
         )?;
+        if let Some(member) = spec.archive_member.as_deref() {
+            safe_relative_path(
+                &format!("acquisition.targets.{target}.archive_member"),
+                member,
+            )?;
+        }
 
         match self.source_kind {
             AcquisitionSourceKind::GithubReleases => {
@@ -259,7 +267,7 @@ impl AcquisitionDescriptor {
                         "acquisition.targets.{target}.asset_name is required for source_kind = `github_releases`"
                     ))
                 })?;
-                non_empty(&format!("acquisition.targets.{target}.asset_name"), asset)?;
+                safe_relative_path(&format!("acquisition.targets.{target}.asset_name"), asset)?;
                 forbid(
                     &format!("acquisition.targets.{target}.platform_package"),
                     spec.platform_package.is_some(),
@@ -277,7 +285,7 @@ impl AcquisitionDescriptor {
                         "acquisition.targets.{target}.platform_package is required for source_kind = `npm`"
                     ))
                 })?;
-                non_empty(
+                safe_relative_path(
                     &format!("acquisition.targets.{target}.platform_package"),
                     package,
                 )?;
@@ -329,6 +337,26 @@ impl AcquisitionDescriptor {
         }
         Ok(())
     }
+}
+
+/// Reject path-shaped values that could escape the runner workspace.
+///
+/// These fields are interpolated into `curl -o`, `tar -x` and file copies on the runner. The
+/// threat model is committed, reviewed manifest data rather than attacker input, so this is
+/// defense in depth — but a typo'd `../` is just as destructive as a malicious one.
+fn safe_relative_path(field: &str, value: &str) -> Result<(), AcquisitionError> {
+    non_empty(field, value)?;
+    let normalized = value.strip_prefix("./").unwrap_or(value);
+    let bad = normalized.starts_with('/')
+        || normalized.contains('\\')
+        || normalized.split('/').any(|part| part == "..")
+        || normalized.contains('\0');
+    if bad {
+        return Err(AcquisitionError::Descriptor(format!(
+            "{field} must be a workspace-relative path without `..`, a leading `/`, or backslashes (got `{value}`)"
+        )));
+    }
+    Ok(())
 }
 
 fn non_empty(field: &str, value: &str) -> Result<(), AcquisitionError> {

@@ -348,3 +348,76 @@ earlier section disagree, this section is authoritative.
    **Consequence:** `acquisition.lockfile_version_key` names the row key, and the reusable lane
    rewrites only `.artifacts`, so every committed lockfile keeps the exact top-level shape it
    already has. No committed artifact is migrated to a new schema by this campaign.
+
+## 11. Review adjudication (round 1, candidate `68f7fb27`)
+
+Both required lanes ran in parallel against the same base/candidate. The Opus adversarial lane
+returned 13 findings; each is adjudicated below. Two were already remediated by workstreams C and
+E landing after the reviewed commit.
+
+| # | Severity | Finding | Verdict |
+| --- | --- | --- | --- |
+| 1 | blocker | opencode's descriptor is live but `opencode-snapshot` did not exist and its `RULES.json` lacked `sorting` | **accepted, fixed** — C added the adapter; E normalized the manifest. Also added the reviewer's suggested guard: the plan job now verifies every descriptor-named subcommand exists *before* any download, plus tests for both |
+| 2 | major | `mapfile` is a bash-4 builtin; GitHub macOS runners ship bash 3.2, so every macOS target would die | **accepted, fixed** — replaced with a portable `while read` loop and an explicit array init for `set -u` |
+| 3 | major | the acquisition commit is pushed with `GITHUB_TOKEN`, which does not start new workflow runs, so the packet PR's CI never sees the acquired artifacts | **accepted, fixed** — the union job now checks out with `AUTOMATION_TOKEN` |
+| 4 | major | npm acquisition self-attests its own download; the retired claude lane verified against an upstream-published checksum | **accepted, fixed** — npm tarballs are now verified against `dist.integrity` (or `dist.shasum`) before the digest is written to the lockfile |
+| 5 | major | `DISABLE_AUTOUPDATER` had no home in the acquire lane, so a self-updating CLI could invalidate its own pin mid-capture | **accepted, fixed** — new `acquisition.snapshot.env`, applied before the binary is ever executed |
+| 6 | major | promotion cannot match lockfile rows written by the retired lanes, and fails opaquely | **accepted, fixed** — explicit, actionable error naming the row it wanted and telling the maintainer to re-acquire; migration noted in the workflow header |
+| 7 | major | the post-matrix push has no rebase/retry, so a branch move discards ~45 minutes of work | **accepted, fixed** — bounded fetch/rebase/retry loop |
+| 8 | minor | `branch_created` can be true for a branch `create-pull-request` just deleted | **accepted, fixed** — gated on `pull-request-operation` |
+| 9 | minor | path-shaped descriptor fields were unvalidated; the `expand` doc comment overclaimed | **accepted, fixed** — `safe_relative_path` rejects `..`, absolute paths and backslashes; comment corrected; the unused `SCRATCH_DIR_PLACEHOLDER` removed |
+| 10 | minor | both `VALIDATOR_SPEC.md` files normatively specify `OK: codex-validate` | **accepted, fixed** — specs updated to the neutral string and note the alias prints it too |
+| 11 | minor | operator runbooks route maintainers to deleted workflows | **accepted, fixed** — already rewritten in the docs pass; no stale references remain under `cli_manifests/**` or `docs/**` outside frozen historical evidence |
+| 12 | minor | no `SCHEMA.json` for the new block; a malformed descriptor is caught only by a command CI never runs | **accepted with reconciliation** — see §10.3 for why a JSON Schema is the wrong instrument here. The real gap was coverage, so `ci.yml` now resolves every enrolled agent's descriptor on every PR |
+| 13 | nits | shell interpolation, `secrets: inherit` breadth, build-vs-reject conflation, writer/reader truncation mismatch, `install` on Windows, packument size, `support-matrix` churn | **accepted and fixed**, except `support-matrix` churn, which is intended: publication should track acquisition |
+
+Frozen historical evidence (`docs/agents/.uaa-temp/**`, `**/governance/proof/**`, closeout JSON,
+ADRs, `PLAN.md`, `ORCH_PLAN.md`) deliberately still names the retired workflows and the `codex-*`
+commands. Those are records of what happened, not instructions, and the back-compat aliases keep
+every command in them working.
+
+## 12. The two stuck packets
+
+Both are **reconcilable through the new path but not completable locally**, because completing
+them requires runners this machine does not have. Neither is hand-authored.
+
+**codex `0.144.6`** — regenerating its union through the new engine reproduces the committed
+artifact exactly: 2 of 4 targets, `complete:false`, missing `aarch64-unknown-linux-musl` and
+`x86_64-pc-windows-msvc`. Those two targets need an ARM-Linux runner and a Windows runner. Running
+`parity-acquire` for `codex 0.144.6` produces all four and a `complete:true` union.
+
+**opencode `1.14.47`** — worse than partial. Its committed `union.json` was hand-produced by the
+relay and carries `expected_targets` of **6** against the manifest's **3**, and its only input is
+`darwin-arm64` while `required_target` is `linux-x64`. The engine refuses to build that union at
+all, which is correct: `partial_union_policy.when_required_target_missing` is `fail`. There is no
+local fix — the required target must actually be snapshotted. Running `parity-acquire` for
+`opencode 1.14.47` regenerates the union from its own `RULES.json`, which resolves the 3-vs-6
+drift as a side effect rather than by editing a committed artifact.
+
+Deliberately **not** done: adding a validator gate asserting that a committed union's
+`expected_targets` matches `RULES.json`. That check is correct and worth having, but it would make
+`make preflight` red against opencode's committed union until the packet is re-acquired — i.e. it
+would gate the repo on an action only the maintainer can take. It belongs in the follow-up that
+lands after opencode `1.14.47` is reconciled.
+
+## 13. Maintainer checklist (everything gated on a human)
+
+Nothing below was performed by this session.
+
+1. **Review and push the branch.** `feat/parity-acquisition-generalization`, branched from
+   `origin/staging` @ `9400ee8e`. Nothing has been pushed.
+2. **Open the PR to `staging`.**
+3. **Confirm the `AUTOMATION_TOKEN` secret exists.** Finding 3 depends on it: without a PAT the
+   acquisition commit will not re-trigger the packet PR's CI, and the maintainer would be
+   reviewing a green check that never saw the acquired artifacts.
+4. **Prove acquisition on a real runner** — the one acceptance criterion that cannot be verified
+   locally, because it needs macOS/Windows/ARM runners:
+   - `parity-acquire.yml` with `agent_id: codex`, `target_version: 0.144.6`, `commit: false`
+   - `parity-acquire.yml` with `agent_id: claude_code`, a current stable version, `commit: false`
+   Expect `complete: true` in the job summary for both.
+5. **Reconcile the two stuck packets** (§12) by running `parity-acquire` with `commit: true`
+   against each packet branch.
+6. **Prove promotion readiness** with `parity-promote.yml`, `dry_run: true`. Do not set
+   `dry_run: false` until the dry run is green and the union has been reviewed.
+7. **Then, and only then, promote.** Promotion advances `latest_validated` and publishes support
+   claims; it stays a human decision at every tier.

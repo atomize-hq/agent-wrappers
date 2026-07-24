@@ -10,8 +10,9 @@ Key references:
 - PR body template: `cli_manifests/claude_code/PR_BODY_TEMPLATE.md`
 - Workflows:
   - `.github/workflows/agent-maintenance-release-watch.yml`
-  - `.github/workflows/claude-code-update-snapshot.yml`
-  - `.github/workflows/claude-code-promote.yml`
+  - `.github/workflows/agent-maintenance-open-pr.yml`
+  - `.github/workflows/parity-acquire.yml` (reusable, agent-agnostic)
+  - `.github/workflows/parity-promote.yml` (reusable, agent-agnostic)
 
 ## Core Policies
 
@@ -27,8 +28,8 @@ Key references:
 
 The shipped maintenance path for Claude Code parity is:
 
-1. `.github/workflows/agent-maintenance-release-watch.yml` detects stale `claude_code` parity from registry truth and dispatches `.github/workflows/claude-code-update-snapshot.yml`.
-2. The worker refreshes the Claude Code parity artifacts, runs `prepare-agent-maintenance --write`, and opens branch `automation/claude_code-maintenance-<target_version>` with PR body `docs/agents/lifecycle/claude_code-maintenance/governance/pr-summary.md`.
+1. `.github/workflows/agent-maintenance-release-watch.yml` detects stale `claude_code` parity from registry truth and dispatches the shared packet opener `.github/workflows/agent-maintenance-open-pr.yml`.
+2. The packet opener runs `prepare-agent-maintenance --write` and opens branch `automation/claude_code-maintenance-<target_version>` with PR body `docs/agents/lifecycle/claude_code-maintenance/governance/pr-summary.md`. It then calls the reusable acquisition lane `.github/workflows/parity-acquire.yml` against that branch, so the PR lands carrying the **complete** multi-target union rather than a single-host partial one.
 3. The maintainer reviews `docs/agents/lifecycle/claude_code-maintenance/governance/maintenance-request.toml` and `docs/agents/lifecycle/claude_code-maintenance/HANDOFF.md`, then runs:
 
 ```bash
@@ -52,25 +53,33 @@ When the shared Release Watch workflow runs, or when you manually inspect a queu
 2. Compare to `cli_manifests/claude_code/latest_validated.txt`.
 3. If the candidate is strictly newer, run the Update Snapshot workflow for that version.
 
-## Update Snapshot (workflow_dispatch)
+## Replay acquisition manually (workflow_dispatch)
 
-Normal operation is the shared watcher dispatch above. Use this workflow manually only to replay or repair the worker step for a known target version.
+Normal operation is the shared watcher dispatch above, which already runs acquisition. Dispatch
+the reusable lane directly only to replay or repair acquisition for a known target version:
 
-Preferred path: run the GitHub Actions workflow:
-- `.github/workflows/claude-code-update-snapshot.yml`
+- `.github/workflows/parity-acquire.yml`
 
-Required replay inputs:
+Inputs:
 - `agent_id`: `claude_code`
-- `current_version`: the current validated Claude Code version from registry truth
-- `latest_stable`: the latest stable upstream version seen by the watcher
-- `target_version`: the worker target version to validate
-- `opened_from`: the repo-relative worker workflow path, `.github/workflows/claude-code-update-snapshot.yml`
-- `detected_by`: `.github/workflows/agent-maintenance-release-watch.yml`
-- `dispatch_kind`: `workflow_dispatch`
-- `branch_name`: `automation/claude_code-maintenance-<target_version>`
+- `target_version`: the bare semver to acquire (e.g. `2.1.219`)
+- `ref`: branch to check out, and to commit to when `commit` is true (default `staging`)
+- `commit`: `true` to commit the acquired artifacts onto `ref`
+
+There are no per-agent acquisition inputs. Everything agent-specific is read from the
+`acquisition` block in `cli_manifests/claude_code/RULES.json`. Preview exactly what the lane will
+do without touching CI:
+
+```bash
+cargo run -p xtask -- manifest-acquisition-plan --agent claude_code --version <target_version>
+```
+
+Acquisition source: **npm**, matching the watch source. Each target's binary comes from its
+platform package (`@anthropic-ai/claude-code-<target>`), which is version-locked to the umbrella
+package by an exact `optionalDependencies` pin. The legacy GCS bucket is no longer used.
 
 Responsibilities (high level):
-- Download `manifest.json` and verify integrity (sha256 + size).
+- Download and pin every expected target (sha256 + size), re-verified on the runner that executes it.
 - Update `cli_manifests/claude_code/artifacts.lock.json`.
 - Generate per-target help snapshots via `xtask claude-snapshot` (matrix).
 - Generate a union snapshot via `xtask claude-union` (Linux).
@@ -97,18 +106,23 @@ Use the recovery notes rendered in `HANDOFF.md` and `maintenance-request.toml` i
 Promotion is a separate PR so it can be reviewed/approved independently.
 
 Workflow:
-- `.github/workflows/claude-code-promote.yml`
+- `.github/workflows/parity-promote.yml` with `agent_id: claude_code`, `version: <semver>`
+
+It defaults to `dry_run: true`, which validates and stages the promotion without opening a PR.
+Set `dry_run: false` only when you intend to open the promotion PR.
 
 Responsibilities:
+- Validate every target present in the committed union, using the commands declared in
+  `acquisition.validation` in `cli_manifests/claude_code/RULES.json`.
 - Update `latest_validated.txt` and per-target pointers under `pointers/latest_validated/`.
 - Update `current.json` to match the promoted union snapshot.
-- Re-run `xtask codex-validate --root cli_manifests/claude_code`.
-- Open a PR branch `automation/claude-code-promote-<version>`.
+- Re-run `xtask manifest-validate --root cli_manifests/claude_code`.
+- Open a PR branch `automation/claude_code-promote-<version>`.
 
 ## Local Debugging Commands
 
 - Validate committed artifacts:  
-  `cargo run -p xtask -- codex-validate --root cli_manifests/claude_code`
+  `cargo run -p xtask -- manifest-validate --root cli_manifests/claude_code`
 - Regenerate wrapper coverage JSON:  
   `cargo run -p xtask -- claude-wrapper-coverage --out cli_manifests/claude_code/wrapper_coverage.json`
 - Generate a per-target snapshot (no downloads; uses a local binary):  

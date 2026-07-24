@@ -198,7 +198,14 @@ fn raw_help_command_dir_name(path: &[String]) -> String {
     }
     const MAX_PREFIX: usize = 40;
     if prefix.len() > MAX_PREFIX {
-        prefix.truncate(MAX_PREFIX);
+        // Truncate on a char boundary, matching the reader in `manifest_union::merge`. A
+        // multi-byte token straddling byte 40 would otherwise panic here and, if it did not,
+        // would name the directory differently from the reference the union records.
+        let cut = (0..=MAX_PREFIX)
+            .rev()
+            .find(|idx| prefix.is_char_boundary(*idx))
+            .unwrap_or(0);
+        prefix.truncate(cut);
         prefix = prefix.trim_end_matches('-').to_string();
         if prefix.is_empty() {
             prefix = "cmd".to_string();

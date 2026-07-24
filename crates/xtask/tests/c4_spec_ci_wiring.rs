@@ -119,9 +119,13 @@ fn c4_spec_packet_pr_delegates_a_complete_union_to_the_reusable_acquisition_lane
     for required in [
         // The gate is committed truth (registry enrollment + an `acquisition` block), enforced by
         // the planner, rather than a second per-agent enablement field.
-        "cargo run -p xtask -- manifest-acquisition-plan",
+        "manifest-acquisition-plan",
         "acquire=true",
         "acquire=false",
+        // A build failure and a planner rejection must stay distinguishable: collapsing both into
+        // `acquire=false` would silently downgrade every agent to the docs-only lane.
+        "cargo build -p xtask",
+        "gate_status=$?",
         "uses: ./.github/workflows/parity-acquire.yml",
         "ref: ${{ inputs.branch_name }}",
         "commit: true",

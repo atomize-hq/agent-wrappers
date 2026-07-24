@@ -353,3 +353,79 @@ fn write_fixture_workspace(root: &Path, rules: &serde_json::Value) {
     )
     .expect("write fixture rules");
 }
+
+#[test]
+fn every_descriptor_names_a_real_xtask_subcommand() {
+    // A descriptor that names a nonexistent command would otherwise only fail after four runners
+    // had each downloaded a release binary.
+    for agent in ["codex", "claude_code", "opencode"] {
+        let plan = plan_for_agent(&repo_root(), agent, "1.2.3").expect("plan");
+
+        let mut commands = vec![plan.snapshot.command.clone(), plan.union_command.clone()];
+        commands.extend(plan.wrapper_coverage_command.clone());
+
+        for command in commands {
+            let status = std::process::Command::new(env!("CARGO_BIN_EXE_xtask"))
+                .args([command.as_str(), "--help"])
+                .output()
+                .expect("run xtask");
+            assert!(
+                status.status.success(),
+                "{agent}: acquisition descriptor names `{command}`, which xtask does not provide"
+            );
+        }
+    }
+}
+
+#[test]
+fn every_enrolled_agent_carries_the_rules_blocks_its_engines_need() {
+    // `manifest-union` and `manifest-report` deserialize these blocks; a manifest missing them
+    // resolves a valid-looking plan and then dies mid-run.
+    for agent in ["codex", "claude_code", "opencode"] {
+        let rules: serde_json::Value = serde_json::from_slice(
+            &fs::read(
+                repo_root()
+                    .join("cli_manifests")
+                    .join(agent)
+                    .join("RULES.json"),
+            )
+            .expect("read RULES.json"),
+        )
+        .expect("parse RULES.json");
+
+        for block in [
+            "union",
+            "sorting",
+            "report",
+            "version_metadata",
+            "acquisition",
+        ] {
+            assert!(
+                rules.get(block).is_some(),
+                "{agent}: RULES.json must carry the `{block}` block the shared engines read"
+            );
+        }
+    }
+}
+
+#[test]
+fn path_shaped_descriptor_fields_cannot_escape_the_workspace() {
+    for (field, value) in [
+        ("binary_path", "../../../etc/cron.d/pwn"),
+        ("archive_member", "/etc/passwd"),
+    ] {
+        let fixture = tempfile::tempdir().expect("tempdir");
+        let mut rules = rules_with_acquisition();
+        rules["acquisition"]["targets"]["linux-x64"][field] =
+            serde_json::Value::String(value.to_string());
+        write_fixture_workspace(fixture.path(), &rules);
+
+        let Err(err) = plan_for_agent(fixture.path(), "fixture", "1.2.3") else {
+            panic!("{field}={value} must be rejected");
+        };
+        assert!(
+            err.to_string().contains("workspace-relative path"),
+            "{field}={value} rejected for the wrong reason: {err}"
+        );
+    }
+}

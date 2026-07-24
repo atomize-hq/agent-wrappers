@@ -216,7 +216,10 @@
       "extra_args": [
         "--help-timeout-ms",
         "8000"
-      ]
+      ],
+      "env": {
+        "DISABLE_AUTOUPDATER": "1"
+      }
     },
     "lockfile_version_key": "claude_code_version",
     "union_command": "manifest-union",

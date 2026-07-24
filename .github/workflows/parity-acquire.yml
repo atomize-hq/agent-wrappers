@@ -31,6 +31,10 @@ on:
         required: false
         default: false
         type: boolean
+    secrets:
+      AUTOMATION_TOKEN:
+        description: "PAT used to push acquired artifacts so the packet PR's CI re-runs"
+        required: false
   workflow_dispatch:
     inputs:
       agent_id:
@@ -93,6 +97,17 @@ jobs:
           jq -c '{include: .include}' _ci_tmp/acquisition-plan.json > _ci_tmp/snapshot-matrix.json
           jq -e '.include | length >= 1' _ci_tmp/snapshot-matrix.json > /dev/null
 
+          # Fail here rather than after downloading binaries on four runners: a descriptor that
+          # names a command xtask does not have would otherwise only surface once every snapshot
+          # job had already paid for its download.
+          while IFS= read -r subcommand; do
+            [ -n "$subcommand" ] || continue
+            if ! cargo run -q -p xtask -- "$subcommand" --help > /dev/null 2>&1; then
+              echo "::error title=Unknown xtask subcommand::The acquisition descriptor names \`${subcommand}\`, which xtask does not provide." >&2
+              exit 1
+            fi
+          done < <(jq -r '[.snapshot.command, .union_command, (.wrapper_coverage_command // empty)] | .[]' _ci_tmp/acquisition-plan.json)
+
           {
             echo "snapshot_matrix=$(cat _ci_tmp/snapshot-matrix.json)"
             echo "manifest_root=$(jq -r '.manifest_root' _ci_tmp/acquisition-plan.json)"
@@ -121,7 +136,9 @@ jobs:
               PUBLISHED_AT="$(jq -r '.published_at' _ci_tmp/release.json)"
               ;;
             npm)
-              curl -fsSL "$METADATA_URL" > _ci_tmp/packument.json
+              # The full packument is needed for `.time`, which the abbreviated
+              # (`application/vnd.npm.install-v1+json`) document omits.
+              curl -fsSL -H "Accept: application/json" "$METADATA_URL" > _ci_tmp/packument.json
               PUBLISHED_AT="$(jq -r --arg v "$VERSION" '.time[$v] // empty' _ci_tmp/packument.json)"
               ;;
             *)
@@ -158,6 +175,34 @@ jobs:
             curl -fsSL -o "$OUT" "$URL"
             SIZE_BYTES="$(wc -c < "$OUT" | tr -d ' ')"
             SHA256="$(sha256sum "$OUT" | awk '{print $1}')"
+
+            # Pin integrity must be anchored upstream, not self-attested. Hashing our own download
+            # only proves every job in this run saw the same bytes; it says nothing about whether
+            # those bytes are what the registry published. npm publishes a per-version digest, so
+            # check against it before the digest is written into the lockfile.
+            if [ -n "$PLATFORM_PACKAGE" ]; then
+              curl -fsSL "https://registry.npmjs.org/${PLATFORM_PACKAGE}/${VERSION}" > _ci_tmp/dist.json
+              EXPECTED_INTEGRITY="$(jq -r '.dist.integrity // empty' _ci_tmp/dist.json)"
+              EXPECTED_SHASUM="$(jq -r '.dist.shasum // empty' _ci_tmp/dist.json)"
+              if [ -n "$EXPECTED_INTEGRITY" ]; then
+                # `integrity` is `<algo>-<base64 digest>`, e.g. `sha512-…`.
+                ALGO="${EXPECTED_INTEGRITY%%-*}"
+                EXPECTED_B64="${EXPECTED_INTEGRITY#*-}"
+                ACTUAL_B64="$(openssl dgst "-${ALGO}" -binary "$OUT" | openssl base64 -A)"
+                if [ "$ACTUAL_B64" != "$EXPECTED_B64" ]; then
+                  echo "::error title=Upstream integrity mismatch::${PLATFORM_PACKAGE}@${VERSION} ${ALGO} expected=${EXPECTED_B64} got=${ACTUAL_B64}" >&2
+                  exit 1
+                fi
+                echo "ok: ${PLATFORM_PACKAGE}@${VERSION} matches published ${ALGO} integrity"
+              elif [ -n "$EXPECTED_SHASUM" ]; then
+                ACTUAL_SHA1="$(openssl dgst -sha1 -hex "$OUT" | awk '{print $NF}')"
+                test "$ACTUAL_SHA1" = "$EXPECTED_SHASUM"
+                echo "ok: ${PLATFORM_PACKAGE}@${VERSION} matches published shasum"
+              else
+                echo "::error title=No upstream digest::${PLATFORM_PACKAGE}@${VERSION} published neither dist.integrity nor dist.shasum" >&2
+                exit 1
+              fi
+            fi
 
             jq -n \
               --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$TARGET" --arg asset "$ASSET" \
@@ -255,10 +300,11 @@ jobs:
 
           rm -rf _extract
           mkdir -p _extract
+          # `cp` + `chmod` rather than `install`: this path now also runs under Git Bash on the
+          # Windows runners for npm-sourced agents.
           case "$ARCHIVE" in
             none)
               cp "$FILE" "$BIN"
-              chmod +x "$BIN" || true
               ;;
             tar_gz)
               if [ -n "${ARCHIVE_MEMBER:-}" ]; then
@@ -268,18 +314,29 @@ jobs:
               fi
               test -n "$MEMBER"
               tar -xzf "$FILE" -C _extract "$MEMBER"
-              install -m 0755 "_extract/${MEMBER}" "$BIN"
+              cp "_extract/${MEMBER}" "$BIN"
               ;;
             npm_tgz)
               test -n "${ARCHIVE_MEMBER:-}"
               tar -xzf "$FILE" -C _extract "$ARCHIVE_MEMBER"
-              install -m 0755 "_extract/${ARCHIVE_MEMBER}" "$BIN"
+              cp "_extract/${ARCHIVE_MEMBER}" "$BIN"
               ;;
             *)
               echo "unsupported archive kind: ${ARCHIVE}" >&2
               exit 1
               ;;
           esac
+          chmod +x "$BIN" || true
+
+          # Apply the descriptor's snapshot env before ever executing the binary. Without it an
+          # agent with a self-updater could replace itself between the pin check and the capture,
+          # making the recorded sha256 a lie about the surface that was snapshotted.
+          while read -r pair; do
+            NAME="$(jq -r '.name' <<<"$pair")"
+            VALUE="$(jq -r '.value' <<<"$pair")"
+            export "${NAME}=${VALUE}"
+            echo "snapshot env: ${NAME}=${VALUE}"
+          done < <(jq -c '.snapshot.env[]?' _ci_tmp/acquisition-plan.json)
 
           "$BIN" --version
 
@@ -297,7 +354,20 @@ jobs:
 
           SNAPSHOT_COMMAND="$(jq -r '.snapshot.command' "$PLAN")"
           BINARY_ARG="$(jq -r '.snapshot.binary_arg' "$PLAN")"
-          mapfile -t EXTRA_ARGS < <(jq -r '.snapshot.extra_args[]?' "$PLAN")
+
+          # `mapfile` is a bash-4 builtin and the macOS runners ship bash 3.2, so read the array
+          # the portable way. The explicit initialisation also keeps `${#EXTRA_ARGS[@]}` valid
+          # under `set -u` when the descriptor declares no extra args.
+          EXTRA_ARGS=()
+          while IFS= read -r extra_arg; do
+            EXTRA_ARGS+=("$extra_arg")
+          done < <(jq -r '.snapshot.extra_args[]?' "$PLAN")
+
+          while read -r pair; do
+            NAME="$(jq -r '.name' <<<"$pair")"
+            VALUE="$(jq -r '.value' <<<"$pair")"
+            export "${NAME}=${VALUE}"
+          done < <(jq -c '.snapshot.env[]?' "$PLAN")
 
           ARGS=(
             "$SNAPSHOT_COMMAND"
@@ -342,6 +412,10 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
+          # Pushes authenticated with GITHUB_TOKEN do not start new workflow runs. Without a PAT
+          # the packet PR would keep showing the CI result from the pre-acquisition commit, so a
+          # maintainer would be reviewing a green check that never saw the acquired artifacts.
+          token: ${{ secrets.AUTOMATION_TOKEN || github.token }}
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
@@ -437,10 +511,12 @@ jobs:
 
       - name: Remove CI-only downloads before committing
         shell: bash
+        env:
+          ROOT: ${{ needs.plan.outputs.manifest_root }}
         run: |
           set -euo pipefail
           rm -rf _download _extract _snapshots _ci_tmp
-          rm -rf "${{ needs.plan.outputs.manifest_root }}/raw_help"
+          rm -rf "${ROOT}/raw_help"
 
       - name: Commit the acquired artifacts onto the packet branch
         if: ${{ inputs.commit }}
@@ -469,7 +545,21 @@ jobs:
           fi
 
           git commit -m "chore(${AGENT_ID}): acquire parity artifacts for ${VERSION}"
-          git push origin "HEAD:${BRANCH}"
+
+          # The snapshot matrix can take the better part of an hour, so the packet branch may have
+          # moved. Rebase and retry rather than letting a non-fast-forward throw away every
+          # downloaded binary, snapshot, union and report this run produced.
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${BRANCH}"; then
+              exit 0
+            fi
+            echo "push attempt ${attempt} was rejected; rebasing onto origin/${BRANCH}"
+            git fetch origin "$BRANCH"
+            git rebase "origin/${BRANCH}"
+          done
+
+          echo "::error title=Could not push acquired artifacts::${BRANCH} kept moving under this run." >&2
+          exit 1
 
       - name: Upload the committed artifact bundle
         uses: actions/upload-artifact@v6

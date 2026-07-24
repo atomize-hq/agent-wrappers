@@ -242,6 +242,41 @@ Runtime evidence repair rule:
 - that selector change is a lifecycle mutation and must update lifecycle provenance fields (`current_owner_command`, `last_transition_at`, `last_transition_by`)
 - repair must be transactional across the canonical repair bundle and lifecycle state: on failure, neither authoritative surface may change
 
+## Multi-target parity acquisition (when a new agent joins it)
+
+Onboarding captures a new agent's baseline surface from a **single host**, which is correct for
+proving the wrapper but can only ever produce a partial, `complete:false` union. Entering
+multi-target parity acquisition is a separate, explicit step.
+
+Entry rule:
+- an agent enters multi-target acquisition when it is enrolled in `maintenance.release_watch`
+  **and** its `cli_manifests/<agent>/RULES.json` carries an `acquisition` block
+- no separate registry field gates this; see `docs/specs/agent-registry-contract.md`
+- until both hold, the agent stays on the docs-only maintenance path and nothing about its
+  existing behavior changes
+
+Adding the `acquisition` block is what routes a newly onboarded agent onto the **same** reusable
+lane every other agent uses (`.github/workflows/parity-acquire.yml`) rather than a bespoke
+per-agent workflow. The block must declare, for every target in `union.expected_targets`:
+- the release source (`github_releases` or `npm`) and its source-specific configuration
+- each target's runner, download coordinates, archive shape, and installed binary path
+- the agent's snapshot command and its binary flag
+- the per-target validation commands promotion must pass
+
+Two consistency rules are enforced by `xtask manifest-acquisition-plan` and MUST hold:
+- `acquisition.targets` and `union.expected_targets` describe exactly the same target set
+- `union.required_target` is present in `acquisition.targets`
+
+A new agent also needs a snapshot adapter (`<agent>-snapshot`) before acquisition can run, since
+capturing a CLI's help surface requires executing it natively on a matching-OS runner. Preview the
+whole resolved plan before wiring CI:
+
+```sh
+cargo run -p xtask -- manifest-acquisition-plan --agent <agent_id> --version <semver>
+```
+
+Promotion remains maintainer-gated for every agent, at every tier.
+
 ## CI expectations (must stay green)
 
 The following workflows are expected to remain green for onboarding work:

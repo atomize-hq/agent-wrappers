@@ -41,6 +41,7 @@ pub struct PlannedSnapshotCommand {
     pub command: String,
     pub binary_arg: String,
     pub extra_args: Vec<String>,
+    pub env: Vec<PlannedEnvVar>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -140,6 +141,15 @@ pub fn resolve(
             command: descriptor.snapshot.command.clone(),
             binary_arg: descriptor.snapshot.binary_arg.clone(),
             extra_args: descriptor.snapshot.extra_args.clone(),
+            env: descriptor
+                .snapshot
+                .env
+                .iter()
+                .map(|(name, value)| PlannedEnvVar {
+                    name: name.clone(),
+                    value: value.clone(),
+                })
+                .collect(),
         },
         lockfile_version_key: descriptor.lockfile_version_key.clone(),
         union_command: descriptor.union_command.clone(),
@@ -222,8 +232,10 @@ fn resolve_target(
 
 /// Substitute the descriptor's supported placeholders.
 ///
-/// Deliberately limited to `{target}`, `{version}` and `{tag}` so a descriptor can never smuggle
-/// in shell or URL fragments the planner does not understand.
+/// Deliberately limited to `{target}`, `{version}` and `{tag}`: an unknown placeholder is left
+/// literal rather than guessed at. Note this constrains the *placeholder* vocabulary only — the
+/// safety of the surrounding literal text is enforced separately by `safe_relative_path` in
+/// `descriptor`.
 fn expand(template: &str, target: &str, version: &str, tag: Option<&str>) -> String {
     let mut out = template
         .replace("{target}", target)
