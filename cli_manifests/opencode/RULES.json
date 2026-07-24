@@ -8,6 +8,8 @@
     }
   },
   "union": {
+    "tool_name": "opencode-cli",
+    "raw_help_layout": "path_tokens",
     "required_target": "linux-x64",
     "expected_targets": [
       "linux-x64",
@@ -18,6 +20,51 @@
       "linux-x64": "linux",
       "darwin-arm64": "macos",
       "win32-x64": "windows"
+    }
+  },
+  "acquisition": {
+    "acquisition_schema_version": 1,
+    "source_kind": "npm",
+    "npm": {
+      "package": "opencode-ai"
+    },
+    "snapshot": {
+      "command": "opencode-snapshot",
+      "binary_arg": "--opencode-binary",
+      "extra_args": []
+    },
+    "lockfile_version_key": "semantic_version",
+    "union_command": "manifest-union",
+    "targets": {
+      "linux-x64": {
+        "runs_on": "ubuntu-latest",
+        "binary_path": "./opencode-{target}",
+        "archive": "npm_tgz",
+        "platform_package": "opencode-linux-x64",
+        "archive_member": "package/bin/opencode"
+      },
+      "darwin-arm64": {
+        "runs_on": "macos-latest",
+        "binary_path": "./opencode-{target}",
+        "archive": "npm_tgz",
+        "platform_package": "opencode-darwin-arm64",
+        "archive_member": "package/bin/opencode"
+      },
+      "win32-x64": {
+        "runs_on": "windows-latest",
+        "binary_path": "./opencode-{target}.exe",
+        "archive": "npm_tgz",
+        "platform_package": "opencode-windows-x64",
+        "archive_member": "package/bin/opencode.exe"
+      }
+    },
+    "validation": {
+      "env": {
+        "OPENCODE_BINARY": "{binary_path}"
+      },
+      "commands": [
+        "cargo test -p unified-agent-api-opencode"
+      ]
     }
   },
   "wrapper_coverage": {

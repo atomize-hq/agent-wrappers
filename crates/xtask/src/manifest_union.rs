@@ -9,24 +9,27 @@ use serde::Deserialize;
 use thiserror::Error;
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
-use crate::claude_snapshot::SnapshotV1;
+use crate::manifest_snapshot_schema::SnapshotV1;
 
 mod merge;
 mod schema;
 use merge::build_union_commands;
+pub(crate) use merge::RawHelpLayout;
 use schema::{SnapshotUnionV2, UnionCommandSnapshotV2, UnionInputV2};
 
 #[derive(Debug, Parser)]
 pub struct Args {
-    /// Root `cli_manifests/claude_code` directory.
-    #[arg(long, default_value = "cli_manifests/claude_code")]
-    pub root: PathBuf,
+    /// Manifest root directory (e.g. `cli_manifests/codex`).
+    ///
+    /// Required for `manifest-union`; the per-agent back-compat aliases supply their own default.
+    #[arg(long)]
+    pub root: Option<PathBuf>,
 
     /// Path to `RULES.json` (default: <root>/RULES.json).
     #[arg(long)]
     pub rules: Option<PathBuf>,
 
-    /// Upstream Claude Code semantic version (e.g., 2.1.29).
+    /// Upstream agent semantic version (e.g., 0.12.0).
     #[arg(long)]
     pub version: String,
 }
@@ -39,6 +42,8 @@ pub enum Error {
     Json(#[from] serde_json::Error),
     #[error("invalid rules file: {0}")]
     Rules(String),
+    #[error("--root is required (no manifest root default is available for this subcommand)")]
+    MissingRoot,
     #[error("missing required snapshot for target {target_triple}: {path}")]
     MissingRequiredSnapshot {
         target_triple: String,
@@ -92,6 +97,13 @@ struct RulesUnionNormalization {
 struct RulesUnion {
     required_target: String,
     expected_targets: Vec<String>,
+    /// Upstream tool identity every per-target snapshot must declare (e.g. `codex-cli`).
+    ///
+    /// This is what makes the engine agent-agnostic: the tool name is manifest data, not code.
+    tool_name: String,
+    /// Layout used for `raw_help/<version>/<target>/**` references recorded in conflict evidence.
+    #[serde(default)]
+    raw_help_layout: RawHelpLayout,
     #[serde(default)]
     require_same_tool: bool,
     #[serde(default)]
@@ -111,7 +123,20 @@ struct RulesSorting {
 }
 
 pub fn run(args: Args) -> Result<(), Error> {
-    let root = fs::canonicalize(&args.root).unwrap_or(args.root.clone());
+    run_with_default_root(args, None)
+}
+
+/// Run the union engine, falling back to `default_root` when `--root` was omitted.
+///
+/// The neutral `manifest-union` subcommand passes `None` (root is mandatory); the per-agent
+/// back-compat aliases pass their historical default so existing callers keep working verbatim.
+pub fn run_with_default_root(args: Args, default_root: Option<&str>) -> Result<(), Error> {
+    let requested_root = args
+        .root
+        .clone()
+        .or_else(|| default_root.map(PathBuf::from))
+        .ok_or(Error::MissingRoot)?;
+    let root = fs::canonicalize(&requested_root).unwrap_or(requested_root);
     let rules_path = args
         .rules
         .clone()
@@ -139,10 +164,10 @@ pub fn run(args: Args) -> Result<(), Error> {
 
         let snapshot: SnapshotV1 = serde_json::from_slice(&fs::read(&snapshot_path)?)?;
 
-        if rules.union.require_same_tool && snapshot.tool != "claude-code-cli" {
+        if rules.union.require_same_tool && snapshot.tool != rules.union.tool_name {
             return Err(Error::SnapshotToolMismatch {
                 path: snapshot_path,
-                expected: "claude-code-cli".to_string(),
+                expected: rules.union.tool_name.clone(),
                 got: snapshot.tool,
             });
         }
@@ -208,6 +233,7 @@ pub fn run(args: Args) -> Result<(), Error> {
         &rules.union.required_target,
         &args.version,
         &raw_help_root,
+        rules.union.raw_help_layout,
         &present_targets,
         &snapshots_by_target,
     );
@@ -215,7 +241,7 @@ pub fn run(args: Args) -> Result<(), Error> {
 
     let union = SnapshotUnionV2 {
         snapshot_schema_version: 2,
-        tool: "claude-code-cli".to_string(),
+        tool: rules.union.tool_name,
         mode: "union".to_string(),
         collected_at,
         expected_targets,

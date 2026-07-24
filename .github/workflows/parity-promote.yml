@@ -1,0 +1,316 @@
+name: Parity promote
+
+# One reusable, agent-agnostic promotion lane: advance `latest_validated` and per-target pointers
+# for a version whose complete union is already committed.
+#
+# Promotion is deliberately maintainer-gated. Nothing dispatches this workflow automatically; the
+# acquisition lane stops at `status: reported` and a maintainer decides when a version is promoted.
+#
+# Per-agent behavior — validation commands, per-target runners, download URLs, archive shape — is
+# read from `cli_manifests/<agent>/RULES.json` through `xtask manifest-acquisition-plan`. The
+# validation matrix is intersected with the committed union's `inputs[]`, so only targets that
+# actually produced a snapshot are validated and promoted.
+
+on:
+  workflow_call:
+    inputs:
+      agent_id:
+        description: "Registry agent id (e.g. codex)"
+        required: true
+        type: string
+      version:
+        description: "Bare semver to promote (e.g. 0.145.0)"
+        required: true
+        type: string
+      dry_run:
+        description: "Validate and stage the promotion without opening a PR"
+        required: false
+        default: true
+        type: boolean
+  workflow_dispatch:
+    inputs:
+      agent_id:
+        description: "Registry agent id (e.g. codex)"
+        required: true
+        type: string
+      version:
+        description: "Bare semver to promote (e.g. 0.145.0)"
+        required: true
+        type: string
+      dry_run:
+        description: "Validate and stage the promotion without opening a PR"
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: parity-promote-${{ inputs.agent_id }}-${{ inputs.version }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  plan:
+    name: "Plan validation matrix (${{ inputs.agent_id }} ${{ inputs.version }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      validation_matrix: ${{ steps.matrix.outputs.validation_matrix }}
+      manifest_root: ${{ steps.matrix.outputs.manifest_root }}
+      required_target: ${{ steps.matrix.outputs.required_target }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: staging
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Resolve the promotion plan from committed union inputs
+        id: matrix
+        shell: bash
+        env:
+          AGENT_ID: ${{ inputs.agent_id }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p _ci_tmp
+          cargo run -p xtask -- manifest-acquisition-plan \
+            --agent "$AGENT_ID" \
+            --version "$VERSION" \
+            --emit-json _ci_tmp/acquisition-plan.json
+
+          ROOT="$(jq -r '.manifest_root' _ci_tmp/acquisition-plan.json)"
+          REQUIRED_TARGET="$(jq -r '.required_target' _ci_tmp/acquisition-plan.json)"
+          UNION="${ROOT}/snapshots/${VERSION}/union.json"
+
+          test -f "$UNION"
+          test -f "${ROOT}/artifacts.lock.json"
+
+          # Only promote targets the committed union actually contains: promoting a pointer for a
+          # target that never produced a snapshot would publish a support claim with no evidence.
+          jq -c \
+            --slurpfile union "$UNION" \
+            '{include: [ .include[] | select(.target_triple as $t | ($union[0].inputs | map(.target_triple) | index($t)) != null) ]}' \
+            _ci_tmp/acquisition-plan.json > _ci_tmp/validation-matrix.json
+
+          jq -e '.include | length >= 1' _ci_tmp/validation-matrix.json > /dev/null
+          jq -e --arg required "$REQUIRED_TARGET" \
+            '(.include | map(.target_triple) | index($required)) != null' \
+            _ci_tmp/validation-matrix.json > /dev/null
+
+          {
+            echo "validation_matrix=$(cat _ci_tmp/validation-matrix.json)"
+            echo "manifest_root=${ROOT}"
+            echo "required_target=${REQUIRED_TARGET}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload the promotion plan
+        uses: actions/upload-artifact@v6
+        with:
+          name: "parity-promote-plan-${{ inputs.agent_id }}-${{ inputs.version }}"
+          if-no-files-found: error
+          retention-days: 1
+          path: _ci_tmp/acquisition-plan.json
+
+  validate-target:
+    name: "Validate (${{ matrix.target_triple }})"
+    needs: plan
+    runs-on: ${{ matrix.runs_on }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.validation_matrix) }}
+    steps:
+      - name: Enable Git long paths on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v5
+        with:
+          ref: staging
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Download the promotion plan
+        uses: actions/download-artifact@v7
+        with:
+          name: "parity-promote-plan-${{ inputs.agent_id }}-${{ inputs.version }}"
+          path: _ci_tmp
+
+      - name: Acquire the pinned binary for this target
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          ROOT: ${{ needs.plan.outputs.manifest_root }}
+          TARGET: ${{ matrix.target_triple }}
+          ASSET: ${{ matrix.asset_name }}
+          URL: ${{ matrix.download_url }}
+          BIN: ${{ matrix.binary_path }}
+          ARCHIVE: ${{ matrix.archive }}
+          ARCHIVE_MEMBER: ${{ matrix.archive_member }}
+        run: |
+          set -euo pipefail
+
+          LOCK="${ROOT}/artifacts.lock.json"
+          VERSION_KEY="$(jq -r '.lockfile_version_key' _ci_tmp/acquisition-plan.json)"
+          SELECT='.artifacts[] | select(.[$key]==$v and .target_triple==$t and .asset_name==$a)'
+          SHA="$(jq -r --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" "${SELECT} | .sha256" "$LOCK")"
+          SIZE="$(jq -r --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" "${SELECT} | .size_bytes" "$LOCK")"
+          test -n "$SHA" && test "$SHA" != "null"
+          test -n "$SIZE" && test "$SIZE" != "null"
+
+          curl -fsSL -o _download.bin "$URL"
+          python -c 'import hashlib, sys; p, exp_sha, exp_size = sys.argv[1], sys.argv[2], int(sys.argv[3]); b = open(p, "rb").read(); got_sha = hashlib.sha256(b).hexdigest(); assert got_sha == exp_sha, f"sha256 mismatch: expected={exp_sha} got={got_sha}"; assert len(b) == exp_size, f"size mismatch: expected={exp_size} got={len(b)}"; print(f"ok: {p} sha256={got_sha} size_bytes={len(b)}")' _download.bin "$SHA" "$SIZE"
+
+          rm -rf _extract
+          mkdir -p _extract
+          case "$ARCHIVE" in
+            none)
+              cp _download.bin "$BIN"
+              chmod +x "$BIN" || true
+              ;;
+            tar_gz)
+              if [ -n "${ARCHIVE_MEMBER:-}" ]; then
+                MEMBER="$ARCHIVE_MEMBER"
+              else
+                MEMBER="$(tar -tzf _download.bin | awk 'NF && substr($0,length($0),1) != "/" {print; exit}')"
+              fi
+              test -n "$MEMBER"
+              tar -xzf _download.bin -C _extract "$MEMBER"
+              install -m 0755 "_extract/${MEMBER}" "$BIN"
+              ;;
+            npm_tgz)
+              test -n "${ARCHIVE_MEMBER:-}"
+              tar -xzf _download.bin -C _extract "$ARCHIVE_MEMBER"
+              install -m 0755 "_extract/${ARCHIVE_MEMBER}" "$BIN"
+              ;;
+            *)
+              echo "unsupported archive kind: ${ARCHIVE}" >&2
+              exit 1
+              ;;
+          esac
+
+          "$BIN" --version
+
+      - name: Run this agent's declared validation commands
+        shell: bash
+        env:
+          VALIDATION_ENV: ${{ toJSON(matrix.validation_env) }}
+        run: |
+          set -euo pipefail
+          PLAN=_ci_tmp/acquisition-plan.json
+
+          # `{scratch_dir}` is the one placeholder the planner cannot resolve: it names a directory
+          # that only exists inside this job.
+          SCRATCH_DIR="$(mktemp -d)"
+          while read -r pair; do
+            NAME="$(jq -r '.name' <<<"$pair")"
+            VALUE="$(jq -r '.value' <<<"$pair")"
+            VALUE="${VALUE//\{scratch_dir\}/$SCRATCH_DIR}"
+            export "${NAME}=${VALUE}"
+            echo "validation env: ${NAME}=${VALUE}"
+          done < <(jq -c '.[]' <<<"$VALIDATION_ENV")
+
+          while IFS= read -r command; do
+            [ -n "$command" ] || continue
+            echo "::group::${command}"
+            eval "$command"
+            echo "::endgroup::"
+          done < <(jq -r '.validation_commands[]' "$PLAN")
+
+  promote:
+    name: "Promote (${{ inputs.agent_id }} ${{ inputs.version }})"
+    needs: [plan, validate-target]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: staging
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Advance pointers and version metadata
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          ROOT: ${{ needs.plan.outputs.manifest_root }}
+          REQUIRED_TARGET: ${{ needs.plan.outputs.required_target }}
+        run: |
+          set -euo pipefail
+          UNION="${ROOT}/snapshots/${VERSION}/union.json"
+
+          printf '%s\n' "$VERSION" > "${ROOT}/latest_validated.txt"
+          printf '%s\n' "$VERSION" > "${ROOT}/pointers/latest_validated/${REQUIRED_TARGET}.txt"
+          cp "$UNION" "${ROOT}/current.json"
+
+          VALIDATION_ARGS=()
+          while IFS= read -r target; do
+            [ -n "$target" ] || continue
+            VALIDATION_ARGS+=(--passed-target "$target")
+          done < <(jq -r '.inputs[].target_triple' "$UNION")
+
+          cargo run -p xtask -- manifest-version-metadata \
+            --root "$ROOT" \
+            --version "$VERSION" \
+            --status validated \
+            "${VALIDATION_ARGS[@]}"
+
+          while IFS= read -r target; do
+            [ -n "$target" ] || continue
+            printf '%s\n' "$VERSION" > "${ROOT}/pointers/latest_validated/${target}.txt"
+          done < <(jq -r '.validation.passed_targets[]?' "${ROOT}/versions/${VERSION}.json")
+
+          while IFS= read -r target; do
+            [ -n "$target" ] || continue
+            printf '%s\n' "$VERSION" > "${ROOT}/pointers/latest_supported/${target}.txt"
+          done < <(jq -r '.coverage.supported_targets[]?' "${ROOT}/versions/${VERSION}.json")
+
+      - name: Refresh support publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run -p xtask -- support-matrix
+
+      - name: Validate the promoted artifacts (hard gate)
+        shell: bash
+        env:
+          ROOT: ${{ needs.plan.outputs.manifest_root }}
+        run: |
+          set -euo pipefail
+          cargo run -p xtask -- manifest-validate --root "$ROOT"
+
+      - name: Render the promotion summary
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          ROOT: ${{ needs.plan.outputs.manifest_root }}
+          AGENT_ID: ${{ inputs.agent_id }}
+          REQUIRED_TARGET: ${{ needs.plan.outputs.required_target }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Parity promotion — \`${AGENT_ID}\` ${VERSION}"
+            echo
+            echo "- required target: \`${REQUIRED_TARGET}\`"
+            echo "- promoted targets: \`$(jq -r '(.validation.passed_targets // []) | join(", ")' "${ROOT}/versions/${VERSION}.json")\`"
+            echo "- union complete: \`$(jq -r '.complete' "${ROOT}/snapshots/${VERSION}/union.json")\`"
+            echo "- dry run: \`${DRY_RUN}\`"
+          } > _promotion_summary.md
+          cat _promotion_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open the promotion PR
+        if: ${{ !inputs.dry_run }}
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.AUTOMATION_TOKEN || github.token }}
+          base: staging
+          commit-message: "chore(${{ inputs.agent_id }}): promote ${{ inputs.version }}"
+          title: "chore(${{ inputs.agent_id }}): promote ${{ inputs.version }}"
+          body-path: _promotion_summary.md
+          branch: "automation/${{ inputs.agent_id }}-promote-${{ inputs.version }}"
+          delete-branch: true

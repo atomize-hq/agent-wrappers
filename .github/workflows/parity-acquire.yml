@@ -1,0 +1,484 @@
+name: Parity acquire
+
+# One reusable, agent-agnostic multi-target acquisition lane.
+#
+# Everything agent-specific — release source, per-target runners, download URLs, archive shape,
+# snapshot command, engine commands — comes from `cli_manifests/<agent>/RULES.json` via
+# `xtask manifest-acquisition-plan`. There is intentionally no per-agent branching in this file:
+# adding an agent means adding an `acquisition` block, not a workflow.
+#
+# Release detection and version selection are owned by `agent-maintenance-release-watch.yml`
+# (via `xtask maintenance-watch`). This workflow only acquires a version it is handed.
+
+on:
+  workflow_call:
+    inputs:
+      agent_id:
+        description: "Registry agent id (e.g. codex)"
+        required: true
+        type: string
+      target_version:
+        description: "Bare upstream semver to acquire (e.g. 0.145.0)"
+        required: true
+        type: string
+      ref:
+        description: "Branch to check out, and to commit acquired artifacts to when `commit` is true"
+        required: false
+        default: staging
+        type: string
+      commit:
+        description: "Commit the acquired artifacts back onto `ref`"
+        required: false
+        default: false
+        type: boolean
+  workflow_dispatch:
+    inputs:
+      agent_id:
+        description: "Registry agent id (e.g. codex)"
+        required: true
+        type: string
+      target_version:
+        description: "Bare upstream semver to acquire (e.g. 0.145.0)"
+        required: true
+        type: string
+      ref:
+        description: "Branch to check out, and to commit acquired artifacts to when `commit` is true"
+        required: false
+        default: staging
+        type: string
+      commit:
+        description: "Commit the acquired artifacts back onto `ref`"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: parity-acquire-${{ inputs.agent_id }}-${{ inputs.target_version }}-${{ inputs.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  plan:
+    name: "Plan + pin (${{ inputs.agent_id }} ${{ inputs.target_version }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      snapshot_matrix: ${{ steps.plan.outputs.snapshot_matrix }}
+      manifest_root: ${{ steps.plan.outputs.manifest_root }}
+      required_target: ${{ steps.plan.outputs.required_target }}
+      source_date_epoch: ${{ steps.metadata.outputs.source_date_epoch }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Resolve acquisition plan from RULES.json
+        id: plan
+        shell: bash
+        env:
+          AGENT_ID: ${{ inputs.agent_id }}
+          VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          mkdir -p _ci_tmp
+          cargo run -p xtask -- manifest-acquisition-plan \
+            --agent "$AGENT_ID" \
+            --version "$VERSION" \
+            --emit-json _ci_tmp/acquisition-plan.json
+
+          jq -c '{include: .include}' _ci_tmp/acquisition-plan.json > _ci_tmp/snapshot-matrix.json
+          jq -e '.include | length >= 1' _ci_tmp/snapshot-matrix.json > /dev/null
+
+          {
+            echo "snapshot_matrix=$(cat _ci_tmp/snapshot-matrix.json)"
+            echo "manifest_root=$(jq -r '.manifest_root' _ci_tmp/acquisition-plan.json)"
+            echo "required_target=$(jq -r '.required_target' _ci_tmp/acquisition-plan.json)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Fetch upstream release metadata
+        id: metadata
+        shell: bash
+        env:
+          VERSION: ${{ inputs.target_version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PLAN=_ci_tmp/acquisition-plan.json
+          SOURCE_KIND="$(jq -r '.source_kind' "$PLAN")"
+          METADATA_URL="$(jq -r '.release_metadata_url' "$PLAN")"
+
+          # SOURCE_DATE_EPOCH is derived from the upstream publish time so every regenerated
+          # artifact is byte-reproducible from committed inputs alone.
+          case "$SOURCE_KIND" in
+            github_releases)
+              curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" "$METADATA_URL" > _ci_tmp/release.json
+              test "$(jq -r '.draft' _ci_tmp/release.json)" = "false"
+              test "$(jq -r '.prerelease' _ci_tmp/release.json)" = "false"
+              PUBLISHED_AT="$(jq -r '.published_at' _ci_tmp/release.json)"
+              ;;
+            npm)
+              curl -fsSL "$METADATA_URL" > _ci_tmp/packument.json
+              PUBLISHED_AT="$(jq -r --arg v "$VERSION" '.time[$v] // empty' _ci_tmp/packument.json)"
+              ;;
+            *)
+              echo "unsupported acquisition source_kind: ${SOURCE_KIND}" >&2
+              exit 1
+              ;;
+          esac
+
+          test -n "$PUBLISHED_AT" && test "$PUBLISHED_AT" != "null"
+          echo "source_date_epoch=$(date -d "$PUBLISHED_AT" +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Download every target asset and refresh artifacts.lock.json
+        shell: bash
+        env:
+          VERSION: ${{ inputs.target_version }}
+          ROOT: ${{ steps.plan.outputs.manifest_root }}
+        run: |
+          set -euo pipefail
+          PLAN=_ci_tmp/acquisition-plan.json
+
+          # Each agent's committed lockfile predates any shared schema and uses its own row version
+          # key. The descriptor names that key, so only `.artifacts` is rewritten and every
+          # lockfile keeps the exact top-level shape it already has.
+          VERSION_KEY="$(jq -r '.lockfile_version_key' "$PLAN")"
+
+          mkdir -p _download
+          while read -r row; do
+            TARGET="$(jq -r '.target_triple' <<<"$row")"
+            ASSET="$(jq -r '.asset_name' <<<"$row")"
+            URL="$(jq -r '.download_url' <<<"$row")"
+            PLATFORM_PACKAGE="$(jq -r '.platform_package // empty' <<<"$row")"
+
+            OUT="_download/${TARGET}-${ASSET}"
+            curl -fsSL -o "$OUT" "$URL"
+            SIZE_BYTES="$(wc -c < "$OUT" | tr -d ' ')"
+            SHA256="$(sha256sum "$OUT" | awk '{print $1}')"
+
+            jq -n \
+              --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$TARGET" --arg asset "$ASSET" \
+              --arg url "$URL" --arg sha "$SHA256" --argjson size "$SIZE_BYTES" \
+              --arg pkg "$PLATFORM_PACKAGE" \
+              '
+                { ($key): $v, target_triple: $t }
+                + (if $pkg == "" then {} else {package_name: $pkg, package_version: $v} end)
+                + { asset_name: $asset, download_url: $url, sha256: $sha, size_bytes: $size }
+              ' \
+              > "_download/${TARGET}.artifact.json"
+          done < <(jq -c '.include[]' "$PLAN")
+
+          jq -s '.' _download/*.artifact.json > _ci_tmp/artifacts.json
+
+          jq \
+            --arg key "$VERSION_KEY" \
+            --arg v "$VERSION" \
+            --slurpfile new _ci_tmp/artifacts.json \
+            '
+              .artifacts = (
+                  ( .artifacts // [] )
+                  | map(select(.[$key] != $v))
+                  + $new[0]
+                  | unique_by([.[$key], .target_triple])
+                  | sort_by([(.[$key]|split(".")|map(tonumber)), .target_triple])
+                )
+            ' \
+            "${ROOT}/artifacts.lock.json" > _ci_tmp/artifacts.lock.json
+          mv _ci_tmp/artifacts.lock.json "${ROOT}/artifacts.lock.json"
+
+      - name: Upload plan + pins + downloads
+        uses: actions/upload-artifact@v6
+        with:
+          name: "parity-acquire-pins-${{ inputs.agent_id }}-${{ inputs.target_version }}"
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            _ci_tmp/acquisition-plan.json
+            ${{ steps.plan.outputs.manifest_root }}/artifacts.lock.json
+            _download/
+
+  snapshot:
+    name: "Snapshot (${{ matrix.target_triple }})"
+    needs: plan
+    runs-on: ${{ matrix.runs_on }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.snapshot_matrix) }}
+    steps:
+      - name: Enable Git long paths on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Download plan + pins
+        uses: actions/download-artifact@v7
+        with:
+          name: "parity-acquire-pins-${{ inputs.agent_id }}-${{ inputs.target_version }}"
+          path: .
+
+      - name: Install the pinned binary for this target
+        shell: bash
+        env:
+          VERSION: ${{ inputs.target_version }}
+          ROOT: ${{ needs.plan.outputs.manifest_root }}
+          TARGET: ${{ matrix.target_triple }}
+          ASSET: ${{ matrix.asset_name }}
+          BIN: ${{ matrix.binary_path }}
+          ARCHIVE: ${{ matrix.archive }}
+          ARCHIVE_MEMBER: ${{ matrix.archive_member }}
+        run: |
+          set -euo pipefail
+
+          LOCK="${ROOT}/artifacts.lock.json"
+          VERSION_KEY="$(jq -r '.lockfile_version_key' _ci_tmp/acquisition-plan.json)"
+          SELECT='.artifacts[] | select(.[$key]==$v and .target_triple==$t and .asset_name==$a)'
+          SHA="$(jq -r --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" "${SELECT} | .sha256" "$LOCK")"
+          SIZE="$(jq -r --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" "${SELECT} | .size_bytes" "$LOCK")"
+          test -n "$SHA" && test "$SHA" != "null"
+          test -n "$SIZE" && test "$SIZE" != "null"
+
+          FILE="_download/${TARGET}-${ASSET}"
+          test -f "$FILE"
+
+          # Re-verify the pin on the target runner: the pin is the integrity boundary between the
+          # download job and every consumer of the resulting snapshot.
+          python -c 'import hashlib, sys; p, exp_sha, exp_size = sys.argv[1], sys.argv[2], int(sys.argv[3]); b = open(p, "rb").read(); got_sha = hashlib.sha256(b).hexdigest(); assert got_sha == exp_sha, f"sha256 mismatch: expected={exp_sha} got={got_sha}"; assert len(b) == exp_size, f"size mismatch: expected={exp_size} got={len(b)}"; print(f"ok: {p} sha256={got_sha} size_bytes={len(b)}")' "$FILE" "$SHA" "$SIZE"
+
+          rm -rf _extract
+          mkdir -p _extract
+          case "$ARCHIVE" in
+            none)
+              cp "$FILE" "$BIN"
+              chmod +x "$BIN" || true
+              ;;
+            tar_gz)
+              if [ -n "${ARCHIVE_MEMBER:-}" ]; then
+                MEMBER="$ARCHIVE_MEMBER"
+              else
+                MEMBER="$(tar -tzf "$FILE" | awk 'NF && substr($0,length($0),1) != "/" {print; exit}')"
+              fi
+              test -n "$MEMBER"
+              tar -xzf "$FILE" -C _extract "$MEMBER"
+              install -m 0755 "_extract/${MEMBER}" "$BIN"
+              ;;
+            npm_tgz)
+              test -n "${ARCHIVE_MEMBER:-}"
+              tar -xzf "$FILE" -C _extract "$ARCHIVE_MEMBER"
+              install -m 0755 "_extract/${ARCHIVE_MEMBER}" "$BIN"
+              ;;
+            *)
+              echo "unsupported archive kind: ${ARCHIVE}" >&2
+              exit 1
+              ;;
+          esac
+
+          "$BIN" --version
+
+      - name: Generate the per-target snapshot
+        shell: bash
+        env:
+          VERSION: ${{ inputs.target_version }}
+          ROOT: ${{ needs.plan.outputs.manifest_root }}
+          TARGET: ${{ matrix.target_triple }}
+          BIN: ${{ matrix.binary_path }}
+          SOURCE_DATE_EPOCH: ${{ needs.plan.outputs.source_date_epoch }}
+        run: |
+          set -euo pipefail
+          PLAN=_ci_tmp/acquisition-plan.json
+
+          SNAPSHOT_COMMAND="$(jq -r '.snapshot.command' "$PLAN")"
+          BINARY_ARG="$(jq -r '.snapshot.binary_arg' "$PLAN")"
+          mapfile -t EXTRA_ARGS < <(jq -r '.snapshot.extra_args[]?' "$PLAN")
+
+          ARGS=(
+            "$SNAPSHOT_COMMAND"
+            "$BINARY_ARG" "$BIN"
+            --out-file "${ROOT}/snapshots/${VERSION}/${TARGET}.json"
+            --capture-raw-help
+            --raw-help-target "$TARGET"
+          )
+          if [ -f "${ROOT}/supplement/commands.json" ]; then
+            ARGS+=(--supplement "${ROOT}/supplement/commands.json")
+          fi
+          if [ ${#EXTRA_ARGS[@]} -gt 0 ]; then
+            ARGS+=("${EXTRA_ARGS[@]}")
+          fi
+
+          cargo run -p xtask -- "${ARGS[@]}"
+
+      - name: Upload the per-target snapshot
+        uses: actions/upload-artifact@v6
+        with:
+          name: "parity-acquire-snapshot-${{ inputs.agent_id }}-${{ inputs.target_version }}-${{ matrix.target_triple }}"
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            ${{ needs.plan.outputs.manifest_root }}/snapshots/${{ inputs.target_version }}/${{ matrix.target_triple }}.json
+
+      - name: Upload the raw help capture (never committed)
+        uses: actions/upload-artifact@v6
+        with:
+          name: "parity-acquire-raw-help-${{ inputs.agent_id }}-${{ inputs.target_version }}-${{ matrix.target_triple }}"
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            ${{ needs.plan.outputs.manifest_root }}/raw_help/${{ inputs.target_version }}/${{ matrix.target_triple }}/
+
+  union:
+    name: "Union → report → validate (${{ inputs.agent_id }})"
+    needs: [plan, snapshot]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Download plan + pins
+        uses: actions/download-artifact@v7
+        with:
+          name: "parity-acquire-pins-${{ inputs.agent_id }}-${{ inputs.target_version }}"
+          path: .
+
+      - name: Download every per-target snapshot from this run
+        uses: actions/download-artifact@v7
+        with:
+          pattern: "parity-acquire-snapshot-${{ inputs.agent_id }}-${{ inputs.target_version }}-*"
+          path: _snapshots
+          merge-multiple: true
+
+      - name: Materialize snapshots and assert the required target is present
+        shell: bash
+        env:
+          VERSION: ${{ inputs.target_version }}
+          ROOT: ${{ needs.plan.outputs.manifest_root }}
+          REQUIRED_TARGET: ${{ needs.plan.outputs.required_target }}
+        run: |
+          set -euo pipefail
+          PLAN=_ci_tmp/acquisition-plan.json
+          DEST="${ROOT}/snapshots/${VERSION}"
+          mkdir -p "$DEST"
+
+          while read -r target; do
+            FOUND="$(find _snapshots -type f -name "${target}.json" -print -quit || true)"
+            if [ -n "$FOUND" ]; then
+              cp "$FOUND" "${DEST}/${target}.json"
+            fi
+          done < <(jq -r '.include[].target_triple' "$PLAN")
+
+          if [ ! -f "${DEST}/${REQUIRED_TARGET}.json" ]; then
+            echo "::error title=Missing required snapshot::${REQUIRED_TARGET} produced no snapshot; the union cannot be built." >&2
+            exit 1
+          fi
+
+          # Surface partial acquisition loudly: the union will still be written with
+          # complete=false, but a maintainer should not have to read job logs to notice.
+          MISSING=0
+          while read -r target; do
+            if [ ! -f "${DEST}/${target}.json" ]; then
+              echo "::warning title=Missing target snapshot::${target} produced no snapshot; union will be incomplete."
+              MISSING=$((MISSING + 1))
+            fi
+          done < <(jq -r '.include[].target_triple' "$PLAN")
+          echo "missing target snapshots: ${MISSING}"
+
+      - name: Union → wrapper coverage → report → version metadata → validate
+        shell: bash
+        env:
+          VERSION: ${{ inputs.target_version }}
+          ROOT: ${{ needs.plan.outputs.manifest_root }}
+          SOURCE_DATE_EPOCH: ${{ needs.plan.outputs.source_date_epoch }}
+        run: |
+          set -euo pipefail
+          PLAN=_ci_tmp/acquisition-plan.json
+
+          UNION_COMMAND="$(jq -r '.union_command' "$PLAN")"
+          cargo run -p xtask -- "$UNION_COMMAND" --root "$ROOT" --version "$VERSION"
+
+          WRAPPER_COVERAGE_COMMAND="$(jq -r '.wrapper_coverage_command // empty' "$PLAN")"
+          if [ -n "$WRAPPER_COVERAGE_COMMAND" ]; then
+            cargo run -p xtask -- "$WRAPPER_COVERAGE_COMMAND" --out "${ROOT}/wrapper_coverage.json"
+          else
+            echo "no wrapper_coverage_command declared; keeping the committed wrapper_coverage.json"
+          fi
+
+          cargo run -p xtask -- manifest-report --root "$ROOT" --version "$VERSION"
+          cargo run -p xtask -- manifest-version-metadata --root "$ROOT" --version "$VERSION" --status reported
+          cargo run -p xtask -- support-matrix
+          cargo run -p xtask -- manifest-validate --root "$ROOT"
+
+      - name: Summarize the acquired union
+        shell: bash
+        env:
+          VERSION: ${{ inputs.target_version }}
+          ROOT: ${{ needs.plan.outputs.manifest_root }}
+          AGENT_ID: ${{ inputs.agent_id }}
+        run: |
+          set -euo pipefail
+          UNION="${ROOT}/snapshots/${VERSION}/union.json"
+          {
+            echo "## Parity acquire — \`${AGENT_ID}\` ${VERSION}"
+            echo
+            echo "- complete: \`$(jq -r '.complete' "$UNION")\`"
+            echo "- inputs: \`$(jq -r '[.inputs[].target_triple] | join(", ")' "$UNION")\`"
+            echo "- missing: \`$(jq -r '(.missing_targets // []) | join(", ") | if . == "" then "none" else . end' "$UNION")\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove CI-only downloads before committing
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf _download _extract _snapshots _ci_tmp
+          rm -rf "${{ needs.plan.outputs.manifest_root }}/raw_help"
+
+      - name: Commit the acquired artifacts onto the packet branch
+        if: ${{ inputs.commit }}
+        shell: bash
+        env:
+          VERSION: ${{ inputs.target_version }}
+          ROOT: ${{ needs.plan.outputs.manifest_root }}
+          AGENT_ID: ${{ inputs.agent_id }}
+          BRANCH: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            "${ROOT}/snapshots/${VERSION}" \
+            "${ROOT}/reports/${VERSION}" \
+            "${ROOT}/versions/${VERSION}.json" \
+            "${ROOT}/wrapper_coverage.json" \
+            "${ROOT}/artifacts.lock.json" \
+            docs/support
+
+          if git diff --cached --quiet; then
+            echo "no acquisition changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore(${AGENT_ID}): acquire parity artifacts for ${VERSION}"
+          git push origin "HEAD:${BRANCH}"
+
+      - name: Upload the committed artifact bundle
+        uses: actions/upload-artifact@v6
+        with:
+          name: "parity-acquire-artifacts-${{ inputs.agent_id }}-${{ inputs.target_version }}"
+          if-no-files-found: error
+          path: |
+            ${{ needs.plan.outputs.manifest_root }}/snapshots/${{ inputs.target_version }}/
+            ${{ needs.plan.outputs.manifest_root }}/reports/${{ inputs.target_version }}/
+            ${{ needs.plan.outputs.manifest_root }}/versions/${{ inputs.target_version }}.json
+            ${{ needs.plan.outputs.manifest_root }}/wrapper_coverage.json
+            ${{ needs.plan.outputs.manifest_root }}/artifacts.lock.json

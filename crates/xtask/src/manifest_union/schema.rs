@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::codex_snapshot::BinarySnapshot;
+use crate::manifest_snapshot_schema::BinarySnapshot;
 
 #[derive(Debug, Serialize)]
 pub(super) struct SnapshotUnionV2 {

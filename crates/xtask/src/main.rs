@@ -3,19 +3,26 @@
 mod agent_api_backend_type_leak_guard;
 mod capability_matrix_audit;
 mod claude_snapshot;
-mod claude_union;
 mod claude_wrapper_coverage;
 mod close_proving_run;
-mod codex_report;
-mod codex_retain;
 mod codex_snapshot;
-mod codex_union;
-mod codex_validate;
-mod codex_version_metadata;
 mod codex_wrapper_coverage;
 mod historical_lifecycle_backfill;
+mod manifest_report;
+mod manifest_retain;
+mod manifest_snapshot_schema;
+mod manifest_union;
+mod manifest_validate;
+mod manifest_version_metadata;
 mod version_bump;
 mod wrapper_coverage_shared;
+
+/// Historical manifest root defaults preserved by the per-agent back-compat command aliases.
+///
+/// The neutral `manifest-*` commands require an explicit `--root`; these constants exist only so
+/// pre-existing callers of `codex-union` / `claude-union` keep their original behavior.
+const CODEX_MANIFEST_ROOT: &str = "cli_manifests/codex";
+const CLAUDE_CODE_MANIFEST_ROOT: &str = "cli_manifests/claude_code";
 
 use xtask::agent_maintenance::{
     closeout as agent_maintenance_closeout, drift as agent_maintenance_drift,
@@ -23,6 +30,7 @@ use xtask::agent_maintenance::{
     refresh as agent_maintenance_refresh, watch as agent_maintenance_watch,
 };
 use xtask::capability_matrix;
+pub use xtask::manifest_acquisition;
 pub use xtask::onboard_agent;
 pub use xtask::prepare_proving_run_closeout;
 pub use xtask::prepare_publication;
@@ -54,22 +62,34 @@ enum Command {
     ClaudeSnapshot(claude_snapshot::Args),
     /// Validate a proving-run closeout artifact and refresh the onboarding packet docs.
     CloseProvingRun(close_proving_run::Args),
-    /// Merge per-target snapshots into a union snapshot under `cli_manifests/codex/`.
-    CodexUnion(codex_union::Args),
-    /// Merge per-target snapshots into a union snapshot under `cli_manifests/claude_code/`.
-    ClaudeUnion(claude_union::Args),
-    /// Generate deterministic coverage reports under `cli_manifests/codex/reports/<version>/`.
-    CodexReport(codex_report::Args),
-    /// Materialize `cli_manifests/codex/versions/<version>.json` deterministically.
-    CodexVersionMetadata(codex_version_metadata::Args),
+    /// Resolve the multi-target acquisition plan for one agent at one upstream version.
+    ManifestAcquisitionPlan(manifest_acquisition::Args),
+    /// Merge per-target snapshots into a union snapshot under any `--root` manifest directory.
+    ManifestUnion(manifest_union::Args),
+    /// Back-compat alias for `manifest-union --root cli_manifests/codex`.
+    CodexUnion(manifest_union::Args),
+    /// Back-compat alias for `manifest-union --root cli_manifests/claude_code`.
+    ClaudeUnion(manifest_union::Args),
+    /// Generate deterministic coverage reports under `<root>/reports/<version>/`.
+    ManifestReport(manifest_report::Args),
+    /// Back-compat alias for `manifest-report --root cli_manifests/codex`.
+    CodexReport(manifest_report::Args),
+    /// Materialize `<root>/versions/<version>.json` deterministically.
+    ManifestVersionMetadata(manifest_version_metadata::Args),
+    /// Back-compat alias for `manifest-version-metadata --root cli_manifests/codex`.
+    CodexVersionMetadata(manifest_version_metadata::Args),
     /// Deterministically prune out-of-window snapshots/reports directories (dry-run by default).
-    CodexRetain(codex_retain::Args),
+    ManifestRetain(manifest_retain::Args),
+    /// Back-compat alias for `manifest-retain --root cli_manifests/codex`.
+    CodexRetain(manifest_retain::Args),
     /// Generate `cli_manifests/codex/wrapper_coverage.json` from wrapper source of truth.
     CodexWrapperCoverage(codex_wrapper_coverage::CliArgs),
     /// Generate `cli_manifests/claude_code/wrapper_coverage.json` from wrapper source of truth.
     ClaudeWrapperCoverage(claude_wrapper_coverage::CliArgs),
-    /// Validate committed Codex parity artifacts under `cli_manifests/codex/`.
-    CodexValidate(codex_validate::Args),
+    /// Validate committed parity artifacts under any `--root` manifest directory.
+    ManifestValidate(manifest_validate::Args),
+    /// Back-compat alias for `manifest-validate --root cli_manifests/codex`.
+    CodexValidate(manifest_validate::Args),
     /// Preview the next control-plane onboarding packet without writing files.
     OnboardAgent(Box<onboard_agent::Args>),
     /// Create a publishable wrapper crate shell for an onboarded agent.
@@ -144,41 +164,87 @@ fn main() {
                 err.exit_code()
             }
         },
-        Command::CodexUnion(args) => match codex_union::run(args) {
+        Command::ManifestAcquisitionPlan(args) => match manifest_acquisition::run(args) {
             Ok(()) => 0,
             Err(err) => {
                 eprintln!("{err}");
                 1
             }
         },
-        Command::ClaudeUnion(args) => match claude_union::run(args) {
+        Command::ManifestUnion(args) => match manifest_union::run(args) {
             Ok(()) => 0,
             Err(err) => {
                 eprintln!("{err}");
                 1
             }
         },
-        Command::CodexReport(args) => match codex_report::run(args) {
+        Command::CodexUnion(args) => {
+            match manifest_union::run_with_default_root(args, Some(CODEX_MANIFEST_ROOT)) {
+                Ok(()) => 0,
+                Err(err) => {
+                    eprintln!("{err}");
+                    1
+                }
+            }
+        }
+        Command::ClaudeUnion(args) => {
+            match manifest_union::run_with_default_root(args, Some(CLAUDE_CODE_MANIFEST_ROOT)) {
+                Ok(()) => 0,
+                Err(err) => {
+                    eprintln!("{err}");
+                    1
+                }
+            }
+        }
+        Command::ManifestReport(args) => match manifest_report::run(args) {
             Ok(()) => 0,
             Err(err) => {
                 eprintln!("{err}");
                 1
             }
         },
-        Command::CodexVersionMetadata(args) => match codex_version_metadata::run(args) {
+        Command::CodexReport(args) => {
+            match manifest_report::run_with_default_root(args, Some(CODEX_MANIFEST_ROOT)) {
+                Ok(()) => 0,
+                Err(err) => {
+                    eprintln!("{err}");
+                    1
+                }
+            }
+        }
+        Command::ManifestVersionMetadata(args) => match manifest_version_metadata::run(args) {
             Ok(()) => 0,
             Err(err) => {
                 eprintln!("{err}");
                 1
             }
         },
-        Command::CodexRetain(args) => match codex_retain::run(args) {
+        Command::CodexVersionMetadata(args) => {
+            match manifest_version_metadata::run_with_default_root(args, Some(CODEX_MANIFEST_ROOT))
+            {
+                Ok(()) => 0,
+                Err(err) => {
+                    eprintln!("{err}");
+                    1
+                }
+            }
+        }
+        Command::ManifestRetain(args) => match manifest_retain::run(args) {
             Ok(()) => 0,
             Err(err) => {
                 eprintln!("{err}");
                 1
             }
         },
+        Command::CodexRetain(args) => {
+            match manifest_retain::run_with_default_root(args, Some(CODEX_MANIFEST_ROOT)) {
+                Ok(()) => 0,
+                Err(err) => {
+                    eprintln!("{err}");
+                    1
+                }
+            }
+        }
         Command::CodexWrapperCoverage(args) => match codex_wrapper_coverage::run(args) {
             Ok(()) => 0,
             Err(err) => {
@@ -193,7 +259,10 @@ fn main() {
                 1
             }
         },
-        Command::CodexValidate(args) => codex_validate::run(args),
+        Command::ManifestValidate(args) => manifest_validate::run(args),
+        Command::CodexValidate(args) => {
+            manifest_validate::run_with_default_root(args, Some(CODEX_MANIFEST_ROOT))
+        }
         Command::OnboardAgent(args) => match onboard_agent::run(*args) {
             Ok(()) => 0,
             Err(err) => {

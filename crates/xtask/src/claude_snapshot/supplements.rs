@@ -1,6 +1,7 @@
 use std::{collections::BTreeMap, fs, path::Path};
 
-use super::{schema::SupplementV1, CommandSnapshot, Error, FlagSnapshot};
+use super::{CommandSnapshot, Error, FlagSnapshot};
+use crate::manifest_snapshot_schema::SupplementV1;
 
 pub(super) fn normalize_command_entries(entries: &mut BTreeMap<Vec<String>, CommandSnapshot>) {
     for cmd in entries.values_mut() {

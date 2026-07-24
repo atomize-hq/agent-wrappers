@@ -111,6 +111,8 @@
     }
   },
   "union": {
+    "tool_name": "claude-code-cli",
+    "raw_help_layout": "hashed_dir",
     "mode": "union",
     "platform_granularity": "target_triple",
     "require_same_tool": true,
@@ -201,6 +203,56 @@
         "normalize_newlines": "lf",
         "trim_trailing_whitespace_per_line": true
       }
+    }
+  },
+  "acquisition": {
+    "acquisition_schema_version": 1,
+    "source_kind": "npm",
+    "npm": {
+      "package": "@anthropic-ai/claude-code"
+    },
+    "snapshot": {
+      "command": "claude-snapshot",
+      "binary_arg": "--claude-binary",
+      "extra_args": [
+        "--help-timeout-ms",
+        "8000"
+      ]
+    },
+    "lockfile_version_key": "claude_code_version",
+    "union_command": "manifest-union",
+    "wrapper_coverage_command": "claude-wrapper-coverage",
+    "targets": {
+      "linux-x64": {
+        "runs_on": "ubuntu-latest",
+        "binary_path": "./claude-{target}",
+        "archive": "npm_tgz",
+        "platform_package": "@anthropic-ai/claude-code-linux-x64",
+        "archive_member": "package/claude"
+      },
+      "darwin-arm64": {
+        "runs_on": "macos-latest",
+        "binary_path": "./claude-{target}",
+        "archive": "npm_tgz",
+        "platform_package": "@anthropic-ai/claude-code-darwin-arm64",
+        "archive_member": "package/claude"
+      },
+      "win32-x64": {
+        "runs_on": "windows-latest",
+        "binary_path": "./claude-{target}.exe",
+        "archive": "npm_tgz",
+        "platform_package": "@anthropic-ai/claude-code-win32-x64",
+        "archive_member": "package/claude.exe"
+      }
+    },
+    "validation": {
+      "env": {
+        "CLAUDE_BINARY": "{binary_path}",
+        "DISABLE_AUTOUPDATER": "1"
+      },
+      "commands": [
+        "cargo test -p unified-agent-api-claude-code"
+      ]
     }
   },
   "comparison": {
