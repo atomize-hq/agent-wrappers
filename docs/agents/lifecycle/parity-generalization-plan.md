@@ -421,3 +421,35 @@ Nothing below was performed by this session.
    `dry_run: false` until the dry run is green and the union has been reviewed.
 7. **Then, and only then, promote.** Promotion advances `latest_validated` and publishes support
    claims; it stays a human decision at every tier.
+
+## 14. Review adjudication (Codex lane, candidate `68f7fb27`)
+
+The Codex lane completed after the Opus lane and returned four findings, none overlapping. Its
+`clippy` and `cargo test` legs could not run — its sandbox is a read-only worktree and both
+failed trying to create `target/`. That verification gap is closed by the lead session's own runs
+(`make preflight` green, 431 tests passing).
+
+| # | Severity | Finding | Verdict |
+| --- | --- | --- | --- |
+| 1 | blocker | `ci.yml`'s claude validation job hardcodes `asset_name: claude` and executes the downloaded blob directly; after the first acquisition through the new lane claude's rows are npm tarballs, so it matches no row and would try to run a `.tgz` | **accepted, fixed** — the job resolves its coordinates from the acquisition descriptor and extracts `archive_member`, like every other consumer |
+| 2 | major | promotion builds its matrix from `union.inputs` and never consults `union.promotion_policy` | **accepted, remedy adjusted** — the proposed hard-fail on `complete != true` would contradict codex's and claude's committed `allow_promote_when_incomplete: true` linux-first policy. The fix is to make the declared policy load-bearing: promotion fails on an incomplete union unless the manifest permits it, and an agent that declares no stance (opencode) does not get one |
+| 3 | major | descriptor fields are unvalidated, so a manifest edit reaches runner execution; `validation.commands` runs through `eval` | **accepted in part** — path safety landed in the previous round (`safe_relative_path`); `runs_on` is now constrained to a plain runner label. The structured-command model is **deferred**: the threat model is committed, reviewed data, and the proportionate control is review gating, so the reviewer's own `CODEOWNERS` observation was adopted instead |
+| 4 | major | the packet-opener gate cannot tell "not enrolled" from "malformed descriptor", so a real regression silently opens a packet PR without the complete union | **accepted, fixed** — the planner now exits `3` for a genuine gate miss and `1` for a real failure; the workflow fails on anything else |
+| — | note | no `CODEOWNERS` protects `cli_manifests/*/RULES.json` | **accepted, fixed** — added, covering the descriptors, the registry, and the four lanes they drive |
+
+### Local end-to-end proof of the acquisition chain
+
+The one thing that genuinely cannot be verified without CI runners is the multi-OS matrix. Every
+other step of the lane was executed for real on this machine's native target
+(`claude_code` / `darwin-arm64` / `2.1.219`):
+
+1. plan resolved from `RULES.json`
+2. tarball downloaded (74,831,594 bytes)
+3. **verified against the registry's published `sha512` `dist.integrity`** — the finding-4 fix
+4. `package/claude` extracted per `archive_member`
+5. executed under the descriptor's `DISABLE_AUTOUPDATER=1` snapshot env → `2.1.219 (Claude Code)`
+6. `claude-snapshot` captured 49 commands
+
+The `opencode` chain was proven the same way end-to-end through the engines
+(`opencode-snapshot` → `manifest-union` → `manifest-report` → `manifest-version-metadata`) against
+the real 1.18.4 binary.
