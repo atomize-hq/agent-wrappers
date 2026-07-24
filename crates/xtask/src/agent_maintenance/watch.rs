@@ -584,39 +584,71 @@ fn percent_encode_query_value(value: &str) -> String {
     encoded
 }
 
-fn fetch_text(url: &str) -> Result<String, Error> {
-    let mut command = Command::new("curl");
-    command.args([
-        "-fsSL",
-        "--retry",
-        "3",
-        "--retry-all-errors",
-        "--retry-max-time",
-        "20",
-        "-H",
-        "User-Agent: unified-agent-api-maintenance-watch/1.0",
-    ]);
+/// Build the curl argument vector for an upstream metadata fetch.
+///
+/// The body is written to `response_path` instead of stdout. curl truncates the
+/// output file at the start of each retry attempt, whereas a retried transfer
+/// captured from stdout appends the retried body to the partial one. That splices
+/// two JSON documents together and corrupts large responses — the
+/// `openai/codex` releases page is ~26 MB, so an interrupted transfer there
+/// yielded an unparseable body rather than a clean failure.
+pub(crate) fn build_curl_args(url: &str, response_path: &Path, token: Option<&str>) -> Vec<String> {
+    let mut args = vec![
+        "-fsSL".to_string(),
+        "--retry".to_string(),
+        "3".to_string(),
+        "--retry-all-errors".to_string(),
+        // Multi-megabyte bodies routinely exceed a 20s window, and the retry timer
+        // starts before the first attempt: too small a budget means a failed large
+        // transfer is never retried at all.
+        "--retry-max-time".to_string(),
+        "120".to_string(),
+        "-H".to_string(),
+        "User-Agent: unified-agent-api-maintenance-watch/1.0".to_string(),
+        "-o".to_string(),
+        response_path.display().to_string(),
+    ];
     if url.starts_with("https://api.github.com/") {
-        if let Ok(token) = env::var("GITHUB_TOKEN") {
-            let token = token.trim();
-            if !token.is_empty() {
-                command.args(["-H", &format!("Authorization: Bearer {token}")]);
-            }
+        if let Some(token) = token.map(str::trim).filter(|token| !token.is_empty()) {
+            args.push("-H".to_string());
+            args.push(format!("Authorization: Bearer {token}"));
         }
     }
-    command.arg(url);
-    let output = command
+    args.push(url.to_string());
+    args
+}
+
+fn temp_response_path() -> PathBuf {
+    env::temp_dir().join(format!(
+        "uaa-maintenance-watch-{}-{}.body",
+        std::process::id(),
+        OffsetDateTime::now_utc().unix_timestamp_nanos()
+    ))
+}
+
+fn fetch_text(url: &str) -> Result<String, Error> {
+    let response_path = temp_response_path();
+    let token = env::var("GITHUB_TOKEN").ok();
+    let args = build_curl_args(url, &response_path, token.as_deref());
+
+    let outcome = Command::new("curl")
+        .args(&args)
         .output()
-        .map_err(|err| Error::Internal(format!("spawn curl for {url}: {err}")))?;
-    if !output.status.success() {
-        return Err(Error::Validation(format!(
-            "curl failed for {url} with exit {}: {}",
-            output.status.code().unwrap_or(1),
-            String::from_utf8_lossy(&output.stderr).trim()
-        )));
-    }
-    String::from_utf8(output.stdout)
-        .map_err(|err| Error::Internal(format!("curl output for {url} was not utf-8: {err}")))
+        .map_err(|err| Error::Internal(format!("spawn curl for {url}: {err}")))
+        .and_then(|output| {
+            if !output.status.success() {
+                return Err(Error::Validation(format!(
+                    "curl failed for {url} with exit {}: {}",
+                    output.status.code().unwrap_or(1),
+                    String::from_utf8_lossy(&output.stderr).trim()
+                )));
+            }
+            fs::read_to_string(&response_path)
+                .map_err(|err| Error::Internal(format!("read curl response body for {url}: {err}")))
+        });
+
+    let _ = fs::remove_file(&response_path);
+    outcome
 }
 
 fn write_queue_json(

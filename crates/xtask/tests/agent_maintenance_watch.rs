@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[path = "support/onboard_agent_harness.rs"]
 mod harness;
@@ -318,6 +321,89 @@ fn agent_filter_scopes_queue_to_single_enrolled_agent() {
     assert!(output.contains("claude_code -> 1.2.5"));
     assert!(!output.contains("codex ->"));
     assert!(!output.contains("opencode ->"));
+}
+
+/// A retried transfer captured from stdout appends the retried body to the partial
+/// one, splicing two JSON documents together. Writing to a file lets curl truncate
+/// on each attempt, so the body is always whole or the fetch fails cleanly.
+#[test]
+fn curl_writes_body_to_file_rather_than_stdout() {
+    let response_path = PathBuf::from("/tmp/uaa-watch-body.json");
+    let args = watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases?per_page=100&page=1",
+        &response_path,
+        None,
+    );
+
+    let output_flag = args
+        .iter()
+        .position(|arg| arg == "-o")
+        .expect("curl must write the body to a file");
+    assert_eq!(args[output_flag + 1], response_path.display().to_string());
+    assert_eq!(
+        args.last().expect("url is the final argument"),
+        "https://api.github.com/repos/openai/codex/releases?per_page=100&page=1"
+    );
+}
+
+/// The retry timer starts before the first attempt, so a budget shorter than a
+/// large transfer means it is never retried at all.
+#[test]
+fn curl_retry_budget_accommodates_multi_megabyte_bodies() {
+    let args = watch::build_curl_args("https://registry.npmjs.org/x", Path::new("/tmp/b"), None);
+    let budget = args
+        .iter()
+        .position(|arg| arg == "--retry-max-time")
+        .expect("retry budget is configured");
+    let seconds: u64 = args[budget + 1].parse().expect("retry budget is numeric");
+    assert!(
+        seconds >= 120,
+        "retry budget {seconds}s is too small for multi-megabyte upstream bodies"
+    );
+}
+
+#[test]
+fn curl_attaches_auth_only_for_github_api() {
+    let path = Path::new("/tmp/b");
+    let joined = |args: Vec<String>| args.join(" ");
+
+    let github = joined(watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases",
+        path,
+        Some("secret-token"),
+    ));
+    assert!(github.contains("Authorization: Bearer secret-token"));
+
+    // The token must never leak to non-GitHub upstreams.
+    let npm = joined(watch::build_curl_args(
+        "https://registry.npmjs.org/%40anthropic-ai%2Fclaude-code",
+        path,
+        Some("secret-token"),
+    ));
+    assert!(!npm.contains("Authorization"));
+    assert!(!npm.contains("secret-token"));
+
+    let gcs = joined(watch::build_curl_args(
+        "https://storage.googleapis.com/storage/v1/b/bucket/o",
+        path,
+        Some("secret-token"),
+    ));
+    assert!(!gcs.contains("secret-token"));
+
+    // A blank token must not produce an empty Authorization header.
+    let blank = joined(watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases",
+        path,
+        Some("   "),
+    ));
+    assert!(!blank.contains("Authorization"));
+
+    let absent = joined(watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases",
+        path,
+        None,
+    ));
+    assert!(!absent.contains("Authorization"));
 }
 
 #[test]
