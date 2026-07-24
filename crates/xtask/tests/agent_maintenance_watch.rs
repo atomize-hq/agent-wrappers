@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[path = "support/onboard_agent_harness.rs"]
 mod harness;
@@ -318,6 +321,175 @@ fn agent_filter_scopes_queue_to_single_enrolled_agent() {
     assert!(output.contains("claude_code -> 1.2.5"));
     assert!(!output.contains("codex ->"));
     assert!(!output.contains("opencode ->"));
+}
+
+/// A retried transfer captured from stdout appends the retried body to the partial
+/// one, splicing two JSON documents together. Writing to a file lets curl truncate
+/// on each attempt, so the body is always whole or the fetch fails cleanly.
+#[test]
+fn curl_writes_body_to_file_rather_than_stdout() {
+    let response_path = PathBuf::from("/tmp/uaa-watch-body.json");
+    let args = watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases?per_page=100&page=1",
+        &response_path,
+        None,
+    );
+
+    let output_flag = args
+        .iter()
+        .position(|arg| arg == "-o")
+        .expect("curl must write the body to a file");
+    // Compare against the raw OsStr, not a lossy String: a lossy expectation would
+    // be computed the same way as the implementation and could never fail.
+    assert_eq!(args[output_flag + 1], response_path.as_os_str());
+    assert_eq!(
+        args.last().expect("url is the final argument"),
+        "https://api.github.com/repos/openai/codex/releases?per_page=100&page=1"
+    );
+}
+
+/// Writing to a file only defeats the retry splice while curl truncates that file
+/// on each attempt. `-C`/`--continue-at` or `-a`/`--append` would restore resume
+/// semantics and reintroduce the corruption, so assert they are absent.
+#[test]
+fn curl_never_enables_resume_or_append_semantics() {
+    let args = watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases",
+        Path::new("/tmp/b"),
+        Some("tok"),
+    );
+    for forbidden in ["-C", "--continue-at", "-a", "--append"] {
+        assert!(
+            !args.iter().any(|arg| arg == forbidden),
+            "`{forbidden}` re-enables append/resume and would splice a retried body onto a partial one"
+        );
+    }
+    assert_eq!(
+        args.iter().filter(|arg| *arg == "-o").count(),
+        1,
+        "exactly one output target"
+    );
+}
+
+fn watcher_temp_bodies() -> usize {
+    fs::read_dir(std::env::temp_dir())
+        .map(|entries| {
+            entries
+                .filter_map(Result::ok)
+                .filter(|entry| {
+                    entry
+                        .file_name()
+                        .to_string_lossy()
+                        .starts_with("uaa-maintenance-watch-")
+                })
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+/// Exercises the real `fetch_text` path — spawn curl, write via `-o`, read the body
+/// back, clean up — over `file://` so it needs no network.
+#[test]
+fn fetch_text_reads_body_from_file_and_removes_it() {
+    let dir = std::env::temp_dir().join(format!("uaa-fetch-text-{}", std::process::id()));
+    fs::create_dir_all(&dir).expect("fixture dir");
+    let fixture = dir.join("body.json");
+    fs::write(&fixture, r#"{"dist-tags":{"stable":"9.9.9"}}"#).expect("write fixture");
+
+    let before = watcher_temp_bodies();
+    let body = watch::fetch_text(&format!("file://{}", fixture.display()))
+        .expect("fetch_text reads a file:// body");
+
+    assert!(body.contains("9.9.9"));
+    assert_eq!(
+        watcher_temp_bodies(),
+        before,
+        "fetch_text must remove its temp body file on success"
+    );
+
+    fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
+fn fetch_text_fails_closed_without_leaking_a_temp_body() {
+    let before = watcher_temp_bodies();
+    let err = watch::fetch_text("file:///nonexistent/uaa-missing-source.json")
+        .expect_err("unreadable source must fail");
+
+    assert!(matches!(err, Error::Validation(_)));
+    assert_eq!(
+        watcher_temp_bodies(),
+        before,
+        "a failed fetch must not leak a temp body file"
+    );
+}
+
+/// The retry timer starts before the first attempt, so a budget shorter than a
+/// large transfer means it is never retried at all.
+#[test]
+fn curl_retry_budget_accommodates_multi_megabyte_bodies() {
+    let args = watch::build_curl_args("https://registry.npmjs.org/x", Path::new("/tmp/b"), None);
+    let budget = args
+        .iter()
+        .position(|arg| arg == "--retry-max-time")
+        .expect("retry budget is configured");
+    let seconds: u64 = args[budget + 1]
+        .to_string_lossy()
+        .parse()
+        .expect("retry budget is numeric");
+    assert!(
+        seconds >= 120,
+        "retry budget {seconds}s is too small for multi-megabyte upstream bodies"
+    );
+}
+
+#[test]
+fn curl_attaches_auth_only_for_github_api() {
+    let path = Path::new("/tmp/b");
+    let joined = |args: Vec<std::ffi::OsString>| {
+        args.iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    let github = joined(watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases",
+        path,
+        Some("secret-token"),
+    ));
+    assert!(github.contains("Authorization: Bearer secret-token"));
+
+    // The token must never leak to non-GitHub upstreams.
+    let npm = joined(watch::build_curl_args(
+        "https://registry.npmjs.org/%40anthropic-ai%2Fclaude-code",
+        path,
+        Some("secret-token"),
+    ));
+    assert!(!npm.contains("Authorization"));
+    assert!(!npm.contains("secret-token"));
+
+    let gcs = joined(watch::build_curl_args(
+        "https://storage.googleapis.com/storage/v1/b/bucket/o",
+        path,
+        Some("secret-token"),
+    ));
+    assert!(!gcs.contains("secret-token"));
+
+    // A blank token must not produce an empty Authorization header.
+    let blank = joined(watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases",
+        path,
+        Some("   "),
+    ));
+    assert!(!blank.contains("Authorization"));
+
+    let absent = joined(watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases",
+        path,
+        None,
+    ));
+    assert!(!absent.contains("Authorization"));
 }
 
 #[test]
