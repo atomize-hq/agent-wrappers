@@ -326,6 +326,7 @@ fn required_arg(value: Option<String>, flag_name: &str) -> Result<String, Error>
 fn release_watch_version_policy(release_watch: &ReleaseWatchMetadata) -> &'static str {
     match release_watch.version_policy {
         ReleaseWatchVersionPolicy::LatestStableMinusOne => "latest_stable_minus_one",
+        ReleaseWatchVersionPolicy::UpstreamStablePointer => "upstream_stable_pointer",
     }
 }
 
@@ -359,6 +360,19 @@ fn release_watch_upstream(release_watch: &ReleaseWatchMetadata) -> String {
                 .map(|marker| format!(" (version_marker: {marker})"))
                 .unwrap_or_default();
             format!("gcs_object_listing:{bucket}/{prefix}{marker}")
+        }
+        ReleaseWatchSourceKind::NpmDistTag => {
+            let package = release_watch
+                .upstream
+                .package
+                .as_deref()
+                .unwrap_or_default();
+            let dist_tag = release_watch
+                .upstream
+                .dist_tag
+                .as_deref()
+                .unwrap_or_default();
+            format!("npm_dist_tag:{package}#{dist_tag}")
         }
     }
 }

@@ -40,6 +40,10 @@ pub struct NormalizedReleaseWatchUpstream {
     pub bucket: Option<String>,
     pub prefix: Option<String>,
     pub version_marker: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub package: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dist_tag: Option<String>,
 }
 
 pub fn validate_release_watch_metadata(
@@ -107,6 +111,18 @@ pub fn normalize_release_watch_metadata(
                 .as_deref()
                 .map(str::trim)
                 .map(str::to_string),
+            package: metadata
+                .upstream
+                .package
+                .as_deref()
+                .map(str::trim)
+                .map(str::to_string),
+            dist_tag: metadata
+                .upstream
+                .dist_tag
+                .as_deref()
+                .map(str::trim)
+                .map(str::to_string),
         },
     })
 }
@@ -162,12 +178,14 @@ impl ReleaseWatchMetadata {
 #[serde(rename_all = "snake_case")]
 pub enum ReleaseWatchVersionPolicy {
     LatestStableMinusOne,
+    UpstreamStablePointer,
 }
 
 impl ReleaseWatchVersionPolicy {
     fn as_str(self) -> &'static str {
         match self {
             Self::LatestStableMinusOne => "latest_stable_minus_one",
+            Self::UpstreamStablePointer => "upstream_stable_pointer",
         }
     }
 }
@@ -204,6 +222,10 @@ pub struct ReleaseWatchUpstream {
     pub prefix: Option<String>,
     #[serde(default)]
     pub version_marker: Option<String>,
+    #[serde(default)]
+    pub package: Option<String>,
+    #[serde(default)]
+    pub dist_tag: Option<String>,
 }
 
 impl ReleaseWatchUpstream {
@@ -237,6 +259,16 @@ impl ReleaseWatchUpstream {
                     self.version_marker.as_deref(),
                     self.source_kind,
                 )?;
+                validate_absent_optional_scalar(
+                    "maintenance.release_watch.upstream.package",
+                    self.package.as_deref(),
+                    self.source_kind,
+                )?;
+                validate_absent_optional_scalar(
+                    "maintenance.release_watch.upstream.dist_tag",
+                    self.dist_tag.as_deref(),
+                    self.source_kind,
+                )?;
             }
             ReleaseWatchSourceKind::GcsObjectListing => {
                 validate_required_optional_scalar(
@@ -266,6 +298,56 @@ impl ReleaseWatchUpstream {
                     self.tag_prefix.as_deref(),
                     self.source_kind,
                 )?;
+                validate_absent_optional_scalar(
+                    "maintenance.release_watch.upstream.package",
+                    self.package.as_deref(),
+                    self.source_kind,
+                )?;
+                validate_absent_optional_scalar(
+                    "maintenance.release_watch.upstream.dist_tag",
+                    self.dist_tag.as_deref(),
+                    self.source_kind,
+                )?;
+            }
+            ReleaseWatchSourceKind::NpmDistTag => {
+                validate_required_optional_scalar(
+                    "maintenance.release_watch.upstream.package",
+                    self.package.as_deref(),
+                )?;
+                validate_required_optional_scalar(
+                    "maintenance.release_watch.upstream.dist_tag",
+                    self.dist_tag.as_deref(),
+                )?;
+                validate_absent_optional_scalar(
+                    "maintenance.release_watch.upstream.owner",
+                    self.owner.as_deref(),
+                    self.source_kind,
+                )?;
+                validate_absent_optional_scalar(
+                    "maintenance.release_watch.upstream.repo",
+                    self.repo.as_deref(),
+                    self.source_kind,
+                )?;
+                validate_absent_optional_scalar(
+                    "maintenance.release_watch.upstream.tag_prefix",
+                    self.tag_prefix.as_deref(),
+                    self.source_kind,
+                )?;
+                validate_absent_optional_scalar(
+                    "maintenance.release_watch.upstream.bucket",
+                    self.bucket.as_deref(),
+                    self.source_kind,
+                )?;
+                validate_absent_optional_scalar(
+                    "maintenance.release_watch.upstream.prefix",
+                    self.prefix.as_deref(),
+                    self.source_kind,
+                )?;
+                validate_absent_optional_scalar(
+                    "maintenance.release_watch.upstream.version_marker",
+                    self.version_marker.as_deref(),
+                    self.source_kind,
+                )?;
             }
         }
 
@@ -278,6 +360,7 @@ impl ReleaseWatchUpstream {
 pub enum ReleaseWatchSourceKind {
     GithubReleases,
     GcsObjectListing,
+    NpmDistTag,
 }
 
 impl ReleaseWatchSourceKind {
@@ -285,6 +368,7 @@ impl ReleaseWatchSourceKind {
         match self {
             Self::GithubReleases => "github_releases",
             Self::GcsObjectListing => "gcs_object_listing",
+            Self::NpmDistTag => "npm_dist_tag",
         }
     }
 }

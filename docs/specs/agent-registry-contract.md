@@ -99,19 +99,26 @@ detection. The schema is:
 ```toml
 [agents.maintenance.release_watch]
 enabled = true
-version_policy = "latest_stable_minus_one"
+version_policy = "latest_stable_minus_one" # or "upstream_stable_pointer"
 dispatch_kind = "workflow_dispatch" # or "packet_pr"
 dispatch_workflow = "example.yml"    # required only for workflow_dispatch
 
 [agents.maintenance.release_watch.upstream]
-source_kind = "github_releases"      # or "gcs_object_listing"
+source_kind = "github_releases"      # or "gcs_object_listing" or "npm_dist_tag"
 ```
 
 Required top-level fields:
 
 - `enabled`: boolean. When the block is present, it MUST be `true`.
-- `version_policy`: currently `latest_stable_minus_one`
+- `version_policy`: one of `latest_stable_minus_one` or `upstream_stable_pointer`
 - `dispatch_kind`: one of `workflow_dispatch` or `packet_pr`
+
+Version-policy rules:
+
+- `latest_stable_minus_one`: target the next-to-latest stable upstream release after the upstream
+  history is sorted and deduplicated.
+- `upstream_stable_pointer`: target the single upstream-resolved stable-channel version directly;
+  no minus-one offset is applied.
 
 Dispatch rules:
 
@@ -137,6 +144,9 @@ Upstream rules:
   - `bucket`
   - `prefix`
   - `version_marker`
+- `source_kind = "npm_dist_tag"` requires:
+  - `package`
+  - `dist_tag`
 - Source-specific fields from the non-selected source kind MUST NOT be present.
 
 Current committed registry truth enables release-watch metadata for `codex`, `claude_code`, and

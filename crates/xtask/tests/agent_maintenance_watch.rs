@@ -28,6 +28,9 @@ use harness::{fixture_root, write_text};
 use watch::{build_watch_queue_with_resolver, run_in_workspace_with_resolver, Args, Error};
 
 const SEEDED_REGISTRY: &str = include_str!("../data/agent_registry.toml");
+const CLAUDE_NPM_RELEASE_WATCH_UPSTREAM: &str =
+    "source_kind = \"npm_dist_tag\"\npackage = \"@anthropic-ai/claude-code\"\ndist_tag = \"stable\"";
+const CLAUDE_GCS_RELEASE_WATCH_UPSTREAM: &str = "source_kind = \"gcs_object_listing\"\nbucket = \"claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819\"\nprefix = \"claude-code-releases\"\nversion_marker = \"manifest.json\"";
 
 #[test]
 fn build_watch_queue_emits_frozen_fields_for_stale_agents() {
@@ -67,8 +70,8 @@ fn build_watch_queue_emits_frozen_fields_for_stale_agents() {
                 manifest_root: "cli_manifests/claude_code".to_string(),
                 current_validated: "1.2.3".to_string(),
                 latest_stable: "1.2.5".to_string(),
-                target_version: "1.2.4".to_string(),
-                version_policy: "latest_stable_minus_one".to_string(),
+                target_version: "1.2.5".to_string(),
+                version_policy: "upstream_stable_pointer".to_string(),
                 dispatch_kind: "packet_pr".to_string(),
                 dispatch_workflow: "agent-maintenance-open-pr.yml".to_string(),
                 maintenance_root: "docs/agents/lifecycle/claude_code-maintenance".to_string(),
@@ -77,7 +80,7 @@ fn build_watch_queue_emits_frozen_fields_for_stale_agents() {
                         .to_string(),
                 opened_from: ".github/workflows/agent-maintenance-open-pr.yml".to_string(),
                 detected_by: ".github/workflows/agent-maintenance-release-watch.yml".to_string(),
-                branch_name: "automation/claude_code-maintenance-1.2.4".to_string(),
+                branch_name: "automation/claude_code-maintenance-1.2.5".to_string(),
             },
             watch::MaintenanceWatchQueueEntry {
                 agent_id: "opencode".to_string(),
@@ -169,7 +172,7 @@ fn clean_or_not_newer_agents_are_not_emitted() {
     let fixture = fixture_root("agent-maintenance-watch-clean");
     seed_registry(&fixture);
     seed_latest_validated(&fixture, "cli_manifests/codex", "0.98.0");
-    seed_latest_validated(&fixture, "cli_manifests/claude_code", "1.2.4");
+    seed_latest_validated(&fixture, "cli_manifests/claude_code", "1.2.5");
     seed_latest_validated(&fixture, "cli_manifests/opencode", "1.4.11");
 
     let queue = build_watch_queue_with_resolver(&fixture, resolver_for_queue).expect("queue");
@@ -191,7 +194,7 @@ fn partial_upstream_failures_are_isolated_into_failed_agents() {
         } else if entry.agent_id == "opencode" {
             Ok(vec!["1.4.12".parse().unwrap(), "1.4.11".parse().unwrap()])
         } else {
-            Ok(vec!["1.2.5".parse().unwrap(), "1.2.4".parse().unwrap()])
+            Ok(vec!["1.2.5".parse().unwrap()])
         }
     })
     .expect("partial failures should not abort queue");
@@ -241,7 +244,14 @@ fn enrolled_agents_use_generic_open_pr_workflow() {
 #[test]
 fn gcs_page_tokens_are_percent_encoded_for_pagination() {
     let fixture = fixture_root("agent-maintenance-watch-gcs-page-token");
-    seed_registry(&fixture);
+    seed_registry_with(
+        &fixture,
+        &SEEDED_REGISTRY.replacen(
+            CLAUDE_NPM_RELEASE_WATCH_UPSTREAM,
+            CLAUDE_GCS_RELEASE_WATCH_UPSTREAM,
+            1,
+        ),
+    );
 
     let registry =
         xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
@@ -296,7 +306,7 @@ fn agent_filter_scopes_queue_to_single_enrolled_agent() {
         },
         &mut stdout,
         |entry, _| match entry.agent_id.as_str() {
-            "claude_code" => Ok(vec!["1.2.5".parse().unwrap(), "1.2.4".parse().unwrap()]),
+            "claude_code" => Ok(vec!["1.2.5".parse().unwrap()]),
             other => panic!("unexpected filtered agent {other}"),
         },
     )
@@ -305,9 +315,155 @@ fn agent_filter_scopes_queue_to_single_enrolled_agent() {
     let output = String::from_utf8(stdout).expect("stdout utf8");
     assert!(output.contains("stale_agents: 1"));
     assert!(output.contains("failed_agents: 0"));
-    assert!(output.contains("claude_code -> 1.2.4"));
+    assert!(output.contains("claude_code -> 1.2.5"));
     assert!(!output.contains("codex ->"));
     assert!(!output.contains("opencode ->"));
+}
+
+#[test]
+fn npm_dist_tag_fetcher_returns_requested_stable_pointer() {
+    let fixture = fixture_root("agent-maintenance-watch-npm-dist-tag");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "claude_code")
+        .expect("claude_code registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code release watch");
+
+    let versions = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |url| {
+        assert_eq!(
+            url,
+            "https://registry.npmjs.org/%40anthropic-ai%2Fclaude-code"
+        );
+        Ok(r#"{"dist-tags":{"stable":"2.1.206","latest":"2.1.218"}}"#.to_string())
+    })
+    .expect("npm dist-tag fetch succeeds");
+
+    assert_eq!(versions, vec!["2.1.206".parse().unwrap()]);
+}
+
+#[test]
+fn npm_dist_tag_fetcher_fails_when_requested_tag_is_missing() {
+    let fixture = fixture_root("agent-maintenance-watch-npm-missing-tag");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "claude_code")
+        .expect("claude_code registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code release watch");
+
+    let err = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |_| {
+        Ok(r#"{"dist-tags":{"latest":"2.1.218"}}"#.to_string())
+    })
+    .expect_err("missing dist-tag should fail");
+
+    assert!(matches!(err, Error::Validation(_)));
+    assert!(err.to_string().contains("npm dist-tag `stable` missing"));
+}
+
+#[test]
+fn npm_dist_tag_fetcher_fails_closed_on_malformed_json() {
+    let fixture = fixture_root("agent-maintenance-watch-npm-malformed-json");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "claude_code")
+        .expect("claude_code registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code release watch");
+
+    let err = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |_| {
+        Ok("{not json".to_string())
+    })
+    .expect_err("malformed npm metadata should fail");
+
+    assert!(matches!(err, Error::Validation(_)));
+    assert!(err.to_string().contains("parse npm metadata"));
+}
+
+#[test]
+fn npm_dist_tag_fetcher_fails_closed_on_blank_version() {
+    let fixture = fixture_root("agent-maintenance-watch-npm-blank-version");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "claude_code")
+        .expect("claude_code registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code release watch");
+
+    let err = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |_| {
+        Ok(r#"{"dist-tags":{"stable":"  "}}"#.to_string())
+    })
+    .expect_err("blank dist-tag version should fail");
+
+    assert!(matches!(err, Error::Validation(_)));
+}
+
+#[test]
+fn npm_dist_tag_fetcher_fails_closed_when_dist_tags_object_missing() {
+    let fixture = fixture_root("agent-maintenance-watch-npm-no-dist-tags");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "claude_code")
+        .expect("claude_code registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code release watch");
+
+    let err = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |_| {
+        Ok(r#"{"versions":{}}"#.to_string())
+    })
+    .expect_err("missing dist-tags object should fail");
+
+    assert!(matches!(err, Error::Validation(_)));
+}
+
+#[test]
+fn upstream_stable_pointer_selects_last_sorted_version() {
+    let selected = watch::select_target_version(
+        &["2.1.206".parse().unwrap()],
+        xtask::agent_registry::ReleaseWatchVersionPolicy::UpstreamStablePointer,
+    );
+
+    assert_eq!(selected, Some("2.1.206".parse().unwrap()));
 }
 
 #[test]
@@ -367,7 +523,7 @@ fn resolver_for_queue(
 ) -> Result<Vec<semver::Version>, Error> {
     let versions = match entry.agent_id.as_str() {
         "codex" => vec!["0.99.0", "0.98.0", "0.97.0"],
-        "claude_code" => vec!["1.2.5", "1.2.4", "1.2.3"],
+        "claude_code" => vec!["1.2.5"],
         "opencode" => vec!["1.4.12", "1.4.11", "1.4.9"],
         other => panic!("unexpected agent {other}"),
     };
