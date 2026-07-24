@@ -280,12 +280,12 @@ maintainer.
 | Workstream | Status | Evidence |
 | --- | --- | --- |
 | **A1** — generalize + rename the engines | **done** | `manifest-union` reproduces the committed codex `0.144.6` and claude `2.1.29` unions byte-for-byte; `claude_union` deleted |
-| **A2** — `acquisition` descriptor + planner | **done** | `acquisition` block in all three `RULES.json`; `xtask manifest-acquisition-plan`; 9 contract tests |
+| **A2** — `acquisition` descriptor + planner | **done** | `acquisition` block in all three `RULES.json`; `xtask manifest-acquisition-plan`; 12 contract tests; every resolved URL verified live against the GitHub and npm registries |
 | **A3** — reusable workflows | **done** | `parity-acquire.yml` + `parity-promote.yml` added; the 4 per-agent copies deleted |
 | **B** — wire acquisition into the generic flow | **done** | `agent-maintenance-open-pr.yml` calls `parity-acquire` on the packet branch with `commit: true` |
-| **C** — `opencode-snapshot` adapter | in progress | delegated packet |
-| **D** — support-tier gate + onboarding | gate done | the gate is enforced by `manifest_acquisition::plan_for_agent`; onboarding routing pending |
-| **E** — drift + stuck packets | in progress | engine rename landed in A1; `claude_code` duplicate `scope` key removed |
+| **C** — `opencode-snapshot` adapter | **done** | yargs parser + 9 unit tests; verified against the real 1.18.4 binary (62 commands, no omissions) |
+| **D** — support-tier gate + onboarding | **done** | gate enforced by `manifest_acquisition::plan_for_agent`; entry rule documented in the charter and the registry contract |
+| **E** — drift + stuck packets | **done, except the maintainer-gated runs** | engine rename landed in A1; `claude_code` duplicate `scope` key removed; opencode `RULES.json` normalized to the full schema; win32→windows-x64 mapping verified live. Stuck-packet reconciliation needs CI runners — see §12 |
 
 ### What actually changed the shape of the system
 

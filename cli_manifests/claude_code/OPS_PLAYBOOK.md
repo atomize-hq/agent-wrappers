@@ -82,7 +82,7 @@ Responsibilities (high level):
 - Download and pin every expected target (sha256 + size), re-verified on the runner that executes it.
 - Update `cli_manifests/claude_code/artifacts.lock.json`.
 - Generate per-target help snapshots via `xtask claude-snapshot` (matrix).
-- Generate a union snapshot via `xtask claude-union` (Linux).
+- Generate a union snapshot via `xtask manifest-union` (Linux).
 - Generate wrapper coverage + reports + version metadata + validate:
   - `xtask claude-wrapper-coverage`
   - `xtask codex-report --root cli_manifests/claude_code`
@@ -128,4 +128,4 @@ Responsibilities:
 - Generate a per-target snapshot (no downloads; uses a local binary):  
   `cargo run -p xtask -- claude-snapshot --claude-binary <PATH> --out-file cli_manifests/claude_code/snapshots/<v>/<target>.json --capture-raw-help --raw-help-target <target> --supplement cli_manifests/claude_code/supplement/commands.json`
 - Union snapshots:  
-  `cargo run -p xtask -- claude-union --root cli_manifests/claude_code --version <v>`
+  `cargo run -p xtask -- manifest-union --root cli_manifests/claude_code --version <v>`
