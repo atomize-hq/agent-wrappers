@@ -614,6 +614,19 @@ pub(crate) fn build_curl_args(
         // transfer is never retried at all.
         OsString::from("--retry-max-time"),
         OsString::from("120"),
+        // Bound a stalled connect/TLS handshake. The throughput guard below cannot see
+        // it — curl only speed-checks once it is PERFORMING — so a handshake stall
+        // would otherwise run to libcurl's 300s default, which exceeds the retry
+        // budget and therefore never retries.
+        OsString::from("--connect-timeout"),
+        OsString::from("30"),
+        // Abort a transfer that stalls *after* connecting (under 1 KB/s sustained for
+        // a minute) without penalising a slow-but-progressing multi-megabyte download,
+        // which a blunt --max-time would turn into a spurious upstream failure.
+        OsString::from("--speed-limit"),
+        OsString::from("1024"),
+        OsString::from("--speed-time"),
+        OsString::from("60"),
         OsString::from("-H"),
         OsString::from("User-Agent: unified-agent-api-maintenance-watch/1.0"),
         // Never add `-C`/`--continue-at` or `-a`/`--append` here: those re-enable
@@ -632,37 +645,42 @@ pub(crate) fn build_curl_args(
     args
 }
 
-fn temp_response_path() -> PathBuf {
-    env::temp_dir().join(format!(
-        "uaa-maintenance-watch-{}-{}.body",
-        std::process::id(),
-        OffsetDateTime::now_utc().unix_timestamp_nanos()
-    ))
-}
-
 pub(crate) fn fetch_text(url: &str) -> Result<String, Error> {
-    let response_path = temp_response_path();
+    // `curl -o` follows a symlink at its output path and truncates the target, so the
+    // destination is created here with O_EXCL under a random name: an attacker cannot
+    // pre-plant a symlink we would later follow, and cannot guess the name.
+    //
+    // The residual is worth stating precisely: curl re-opens this path by name without
+    // O_NOFOLLOW, so what rules out an unlink-and-swap between our creation and that
+    // open is a sticky (/tmp, 1777) or per-user temp directory — not O_EXCL itself. A
+    // TMPDIR pointing somewhere world-writable and non-sticky would reopen the class.
+    //
+    // `into_temp_path` closes the handle so curl can write on every platform, while
+    // deletion moves to the drop guard and so also covers the early returns below.
+    let response_path = tempfile::Builder::new()
+        .prefix("uaa-maintenance-watch-")
+        .suffix(".body")
+        .tempfile()
+        .map_err(|err| Error::Internal(format!("create response file for {url}: {err}")))?
+        .into_temp_path();
+
     let token = env::var("GITHUB_TOKEN").ok();
     let args = build_curl_args(url, &response_path, token.as_deref());
 
-    let outcome = Command::new("curl")
+    let output = Command::new("curl")
         .args(&args)
         .output()
-        .map_err(|err| Error::Internal(format!("spawn curl for {url}: {err}")))
-        .and_then(|output| {
-            if !output.status.success() {
-                return Err(Error::Validation(format!(
-                    "curl failed for {url} with exit {}: {}",
-                    output.status.code().unwrap_or(1),
-                    String::from_utf8_lossy(&output.stderr).trim()
-                )));
-            }
-            fs::read_to_string(&response_path)
-                .map_err(|err| Error::Internal(format!("read curl response body for {url}: {err}")))
-        });
+        .map_err(|err| Error::Internal(format!("spawn curl for {url}: {err}")))?;
+    if !output.status.success() {
+        return Err(Error::Validation(format!(
+            "curl failed for {url} with exit {}: {}",
+            output.status.code().unwrap_or(1),
+            String::from_utf8_lossy(&output.stderr).trim()
+        )));
+    }
 
-    let _ = fs::remove_file(&response_path);
-    outcome
+    fs::read_to_string(&response_path)
+        .map_err(|err| Error::Internal(format!("read curl response body for {url}: {err}")))
 }
 
 fn write_queue_json(

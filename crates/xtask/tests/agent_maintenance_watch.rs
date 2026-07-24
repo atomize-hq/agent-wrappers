@@ -371,35 +371,82 @@ fn curl_never_enables_resume_or_append_semantics() {
     );
 }
 
-fn watcher_temp_bodies() -> usize {
+/// A stalled-but-not-dead upstream must be abandoned, but a slow-yet-progressing
+/// multi-megabyte download must not be — which is why this is a throughput floor
+/// rather than a blunt `--max-time`.
+#[test]
+fn curl_aborts_stalled_transfers_without_capping_slow_ones() {
+    let args = watch::build_curl_args("https://registry.npmjs.org/x", Path::new("/tmp/b"), None);
+    let value_after = |flag: &str| -> u64 {
+        let at = args
+            .iter()
+            .position(|arg| arg == flag)
+            .unwrap_or_else(|| panic!("{flag} is configured"));
+        args[at + 1]
+            .to_string_lossy()
+            .parse()
+            .unwrap_or_else(|_| panic!("{flag} takes a numeric value"))
+    };
+
+    // Bounds, not mere presence: `--speed-limit 0` silently disables the guard
+    // entirely, while a high floor aborts transfers that are merely slow. Asserting
+    // only that these parse would let both regressions through a green suite.
+    let floor = value_after("--speed-limit");
+    assert!(
+        (1..=65_536).contains(&floor),
+        "speed floor {floor} B/s is outside the sane band: 0 disables the stall guard, and a high floor fails slow-but-progressing transfers"
+    );
+
+    let window = value_after("--speed-time");
+    assert!(
+        window >= 30,
+        "a {window}s stall window is too short; transient slowdowns would be reported as upstream failures"
+    );
+
+    // The throughput guard only applies once curl is PERFORMING, so a stalled
+    // connect/TLS handshake needs its own ceiling or it runs past the retry budget.
+    let connect = value_after("--connect-timeout");
+    assert!(
+        (1..=120).contains(&connect),
+        "connect timeout {connect}s is outside the sane band"
+    );
+
+    assert!(
+        !args.iter().any(|arg| arg == "--max-time"),
+        "a hard --max-time would fail slow-but-progressing large transfers"
+    );
+}
+
+fn watcher_temp_bodies() -> std::collections::BTreeSet<String> {
     fs::read_dir(std::env::temp_dir())
         .map(|entries| {
             entries
                 .filter_map(Result::ok)
-                .filter(|entry| {
-                    entry
-                        .file_name()
-                        .to_string_lossy()
-                        .starts_with("uaa-maintenance-watch-")
-                })
-                .count()
+                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .filter(|name| name.starts_with("uaa-maintenance-watch-"))
+                .collect()
         })
-        .unwrap_or(0)
+        .unwrap_or_default()
 }
 
 /// Exercises the real `fetch_text` path — spawn curl, write via `-o`, read the body
 /// back, clean up — over `file://` so it needs no network.
+///
+/// Success and failure are asserted in a single test on purpose: the temp-dir
+/// snapshot is machine-global, so as separate `#[test]` functions they run
+/// concurrently and each observes the other's in-flight body file.
 #[test]
-fn fetch_text_reads_body_from_file_and_removes_it() {
-    let dir = std::env::temp_dir().join(format!("uaa-fetch-text-{}", std::process::id()));
-    fs::create_dir_all(&dir).expect("fixture dir");
+fn fetch_text_reads_body_and_never_leaks_its_temp_file() {
+    // A TempDir cleans up even if an assertion below panics.
+    let fixture_dir = tempfile::tempdir().expect("fixture dir");
+    let dir = fixture_dir.path();
     let fixture = dir.join("body.json");
     fs::write(&fixture, r#"{"dist-tags":{"stable":"9.9.9"}}"#).expect("write fixture");
 
     let before = watcher_temp_bodies();
+
     let body = watch::fetch_text(&format!("file://{}", fixture.display()))
         .expect("fetch_text reads a file:// body");
-
     assert!(body.contains("9.9.9"));
     assert_eq!(
         watcher_temp_bodies(),
@@ -407,15 +454,8 @@ fn fetch_text_reads_body_from_file_and_removes_it() {
         "fetch_text must remove its temp body file on success"
     );
 
-    fs::remove_dir_all(&dir).ok();
-}
-
-#[test]
-fn fetch_text_fails_closed_without_leaking_a_temp_body() {
-    let before = watcher_temp_bodies();
     let err = watch::fetch_text("file:///nonexistent/uaa-missing-source.json")
         .expect_err("unreadable source must fail");
-
     assert!(matches!(err, Error::Validation(_)));
     assert_eq!(
         watcher_temp_bodies(),

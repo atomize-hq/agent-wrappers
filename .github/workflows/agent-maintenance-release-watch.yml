@@ -17,6 +17,9 @@ jobs:
   queue:
     name: Build watcher queue
     runs-on: ubuntu-latest
+    # The upstream fetch has no per-attempt ceiling and paginates unbounded, so cap
+    # the job rather than inheriting the 6-hour default if an upstream stalls.
+    timeout-minutes: 30
     outputs:
       queue: ${{ steps.queue.outputs.queue }}
     steps:
@@ -30,6 +33,12 @@ jobs:
       - name: Emit stale-agent queue
         id: emit_queue
         continue-on-error: true
+        # Bound the fetch at the STEP, not just the job: a job timeout cancels the
+        # remaining steps, and `if: always()` steps are skipped on cancellation — so a
+        # job-level cap alone would discard the summary, artifact, and failure
+        # annotation in exactly the run they are needed. With continue-on-error, a
+        # timed-out fetch instead falls through to those steps and the emission gate.
+        timeout-minutes: 15
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
