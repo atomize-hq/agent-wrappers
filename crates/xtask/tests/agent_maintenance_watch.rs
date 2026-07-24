@@ -377,18 +377,39 @@ fn curl_never_enables_resume_or_append_semantics() {
 #[test]
 fn curl_aborts_stalled_transfers_without_capping_slow_ones() {
     let args = watch::build_curl_args("https://registry.npmjs.org/x", Path::new("/tmp/b"), None);
+    let value_after = |flag: &str| -> u64 {
+        let at = args
+            .iter()
+            .position(|arg| arg == flag)
+            .unwrap_or_else(|| panic!("{flag} is configured"));
+        args[at + 1]
+            .to_string_lossy()
+            .parse()
+            .unwrap_or_else(|_| panic!("{flag} takes a numeric value"))
+    };
 
-    let limit = args
-        .iter()
-        .position(|arg| arg == "--speed-limit")
-        .expect("a stall threshold is configured");
-    assert!(args[limit + 1].to_string_lossy().parse::<u64>().is_ok());
+    // Bounds, not mere presence: `--speed-limit 0` silently disables the guard
+    // entirely, while a high floor aborts transfers that are merely slow. Asserting
+    // only that these parse would let both regressions through a green suite.
+    let floor = value_after("--speed-limit");
+    assert!(
+        (1..=65_536).contains(&floor),
+        "speed floor {floor} B/s is outside the sane band: 0 disables the stall guard, and a high floor fails slow-but-progressing transfers"
+    );
 
-    let window = args
-        .iter()
-        .position(|arg| arg == "--speed-time")
-        .expect("a stall window is configured");
-    assert!(args[window + 1].to_string_lossy().parse::<u64>().is_ok());
+    let window = value_after("--speed-time");
+    assert!(
+        window >= 30,
+        "a {window}s stall window is too short; transient slowdowns would be reported as upstream failures"
+    );
+
+    // The throughput guard only applies once curl is PERFORMING, so a stalled
+    // connect/TLS handshake needs its own ceiling or it runs past the retry budget.
+    let connect = value_after("--connect-timeout");
+    assert!(
+        (1..=120).contains(&connect),
+        "connect timeout {connect}s is outside the sane band"
+    );
 
     assert!(
         !args.iter().any(|arg| arg == "--max-time"),
@@ -412,12 +433,13 @@ fn watcher_temp_bodies() -> std::collections::BTreeSet<String> {
 /// back, clean up — over `file://` so it needs no network.
 ///
 /// Success and failure are asserted in a single test on purpose: the temp-dir
-/// snapshot is process-global, so as separate `#[test]` functions they run
+/// snapshot is machine-global, so as separate `#[test]` functions they run
 /// concurrently and each observes the other's in-flight body file.
 #[test]
 fn fetch_text_reads_body_and_never_leaks_its_temp_file() {
-    let dir = std::env::temp_dir().join(format!("uaa-fetch-text-{}", std::process::id()));
-    fs::create_dir_all(&dir).expect("fixture dir");
+    // A TempDir cleans up even if an assertion below panics.
+    let fixture_dir = tempfile::tempdir().expect("fixture dir");
+    let dir = fixture_dir.path();
     let fixture = dir.join("body.json");
     fs::write(&fixture, r#"{"dist-tags":{"stable":"9.9.9"}}"#).expect("write fixture");
 
@@ -440,8 +462,6 @@ fn fetch_text_reads_body_and_never_leaks_its_temp_file() {
         before,
         "a failed fetch must not leak a temp body file"
     );
-
-    fs::remove_dir_all(&dir).ok();
 }
 
 /// The retry timer starts before the first attempt, so a budget shorter than a

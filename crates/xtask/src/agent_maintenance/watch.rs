@@ -614,9 +614,15 @@ pub(crate) fn build_curl_args(
         // transfer is never retried at all.
         OsString::from("--retry-max-time"),
         OsString::from("120"),
-        // Abort a genuinely stalled transfer (under 1 KB/s sustained for a minute)
-        // without penalising a slow-but-progressing multi-megabyte download, which a
-        // blunt --max-time would turn into a spurious upstream failure.
+        // Bound a stalled connect/TLS handshake. The throughput guard below cannot see
+        // it — curl only speed-checks once it is PERFORMING — so a handshake stall
+        // would otherwise run to libcurl's 300s default, which exceeds the retry
+        // budget and therefore never retries.
+        OsString::from("--connect-timeout"),
+        OsString::from("30"),
+        // Abort a transfer that stalls *after* connecting (under 1 KB/s sustained for
+        // a minute) without penalising a slow-but-progressing multi-megabyte download,
+        // which a blunt --max-time would turn into a spurious upstream failure.
         OsString::from("--speed-limit"),
         OsString::from("1024"),
         OsString::from("--speed-time"),
@@ -640,11 +646,17 @@ pub(crate) fn build_curl_args(
 }
 
 pub(crate) fn fetch_text(url: &str) -> Result<String, Error> {
-    // Create the destination with O_EXCL and mode 0600 rather than handing curl a
-    // predictable path: `curl -o` follows a pre-existing symlink and would truncate
-    // whatever it points at. `into_temp_path` closes the handle (so curl can write on
-    // every platform) while still deleting the file when the guard drops — including
-    // on the early returns below.
+    // `curl -o` follows a symlink at its output path and truncates the target, so the
+    // destination is created here with O_EXCL under a random name: an attacker cannot
+    // pre-plant a symlink we would later follow, and cannot guess the name.
+    //
+    // The residual is worth stating precisely: curl re-opens this path by name without
+    // O_NOFOLLOW, so what rules out an unlink-and-swap between our creation and that
+    // open is a sticky (/tmp, 1777) or per-user temp directory — not O_EXCL itself. A
+    // TMPDIR pointing somewhere world-writable and non-sticky would reopen the class.
+    //
+    // `into_temp_path` closes the handle so curl can write on every platform, while
+    // deletion moves to the drop guard and so also covers the early returns below.
     let response_path = tempfile::Builder::new()
         .prefix("uaa-maintenance-watch-")
         .suffix(".body")
