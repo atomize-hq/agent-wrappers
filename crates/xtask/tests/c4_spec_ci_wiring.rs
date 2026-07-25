@@ -315,6 +315,30 @@ fn c4_spec_ci_workflow_has_conditional_manifest_validate_gate() {
 }
 
 #[test]
+fn c4_spec_acquisition_commits_the_paths_support_matrix_actually_publishes() {
+    let yml = read_repo_file(".github/workflows/parity-acquire.yml");
+
+    // `git add` fails the entire commit on a pathspec that matches nothing, so a wrong path here
+    // does not degrade gracefully: it throws away a full acquisition run — every download,
+    // snapshot, union and report — at the very last step. Bind the workflow to the constants the
+    // publisher actually writes so renaming one without updating the other fails here instead.
+    for published in [
+        xtask::support_matrix::JSON_OUTPUT_PATH,
+        xtask::support_matrix::MARKDOWN_OUTPUT_PATH,
+    ] {
+        assert!(
+            yml.contains(published),
+            "parity-acquire must commit the support publication path `{published}`"
+        );
+    }
+
+    assert!(
+        !yml.contains("docs/support\n") && !yml.contains("docs/support "),
+        "`docs/support` is not a path this repository has; it fails `git add` and discards the run"
+    );
+}
+
+#[test]
 fn c4_spec_process_substitution_loops_strip_cr_for_the_windows_runners() {
     // Git Bash backs process substitution with a temp file subject to text-mode translation, so
     // `while read ... done < <(...)` yields a trailing CR on the Windows runners while `$(...)`
