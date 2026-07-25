@@ -23,8 +23,8 @@ Key policy references:
 
 The shipped maintenance path for Codex parity is:
 
-1. `.github/workflows/agent-maintenance-release-watch.yml` detects stale `codex` parity from registry truth and dispatches `.github/workflows/codex-cli-update-snapshot.yml`.
-2. The worker refreshes the Codex parity artifacts, runs `prepare-agent-maintenance --write`, and opens branch `automation/codex-maintenance-<target_version>` with PR body `docs/agents/lifecycle/codex-maintenance/governance/pr-summary.md`.
+1. `.github/workflows/agent-maintenance-release-watch.yml` detects stale `codex` parity from registry truth and dispatches the shared packet opener `.github/workflows/agent-maintenance-open-pr.yml`.
+2. The packet opener runs `prepare-agent-maintenance --write` and opens branch `automation/codex-maintenance-<target_version>` with PR body `docs/agents/lifecycle/codex-maintenance/governance/pr-summary.md`. It then calls the reusable acquisition lane `.github/workflows/parity-acquire.yml` against that branch, so the PR lands carrying the **complete** multi-target union rather than a single-host partial one.
 3. The maintainer reviews `docs/agents/lifecycle/codex-maintenance/HANDOFF.md` as canonical, `docs/agents/lifecycle/codex-maintenance/governance/pr-summary.md` as derivative, and `docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml` as the surface that owns relay/write envelope/gates/recovery, then runs:
 
 ```bash
@@ -53,36 +53,41 @@ When the shared Release Watch workflow runs, or when you manually inspect a queu
    - If the candidate is new and we’re within normal maintenance cadence, proceed.
    - If the release is risky/large, proceed but expect follow-on triads (don’t “quick fix” in the ops PR).
 
-## Run Update Snapshot (workflow_dispatch)
+## Replay acquisition manually (workflow_dispatch)
 
-Normal operation is the shared watcher dispatch above. Use this workflow manually only to replay or repair the worker step for a known target version.
+Normal operation is the shared watcher dispatch above, which already runs acquisition. Dispatch
+the reusable lane directly only to replay or repair acquisition for a known target version:
 
-Preferred path: run the GitHub Actions workflow:
-- `.github/workflows/codex-cli-update-snapshot.yml`
+- `.github/workflows/parity-acquire.yml`
 
-Required replay inputs:
+Inputs:
 - `agent_id`: `codex`
-- `current_version`: the current validated Codex version from registry truth
-- `latest_stable`: the latest stable upstream version seen by the watcher
-- `target_version`: the worker target version to validate
-- `opened_from`: the repo-relative worker workflow path, `.github/workflows/codex-cli-update-snapshot.yml`
-- `detected_by`: `.github/workflows/agent-maintenance-release-watch.yml`
-- `dispatch_kind`: `workflow_dispatch`
-- `branch_name`: `automation/codex-maintenance-<target_version>`
+- `target_version`: the bare semver to acquire (e.g. `0.145.0`)
+- `ref`: branch to check out, and to commit to when `commit` is true (default `staging`)
+- `commit`: `true` to commit the acquired artifacts onto `ref`
 
-Optional inputs:
-- `update_min_supported`: keep `false`. `min_supported.txt` is a maintainer-only policy decision and must be updated in a separate PR.
+There are no per-agent acquisition inputs. Everything agent-specific — the release source, each
+target's runner, the download URL, the archive shape, and the snapshot command — is read from the
+`acquisition` block in `cli_manifests/codex/RULES.json`. Preview exactly what the lane will do
+without touching CI:
+
+```bash
+cargo run -p xtask -- manifest-acquisition-plan --agent codex --version <target_version>
+```
 
 Notes:
-- The workflow is responsible for downloading/extracting the upstream release artifact(s) and updating `cli_manifests/codex/artifacts.lock.json`.
-- The workflow should regenerate `cli_manifests/codex/current.json` (and optionally `cli_manifests/codex/raw_help/<version>/**`) using `xtask`.
-- If the org/repo disables workflow write permissions for `GITHUB_TOKEN`, the workflow will not be able to open a PR; either:
-  - configure a repo secret `CODEX_AUTOMATION_TOKEN` (PAT or GitHub App token with repo write) for PR creation, or
-  - download the workflow artifact bundle and open a PR manually with the regenerated files.
+- The lane downloads and pins every expected target, records them in
+  `cli_manifests/codex/artifacts.lock.json`, and re-verifies each pin on the runner that executes
+  the binary.
+- `min_supported.txt` is never touched by automation. It is a maintainer-only policy decision and
+  must be updated in a separate PR.
+- If the org/repo disables workflow write permissions for `GITHUB_TOKEN`, PR creation will fail;
+  either configure the `AUTOMATION_TOKEN` secret, or download the workflow artifact bundle and
+  open a PR manually with the regenerated files.
 
 ## Automation PRs: Agent Instructions
 
-The Update Snapshot workflow opens a PR branch like `automation/codex-maintenance-<target_version>`.
+The maintenance flow opens a PR branch like `automation/codex-maintenance-<target_version>`.
 
 That PR is intentionally *not* self-closing. It is the maintainer handoff point for the local relay. The implementation work happens by:
 - reviewing the generated request and canonical `HANDOFF.md`
@@ -102,11 +107,17 @@ Use the machine-derived recovery instructions rendered in:
 - `docs/agents/lifecycle/codex-maintenance/HANDOFF.md`
 - `docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml`
 
-### Target end state (v1)
+### Promotion (maintainer-gated)
 
-See `cli_manifests/codex/CI_WORKFLOWS_PLAN.md` for the target end state:
-- Release Watch dispatches Update Snapshot automatically for stable releases.
-- Update Snapshot acquires binaries from GitHub Releases for Linux/macOS/Windows, generates per-target snapshots, merges a union, generates reports, and opens/updates a dedicated per-version PR branch for automation.
+Promotion is never automatic. When the packet PR carries a complete, reviewed union, a maintainer
+dispatches the reusable promotion lane:
+
+- `.github/workflows/parity-promote.yml` with `agent_id: codex`, `version: <semver>`
+
+It defaults to `dry_run: true`, which validates every target present in the committed union and
+stages the pointer advance without opening a PR. Set `dry_run: false` only when you intend to open
+the promotion PR. The per-target validation commands it runs are declared in
+`acquisition.validation` in `cli_manifests/codex/RULES.json`, not in the workflow.
 
 ## Review Snapshot Diff (treat as a checklist)
 

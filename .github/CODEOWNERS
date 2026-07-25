@@ -1,0 +1,13 @@
+# Ownership for the surfaces that machines act on without a human in the loop.
+#
+# The acquisition descriptors in cli_manifests/*/RULES.json tell CI which binaries to download and
+# execute on a runner, and which commands promotion runs. A manifest-only PR is therefore a
+# code-execution surface, not a data surface, and must not be mergeable on a docs-shaped review.
+/cli_manifests/*/RULES.json      @spenquatch
+/crates/xtask/data/agent_registry.toml  @spenquatch
+
+# The reusable lanes those descriptors drive.
+/.github/workflows/parity-acquire.yml   @spenquatch
+/.github/workflows/parity-promote.yml   @spenquatch
+/.github/workflows/agent-maintenance-open-pr.yml     @spenquatch
+/.github/workflows/agent-maintenance-release-watch.yml @spenquatch

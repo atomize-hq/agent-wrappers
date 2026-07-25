@@ -155,6 +155,29 @@ for each of those agents. Any temporary or historical `workflow_dispatch` entry 
 compatibility state in the committed registry content, not as a permanent schema-level expectation
 for future agents.
 
+## Multi-target parity acquisition
+
+Multi-target parity acquisition — downloading an upstream release for every expected target,
+snapshotting each on a matching-OS runner, and merging a complete union — is enabled for an agent
+when **both** of the following hold:
+
+1. the agent carries `maintenance.release_watch` in this registry, and
+2. the agent's `cli_manifests/<agent>/RULES.json` carries an `acquisition` block.
+
+The registry MUST NOT gain a separate acquisition-enablement field. Such a field would be a second
+enrollment inventory, which the “Absence of `maintenance.release_watch` is the only ‘not enrolled’
+state” rule above already forbids, and it could disagree with the manifest it claims to describe.
+
+The gate is enforced in one place — `xtask manifest-acquisition-plan` — which fails closed with a
+distinct error for each reason (`UnknownAgent`, `NotEnrolled`, `NoAcquisitionBlock`).
+`.github/workflows/agent-maintenance-open-pr.yml` treats a clean exit from that command as the
+gate, so committed truth is the only input. An agent that satisfies neither condition keeps the
+docs-only maintenance path with no behavior change.
+
+Watch and acquire are independent. `maintenance.release_watch.upstream.source_kind` governs
+release *detection*; `acquisition.source_kind` in the manifest governs where *binaries* come from.
+An agent may legitimately watch one source and acquire from another.
+
 ## Maintenance governance checks
 
 Each `governance_checks` entry MUST declare:

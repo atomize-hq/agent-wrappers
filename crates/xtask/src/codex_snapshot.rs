@@ -7,11 +7,10 @@ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 mod discovery;
 mod layout;
 mod probes;
-mod schema;
 mod supplements;
 mod util;
 
-pub(crate) use schema::{
+pub(crate) use crate::manifest_snapshot_schema::{
     ArgSnapshot, BinaryPlatform, BinarySnapshot, CommandSnapshot, FlagSnapshot, SnapshotV1,
 };
 

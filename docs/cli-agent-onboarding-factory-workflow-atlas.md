@@ -345,8 +345,9 @@ Then switch to the operator guide when you need:
 - `docs/specs/cli-agent-onboarding-charter.md`
 - `.github/workflows/agent-maintenance-release-watch.yml`
 - `.github/workflows/agent-maintenance-open-pr.yml`
-- `.github/workflows/codex-cli-update-snapshot.yml`
-- `.github/workflows/claude-code-update-snapshot.yml`
+- `.github/workflows/parity-acquire.yml`
+- `.github/workflows/parity-promote.yml`
+- `crates/xtask/src/manifest_acquisition.rs`
 - `crates/xtask/src/agent_maintenance/watch.rs`
 - `crates/xtask/src/agent_maintenance/prepare.rs`
 - `crates/xtask/src/agent_maintenance/execute/workflow.rs`

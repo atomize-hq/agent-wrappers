@@ -7,6 +7,7 @@ pub mod approval_artifact;
 pub mod capability_matrix;
 pub mod capability_projection;
 pub mod capability_publication;
+pub mod manifest_acquisition;
 pub mod onboard_agent;
 pub mod prepare_proving_run_closeout;
 pub mod prepare_publication;

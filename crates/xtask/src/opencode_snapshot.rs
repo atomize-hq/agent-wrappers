@@ -1,3 +1,9 @@
+//! Snapshot adapter for the OpenCode CLI.
+//!
+//! Mirrors `codex-snapshot` and `claude-snapshot`: capture one target's help surface and emit an
+//! `UpstreamSnapshotV1`. Before this existed, opencode's snapshots were hand-produced by the
+//! autonomous relay, which is why opencode could never use the shared acquisition lane.
+
 use std::{fs, io, path::PathBuf};
 
 use clap::Parser;
@@ -16,9 +22,9 @@ pub(crate) use crate::manifest_snapshot_schema::{
 
 #[derive(Debug, Parser)]
 pub struct Args {
-    /// Path to the `claude` binary to snapshot.
+    /// Path to the `opencode` binary to snapshot.
     #[arg(long)]
-    pub claude_binary: PathBuf,
+    pub opencode_binary: PathBuf,
 
     /// Output directory (legacy mode; writes `current.json` under this directory).
     #[arg(
@@ -40,7 +46,7 @@ pub struct Args {
     #[arg(long)]
     pub raw_help_target: Option<String>,
 
-    /// Path to `cli_manifests/claude_code/supplement/commands.json` (schema v1).
+    /// Path to `cli_manifests/opencode/supplement/commands.json` (schema v1).
     #[arg(long)]
     pub supplement: Option<PathBuf>,
 
@@ -48,7 +54,7 @@ pub struct Args {
     #[arg(long)]
     pub collected_at: Option<String>,
 
-    /// Timeout for each `claude ... --help` invocation, in milliseconds.
+    /// Timeout for each `opencode ... --help` invocation, in milliseconds.
     ///
     /// This is a safety valve to prevent snapshot generation from hanging on any single command.
     #[arg(long, default_value_t = 10_000)]
@@ -57,8 +63,8 @@ pub struct Args {
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("invalid claude binary path: {0}")]
-    InvalidClaudeBinary(PathBuf),
+    #[error("invalid opencode binary path: {0}")]
+    InvalidOpencodeBinary(PathBuf),
     #[error("--capture-raw-help requires a target triple (use --raw-help-target, or infer it from --out-file)")]
     MissingRawHelpTarget,
     #[error("failed to probe semantic version; required for per-target snapshots")]
@@ -84,10 +90,10 @@ pub enum Error {
 }
 
 pub fn run(args: Args) -> Result<(), Error> {
-    let claude_binary = fs::canonicalize(&args.claude_binary)
-        .map_err(|_| Error::InvalidClaudeBinary(args.claude_binary.clone()))?;
-    if !claude_binary.is_file() {
-        return Err(Error::InvalidClaudeBinary(claude_binary));
+    let opencode_binary = fs::canonicalize(&args.opencode_binary)
+        .map_err(|_| Error::InvalidOpencodeBinary(args.opencode_binary.clone()))?;
+    if !opencode_binary.is_file() {
+        return Err(Error::InvalidOpencodeBinary(opencode_binary));
     }
 
     let collected_at = if let Some(s) = args.collected_at.as_ref() {
@@ -97,8 +103,8 @@ pub fn run(args: Args) -> Result<(), Error> {
         probes::deterministic_rfc3339_now()
     };
 
-    let binary_meta = probes::BinaryMetadata::collect(&claude_binary)?;
-    let (version_output, semantic_version) = probes::probe_version(&claude_binary)?;
+    let binary_meta = probes::BinaryMetadata::collect(&opencode_binary)?;
+    let (version_output, semantic_version) = probes::probe_version(&opencode_binary)?;
 
     let version_dir = match (&args.out_file, &semantic_version) {
         (Some(_), None) => return Err(Error::MissingSemanticVersion),
@@ -110,7 +116,7 @@ pub fn run(args: Args) -> Result<(), Error> {
         layout::resolve_outputs(&args, &version_dir)?;
 
     let discovery = discovery::discover_commands(
-        &claude_binary,
+        &opencode_binary,
         raw_help_dir.as_deref(),
         args.capture_raw_help,
         args.help_timeout_ms,
@@ -120,7 +126,6 @@ pub fn run(args: Args) -> Result<(), Error> {
 
     let (supplement_omissions, _supplemented) =
         supplements::apply_supplements(args.supplement.as_deref(), &mut command_entries)?;
-
     known_omissions.extend(supplement_omissions);
 
     supplements::normalize_command_entries(&mut command_entries);
@@ -130,7 +135,7 @@ pub fn run(args: Args) -> Result<(), Error> {
 
     let snapshot = SnapshotV1 {
         snapshot_schema_version: 1,
-        tool: "claude-code-cli".to_string(),
+        tool: "opencode-cli".to_string(),
         collected_at,
         binary: BinarySnapshot {
             sha256: binary_meta.sha256,

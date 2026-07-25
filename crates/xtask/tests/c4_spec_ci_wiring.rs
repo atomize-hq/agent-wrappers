@@ -21,7 +21,7 @@ fn read_repo_file(relative_path: &str) -> String {
 #[test]
 fn c4_spec_agent_maintenance_workflows_share_the_release_watch_and_packet_only_pr_contract() {
     let shared_watch = read_repo_file(".github/workflows/agent-maintenance-release-watch.yml");
-    let packet_only_pr = read_repo_file(".github/workflows/agent-maintenance-open-pr.yml");
+    let packet_pr = read_repo_file(".github/workflows/agent-maintenance-open-pr.yml");
 
     assert!(
         shared_watch.contains(
@@ -79,20 +79,23 @@ fn c4_spec_agent_maintenance_workflows_share_the_release_watch_and_packet_only_p
         "gh pr create --base staging --head \"${{ inputs.branch_name }}\"",
     ] {
         assert!(
-            packet_only_pr.contains(required),
-            "packet-only PR workflow must retain {required}"
+            packet_pr.contains(required),
+            "packet PR workflow must retain {required}"
         );
     }
     assert!(
-        !packet_only_pr.contains("\n          body:"),
-        "packet-only PR workflow must not keep an inline body block"
+        !packet_pr.contains("\n          body:"),
+        "packet PR workflow must not keep an inline body block"
     );
     assert_prepare_step_precedes(
-        &packet_only_pr,
+        &packet_pr,
         "prepare-agent-maintenance",
         "body-path: docs/agents/lifecycle/${{ inputs.agent_id }}-maintenance/governance/pr-summary.md",
         ".github/workflows/agent-maintenance-open-pr.yml",
     );
+
+    // The packet-opening job itself still performs no acquisition work: acquisition happens in a
+    // separate job that delegates to the reusable lane.
     for forbidden in [
         "actions/download-artifact@v7",
         "codex-snapshot",
@@ -103,210 +106,186 @@ fn c4_spec_agent_maintenance_workflows_share_the_release_watch_and_packet_only_p
         "_ci_tmp/codex_cli_pr_body.md",
     ] {
         assert!(
-            !packet_only_pr.contains(forbidden),
-            "packet-only PR workflow must not perform acquisition/generation work: {forbidden}"
+            !packet_pr.contains(forbidden),
+            "packet PR workflow must not inline acquisition/generation work: {forbidden}"
         );
     }
 }
 
 #[test]
-fn c4_spec_update_snapshot_workflow_runs_full_pipeline_and_uploads_artifacts() {
-    let yml = read_repo_file(".github/workflows/codex-cli-update-snapshot.yml");
-
-    assert!(
-        yml.contains("historical manual only"),
-        "workflow must be explicitly demoted to historical/manual-only status"
-    );
-    assert!(
-        yml.contains("Shared maintenance transport is owned by:"),
-        "workflow must point maintainers back to the shared watcher/open-pr transport"
-    );
-
-    // C4-spec: acquire pinned upstream binaries using artifacts.lock + RULES.json expected targets.
-    assert!(
-        yml.contains("cli_manifests/codex/artifacts.lock.json"),
-        "workflow must reference cli_manifests/codex/artifacts.lock.json to acquire pinned binaries"
-    );
-    assert!(
-        yml.contains("cli_manifests/codex/RULES.json"),
-        "workflow must reference cli_manifests/codex/RULES.json (for union.expected_targets contract)"
-    );
-    assert!(
-        yml.contains("expected_targets"),
-        "workflow must reference RULES.json union.expected_targets (expected_targets)"
-    );
-
-    // C4-spec: per-target snapshots should run on Linux/macOS/Windows.
-    assert!(
-        yml.contains("ubuntu-"),
-        "workflow must include at least one ubuntu runs-on job (Linux snapshots + union stage)"
-    );
-    assert!(
-        yml.contains("macos-"),
-        "workflow must include at least one macos runs-on job (macOS snapshots)"
-    );
-    assert!(
-        yml.contains("windows-"),
-        "workflow must include at least one windows runs-on job (Windows snapshots)"
-    );
-
-    // C4-spec: generate per-target snapshots + raw help captures and upload raw help as CI artifacts.
-    assert!(
-        yml.contains("codex-snapshot"),
-        "workflow must run xtask codex-snapshot"
-    );
-    assert!(
-        yml.contains("cli_manifests/codex/raw_help/"),
-        "workflow must capture/upload raw help under cli_manifests/codex/raw_help/<version>/<target_triple>/"
-    );
-    let upload_artifact_invocation =
-        Regex::new(r"actions/upload-artifact@v[0-9]+").expect("valid regex");
-    assert!(
-        upload_artifact_invocation.is_match(&yml),
-        "workflow must upload raw help and artifact bundles via actions/upload-artifact"
-    );
-
-    // C4-spec: on Linux, run union → wrapper-coverage → report → version-metadata → validate.
-    for required in [
-        "codex-union",
-        "codex-wrapper-coverage",
-        "codex-report",
-        "codex-version-metadata",
-        "codex-validate",
-    ] {
-        assert!(
-            yml.contains(required),
-            "workflow must run xtask {required} as part of the end-to-end pipeline"
-        );
-    }
-
-    // C4-spec: upload artifact bundle containing snapshots/reports/versions + wrapper coverage.
-    for required_path in [
-        "cli_manifests/codex/snapshots/",
-        "cli_manifests/codex/reports/",
-        "cli_manifests/codex/versions/",
-        "cli_manifests/codex/wrapper_coverage.json",
-    ] {
-        assert!(
-            yml.contains(required_path),
-            "workflow must upload committed-artifact bundle including {required_path}"
-        );
-    }
+fn c4_spec_packet_pr_delegates_a_complete_union_to_the_reusable_acquisition_lane() {
+    let packet_pr = read_repo_file(".github/workflows/agent-maintenance-open-pr.yml");
 
     for required in [
-        "snapshot_matrix.json",
-        "Rehydrate snapshot matrix",
-        "needs.prepare.outputs.snapshot_matrix",
-        "--status reported",
-        "actions/download-artifact@v7",
-        "pattern: \"codex-cli-snapshot-${{ inputs.target_version }}-*\"",
+        // The gate is committed truth (registry enrollment + an `acquisition` block), enforced by
+        // the planner, rather than a second per-agent enablement field.
+        "manifest-acquisition-plan",
+        "acquire=true",
+        "acquire=false",
+        // A build failure and a planner rejection must stay distinguishable: collapsing both into
+        // `acquire=false` would silently downgrade every agent to the docs-only lane.
+        "cargo build -p xtask",
+        "gate_status=$?",
+        "uses: ./.github/workflows/parity-acquire.yml",
+        "ref: ${{ inputs.branch_name }}",
+        "commit: true",
     ] {
         assert!(
-            yml.contains(required),
-            "workflow must preserve deterministic cross-run snapshot inputs: {required}"
+            packet_pr.contains(required),
+            "packet PR workflow must route acquisition through the reusable lane: {required}"
         );
     }
+
     assert!(
-        !yml.contains("gh run download"),
-        "workflow must not use gh run download for same-run snapshot artifact hydration"
+        packet_pr.contains("needs.open-pr.outputs.acquire == 'true'")
+            && packet_pr.contains("needs.open-pr.outputs.branch_created == 'true'"),
+        "acquisition must be gated on both the descriptor gate and a branch that actually exists"
     );
 }
 
 #[test]
-fn c4_spec_promote_workflow_runs_target_scoped_validation_before_pointer_promotion() {
-    let yml = read_repo_file(".github/workflows/codex-cli-promote.yml");
+fn c4_spec_reusable_acquisition_is_agent_parameterized_with_no_per_agent_branching() {
+    let yml = read_repo_file(".github/workflows/parity-acquire.yml");
 
     for required in [
-        "validation_matrix",
-        "fromJSON(needs.prepare.outputs.validation_matrix)",
+        "workflow_call:",
+        "workflow_dispatch:",
+        "agent_id:",
+        "target_version:",
+        "cargo run -p xtask -- manifest-acquisition-plan",
+        "--emit-json _ci_tmp/acquisition-plan.json",
+        "fromJSON(needs.plan.outputs.snapshot_matrix)",
         "runs-on: ${{ matrix.runs_on }}",
-        "needs: [prepare, validate-target]",
-        "cargo test -p unified-agent-api-codex",
-        "cargo test -p unified-agent-api-codex --test cli_e2e -- --nocapture",
+        // Engine invocations are read from the plan, not hardcoded per agent.
+        "UNION_COMMAND=",
+        "SNAPSHOT_COMMAND=",
+        "manifest-report --root",
+        "manifest-version-metadata --root",
+        "--status reported",
+        "manifest-validate --root",
+    ] {
+        assert!(
+            yml.contains(required),
+            "reusable acquisition workflow must retain {required}"
+        );
+    }
+
+    // Both acquisition source kinds and all three archive shapes must be handled generically.
+    for required in ["github_releases)", "npm)", "none)", "tar_gz)", "npm_tgz)"] {
+        assert!(
+            yml.contains(required),
+            "reusable acquisition workflow must handle {required}"
+        );
+    }
+
+    // Integrity: pins are re-verified on the target runner before the binary is executed.
+    assert!(
+        yml.contains("sha256 mismatch") && yml.contains("size mismatch"),
+        "reusable acquisition must re-verify the download pin on the snapshotting runner"
+    );
+
+    // No agent may be named in a branching construct: the whole point is one lane for all agents.
+    for forbidden in [
+        "cli_manifests/codex",
+        "cli_manifests/claude_code",
+        "cli_manifests/opencode",
+        "openai/codex",
+        "storage.googleapis",
+        "codex-union",
+        "claude-union",
+        "codex-report",
+        "codex-validate",
+        "codex-version-metadata",
+    ] {
+        assert!(
+            !yml.contains(forbidden),
+            "reusable acquisition workflow must stay agent-agnostic: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn c4_spec_reusable_promotion_validates_every_promoted_target_before_advancing_pointers() {
+    let yml = read_repo_file(".github/workflows/parity-promote.yml");
+
+    for required in [
+        "workflow_call:",
+        "workflow_dispatch:",
+        "validation_matrix",
+        "fromJSON(needs.plan.outputs.validation_matrix)",
+        "runs-on: ${{ matrix.runs_on }}",
+        "needs: [plan, validate-target]",
+        // Only targets present in the committed union may be validated and promoted.
         "jq -r '.inputs[].target_triple'",
         "VALIDATION_ARGS+=(--passed-target \"$target\")",
         "--status validated",
         "pointers/latest_validated/${REQUIRED_TARGET}.txt",
+        "manifest-validate --root",
+        // Validation commands and env come from the descriptor, not from this file.
+        "jq -r '.validation_commands[]'",
+        "{scratch_dir}",
     ] {
         assert!(
             yml.contains(required),
-            "promote workflow must validate each promoted target before advancing latest_validated truth: {required}"
+            "reusable promotion workflow must retain {required}"
         );
     }
 
     assert!(
-        yml.contains("x86_64-unknown-linux-musl")
-            && yml.contains("aarch64-unknown-linux-musl")
-            && yml.contains("aarch64-apple-darwin")
-            && yml.contains("x86_64-pc-windows-msvc"),
-        "promote workflow must map all committed Codex publication targets into the validation matrix"
+        yml.contains("default: true") && yml.contains("if: ${{ !inputs.dry_run }}"),
+        "promotion must default to dry-run and only open a PR when explicitly asked"
     );
-}
 
-#[test]
-fn c4_spec_worker_update_snapshot_workflows_are_manual_only_acquisition_pipelines() {
-    for workflow in [
-        ".github/workflows/codex-cli-update-snapshot.yml",
-        ".github/workflows/claude-code-update-snapshot.yml",
-    ] {
-        let yml = read_repo_file(workflow);
-
-        for required in [
-            "agent_id:",
-            "current_version:",
-            "latest_stable:",
-            "target_version:",
-            "opened_from:",
-            "detected_by:",
-            "dispatch_kind:",
-            "branch_name:",
-            "inputs.target_version",
-            "workflow_dispatch:",
-            "historical manual only",
-            "Shared maintenance transport is owned by:",
-            ".github/workflows/agent-maintenance-release-watch.yml",
-            ".github/workflows/agent-maintenance-open-pr.yml",
-        ] {
-            assert!(
-                yml.contains(required),
-                "{workflow} must retain manual acquisition contract surface {required}"
-            );
-        }
-
-        for forbidden in [
-            "prepare-agent-maintenance",
-            "--dispatch-workflow",
-            "body-path: docs/agents/lifecycle/",
-            "branch: \"${{ inputs.branch_name }}\"",
-            "steps.create_pr.outcome == 'failure'",
-            "cargo run -p xtask -- refresh-agent --request \"${REQUEST_PATH}\" --write",
-            "gh pr create --base staging --head",
-            "peter-evans/create-pull-request@v8",
-        ] {
-            assert!(
-                !yml.contains(forbidden),
-                "{workflow} must not remain a registry-driven maintenance transport: {forbidden}"
-            );
-        }
-    }
-
-    let codex = read_repo_file(".github/workflows/codex-cli-update-snapshot.yml");
     for forbidden in [
-        "Generate work queue summary",
-        "_ci_tmp/codex_cli_work_queue.md",
-        "_ci_tmp/codex_cli_pr_body.md",
-        "Render PR body from template",
-        "cli_manifests/codex/PR_BODY_TEMPLATE.md",
+        "cli_manifests/codex",
+        "cli_manifests/claude_code",
+        "cargo test -p unified-agent-api-codex",
+        "cargo test -p unified-agent-api-claude-code",
+        "x86_64-unknown-linux-musl",
     ] {
         assert!(
-            !codex.contains(forbidden),
-            "codex worker must not keep workflow-side PR body assembly: {forbidden}"
+            !yml.contains(forbidden),
+            "reusable promotion workflow must stay agent-agnostic: {forbidden}"
         );
     }
 }
 
 #[test]
-fn c4_spec_ci_workflow_has_conditional_codex_validate_gate() {
+fn c4_spec_legacy_per_agent_parity_workflows_are_retired() {
+    for legacy in [
+        ".github/workflows/codex-cli-update-snapshot.yml",
+        ".github/workflows/claude-code-update-snapshot.yml",
+        ".github/workflows/codex-cli-promote.yml",
+        ".github/workflows/claude-code-promote.yml",
+    ] {
+        assert!(
+            !repo_root().join(legacy).exists(),
+            "legacy per-agent parity workflow must be deleted: {legacy}"
+        );
+    }
+
+    let workflows = fs::read_dir(repo_root().join(".github/workflows"))
+        .expect("read .github/workflows")
+        .map(|entry| {
+            entry
+                .expect("dir entry")
+                .file_name()
+                .to_string_lossy()
+                .to_string()
+        })
+        .collect::<Vec<_>>();
+
+    for name in &workflows {
+        assert!(
+            !(name.contains("update-snapshot") || name.contains("promote"))
+                || name.starts_with("parity-"),
+            "acquisition/promotion must live only in the reusable parity-* lanes, found {name}"
+        );
+    }
+}
+
+#[test]
+fn c4_spec_ci_workflow_has_conditional_manifest_validate_gate() {
     let yml = read_repo_file(".github/workflows/ci.yml");
 
     // C4-spec (normative): gate runs only when committed artifacts regime is active.
@@ -320,16 +299,65 @@ fn c4_spec_ci_workflow_has_conditional_codex_validate_gate() {
         && yml.contains("steps.codex-artifacts.outputs.has_versions");
     assert!(
         has_hashfiles_gate || has_step_gate,
-        "ci.yml must gate codex-validate behind either hashFiles('cli_manifests/codex/versions/*.json') != '' or a Detect Codex committed artifacts step gate"
+        "ci.yml must gate manifest validation behind either hashFiles('cli_manifests/codex/versions/*.json') != '' or a Detect Codex committed artifacts step gate"
     );
 
-    // Ensure the job actually runs codex-validate (not just mentions it).
-    let validate_invocation =
-        Regex::new(r"cargo\s+run\s+-p\s+xtask\s+--[\s\\]*\n?[\s\\]*codex-validate")
-            .expect("valid regex");
+    // Ensure the job actually runs the validator (not just mentions it). Both the neutral name and
+    // the retained back-compat alias are acceptable.
+    let validate_invocation = Regex::new(
+        r"cargo\s+run\s+-p\s+xtask\s+--[\s\\]*\n?[\s\\]*(manifest-validate|codex-validate)",
+    )
+    .expect("valid regex");
     assert!(
         validate_invocation.is_match(&yml),
-        "ci.yml must invoke: cargo run -p xtask -- codex-validate"
+        "ci.yml must invoke: cargo run -p xtask -- manifest-validate"
+    );
+}
+
+#[test]
+fn c4_spec_ci_pins_the_latest_validated_binary_from_the_lockfile_row_not_the_descriptor() {
+    let yml = read_repo_file(".github/workflows/ci.yml");
+
+    // The descriptor answers "how would a new version be acquired"; the lockfile row answers
+    // "what was actually pinned for this one". Those diverge across a distribution migration:
+    // claude_code 2.1.29 is pinned as a bare binary from the old bucket while the descriptor
+    // resolves an npm platform tarball. Selecting the row by the descriptor's asset name matches
+    // nothing and fails the job, so the row must be selected by (version, target) alone.
+    let selects_row_by_version_and_target =
+        yml.contains(r#"select(.[$key]==$v and .target_triple==$t)"#);
+    assert!(
+        selects_row_by_version_and_target,
+        "ci.yml must select the claude_code lockfile row by (version, target) only"
+    );
+
+    assert!(
+        !yml.contains(r#"select(.[$key]==$v and .target_triple==$t and .asset_name==$a)"#),
+        "ci.yml must not constrain the lockfile row on the descriptor's asset name: a version \
+         pinned before the acquisition descriptor existed has no row under that name"
+    );
+
+    // The pinned asset names its own shape. Inferring it from the descriptor's `archive` would
+    // try to untar a bare binary (or execute a tarball) depending on migration direction.
+    assert!(
+        yml.contains("*.tgz|*.tar.gz)"),
+        "ci.yml must infer archive shape from the pinned asset name"
+    );
+
+    // Whatever the shape, the binary must never be executed before the autoupdater is disabled:
+    // a self-update between the digest check and the run would make the verified pin a lie.
+    let acquire_step = yml
+        .split("- name: Acquire Claude Code CLI (required target)")
+        .nth(1)
+        .expect("ci.yml must retain the claude_code acquisition step");
+    let env_export = acquire_step
+        .find(".snapshot.env[]?")
+        .expect("acquisition step must apply the descriptor's snapshot env");
+    let version_probe = acquire_step
+        .find(r#""$BIN" --version"#)
+        .expect("acquisition step must smoke the acquired binary");
+    assert!(
+        env_export < version_probe,
+        "ci.yml must export the descriptor's snapshot env before executing the binary"
     );
 }
 

@@ -19,8 +19,8 @@ use models::{UnionSnapshotV2, WrapperCoverageV1};
 #[derive(Debug, Parser)]
 pub struct Args {
     /// Root `cli_manifests/codex` directory.
-    #[arg(long, default_value = "cli_manifests/codex")]
-    pub root: PathBuf,
+    #[arg(long)]
+    pub root: Option<PathBuf>,
 
     /// Path to `RULES.json` (default: <root>/RULES.json).
     #[arg(long)]
@@ -58,6 +58,8 @@ pub enum Status {
 
 #[derive(Debug, Error)]
 pub enum VersionMetadataError {
+    #[error("--root is required (no manifest root default is available for this subcommand)")]
+    MissingRoot,
     #[error("I/O error: {0}")]
     Io(#[from] io::Error),
     #[error("failed to parse JSON: {0}")]
@@ -180,7 +182,23 @@ struct PromotionV1 {
 }
 
 pub fn run(args: Args) -> Result<(), VersionMetadataError> {
-    let root = fs::canonicalize(&args.root).unwrap_or(args.root.clone());
+    run_with_default_root(args, None)
+}
+
+/// Run the engine, falling back to `default_root` when `--root` was omitted.
+///
+/// The neutral `manifest-*` subcommand passes `None` (root is mandatory); the per-agent
+/// back-compat aliases pass their historical default so existing callers keep working.
+pub fn run_with_default_root(
+    args: Args,
+    default_root: Option<&str>,
+) -> Result<(), VersionMetadataError> {
+    let requested_root = args
+        .root
+        .clone()
+        .or_else(|| default_root.map(PathBuf::from))
+        .ok_or(VersionMetadataError::MissingRoot)?;
+    let root = fs::canonicalize(&requested_root).unwrap_or(requested_root);
     let rules_path = args
         .rules
         .clone()

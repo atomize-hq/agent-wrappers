@@ -32,8 +32,8 @@ use models::{
 pub struct Args {
     /// Root directory containing `SCHEMA.json`, `RULES.json`, pointer files, snapshots, reports,
     /// and version metadata.
-    #[arg(long, default_value = "cli_manifests/codex", alias = "codex-dir")]
-    pub root: PathBuf,
+    #[arg(long, alias = "codex-dir")]
+    pub root: Option<PathBuf>,
 
     /// Path to `RULES.json`.
     #[arg(long)]
@@ -72,6 +72,8 @@ pub enum FatalError {
     SchemaCompile(String),
     #[error("invalid RULES.json: {0}")]
     Rules(String),
+    #[error("--root is required (no manifest root default is available for this subcommand)")]
+    MissingRoot,
 }
 
 #[derive(Debug)]
@@ -91,8 +93,16 @@ struct ValidateCtx {
 }
 
 pub fn run(args: Args) -> i32 {
+    run_with_default_root(args, None)
+}
+
+/// Run the validator, falling back to `default_root` when `--root` was omitted.
+///
+/// The neutral `manifest-validate` subcommand passes `None` (root is mandatory); the per-agent
+/// back-compat aliases pass their historical default so existing callers keep working.
+pub fn run_with_default_root(args: Args, default_root: Option<&str>) -> i32 {
     let json_out = args.json;
-    match run_inner(args) {
+    match run_inner(args, default_root) {
         Ok(violations) => {
             if json_out {
                 let out = json!({
@@ -107,9 +117,9 @@ pub fn run(args: Args) -> i32 {
 
             if violations.is_empty() {
                 if json_out {
-                    eprintln!("OK: codex-validate");
+                    eprintln!("OK: manifest-validate");
                 } else {
-                    println!("OK: codex-validate");
+                    println!("OK: manifest-validate");
                 }
                 0
             } else {
@@ -121,14 +131,17 @@ pub fn run(args: Args) -> i32 {
             }
         }
         Err(err) => {
-            eprintln!("FAIL: codex-validate ({err})");
+            eprintln!("FAIL: manifest-validate ({err})");
             3
         }
     }
 }
 
-fn run_inner(args: Args) -> Result<Vec<Violation>, FatalError> {
-    let root = args.root;
+fn run_inner(args: Args, default_root: Option<&str>) -> Result<Vec<Violation>, FatalError> {
+    let root = args
+        .root
+        .or_else(|| default_root.map(PathBuf::from))
+        .ok_or(FatalError::MissingRoot)?;
     let rules_path = args.rules.unwrap_or_else(|| root.join("RULES.json"));
     let schema_path = args.schema.unwrap_or_else(|| root.join("SCHEMA.json"));
     let version_schema_path = args
