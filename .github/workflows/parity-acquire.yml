@@ -106,7 +106,7 @@ jobs:
               echo "::error title=Unknown xtask subcommand::The acquisition descriptor names \`${subcommand}\`, which xtask does not provide." >&2
               exit 1
             fi
-          done < <(jq -r '[.snapshot.command, .union_command, (.wrapper_coverage_command // empty)] | .[]' _ci_tmp/acquisition-plan.json)
+          done < <(jq -r '[.snapshot.command, .union_command, (.wrapper_coverage_command // empty)] | .[]' _ci_tmp/acquisition-plan.json | tr -d '\r')
 
           {
             echo "snapshot_matrix=$(cat _ci_tmp/snapshot-matrix.json)"
@@ -214,7 +214,7 @@ jobs:
                 + { asset_name: $asset, download_url: $url, sha256: $sha, size_bytes: $size }
               ' \
               > "_download/${TARGET}.artifact.json"
-          done < <(jq -c '.include[]' "$PLAN")
+          done < <(jq -c '.include[]' "$PLAN" | tr -d '\r')
 
           jq -s '.' _download/*.artifact.json > _ci_tmp/artifacts.json
 
@@ -336,7 +336,7 @@ jobs:
             VALUE="$(jq -r '.value' <<<"$pair")"
             export "${NAME}=${VALUE}"
             echo "snapshot env: ${NAME}=${VALUE}"
-          done < <(jq -c '.snapshot.env[]?' _ci_tmp/acquisition-plan.json)
+          done < <(jq -c '.snapshot.env[]?' _ci_tmp/acquisition-plan.json | tr -d '\r')
 
           "$BIN" --version
 
@@ -358,16 +358,24 @@ jobs:
           # `mapfile` is a bash-4 builtin and the macOS runners ship bash 3.2, so read the array
           # the portable way. The explicit initialisation also keeps `${#EXTRA_ARGS[@]}` valid
           # under `set -u` when the descriptor declares no extra args.
+          #
+          # `tr -d '\r'` is load-bearing on the Windows runners. Git Bash backs process
+          # substitution with a temp file that is subject to text-mode translation, so every line
+          # read this way arrives with a trailing CR — while `$(...)` captures, which use a pipe,
+          # do not. That asymmetry is why the pinned sha256 verified cleanly a step earlier and
+          # this loop still produced `--help-timeout-ms\r`, which clap rejects. The env loops
+          # below survived only because their CR lands outside the JSON, where jq discards it as
+          # whitespace; that is luck, not design, so every such loop strips CR.
           EXTRA_ARGS=()
           while IFS= read -r extra_arg; do
             EXTRA_ARGS+=("$extra_arg")
-          done < <(jq -r '.snapshot.extra_args[]?' "$PLAN")
+          done < <(jq -r '.snapshot.extra_args[]?' "$PLAN" | tr -d '\r')
 
           while read -r pair; do
             NAME="$(jq -r '.name' <<<"$pair")"
             VALUE="$(jq -r '.value' <<<"$pair")"
             export "${NAME}=${VALUE}"
-          done < <(jq -c '.snapshot.env[]?' "$PLAN")
+          done < <(jq -c '.snapshot.env[]?' "$PLAN" | tr -d '\r')
 
           ARGS=(
             "$SNAPSHOT_COMMAND"
@@ -449,7 +457,7 @@ jobs:
             if [ -n "$FOUND" ]; then
               cp "$FOUND" "${DEST}/${target}.json"
             fi
-          done < <(jq -r '.include[].target_triple' "$PLAN")
+          done < <(jq -r '.include[].target_triple' "$PLAN" | tr -d '\r')
 
           if [ ! -f "${DEST}/${REQUIRED_TARGET}.json" ]; then
             echo "::error title=Missing required snapshot::${REQUIRED_TARGET} produced no snapshot; the union cannot be built." >&2
@@ -464,7 +472,7 @@ jobs:
               echo "::warning title=Missing target snapshot::${target} produced no snapshot; union will be incomplete."
               MISSING=$((MISSING + 1))
             fi
-          done < <(jq -r '.include[].target_triple' "$PLAN")
+          done < <(jq -r '.include[].target_triple' "$PLAN" | tr -d '\r')
           echo "missing target snapshots: ${MISSING}"
 
       - name: Union → wrapper coverage → report → version metadata → validate
