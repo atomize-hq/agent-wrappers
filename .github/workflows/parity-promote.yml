@@ -232,14 +232,14 @@ jobs:
             VALUE="${VALUE//\{scratch_dir\}/$SCRATCH_DIR}"
             export "${NAME}=${VALUE}"
             echo "validation env: ${NAME}=${VALUE}"
-          done < <(jq -c '.[]' <<<"$VALIDATION_ENV")
+          done < <(jq -c '.[]' <<<"$VALIDATION_ENV" | tr -d '\r')
 
           while IFS= read -r command; do
             [ -n "$command" ] || continue
             echo "::group::${command}"
             eval "$command"
             echo "::endgroup::"
-          done < <(jq -r '.validation_commands[]' "$PLAN")
+          done < <(jq -r '.validation_commands[]' "$PLAN" | tr -d '\r')
 
   promote:
     name: "Promote (${{ inputs.agent_id }} ${{ inputs.version }})"
@@ -272,7 +272,7 @@ jobs:
           while IFS= read -r target; do
             [ -n "$target" ] || continue
             VALIDATION_ARGS+=(--passed-target "$target")
-          done < <(jq -r '.inputs[].target_triple' "$UNION")
+          done < <(jq -r '.inputs[].target_triple' "$UNION" | tr -d '\r')
 
           cargo run -p xtask -- manifest-version-metadata \
             --root "$ROOT" \
@@ -283,12 +283,12 @@ jobs:
           while IFS= read -r target; do
             [ -n "$target" ] || continue
             printf '%s\n' "$VERSION" > "${ROOT}/pointers/latest_validated/${target}.txt"
-          done < <(jq -r '.validation.passed_targets[]?' "${ROOT}/versions/${VERSION}.json")
+          done < <(jq -r '.validation.passed_targets[]?' "${ROOT}/versions/${VERSION}.json" | tr -d '\r')
 
           while IFS= read -r target; do
             [ -n "$target" ] || continue
             printf '%s\n' "$VERSION" > "${ROOT}/pointers/latest_supported/${target}.txt"
-          done < <(jq -r '.coverage.supported_targets[]?' "${ROOT}/versions/${VERSION}.json")
+          done < <(jq -r '.coverage.supported_targets[]?' "${ROOT}/versions/${VERSION}.json" | tr -d '\r')
 
       - name: Refresh support publication
         shell: bash
