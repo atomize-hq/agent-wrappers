@@ -10,8 +10,8 @@ This packet tracks automated upstream-release maintenance for `codex`.
 - trigger kind: `upstream_release_detected`
 - basis ref: `cli_manifests/codex/latest_validated.txt`
 - opened from: `.github/workflows/agent-maintenance-open-pr.yml`
-- recorded at: `2026-07-22T00:14:53Z`
-- request commit: `df0762ea109af1206b85c585a87030a8e3bbfe38`
+- recorded at: `2026-07-25T14:56:43Z`
+- request commit: `118a73096ff059f0bff11a0ad82f48179189468f`
 
 ## Trigger context
 

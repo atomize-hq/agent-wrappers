@@ -3,13 +3,13 @@
   "tool": "codex-cli",
   "collected_at": "2026-07-18T13:51:52Z",
   "binary": {
-    "sha256": "80a3933d11a9d13ef806aa24f7bb8afc9169cfe4e9b09d6da6a92922cbde9cff",
-    "size_bytes": 260472144,
+    "sha256": "57a159f67999794494a172e71c12c6b5a211542ea90c66ea2ce9e6ac1edec6b1",
+    "size_bytes": 259137328,
     "platform": {
-      "os": "macos",
+      "os": "linux",
       "arch": "aarch64"
     },
-    "target_triple": "aarch64-apple-darwin",
+    "target_triple": "aarch64-unknown-linux-musl",
     "version_output": "codex-cli 0.144.6",
     "semantic_version": "0.144.6",
     "channel": "stable"
@@ -133,48 +133,6 @@
         {
           "long": "--version",
           "short": "-V",
-          "takes_value": false
-        }
-      ]
-    },
-    {
-      "path": [
-        "app"
-      ],
-      "usage": "codex app [OPTIONS] [PATH]",
-      "args": [
-        {
-          "name": "PATH",
-          "required": false,
-          "variadic": false,
-          "note": "Workspace path to open in Codex Desktop\n[default: .]"
-        }
-      ],
-      "flags": [
-        {
-          "long": "--config",
-          "short": "-c",
-          "takes_value": true,
-          "value_name": "key=value"
-        },
-        {
-          "long": "--disable",
-          "takes_value": true,
-          "value_name": "FEATURE"
-        },
-        {
-          "long": "--download-url",
-          "takes_value": true,
-          "value_name": "DOWNLOAD_URL_OVERRIDE"
-        },
-        {
-          "long": "--enable",
-          "takes_value": true,
-          "value_name": "FEATURE"
-        },
-        {
-          "long": "--help",
-          "short": "-h",
           "takes_value": false
         }
       ]
@@ -3426,15 +3384,10 @@
           "name": "COMMAND",
           "required": false,
           "variadic": true,
-          "note": "Full command args to run under seatbelt"
+          "note": "Full command args to run under the Linux sandbox"
         }
       ],
       "flags": [
-        {
-          "long": "--allow-unix-socket",
-          "takes_value": true,
-          "value_name": "ALLOW_UNIX_SOCKETS"
-        },
         {
           "long": "--cd",
           "short": "-C",
@@ -3464,10 +3417,6 @@
         },
         {
           "long": "--include-managed-config",
-          "takes_value": false
-        },
-        {
-          "long": "--log-denials",
           "takes_value": false
         },
         {

@@ -2,18 +2,14 @@
   "snapshot_schema_version": 2,
   "tool": "codex-cli",
   "mode": "union",
-  "collected_at": "2026-07-21T23:54:16.976609Z",
+  "collected_at": "2026-07-18T13:51:52Z",
   "expected_targets": [
     "x86_64-unknown-linux-musl",
     "aarch64-unknown-linux-musl",
     "aarch64-apple-darwin",
     "x86_64-pc-windows-msvc"
   ],
-  "complete": false,
-  "missing_targets": [
-    "aarch64-unknown-linux-musl",
-    "x86_64-pc-windows-msvc"
-  ],
+  "complete": true,
   "inputs": [
     {
       "target_triple": "x86_64-unknown-linux-musl",
@@ -430,8 +426,422 @@
       }
     },
     {
+      "target_triple": "aarch64-unknown-linux-musl",
+      "collected_at": "2026-07-18T13:51:52Z",
+      "binary": {
+        "sha256": "57a159f67999794494a172e71c12c6b5a211542ea90c66ea2ce9e6ac1edec6b1",
+        "size_bytes": 259137328,
+        "platform": {
+          "os": "linux",
+          "arch": "aarch64"
+        },
+        "target_triple": "aarch64-unknown-linux-musl",
+        "version_output": "codex-cli 0.144.6",
+        "semantic_version": "0.144.6",
+        "channel": "stable"
+      },
+      "features": {
+        "commands_added_when_all_enabled": [],
+        "enabled_for_snapshot": [
+          "apply_patch_freeform",
+          "apps",
+          "apps_mcp_path_override",
+          "auth_elicitation",
+          "browser_use",
+          "browser_use_external",
+          "browser_use_full_cdp_access",
+          "code_mode_host",
+          "codex_git_commit",
+          "collaboration_modes",
+          "computer_use",
+          "elevated_windows_sandbox",
+          "enable_request_compression",
+          "experimental_windows_sandbox",
+          "external_migration",
+          "fast_mode",
+          "goals",
+          "guardian_approval",
+          "hooks",
+          "image_detail_original",
+          "image_generation",
+          "in_app_browser",
+          "js_repl",
+          "js_repl_tools_only",
+          "memories",
+          "mentions_v2",
+          "multi_agent",
+          "multi_agent_mode",
+          "network_proxy",
+          "personality",
+          "plugin_hooks",
+          "plugin_sharing",
+          "plugins",
+          "prevent_idle_sleep",
+          "remote_compaction_v2",
+          "remote_control",
+          "remote_models",
+          "remote_plugin",
+          "request_rule",
+          "resize_all_images",
+          "responses_websockets",
+          "responses_websockets_v2",
+          "search_tool",
+          "secret_auth_storage",
+          "shell_snapshot",
+          "shell_tool",
+          "skill_env_var_dependency_prompt",
+          "skill_mcp_dependency_install",
+          "sqlite",
+          "steer",
+          "terminal_resize_reflow",
+          "tool_call_mcp_elicitation",
+          "tool_search",
+          "tool_search_always_defer_mcp_tools",
+          "tool_suggest",
+          "tui_app_server",
+          "unavailable_dummy_tools",
+          "undo",
+          "unified_exec",
+          "use_legacy_landlock",
+          "use_linux_sandbox_bwrap",
+          "web_search_cached",
+          "web_search_request",
+          "workspace_dependencies",
+          "workspace_owner_usage_nudge"
+        ],
+        "listed": [
+          {
+            "effective": false,
+            "name": "apply_patch_freeform",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "apps",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "apps_mcp_path_override",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "auth_elicitation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use_external",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use_full_cdp_access",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "code_mode_host",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "codex_git_commit",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "collaboration_modes",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "computer_use",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "elevated_windows_sandbox",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "enable_request_compression",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "experimental_windows_sandbox",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "external_migration",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "fast_mode",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "goals",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "guardian_approval",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "hooks",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "image_detail_original",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "image_generation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_browser",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "js_repl",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "js_repl_tools_only",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "memories",
+            "stage": "experimental"
+          },
+          {
+            "effective": true,
+            "name": "mentions_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "multi_agent",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "multi_agent_mode",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "network_proxy",
+            "stage": "experimental"
+          },
+          {
+            "effective": true,
+            "name": "personality",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "plugin_hooks",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "plugin_sharing",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "plugins",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "prevent_idle_sleep",
+            "stage": "experimental"
+          },
+          {
+            "effective": true,
+            "name": "remote_compaction_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "remote_control",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "remote_models",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "remote_plugin",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "request_rule",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "resize_all_images",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "responses_websockets",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "responses_websockets_v2",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "search_tool",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "secret_auth_storage",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "shell_snapshot",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "shell_tool",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "skill_env_var_dependency_prompt",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "skill_mcp_dependency_install",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "sqlite",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "steer",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "terminal_resize_reflow",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_call_mcp_elicitation",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "tool_search",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_search_always_defer_mcp_tools",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_suggest",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "tui_app_server",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "unavailable_dummy_tools",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "undo",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "unified_exec",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "use_legacy_landlock",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "use_linux_sandbox_bwrap",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "web_search_cached",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "web_search_request",
+            "stage": "deprecated"
+          },
+          {
+            "effective": true,
+            "name": "workspace_dependencies",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "workspace_owner_usage_nudge",
+            "stage": "removed"
+          }
+        ],
+        "mode": "default_plus_all_enabled"
+      }
+    },
+    {
       "target_triple": "aarch64-apple-darwin",
-      "collected_at": "2026-07-21T23:14:23.81336Z",
+      "collected_at": "2026-07-18T13:51:52Z",
       "binary": {
         "sha256": "80a3933d11a9d13ef806aa24f7bb8afc9169cfe4e9b09d6da6a92922cbde9cff",
         "size_bytes": 260472144,
@@ -635,7 +1045,7 @@
             "stage": "removed"
           },
           {
-            "effective": true,
+            "effective": false,
             "name": "memories",
             "stage": "experimental"
           },
@@ -760,7 +1170,421 @@
             "stage": "removed"
           },
           {
+            "effective": true,
+            "name": "steer",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "terminal_resize_reflow",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_call_mcp_elicitation",
+            "stage": "stable"
+          },
+          {
             "effective": false,
+            "name": "tool_search",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_search_always_defer_mcp_tools",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_suggest",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "tui_app_server",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "unavailable_dummy_tools",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "undo",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "unified_exec",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "use_legacy_landlock",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "use_linux_sandbox_bwrap",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "web_search_cached",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "web_search_request",
+            "stage": "deprecated"
+          },
+          {
+            "effective": true,
+            "name": "workspace_dependencies",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "workspace_owner_usage_nudge",
+            "stage": "removed"
+          }
+        ],
+        "mode": "default_plus_all_enabled"
+      }
+    },
+    {
+      "target_triple": "x86_64-pc-windows-msvc",
+      "collected_at": "2026-07-18T13:51:52Z",
+      "binary": {
+        "sha256": "4b76ded066d0239115ca97473d010c92072bc5c5550a45dd7cbebe1e9eb956a7",
+        "size_bytes": 341225264,
+        "platform": {
+          "os": "windows",
+          "arch": "x86_64"
+        },
+        "target_triple": "x86_64-pc-windows-msvc",
+        "version_output": "codex-cli 0.144.6",
+        "semantic_version": "0.144.6",
+        "channel": "stable"
+      },
+      "features": {
+        "commands_added_when_all_enabled": [],
+        "enabled_for_snapshot": [
+          "apply_patch_freeform",
+          "apps",
+          "apps_mcp_path_override",
+          "auth_elicitation",
+          "browser_use",
+          "browser_use_external",
+          "browser_use_full_cdp_access",
+          "code_mode_host",
+          "codex_git_commit",
+          "collaboration_modes",
+          "computer_use",
+          "elevated_windows_sandbox",
+          "enable_request_compression",
+          "experimental_windows_sandbox",
+          "external_migration",
+          "fast_mode",
+          "goals",
+          "guardian_approval",
+          "hooks",
+          "image_detail_original",
+          "image_generation",
+          "in_app_browser",
+          "js_repl",
+          "js_repl_tools_only",
+          "memories",
+          "mentions_v2",
+          "multi_agent",
+          "multi_agent_mode",
+          "network_proxy",
+          "personality",
+          "plugin_hooks",
+          "plugin_sharing",
+          "plugins",
+          "prevent_idle_sleep",
+          "remote_compaction_v2",
+          "remote_control",
+          "remote_models",
+          "remote_plugin",
+          "request_rule",
+          "resize_all_images",
+          "responses_websockets",
+          "responses_websockets_v2",
+          "search_tool",
+          "secret_auth_storage",
+          "shell_snapshot",
+          "shell_tool",
+          "skill_env_var_dependency_prompt",
+          "skill_mcp_dependency_install",
+          "sqlite",
+          "steer",
+          "terminal_resize_reflow",
+          "tool_call_mcp_elicitation",
+          "tool_search",
+          "tool_search_always_defer_mcp_tools",
+          "tool_suggest",
+          "tui_app_server",
+          "unavailable_dummy_tools",
+          "undo",
+          "unified_exec",
+          "use_legacy_landlock",
+          "use_linux_sandbox_bwrap",
+          "web_search_cached",
+          "web_search_request",
+          "workspace_dependencies",
+          "workspace_owner_usage_nudge"
+        ],
+        "listed": [
+          {
+            "effective": false,
+            "name": "apply_patch_freeform",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "apps",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "apps_mcp_path_override",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "auth_elicitation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use_external",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use_full_cdp_access",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "code_mode_host",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "codex_git_commit",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "collaboration_modes",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "computer_use",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "elevated_windows_sandbox",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "enable_request_compression",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "experimental_windows_sandbox",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "external_migration",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "fast_mode",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "goals",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "guardian_approval",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "hooks",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "image_detail_original",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "image_generation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_browser",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "js_repl",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "js_repl_tools_only",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "memories",
+            "stage": "experimental"
+          },
+          {
+            "effective": true,
+            "name": "mentions_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "multi_agent",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "multi_agent_mode",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "network_proxy",
+            "stage": "experimental"
+          },
+          {
+            "effective": true,
+            "name": "personality",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "plugin_hooks",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "plugin_sharing",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "plugins",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "prevent_idle_sleep",
+            "stage": "experimental"
+          },
+          {
+            "effective": true,
+            "name": "remote_compaction_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "remote_control",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "remote_models",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "remote_plugin",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "request_rule",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "resize_all_images",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "responses_websockets",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "responses_websockets_v2",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "search_tool",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "secret_auth_storage",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "shell_snapshot",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "shell_tool",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "skill_env_var_dependency_prompt",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "skill_mcp_dependency_install",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "sqlite",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
             "name": "steer",
             "stage": "removed"
           },
@@ -849,7 +1673,9 @@
       "path": [],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "about": "If no subcommand is specified, options will be forwarded to the interactive CLI.",
       "usage": "codex [OPTIONS] [PROMPT]\ncodex [OPTIONS] <COMMAND> [ARGS]",
@@ -861,7 +1687,9 @@
           "note": "Optional user prompt to start the session",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -873,7 +1701,9 @@
           "value_name": "DIR",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -884,7 +1714,9 @@
           "value_name": "APPROVAL_POLICY",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -895,7 +1727,9 @@
           "value_name": "DIR",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -906,7 +1740,9 @@
           "value_name": "key=value",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -915,7 +1751,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -924,7 +1762,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -934,7 +1774,9 @@
           "value_name": "FEATURE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -944,7 +1786,9 @@
           "value_name": "FEATURE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -954,7 +1798,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -966,7 +1812,9 @@
           "repeatable": true,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -976,7 +1824,9 @@
           "value_name": "OSS_PROVIDER",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -987,7 +1837,9 @@
           "value_name": "MODEL",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -996,7 +1848,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1005,7 +1859,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1016,7 +1872,9 @@
           "value_name": "CONFIG_PROFILE_V2",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1026,7 +1884,9 @@
           "value_name": "ADDR",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1036,7 +1896,9 @@
           "value_name": "ENV_VAR",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1047,7 +1909,9 @@
           "value_name": "SANDBOX_MODE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1056,7 +1920,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1065,7 +1931,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1075,7 +1943,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1085,7 +1955,8 @@
         "app"
       ],
       "available_on": [
-        "aarch64-apple-darwin"
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app [OPTIONS] [PATH]",
       "args": [
@@ -1095,7 +1966,8 @@
           "variadic": false,
           "note": "Workspace path to open in Codex Desktop\n[default: .]",
           "available_on": [
-            "aarch64-apple-darwin"
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -1106,7 +1978,8 @@
           "takes_value": true,
           "value_name": "DOWNLOAD_URL_OVERRIDE",
           "available_on": [
-            "aarch64-apple-darwin"
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1117,7 +1990,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server [OPTIONS] [COMMAND]",
       "flags": [
@@ -1127,7 +2002,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1137,7 +2014,9 @@
           "value_name": "URL",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1146,7 +2025,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1156,7 +2037,9 @@
           "value_name": "AUDIENCE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1166,7 +2049,9 @@
           "value_name": "MODE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1176,7 +2061,9 @@
           "value_name": "ISSUER",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1186,7 +2073,9 @@
           "value_name": "SECONDS",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1196,7 +2085,9 @@
           "value_name": "PATH",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1206,7 +2097,9 @@
           "value_name": "PATH",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1216,7 +2109,9 @@
           "value_name": "HEX",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1228,7 +2123,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server daemon [OPTIONS] <COMMAND>"
     },
@@ -1240,7 +2137,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server daemon bootstrap [OPTIONS]",
       "flags": [
@@ -1250,7 +2149,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1263,7 +2164,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server daemon disable-remote-control [OPTIONS]"
     },
@@ -1275,7 +2178,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server daemon enable-remote-control [OPTIONS]"
     },
@@ -1287,7 +2192,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server daemon help [COMMAND]...",
       "args": [
@@ -1298,7 +2205,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1311,7 +2220,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server daemon restart [OPTIONS]"
     },
@@ -1323,7 +2234,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server daemon start [OPTIONS]"
     },
@@ -1335,7 +2248,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server daemon stop [OPTIONS]"
     },
@@ -1347,7 +2262,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server daemon version [OPTIONS]"
     },
@@ -1358,7 +2275,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server generate-json-schema [OPTIONS] --out <DIR>",
       "flags": [
@@ -1368,7 +2287,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1379,7 +2300,9 @@
           "value_name": "DIR",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1391,7 +2314,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server generate-ts [OPTIONS] --out <DIR>",
       "flags": [
@@ -1401,7 +2326,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1412,7 +2339,9 @@
           "value_name": "DIR",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1423,7 +2352,9 @@
           "value_name": "PRETTIER_BIN",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1435,7 +2366,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server help [COMMAND]...",
       "args": [
@@ -1446,7 +2379,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1458,7 +2393,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex app-server proxy [OPTIONS]",
       "flags": [
@@ -1469,7 +2406,9 @@
           "value_name": "SOCKET_PATH",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1480,7 +2419,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex apply [OPTIONS] <TASK_ID>",
       "args": [
@@ -1492,7 +2433,9 @@
           "note": "inferred from usage",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1503,7 +2446,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex archive [OPTIONS] <SESSION>",
       "args": [
@@ -1514,7 +2459,9 @@
           "note": "Session id (UUID) or session name. UUIDs take precedence if it parses",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1525,7 +2472,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex cloud [OPTIONS] [COMMAND]"
     },
@@ -1536,7 +2485,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex cloud apply [OPTIONS] <TASK_ID>",
       "args": [
@@ -1547,7 +2498,9 @@
           "note": "Codex Cloud task identifier to apply",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -1559,7 +2512,9 @@
           "value_name": "N",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1571,7 +2526,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex cloud diff [OPTIONS] <TASK_ID>",
       "args": [
@@ -1582,7 +2539,9 @@
           "note": "Codex Cloud task identifier to display",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -1594,7 +2553,9 @@
           "value_name": "N",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1606,7 +2567,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex cloud exec [OPTIONS] --env <ENV_ID> [QUERY]",
       "args": [
@@ -1617,7 +2580,9 @@
           "note": "Task prompt to run in Codex Cloud",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -1629,7 +2594,9 @@
           "value_name": "ATTEMPTS",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1639,7 +2606,9 @@
           "value_name": "BRANCH",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1649,7 +2618,9 @@
           "value_name": "ENV_ID",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1661,7 +2632,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex cloud help [COMMAND]...",
       "args": [
@@ -1672,7 +2645,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1684,7 +2659,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex cloud list [OPTIONS]",
       "flags": [
@@ -1695,7 +2672,9 @@
           "value_name": "CURSOR",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1705,7 +2684,9 @@
           "value_name": "ENV_ID",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1714,7 +2695,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1724,7 +2707,9 @@
           "value_name": "N",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1736,7 +2721,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex cloud status [OPTIONS] <TASK_ID>",
       "args": [
@@ -1747,7 +2734,9 @@
           "note": "Codex Cloud task identifier to inspect",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1758,7 +2747,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex completion [OPTIONS] [SHELL]",
       "args": [
@@ -1769,7 +2760,9 @@
           "note": "Shell to generate completions for\n[default: bash]\n[possible values: bash, elvish, fish, powershell, zsh]",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1780,7 +2773,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex debug [OPTIONS] <COMMAND>"
     },
@@ -1791,7 +2786,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex debug app-server [OPTIONS] <COMMAND>"
     },
@@ -1803,7 +2800,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex debug app-server help [COMMAND]...",
       "args": [
@@ -1814,7 +2813,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1827,7 +2828,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex debug app-server send-message-v2 [OPTIONS] <USER_MESSAGE>",
       "args": [
@@ -1839,7 +2842,9 @@
           "note": "inferred from usage",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1851,7 +2856,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex debug help [COMMAND]...",
       "args": [
@@ -1862,7 +2869,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1874,7 +2883,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex debug models [OPTIONS]",
       "flags": [
@@ -1884,7 +2895,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1896,7 +2909,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex debug prompt-input [OPTIONS] [PROMPT]",
       "args": [
@@ -1907,7 +2922,9 @@
           "note": "Optional user prompt to append after session context",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1918,7 +2935,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex delete [OPTIONS] <SESSION>",
       "args": [
@@ -1929,7 +2948,9 @@
           "note": "Session id (UUID) or session name. UUIDs take precedence if it parses",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -1940,7 +2961,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -1951,7 +2974,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex doctor [OPTIONS]",
       "flags": [
@@ -1961,7 +2986,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1970,7 +2997,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1979,7 +3008,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1988,7 +3019,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -1997,7 +3030,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2008,7 +3043,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex exec [OPTIONS] [PROMPT]\ncodex exec [OPTIONS] <COMMAND> [ARGS]",
       "args": [
@@ -2019,7 +3056,9 @@
           "note": "Initial instructions for the agent. If not provided as an argument (or if `-` is used),\ninstructions are read from stdin. If stdin is piped and a prompt is also provided, stdin\nis appended as a `<stdin>` block",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -2031,7 +3070,9 @@
           "value_name": "COLOR",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2040,7 +3081,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2049,7 +3092,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2058,7 +3103,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2067,7 +3114,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2078,7 +3127,9 @@
           "value_name": "FILE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2088,7 +3139,9 @@
           "value_name": "FILE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2097,7 +3150,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2109,7 +3164,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex exec help [COMMAND]...",
       "args": [
@@ -2120,7 +3177,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2132,7 +3191,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex exec resume [OPTIONS] [SESSION_ID] [PROMPT]",
       "args": [
@@ -2143,7 +3204,9 @@
           "note": "Prompt to send after resuming the session. If `-` is used, read from stdin",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2153,7 +3216,9 @@
           "note": "Conversation/session id (UUID) or thread name. UUIDs take precedence if it parses. If\nomitted, use --last to pick the most recent recorded session",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -2164,7 +3229,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2173,7 +3240,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2182,7 +3251,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2191,7 +3262,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2200,7 +3273,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2209,7 +3284,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2220,7 +3297,9 @@
           "value_name": "FILE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2230,7 +3309,9 @@
           "value_name": "FILE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2239,7 +3320,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2251,7 +3334,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex exec review [OPTIONS] [PROMPT]",
       "args": [
@@ -2262,7 +3347,9 @@
           "note": "Custom review instructions. If `-` is used, read from stdin",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -2274,7 +3361,9 @@
           "value_name": "BRANCH",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2284,7 +3373,9 @@
           "value_name": "SHA",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2293,7 +3384,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2302,7 +3395,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2311,7 +3406,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2320,7 +3417,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2331,7 +3430,9 @@
           "value_name": "FILE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2341,7 +3442,9 @@
           "value_name": "FILE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2350,7 +3453,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2360,7 +3465,9 @@
           "value_name": "TITLE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2369,7 +3476,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2380,7 +3489,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex exec-server [OPTIONS]",
       "flags": [
@@ -2391,7 +3502,9 @@
           "value_name": "ID",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2401,7 +3514,9 @@
           "value_name": "URL",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2411,7 +3526,9 @@
           "value_name": "NAME",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2420,7 +3537,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2431,7 +3550,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex features [OPTIONS] <COMMAND>"
     },
@@ -2442,7 +3563,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex features disable [OPTIONS] <FEATURE>",
       "args": [
@@ -2453,7 +3576,9 @@
           "note": "Feature key to update (for example: unified_exec)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2465,7 +3590,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex features enable [OPTIONS] <FEATURE>",
       "args": [
@@ -2476,7 +3603,9 @@
           "note": "Feature key to update (for example: unified_exec)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2488,7 +3617,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex features help [COMMAND]...",
       "args": [
@@ -2499,7 +3630,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2511,7 +3644,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex features list [OPTIONS]"
     },
@@ -2521,7 +3656,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex fork [OPTIONS] [SESSION_ID] [PROMPT]",
       "args": [
@@ -2532,7 +3669,9 @@
           "note": "Optional user prompt to start the session",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2542,7 +3681,9 @@
           "note": "Conversation/session id (UUID). When provided, forks this session. If omitted, use --last\nto pick the most recent recorded session",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -2553,7 +3694,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2562,7 +3705,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2573,7 +3718,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex help [COMMAND]...",
       "args": [
@@ -2584,7 +3731,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2595,7 +3744,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex login [OPTIONS] [COMMAND]",
       "flags": [
@@ -2605,7 +3756,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2614,7 +3767,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2623,7 +3778,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2635,7 +3792,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex login help [COMMAND]...",
       "args": [
@@ -2646,7 +3805,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2658,7 +3819,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex login status [OPTIONS]"
     },
@@ -2668,7 +3831,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex logout [OPTIONS]"
     },
@@ -2678,7 +3843,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex mcp [OPTIONS] <COMMAND>"
     },
@@ -2689,7 +3856,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex mcp add [OPTIONS] <NAME> (--url <URL> | -- <COMMAND>...)",
       "args": [
@@ -2700,7 +3869,9 @@
           "note": "Command to launch the MCP server. Use --url for a streamable HTTP server",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2710,7 +3881,9 @@
           "note": "Name for the MCP server configuration",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -2722,7 +3895,9 @@
           "value_name": "ENV_VAR",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2732,7 +3907,9 @@
           "value_name": "KEY=VALUE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2742,7 +3919,9 @@
           "value_name": "CLIENT_ID",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2752,7 +3931,9 @@
           "value_name": "RESOURCE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2762,7 +3943,9 @@
           "value_name": "URL",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2774,7 +3957,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex mcp get [OPTIONS] <NAME>",
       "args": [
@@ -2785,7 +3970,9 @@
           "note": "Name of the MCP server to display",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -2796,7 +3983,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2808,7 +3997,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex mcp help [COMMAND]...",
       "args": [
@@ -2819,7 +4010,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2831,7 +4024,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex mcp list [OPTIONS]",
       "flags": [
@@ -2841,7 +4036,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2853,7 +4050,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex mcp login [OPTIONS] <NAME>",
       "args": [
@@ -2864,7 +4063,9 @@
           "note": "Name of the MCP server to authenticate with oauth",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -2876,7 +4077,9 @@
           "value_name": "SCOPE,SCOPE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2888,7 +4091,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex mcp logout [OPTIONS] <NAME>",
       "args": [
@@ -2899,7 +4104,9 @@
           "note": "Name of the MCP server to deauthenticate",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2911,7 +4118,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex mcp remove [OPTIONS] <NAME>",
       "args": [
@@ -2922,7 +4131,9 @@
           "note": "Name of the MCP server configuration to remove",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -2933,7 +4144,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex mcp-server [OPTIONS]"
     },
@@ -2943,7 +4156,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex plugin [OPTIONS] <COMMAND>"
     },
@@ -2954,7 +4169,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "about": "Pass either `PLUGIN@MARKETPLACE` or pass `PLUGIN` with `--marketplace MARKETPLACE`.",
       "usage": "codex plugin add [OPTIONS] <PLUGIN[@MARKETPLACE]>",
@@ -2966,7 +4183,9 @@
           "note": "Plugin selector to install: either PLUGIN@MARKETPLACE or PLUGIN with --marketplace",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -2977,7 +4196,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -2988,7 +4209,9 @@
           "value_name": "MARKETPLACE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3000,7 +4223,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex plugin help [COMMAND]...",
       "args": [
@@ -3011,7 +4236,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3023,7 +4250,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex plugin list [OPTIONS]",
       "flags": [
@@ -3033,7 +4262,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3042,7 +4273,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3053,7 +4286,9 @@
           "value_name": "MARKETPLACE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3065,7 +4300,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex plugin marketplace [OPTIONS] <COMMAND>"
     },
@@ -3077,7 +4314,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex plugin marketplace add [OPTIONS] <SOURCE>",
       "args": [
@@ -3088,7 +4327,9 @@
           "note": "Marketplace source: a local path, owner/repo[@ref], HTTPS Git URL, or SSH Git URL",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -3099,7 +4340,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3109,7 +4352,9 @@
           "value_name": "REF",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3119,7 +4364,9 @@
           "value_name": "PATH",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3132,7 +4379,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex plugin marketplace help [COMMAND]...",
       "args": [
@@ -3143,7 +4392,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3156,7 +4407,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex plugin marketplace list [OPTIONS]",
       "flags": [
@@ -3166,7 +4419,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3179,7 +4434,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex plugin marketplace remove [OPTIONS] <MARKETPLACE_NAME>",
       "args": [
@@ -3190,7 +4447,9 @@
           "note": "Configured marketplace name to remove",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -3201,7 +4460,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3214,7 +4475,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "about": "Omit MARKETPLACE_NAME to upgrade all configured Git marketplaces.",
       "usage": "codex plugin marketplace upgrade [OPTIONS] [MARKETPLACE_NAME]",
@@ -3226,7 +4489,9 @@
           "note": "Optional configured marketplace name to upgrade. Omit to upgrade all Git marketplaces",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -3237,7 +4502,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3249,7 +4516,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "about": "Pass either `PLUGIN@MARKETPLACE` or pass `PLUGIN` with `--marketplace MARKETPLACE`.",
       "usage": "codex plugin remove [OPTIONS] <PLUGIN[@MARKETPLACE]>",
@@ -3261,7 +4530,9 @@
           "note": "Plugin selector to remove: either PLUGIN@MARKETPLACE or PLUGIN with --marketplace",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -3272,7 +4543,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3283,7 +4556,9 @@
           "value_name": "MARKETPLACE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3294,7 +4569,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex remote-control [OPTIONS] [COMMAND]",
       "flags": [
@@ -3304,7 +4581,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3316,7 +4595,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex remote-control help [COMMAND]...",
       "args": [
@@ -3327,7 +4608,9 @@
           "note": "Print help for the subcommand(s)",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3339,7 +4622,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex remote-control pair [OPTIONS]",
       "flags": [
@@ -3349,7 +4634,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3361,7 +4648,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex remote-control start [OPTIONS]",
       "flags": [
@@ -3371,7 +4660,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3383,7 +4674,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex remote-control stop [OPTIONS]",
       "flags": [
@@ -3393,7 +4686,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3404,7 +4699,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex resume [OPTIONS] [SESSION_ID] [PROMPT]",
       "args": [
@@ -3415,7 +4712,9 @@
           "note": "Optional user prompt to start the session",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3425,7 +4724,9 @@
           "note": "Session id (UUID) or session name. UUIDs take precedence if it parses. If omitted, use\n--last to pick the most recent recorded session",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -3436,7 +4737,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3445,7 +4748,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3454,7 +4759,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3465,7 +4772,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex review [OPTIONS] [PROMPT]",
       "args": [
@@ -3476,7 +4785,9 @@
           "note": "Custom review instructions. If `-` is used, read from stdin",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -3488,7 +4799,9 @@
           "value_name": "BRANCH",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3498,7 +4811,9 @@
           "value_name": "SHA",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3508,7 +4823,9 @@
           "value_name": "TITLE",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3517,7 +4834,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3528,7 +4847,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex sandbox [OPTIONS] [COMMAND]...",
       "args": [
@@ -3539,7 +4860,9 @@
           "note": "Full command args to run under the Linux sandbox",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ],
@@ -3559,7 +4882,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3578,7 +4903,9 @@
           "value_name": "NAME",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3587,7 +4914,9 @@
           "takes_value": false,
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3597,7 +4926,9 @@
           "value_name": "JSON",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         },
         {
@@ -3607,7 +4938,9 @@
           "value_name": "SANDBOX_STATE_READABLE_ROOT",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3618,7 +4951,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex unarchive [OPTIONS] <SESSION>",
       "args": [
@@ -3629,7 +4964,9 @@
           "note": "Session id (UUID) or session name. UUIDs take precedence if it parses",
           "available_on": [
             "x86_64-unknown-linux-musl",
-            "aarch64-apple-darwin"
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
           ]
         }
       ]
@@ -3640,7 +4977,9 @@
       ],
       "available_on": [
         "x86_64-unknown-linux-musl",
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
       ],
       "usage": "codex update [OPTIONS]"
     }

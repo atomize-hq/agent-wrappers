@@ -164,6 +164,22 @@
     },
     {
       "codex_version": "0.144.6",
+      "target_triple": "aarch64-unknown-linux-musl",
+      "asset_name": "codex-aarch64-unknown-linux-musl.tar.gz",
+      "download_url": "https://github.com/openai/codex/releases/download/rust-v0.144.6/codex-aarch64-unknown-linux-musl.tar.gz",
+      "sha256": "8eddae5e6c009dff9ba51ae1bfe3bdd9ff4c1ccc93a48cc6860db1cd9fdf11be",
+      "size_bytes": 101269986
+    },
+    {
+      "codex_version": "0.144.6",
+      "target_triple": "x86_64-pc-windows-msvc",
+      "asset_name": "codex-x86_64-pc-windows-msvc.exe",
+      "download_url": "https://github.com/openai/codex/releases/download/rust-v0.144.6/codex-x86_64-pc-windows-msvc.exe",
+      "sha256": "4b76ded066d0239115ca97473d010c92072bc5c5550a45dd7cbebe1e9eb956a7",
+      "size_bytes": 341225264
+    },
+    {
+      "codex_version": "0.144.6",
       "target_triple": "x86_64-unknown-linux-musl",
       "asset_name": "codex-x86_64-unknown-linux-musl.tar.gz",
       "download_url": "https://github.com/openai/codex/releases/download/rust-v0.144.6/codex-x86_64-unknown-linux-musl.tar.gz",

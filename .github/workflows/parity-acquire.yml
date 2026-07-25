@@ -539,13 +539,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          # These are the two paths `xtask support-matrix` actually publishes
+          # (support_matrix::JSON_OUTPUT_PATH and MARKDOWN_OUTPUT_PATH). `git add` fails the whole
+          # commit on a pathspec that matches nothing, so a wrong path here does not degrade
+          # gracefully — it discards an entire acquisition run at the last step.
           git add \
             "${ROOT}/snapshots/${VERSION}" \
             "${ROOT}/reports/${VERSION}" \
             "${ROOT}/versions/${VERSION}.json" \
             "${ROOT}/wrapper_coverage.json" \
             "${ROOT}/artifacts.lock.json" \
-            docs/support
+            cli_manifests/support_matrix/current.json \
+            docs/specs/unified-agent-api/support-matrix.md
 
           if git diff --cached --quiet; then
             echo "no acquisition changes to commit"

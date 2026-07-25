@@ -606,3 +606,58 @@ runner → complete union on the branch) rather than re-proving the lane in isol
 
 **Blocked on:** the CR fix reaching a ref the dispatch can use. codex's matrix includes
 `x86_64-pc-windows-msvc`, so without it the Windows leg fails and the union comes back incomplete.
+
+## 17. Item 3 complete — the packet reconciled end to end (2026-07-25)
+
+`agent-maintenance-open-pr` dispatched for codex `0.144.6` ran the whole chain: packet
+regeneration → acquisition gate → four-target matrix → union → report → validate → commit onto the
+packet branch. PR #153 now carries:
+
+```
+adb6019c chore(codex): acquire parity artifacts for 0.144.6
+214879fb chore: open maintenance packet for codex 0.144.6
+```
+
+with a committed union of `complete: true`, all four targets present, `missing: []`. Packet PR CI
+on that commit: **16 jobs green**. `status` remains `reported` — promotion is still a separate,
+maintainer-triggered decision.
+
+This is criterion 3 satisfied in the form it was written: a watcher-opened packet PR landing a
+complete multi-target union, acquisition run in the runner. Retrofitting the branch by hand would
+have proven the lane but not the wiring.
+
+It also confirmed Opus finding 3's fix in production: the acquisition push **re-triggered CI on
+#153** (`adb6019c pull_request CI`). Under `GITHUB_TOKEN` it silently would not have, and a
+maintainer would have been reviewing a green check that never saw the acquired artifacts.
+
+### 17.1 A third defect, found only by committing
+
+The first attempt failed at the last step of an otherwise perfect run:
+
+```
+fatal: pathspec 'docs/support' did not match any files
+```
+
+`docs/support` is not a path this repository has. `git add` fails the whole commit on a pathspec
+that matches nothing, so four downloads, four snapshots, the union, the report and the version
+metadata were all discarded after the matrix had already succeeded. The real publication paths are
+`support_matrix::JSON_OUTPUT_PATH` and `MARKDOWN_OUTPUT_PATH`.
+
+Fixed and bound to those constants by
+`c4_spec_acquisition_commits_the_paths_support_matrix_actually_publishes`, so renaming either fails
+in CI rather than at the end of an hour-long matrix. Every other path in that `git add` list was
+verified against all three agents.
+
+Only a `commit: true` run could surface it — every `commit: false` proof skips the step entirely.
+
+### 17.2 Standing gap: workflow changes get no multi-OS coverage
+
+All 17 `ci.yml` jobs are `ubuntu-latest`, and `parity-acquire`/`parity-promote` carry only
+`workflow_call` and `workflow_dispatch` — no `pull_request` trigger. A PR that edits these lanes
+therefore gets **zero** macOS or Windows coverage; PR #156's green checks never ran a Windows job.
+
+Three of the defects in this campaign were platform- or execution-mode-specific (`mapfile` on bash
+3.2, CR from Git Bash process substitution, `git add` on a `commit: true` path) and none were
+reachable from a `commit: false` Linux run. The static guards added here cover those specific
+shapes cheaply; a paths-filtered multi-OS job on `.github/workflows/**` would cover the class.
+Left as a maintainer decision because it changes CI cost and required-check configuration.
