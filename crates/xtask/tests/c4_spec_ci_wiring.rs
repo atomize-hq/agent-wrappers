@@ -323,8 +323,8 @@ fn c4_spec_ci_pins_the_latest_validated_binary_from_the_lockfile_row_not_the_des
     // claude_code 2.1.29 is pinned as a bare binary from the old bucket while the descriptor
     // resolves an npm platform tarball. Selecting the row by the descriptor's asset name matches
     // nothing and fails the job, so the row must be selected by (version, target) alone.
-    let selects_row_by_version_and_target = yml
-        .contains(r#"select(.[$key]==$v and .target_triple==$t)"#);
+    let selects_row_by_version_and_target =
+        yml.contains(r#"select(.[$key]==$v and .target_triple==$t)"#);
     assert!(
         selects_row_by_version_and_target,
         "ci.yml must select the claude_code lockfile row by (version, target) only"
