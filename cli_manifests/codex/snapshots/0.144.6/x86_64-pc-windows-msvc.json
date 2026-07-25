@@ -3,13 +3,13 @@
   "tool": "codex-cli",
   "collected_at": "2026-07-18T13:51:52Z",
   "binary": {
-    "sha256": "80a3933d11a9d13ef806aa24f7bb8afc9169cfe4e9b09d6da6a92922cbde9cff",
-    "size_bytes": 260472144,
+    "sha256": "4b76ded066d0239115ca97473d010c92072bc5c5550a45dd7cbebe1e9eb956a7",
+    "size_bytes": 341225264,
     "platform": {
-      "os": "macos",
-      "arch": "aarch64"
+      "os": "windows",
+      "arch": "x86_64"
     },
-    "target_triple": "aarch64-apple-darwin",
+    "target_triple": "x86_64-pc-windows-msvc",
     "version_output": "codex-cli 0.144.6",
     "semantic_version": "0.144.6",
     "channel": "stable"
@@ -3426,15 +3426,10 @@
           "name": "COMMAND",
           "required": false,
           "variadic": true,
-          "note": "Full command args to run under seatbelt"
+          "note": "Full command args to run under Windows restricted token sandbox"
         }
       ],
       "flags": [
-        {
-          "long": "--allow-unix-socket",
-          "takes_value": true,
-          "value_name": "ALLOW_UNIX_SOCKETS"
-        },
         {
           "long": "--cd",
           "short": "-C",
@@ -3464,10 +3459,6 @@
         },
         {
           "long": "--include-managed-config",
-          "takes_value": false
-        },
-        {
-          "long": "--log-denials",
           "takes_value": false
         },
         {
@@ -3918,7 +3909,7 @@
         "stage": "removed"
       },
       {
-        "effective": false,
+        "effective": true,
         "name": "secret_auth_storage",
         "stage": "stable"
       },
@@ -3993,7 +3984,7 @@
         "stage": "removed"
       },
       {
-        "effective": true,
+        "effective": false,
         "name": "unified_exec",
         "stage": "stable"
       },
