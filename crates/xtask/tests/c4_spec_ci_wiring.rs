@@ -315,6 +315,37 @@ fn c4_spec_ci_workflow_has_conditional_manifest_validate_gate() {
 }
 
 #[test]
+fn c4_spec_process_substitution_loops_strip_cr_for_the_windows_runners() {
+    // Git Bash backs process substitution with a temp file subject to text-mode translation, so
+    // `while read ... done < <(...)` yields a trailing CR on the Windows runners while `$(...)`
+    // captures do not. A CR is never part of a legitimate CLI flag, target triple, env var name
+    // or shell command, so every such loop in a workflow with a Windows matrix must strip it.
+    //
+    // This is not hypothetical: it took the whole win32-x64 leg of parity-acquire down with
+    // `unexpected argument '--help-timeout-ms\r'`, and parity-promote fed the same shape into
+    // `eval`.
+    for workflow in [
+        ".github/workflows/parity-acquire.yml",
+        ".github/workflows/parity-promote.yml",
+        ".github/workflows/ci.yml",
+    ] {
+        let yml = read_repo_file(workflow);
+        for (index, line) in yml.lines().enumerate() {
+            if !line.contains("done < <(") {
+                continue;
+            }
+            assert!(
+                line.contains(r"tr -d '\r'"),
+                "{workflow}:{} reads through process substitution without stripping CR, which \
+                 corrupts every value on the Windows runners: {}",
+                index + 1,
+                line.trim()
+            );
+        }
+    }
+}
+
+#[test]
 fn c4_spec_ci_pins_the_latest_validated_binary_from_the_lockfile_row_not_the_descriptor() {
     let yml = read_repo_file(".github/workflows/ci.yml");
 

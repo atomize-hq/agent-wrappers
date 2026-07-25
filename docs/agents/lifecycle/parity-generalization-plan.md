@@ -531,3 +531,78 @@ migration. Only CI, running against committed pointers, exercised that combinati
 One process note worth keeping: an earlier local preflight was reported green when it had in fact
 exited 2 on the same `fmt-check` failure CI caught. The wrapper ended with `tail`, so the captured
 exit status was `tail`'s. Local and CI never actually disagreed. Propagate the real exit code.
+
+## 16. Runner proof of items 2–4 (2026-07-25)
+
+With both lanes on `main` they became dispatchable, and checklist items 2 and 4 are now proven on
+real runners. Item 3 changed shape.
+
+### 16.1 Item 2 — acquisition proves complete on every target
+
+Version selection came from the tooling (`maintenance-watch`), not by hand: codex → `0.144.6`,
+claude_code → `2.1.212`, opencode → `1.18.4`.
+
+| agent | targets | union |
+|---|---|---|
+| codex `0.144.6` | 4/4 incl. `aarch64-unknown-linux-musl`, `x86_64-pc-windows-msvc` | `complete: true`, missing `[]` |
+| claude_code `2.1.212` | 3/3 incl. `win32-x64` | `complete: true`, missing `[]` |
+
+The two codex targets that were missing from the committed artifact are exactly the two the union
+now carries, which is the acceptance criterion for the stuck-packet class.
+
+### 16.2 A second defect only a Windows runner could find
+
+The first claude_code run failed on `win32-x64`:
+
+```
+error: unexpected argument '--help-timeout-ms<CR>' found
+  tip: a similar argument exists: '--help-timeout-ms'
+```
+
+Git Bash backs process substitution with a temp file subject to text-mode translation, so every
+line read via `while read … done < <(…)` arrives with a trailing CR on the Windows runners.
+`$(...)` captures use a pipe and do not. That asymmetry is why the pinned sha256 **and** the
+`int()`-parsed size verified cleanly one step earlier while this loop still produced a corrupted
+argument — the two facts that ruled out a blanket "jq emits CRLF" explanation.
+
+The env loops survived only because their CR lands outside the JSON, where jq discards it as
+insignificant whitespace. That is luck, not design. `parity-promote` had the same shape feeding
+`eval`, so its first Windows validation leg would have failed identically.
+
+Fixed across all 13 such reads in `parity-acquire`, `parity-promote` and `ci`, guarded by
+`c4_spec_process_substitution_loops_strip_cr_for_the_windows_runners`. Re-running claude_code
+`2.1.212` against the fix turned `win32-x64` green and produced `complete: true`.
+
+Note this is the second time the *portability remedy itself* carried the next portability bug: the
+bash-3.2 `mapfile` fix introduced the loop shape that then broke on Windows.
+
+### 16.3 Item 4 — promotion readiness proven
+
+`parity-promote` dry-run for codex `0.144.6` (committed union `complete: false`, 2/4, status
+`reported`) succeeded end to end: validation ran on both union targets, then the promote job
+advanced `latest_validated.txt` and the per-target pointers, copied the union to `current.json`,
+set `status: validated` with its passed targets, and **passed the hard `manifest-validate` gate**.
+`Open the promotion PR` was **skipped**, as dry-run requires. Nothing was self-promoted.
+
+This exercised codex's declared `allow_promote_when_incomplete: true` (`linux_first_v1`) — the
+policy path that the Codex reviewer wanted replaced with a hard fail, and which §14 kept
+manifest-declared rather than assumed.
+
+### 16.4 Item 3 — one packet is superseded, the other needs the watcher
+
+**opencode `1.14.47` is superseded, not stuck.** Its PR **#109 is closed**; the live opencode packet
+is #149 (`1.18.3`) and the watcher now targets `1.18.4`. Criterion 5 permits "completed **or
+explicitly superseded**"; re-acquiring a closed packet would be wrong. Recorded as superseded.
+
+**codex `0.144.6` (PR #153, open) cannot be reconciled by a direct `parity-acquire` dispatch.** The
+branch is 13 commits behind `main` and predates the subsystem, so it carries no
+`manifest_acquisition`; the plan step would invoke an xtask subcommand that branch does not have.
+
+Chosen path: dispatch `agent-maintenance-open-pr` for codex `0.144.6`. Its `open-pr` job checks out
+`staging`, regenerates the packet, and `create-pull-request` updates the existing branch — which
+brings it current as a side effect — after which the `acquire` job commits the complete union. This
+is the only option that proves criterion 3 end to end (watcher-opened PR → acquisition in the
+runner → complete union on the branch) rather than re-proving the lane in isolation.
+
+**Blocked on:** the CR fix reaching a ref the dispatch can use. codex's matrix includes
+`x86_64-pc-windows-msvc`, so without it the Windows leg fails and the union comes back incomplete.

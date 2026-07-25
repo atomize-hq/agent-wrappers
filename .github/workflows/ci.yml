@@ -557,7 +557,7 @@ jobs:
             NAME="$(jq -r '.name' <<<"$pair")"
             VALUE="$(jq -r '.value' <<<"$pair")"
             export "${NAME}=${VALUE}"
-          done < <(jq -c '.snapshot.env[]?' _ci_tmp/plan.json)
+          done < <(jq -c '.snapshot.env[]?' _ci_tmp/plan.json | tr -d '\r')
           "$BIN" --version
 
       - name: Wrapper unit tests
