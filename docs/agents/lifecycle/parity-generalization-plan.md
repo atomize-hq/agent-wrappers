@@ -461,3 +461,73 @@ other step of the lane was executed for real on this machine's native target
 The `opencode` chain was proven the same way end-to-end through the engines
 (`opencode-snapshot` → `manifest-union` → `manifest-report` → `manifest-version-metadata`) against
 the real 1.18.4 binary.
+
+## 15. Real-runner validation (2026-07-25)
+
+The maintainer pushed the branch, confirmed `AUTOMATION_TOKEN` exists as a repository secret, and
+authorized checklist items 2–4. Two things came out of attempting them.
+
+### 15.1 The reusable lanes are not dispatchable until they reach `main`
+
+`workflow_dispatch` only registers if the workflow file exists on the repository's **default
+branch**. This repo's default branch is `main`, not `staging`, and both new lanes exist only on the
+feature branch:
+
+```
+HTTP 404: workflow parity-acquire.yml not found on the default branch
+HTTP 404: workflow parity-promote.yml not found on the default branch
+```
+
+So checklist items 2 (prove acquisition on runners), 3 (reconcile the stuck packets) and 4 (prove
+promotion readiness) are blocked on merge order — `feat/… → staging → main` — not on anything in
+the implementation. `only-staging-to-main.yml` guards the second hop, so both merges are human.
+
+`agent-maintenance-open-pr.yml` is on `main` and `workflow_call` has no default-branch requirement,
+so dispatching *it* at the feature ref looked like a way in. It is not: its `open-pr` job checks out
+`ref: staging` unconditionally, so the gate step would run `staging`'s xtask, which has no
+`manifest-acquisition-plan` command, and the run would fail before reaching the acquire job.
+
+**Decision:** merge the chain first, then run items 2–4 as real dispatches. Recorded so the next
+person does not re-derive the 404.
+
+### 15.2 A real defect the runners caught that local proof could not
+
+`ci.yml` *is* on `main` and does carry `workflow_dispatch`, so it can be dispatched at the feature
+ref — running the feature branch's own definition. Doing so failed
+`Claude Code Linux (latest validated)`:
+
+```
+manifest-acquisition-plan --agent claude_code --version 2.1.29
+error: cli_manifests/claude_code/artifacts.lock.json has no row for
+       claude_code_version=2.1.29 target=linux-x64 asset=claude-code-linux-x64-2.1.29.tgz
+```
+
+The round-2 remedy for the Codex BLOCKER took the **asset name from the descriptor** and then
+demanded a lockfile row matching it. That is the wrong authority for an already-pinned version. The
+descriptor says how a *new* version would be acquired; the lockfile row records what was *actually*
+pinned. They disagree across the distribution migration: `2.1.29` is pinned as a bare `claude`
+binary from the old storage bucket, while the descriptor resolves an npm platform tarball. So the
+job demanded a row that does not exist and failed against committed truth.
+
+The Codex finding was correct — hardcoding `asset_name: claude` would break once acquisition writes
+tarball rows — but the remedy over-corrected into assuming the post-migration shape exclusively.
+
+**Fix** (`4ea94956`): select the row by `(version, target)` and let it name its own asset, URL,
+digest and size; infer archive shape from the pinned asset name. Target, binary path and snapshot
+env still come from the descriptor, since those are version-independent. The job is now correct on
+both sides of the migration. Guarded by
+`c4_spec_ci_pins_the_latest_validated_binary_from_the_lockfile_row_not_the_descriptor`, which fails
+against the old selector.
+
+**Why local proof missed it:** the round-2 end-to-end proof used `2.1.219`, a version that exists on
+npm, so the descriptor path worked. The committed `latest_validated` is `2.1.29`, which predates the
+migration. Only CI, running against committed pointers, exercised that combination.
+
+### 15.3 Status after the fix
+
+`ci.yml` dispatched at the feature ref: **16 jobs green**, `Publish readiness` skipped as expected.
+`make preflight` locally: **exit 0**.
+
+One process note worth keeping: an earlier local preflight was reported green when it had in fact
+exited 2 on the same `fmt-check` failure CI caught. The wrapper ended with `tail`, so the captured
+exit status was `tail`'s. Local and CI never actually disagreed. Propagate the real exit code.
