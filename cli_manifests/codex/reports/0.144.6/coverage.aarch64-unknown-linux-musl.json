@@ -6,7 +6,7 @@
       "semantic_version": "0.144.6",
       "mode": "union",
       "targets": [
-        "aarch64-apple-darwin"
+        "aarch64-unknown-linux-musl"
       ]
     },
     "wrapper": {
@@ -19,24 +19,12 @@
   },
   "platform_filter": {
     "mode": "exact_target",
-    "target_triple": "aarch64-apple-darwin"
+    "target_triple": "aarch64-unknown-linux-musl"
   },
   "deltas": {
     "missing_commands": [],
     "missing_flags": [],
     "missing_args": [],
-    "excluded_commands": [
-      {
-        "path": [
-          "app"
-        ],
-        "upstream_available_on": [
-          "aarch64-apple-darwin",
-          "x86_64-pc-windows-msvc"
-        ],
-        "note": "Desktop app launcher is platform-specific and excluded from wrapper parity."
-      }
-    ],
     "excluded_flags": [
       {
         "path": [],
@@ -413,7 +401,7 @@
           "check"
         ],
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -422,7 +410,7 @@
           "responses-api-proxy"
         ],
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -432,7 +420,7 @@
           "help"
         ],
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -442,7 +430,7 @@
           "linux"
         ],
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -452,7 +440,7 @@
           "macos"
         ],
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -462,7 +450,7 @@
           "windows"
         ],
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -471,7 +459,7 @@
           "stdio-to-uds"
         ],
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       }
@@ -522,7 +510,7 @@
         ],
         "key": "--policy",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -533,7 +521,7 @@
         ],
         "key": "--pretty",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -570,7 +558,7 @@
         ],
         "key": "--http-shutdown",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -580,7 +568,7 @@
         ],
         "key": "--port",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -590,7 +578,7 @@
         ],
         "key": "--server-info",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -600,9 +588,31 @@
         ],
         "key": "--upstream-url",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox"
+        ],
+        "key": "--allow-unix-socket",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded verbatim by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "sandbox"
+        ],
+        "key": "--log-denials",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded verbatim by NonTuiCommandRequest."
       },
       {
         "path": [
@@ -611,7 +621,7 @@
         ],
         "key": "--include-managed-config",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -622,7 +632,7 @@
         ],
         "key": "--permissions-profile",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -633,7 +643,7 @@
         ],
         "key": "--allow-unix-socket",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -644,7 +654,7 @@
         ],
         "key": "--include-managed-config",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -655,7 +665,7 @@
         ],
         "key": "--log-denials",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -666,7 +676,7 @@
         ],
         "key": "--permissions-profile",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -677,7 +687,7 @@
         ],
         "key": "--include-managed-config",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -688,7 +698,7 @@
         ],
         "key": "--permissions-profile",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       }
@@ -701,7 +711,7 @@
         ],
         "name": "COMMAND",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -712,7 +722,7 @@
         ],
         "name": "COMMAND",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -723,7 +733,7 @@
         ],
         "name": "COMMAND",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -734,7 +744,7 @@
         ],
         "name": "COMMAND",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -745,7 +755,7 @@
         ],
         "name": "COMMAND",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       },
@@ -755,7 +765,7 @@
         ],
         "name": "SOCKET_PATH",
         "upstream_available_on": [
-          "aarch64-apple-darwin"
+          "aarch64-unknown-linux-musl"
         ],
         "wrapper_level": "explicit"
       }
