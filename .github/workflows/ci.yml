@@ -493,9 +493,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
-      # Driven by the acquisition descriptor rather than hardcoded coordinates. Claude's asset is
-      # now an npm platform tarball, not a bare binary, so a hardcoded `asset_name: claude` would
-      # match no lockfile row and — if it did — would try to execute the tarball.
+      # Target, binary path and runtime env come from the acquisition descriptor; the artifact
+      # itself comes from the lockfile row. The two answer different questions: the descriptor
+      # says how a *new* version would be acquired, while the row records what was *actually*
+      # pinned for this one. They disagree across the distribution migration — 2.1.29 is pinned
+      # as a bare binary from the old bucket, while the descriptor resolves an npm platform
+      # tarball — so taking the asset name from the descriptor would demand a row that does not
+      # exist. Reading the row keeps this job correct on both sides of the migration, including
+      # after parity-acquire starts writing tarball-shaped rows.
       - name: Acquire Claude Code CLI (required target)
         shell: bash
         run: |
@@ -506,42 +511,52 @@ jobs:
             --agent claude_code --version "$VERSION" --emit-json _ci_tmp/plan.json
 
           REQUIRED_TARGET="$(jq -r '.required_target' _ci_tmp/plan.json)"
-          ROW="$(jq -c --arg t "$REQUIRED_TARGET" '.include[] | select(.target_triple==$t)' _ci_tmp/plan.json)"
-          ASSET="$(jq -r '.asset_name' <<<"$ROW")"
-          URL="$(jq -r '.download_url' <<<"$ROW")"
-          BIN="$(jq -r '.binary_path' <<<"$ROW")"
-          ARCHIVE="$(jq -r '.archive' <<<"$ROW")"
-          ARCHIVE_MEMBER="$(jq -r '.archive_member // empty' <<<"$ROW")"
+          PLANNED="$(jq -c --arg t "$REQUIRED_TARGET" '.include[] | select(.target_triple==$t)' _ci_tmp/plan.json)"
+          BIN="$(jq -r '.binary_path' <<<"$PLANNED")"
           VERSION_KEY="$(jq -r '.lockfile_version_key' _ci_tmp/plan.json)"
 
           LOCK=cli_manifests/claude_code/artifacts.lock.json
-          SELECT='.artifacts[] | select(.[$key]==$v and .target_triple==$t and .asset_name==$a)'
-          SHA="$(jq -r --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$REQUIRED_TARGET" --arg a "$ASSET" "${SELECT} | .sha256" "$LOCK")"
-          SIZE="$(jq -r --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$REQUIRED_TARGET" --arg a "$ASSET" "${SELECT} | .size_bytes" "$LOCK")"
+          ROW="$(jq -c --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$REQUIRED_TARGET" \
+            '.artifacts[] | select(.[$key]==$v and .target_triple==$t)' "$LOCK")"
 
-          if [ -z "$SHA" ] || [ "$SHA" = "null" ]; then
-            echo "::error title=No usable lockfile pin::${LOCK} has no row for ${VERSION_KEY}=${VERSION} target=${REQUIRED_TARGET} asset=${ASSET}. Re-run parity-acquire for this version." >&2
+          if [ -z "$ROW" ]; then
+            echo "::error title=No usable lockfile pin::${LOCK} has no row for ${VERSION_KEY}=${VERSION} target=${REQUIRED_TARGET}. Re-run parity-acquire for this version." >&2
             exit 1
           fi
+
+          ASSET="$(jq -r '.asset_name' <<<"$ROW")"
+          URL="$(jq -r '.download_url' <<<"$ROW")"
+          SHA="$(jq -r '.sha256' <<<"$ROW")"
+          SIZE="$(jq -r '.size_bytes' <<<"$ROW")"
 
           curl -fsSL -o claude.bin "$URL"
           test "$(wc -c < claude.bin)" = "$SIZE"
           echo "$SHA  claude.bin" | sha256sum -c -
 
-          rm -rf _extract && mkdir -p _extract
-          case "$ARCHIVE" in
-            none)    cp claude.bin "$BIN" ;;
-            tar_gz|npm_tgz)
-              test -n "$ARCHIVE_MEMBER"
-              tar -xzf claude.bin -C _extract "$ARCHIVE_MEMBER"
-              cp "_extract/${ARCHIVE_MEMBER}" "$BIN"
+          # The pinned asset names its own shape: a tarball has to be unpacked, a bare binary is
+          # already the executable. Trusting the descriptor's `archive` here would mis-handle
+          # whichever side of the migration the row came from.
+          case "$ASSET" in
+            *.tgz|*.tar.gz)
+              MEMBER="$(jq -r '.archive_member // empty' <<<"$PLANNED")"
+              if [ -z "$MEMBER" ]; then
+                MEMBER="$(tar -tzf claude.bin | awk 'NF && substr($0,length($0),1) != "/" {print; exit}')"
+              fi
+              test -n "$MEMBER"
+              rm -rf _extract && mkdir -p _extract
+              tar -xzf claude.bin -C _extract "$MEMBER"
+              cp "_extract/${MEMBER}" "$BIN"
               ;;
-            *) echo "unsupported archive kind: ${ARCHIVE}" >&2; exit 1 ;;
+            *)
+              cp claude.bin "$BIN"
+              ;;
           esac
           chmod +x "$BIN"
 
           while read -r pair; do
-            export "$(jq -r '.name' <<<"$pair")=$(jq -r '.value' <<<"$pair")"
+            NAME="$(jq -r '.name' <<<"$pair")"
+            VALUE="$(jq -r '.value' <<<"$pair")"
+            export "${NAME}=${VALUE}"
           done < <(jq -c '.snapshot.env[]?' _ci_tmp/plan.json)
           "$BIN" --version
 

@@ -314,6 +314,53 @@ fn c4_spec_ci_workflow_has_conditional_manifest_validate_gate() {
     );
 }
 
+#[test]
+fn c4_spec_ci_pins_the_latest_validated_binary_from_the_lockfile_row_not_the_descriptor() {
+    let yml = read_repo_file(".github/workflows/ci.yml");
+
+    // The descriptor answers "how would a new version be acquired"; the lockfile row answers
+    // "what was actually pinned for this one". Those diverge across a distribution migration:
+    // claude_code 2.1.29 is pinned as a bare binary from the old bucket while the descriptor
+    // resolves an npm platform tarball. Selecting the row by the descriptor's asset name matches
+    // nothing and fails the job, so the row must be selected by (version, target) alone.
+    let selects_row_by_version_and_target = yml
+        .contains(r#"select(.[$key]==$v and .target_triple==$t)"#);
+    assert!(
+        selects_row_by_version_and_target,
+        "ci.yml must select the claude_code lockfile row by (version, target) only"
+    );
+
+    assert!(
+        !yml.contains(r#"select(.[$key]==$v and .target_triple==$t and .asset_name==$a)"#),
+        "ci.yml must not constrain the lockfile row on the descriptor's asset name: a version \
+         pinned before the acquisition descriptor existed has no row under that name"
+    );
+
+    // The pinned asset names its own shape. Inferring it from the descriptor's `archive` would
+    // try to untar a bare binary (or execute a tarball) depending on migration direction.
+    assert!(
+        yml.contains("*.tgz|*.tar.gz)"),
+        "ci.yml must infer archive shape from the pinned asset name"
+    );
+
+    // Whatever the shape, the binary must never be executed before the autoupdater is disabled:
+    // a self-update between the digest check and the run would make the verified pin a lie.
+    let acquire_step = yml
+        .split("- name: Acquire Claude Code CLI (required target)")
+        .nth(1)
+        .expect("ci.yml must retain the claude_code acquisition step");
+    let env_export = acquire_step
+        .find(".snapshot.env[]?")
+        .expect("acquisition step must apply the descriptor's snapshot env");
+    let version_probe = acquire_step
+        .find(r#""$BIN" --version"#)
+        .expect("acquisition step must smoke the acquired binary");
+    assert!(
+        env_export < version_probe,
+        "ci.yml must export the descriptor's snapshot env before executing the binary"
+    );
+}
+
 fn assert_prepare_step_precedes(
     workflow_text: &str,
     prepare_needle: &str,
