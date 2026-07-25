@@ -4,7 +4,6 @@ use std::{
 };
 
 use serde::Deserialize;
-use sha2::{Digest, Sha256};
 
 use super::{Args, Error};
 
@@ -172,11 +171,11 @@ pub(super) fn write_raw_help(
     let rel = if path.is_empty() {
         PathBuf::from("help.txt")
     } else {
-        // Avoid OS path-length limits by using a stable hashed directory name rather than nesting
-        // one directory per token.
-        PathBuf::from("commands")
-            .join(raw_help_command_dir_name(path))
-            .join("help.txt")
+        let mut p = PathBuf::from("commands");
+        for token in path {
+            p.push(token);
+        }
+        p.join("help.txt")
     };
     let full = raw_help_dir.join(rel);
     if let Some(parent) = full.parent() {
@@ -184,33 +183,4 @@ pub(super) fn write_raw_help(
     }
     fs::write(full, help)?;
     Ok(())
-}
-
-fn raw_help_command_dir_name(path: &[String]) -> String {
-    let joined = path.join("\u{1f}");
-    let mut hasher = Sha256::new();
-    hasher.update(joined.as_bytes());
-    let hash = hex::encode(hasher.finalize());
-
-    let mut prefix = path.join("-");
-    if prefix.is_empty() {
-        prefix = "cmd".to_string();
-    }
-    const MAX_PREFIX: usize = 40;
-    if prefix.len() > MAX_PREFIX {
-        // Truncate on a char boundary, matching the reader in `manifest_union::merge`. A
-        // multi-byte token straddling byte 40 would otherwise panic here and, if it did not,
-        // would name the directory differently from the reference the union records.
-        let cut = (0..=MAX_PREFIX)
-            .rev()
-            .find(|idx| prefix.is_char_boundary(*idx))
-            .unwrap_or(0);
-        prefix.truncate(cut);
-        prefix = prefix.trim_end_matches('-').to_string();
-        if prefix.is_empty() {
-            prefix = "cmd".to_string();
-        }
-    }
-
-    format!("{prefix}__{hash}")
 }

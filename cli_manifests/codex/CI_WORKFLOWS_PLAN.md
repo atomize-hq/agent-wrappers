@@ -33,24 +33,26 @@ Trigger:
 Responsibilities:
 - Run `cargo run -p xtask -- maintenance-watch --emit-json _ci_tmp/maintenance-watch.json`.
 - Build the shared `stale_agents[]` queue from registry truth rather than reimplementing release selection in YAML.
-- Dispatch `.github/workflows/codex-cli-update-snapshot.yml` for the `codex` queue item when that queue reports drift.
+- Dispatch the shared packet opener `.github/workflows/agent-maintenance-open-pr.yml`, which opens the packet PR and then calls the reusable acquisition lane against that branch.
 - The deleted per-agent watcher workflows are not live entrypoints.
 
-### 2) Update Snapshot / Parity PR (workflow_dispatch, dispatched by Release Watch)
+### 2) Acquisition (reusable lane, called by the packet opener)
 
-Workflow: `.github/workflows/codex-cli-update-snapshot.yml`
+Workflow: `.github/workflows/parity-acquire.yml` — one agent-agnostic lane shared by every agent.
 
 Trigger:
-- `workflow_dispatch` with inputs:
+- `workflow_call` from `.github/workflows/agent-maintenance-open-pr.yml`, and `workflow_dispatch`
+  for manual replay, with inputs:
   - `agent_id`
-  - `current_version`
-  - `latest_stable`
   - `target_version`
-  - `opened_from`
-  - `detected_by`
-  - `dispatch_kind`
-  - `branch_name`
-  - optional `update_min_supported` (**deprecated**; workflow will fail if `true`)
+  - `ref` (branch to check out and commit to; default `staging`)
+  - `commit` (commit the acquired artifacts onto `ref`)
+
+There are no per-agent inputs and no per-agent branching in the workflow. The release source, each
+target's runner, the download URL, the archive shape, the snapshot command and the engine commands
+are all read from the `acquisition` block in `cli_manifests/codex/RULES.json` via
+`xtask manifest-acquisition-plan`, whose emitted `include` array is used directly as the job
+matrix.
 
 Responsibilities:
 - Acquire upstream binaries for each expected target (see “Targets” and “Assets” below).
@@ -174,7 +176,7 @@ Consumer jobs must:
 3) **Enforce + validate**
 - Runs deterministic validators:
   - JSON schema validation
-  - `xtask codex-validate` (RULES enforcement)
+  - `xtask manifest-validate` (RULES enforcement)
 - Runs wrapper validation tests (Linux required in v1).
 
 ## Branch + PR Strategy

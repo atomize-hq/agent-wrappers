@@ -609,11 +609,26 @@ Use maintenance mode for an already-onboarded agent when drift is detected or a 
 
 The procedure below documents the live committed workflow surfaces.
 
-It does not imply that all currently committed worker workflows are the intended long-term steady
-state. The successful `opencode` `packet_pr` proving run established the intended convergence
-direction: shared watcher, shared packet PR opener, shared prepared request schema, shared relay,
-and explicit manual closeout. The remaining `codex` and `claude_code` worker workflows are
-transitional transport surfaces until that migration lands.
+That convergence has landed. The `opencode` `packet_pr` proving run established the direction —
+shared watcher, shared packet PR opener, shared prepared request schema, shared relay, and
+explicit manual closeout — and multi-target parity acquisition and promotion now follow it too.
+The per-agent `codex` and `claude_code` acquisition/promotion workflows have been deleted and
+replaced by two reusable, agent-agnostic lanes:
+
+- `.github/workflows/parity-acquire.yml` — called by the packet opener against the packet branch,
+  so a watcher-opened PR carries a **complete** multi-target union instead of the single-host
+  partial union the generic executor can produce on its own.
+- `.github/workflows/parity-promote.yml` — maintainer-dispatched only, defaulting to `dry_run`.
+
+Neither workflow branches on agent identity. Everything agent-specific lives in the `acquisition`
+block of `cli_manifests/<agent>/RULES.json` and is resolved by
+`cargo run -p xtask -- manifest-acquisition-plan --agent <agent_id> --version <semver>`, which you
+can run locally to preview exactly what CI will do.
+
+An agent takes the acquisition lane when — and only when — it is enrolled in
+`maintenance.release_watch` **and** its `RULES.json` carries an `acquisition` block. Docs-only
+agents satisfy neither and keep their existing maintenance behavior unchanged; the packet opener
+records a `Docs-only maintenance lane` notice for them and skips acquisition.
 
 Maintenance reads the committed lifecycle baseline first. Generated packet docs and historical handoff text remain detector inputs, not the lifecycle authority.
 Maintenance accepts committed `published` records as valid baselines even before `closeout_baseline_path` exists; `closed_baseline` remains the post-closeout steady state.

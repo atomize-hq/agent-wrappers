@@ -167,6 +167,8 @@
     }
   },
   "union": {
+    "tool_name": "codex-cli",
+    "raw_help_layout": "path_tokens",
     "mode": "union",
     "platform_granularity": "target_triple",
     "require_same_tool": true,
@@ -259,6 +261,64 @@
         "normalize_newlines": "lf",
         "trim_trailing_whitespace_per_line": true
       }
+    }
+  },
+  "acquisition": {
+    "acquisition_schema_version": 1,
+    "source_kind": "github_releases",
+    "github_releases": {
+      "owner": "openai",
+      "repo": "codex",
+      "tag_template": "rust-v{version}"
+    },
+    "snapshot": {
+      "command": "codex-snapshot",
+      "binary_arg": "--codex-binary",
+      "extra_args": []
+    },
+    "lockfile_version_key": "codex_version",
+    "union_command": "manifest-union",
+    "wrapper_coverage_command": "codex-wrapper-coverage",
+    "targets": {
+      "x86_64-unknown-linux-musl": {
+        "runs_on": "ubuntu-latest",
+        "binary_path": "./codex-{target}",
+        "archive": "tar_gz",
+        "asset_name": "codex-{target}.tar.gz"
+      },
+      "aarch64-unknown-linux-musl": {
+        "runs_on": "ubuntu-24.04-arm",
+        "binary_path": "./codex-{target}",
+        "archive": "tar_gz",
+        "asset_name": "codex-{target}.tar.gz"
+      },
+      "aarch64-apple-darwin": {
+        "runs_on": "macos-latest",
+        "binary_path": "./codex-{target}",
+        "archive": "tar_gz",
+        "asset_name": "codex-{target}.tar.gz"
+      },
+      "x86_64-pc-windows-msvc": {
+        "runs_on": "windows-latest",
+        "binary_path": "./codex-{target}.exe",
+        "archive": "none",
+        "asset_name": "codex-{target}.exe"
+      }
+    },
+    "validation": {
+      "env": {
+        "CODEX_BINARY": "{binary_path}",
+        "CODEX_E2E_BINARY": "{binary_path}",
+        "CODEX_E2E_HOME": "{scratch_dir}",
+        "CODEX_HOME": "{scratch_dir}"
+      },
+      "commands": [
+        "cargo test -p unified-agent-api-codex",
+        "cargo test -p unified-agent-api-codex --examples",
+        "cargo run -p unified-agent-api-codex --example feature_detection",
+        "cargo run -p unified-agent-api-codex --example capability_snapshot -- \"$CODEX_BINARY\" \"$CODEX_E2E_HOME/capabilities.json\" auto",
+        "cargo test -p unified-agent-api-codex --test cli_e2e -- --nocapture"
+      ]
     }
   },
   "comparison": {

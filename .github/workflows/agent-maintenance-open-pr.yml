@@ -77,6 +77,11 @@ permissions:
 jobs:
   open-pr:
     runs-on: ubuntu-latest
+    outputs:
+      # `pull-request-operation` distinguishes a live branch from the `closed` path, where
+      # create-pull-request deletes the branch but still reports a pull-request-number.
+      branch_created: ${{ steps.create_pr.outcome == 'success' && (steps.create_pr.outputs.pull-request-operation == 'created' || steps.create_pr.outputs.pull-request-operation == 'updated') }}
+      acquire: ${{ steps.acquisition_gate.outputs.acquire }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -103,6 +108,50 @@ jobs:
             --request-recorded-at "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
             --request-commit "${{ github.sha }}" \
             --write
+      - name: Decide whether this agent takes the multi-target acquisition lane
+        id: acquisition_gate
+        shell: bash
+        env:
+          AGENT_ID: ${{ inputs.agent_id }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          # The gate is committed truth, not a second registry field: an agent acquires exactly
+          # when it is release-watch enrolled *and* its RULES.json carries an `acquisition` block.
+          # `manifest-acquisition-plan` enforces both, so a clean exit is the gate.
+          #
+          # Build the planner first, separately. A compile failure and a planner rejection are
+          # very different things, and collapsing both into `acquire=false` would silently
+          # downgrade every agent to the docs-only lane whenever xtask fails to build.
+          cargo build -p xtask
+
+          set +e
+          ./target/debug/xtask manifest-acquisition-plan \
+            --agent "$AGENT_ID" \
+            --version "$TARGET_VERSION" \
+            --emit-json _ci_tmp_gate.json 2> _ci_tmp_gate.err
+          gate_status=$?
+          set -e
+
+          # Exit 3 means "not on the acquisition lane", which is an expected answer. Any other
+          # non-zero exit is a real regression — a malformed descriptor, a broken registry — and
+          # must fail the run rather than quietly downgrading an enrolled agent to docs-only.
+          case "$gate_status" in
+            0)
+              echo "acquire=true" >> "$GITHUB_OUTPUT"
+              echo "${AGENT_ID} takes the multi-target acquisition lane."
+              ;;
+            3)
+              echo "acquire=false" >> "$GITHUB_OUTPUT"
+              echo "::notice title=Docs-only maintenance lane::${AGENT_ID} does not acquire binaries: $(cat _ci_tmp_gate.err)"
+              ;;
+            *)
+              echo "::error title=Acquisition planner failed::${AGENT_ID} is enrolled but its plan could not be resolved (exit ${gate_status}): $(cat _ci_tmp_gate.err)" >&2
+              rm -f _ci_tmp_gate.err _ci_tmp_gate.json
+              exit 1
+              ;;
+          esac
+          rm -f _ci_tmp_gate.err _ci_tmp_gate.json
       - name: Create PR
         id: create_pr
         continue-on-error: true
@@ -195,3 +244,22 @@ jobs:
           gh pr create --base staging --head "${{ inputs.branch_name }}" --title "${PR_TITLE}" --body-file "${PR_SUMMARY_PATH}"
           EOF
           exit 1
+
+  # Fill the freshly opened packet PR with the COMPLETE multi-target union.
+  #
+  # The generic executor runs on a single host and can therefore only ever produce a partial,
+  # `complete:false` union. Acquisition runs the full cross-platform matrix in the runner and
+  # commits the result onto the packet branch, so the PR a maintainer reviews carries the whole
+  # surface. Promotion stays a separate, maintainer-triggered `parity-promote` dispatch.
+  acquire:
+    name: Acquire complete union
+    needs: open-pr
+    if: ${{ needs.open-pr.outputs.acquire == 'true' && needs.open-pr.outputs.branch_created == 'true' }}
+    uses: ./.github/workflows/parity-acquire.yml
+    with:
+      agent_id: ${{ inputs.agent_id }}
+      target_version: ${{ inputs.target_version }}
+      ref: ${{ inputs.branch_name }}
+      commit: true
+    secrets:
+      AUTOMATION_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}

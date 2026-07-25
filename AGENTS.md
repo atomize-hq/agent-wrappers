@@ -18,7 +18,7 @@
 - Build/typecheck: `make check`
 - Tests: `make test` (or targeted: `cargo test -p codex`)
 - Integration gate: `make preflight` (runs hygiene + fmt/clippy/check/test + LOC cap + security)
-- Artifacts/tools: `cargo run -p xtask -- capability-matrix` and `cargo run -p xtask -- codex-validate --root cli_manifests/codex`
+- Artifacts/tools: `cargo run -p xtask -- capability-matrix` and `cargo run -p xtask -- manifest-validate --root cli_manifests/codex`
 
 ## Coding Style & Naming Conventions
 
@@ -36,7 +36,8 @@
 
 - Follow the repo’s established commit style: `feat:`, `fix:`, `chore:`, `docs:`, `ci:`; optional scope is common (e.g. `fix(claude_code): ...`).
 - PRs should include: what changed, why, and pointers to the canonical contract in `docs/specs/**` when behavior/format changes are involved (ADRs are supporting rationale).
-- If you touch `cli_manifests/**`, run the relevant `xtask ...validate` command locally before pushing.
+- If you touch `cli_manifests/**`, run `cargo run -p xtask -- manifest-validate --root cli_manifests/<agent>` locally before pushing.
+- The parity engines are agent-agnostic and neutrally named (`manifest-union`, `manifest-report`, `manifest-validate`, `manifest-version-metadata`, `manifest-retain`); the historical `codex-*` / `claude-union` names remain as back-compat aliases that preserve their original default `--root`.
 
 ## Security, Docs, and Repo Hygiene
 

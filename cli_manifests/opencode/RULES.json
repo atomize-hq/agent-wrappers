@@ -1,13 +1,32 @@
 {
   "rules_schema_version": 1,
   "scope": "opencode-cli-parity",
+  "identity": {
+    "command": "path",
+    "flag": "prefer_long_else_short",
+    "arg": "name"
+  },
   "versioning": {
     "pointers": {
       "stable_semver_pattern": "^\\d+\\.\\d+\\.\\d+$",
       "root_pointers_allow_none": true
     }
   },
+  "parity_exclusions": {
+    "schema_version": 1,
+    "units": [
+      {
+        "unit": "arg",
+        "path": [],
+        "name": "project",
+        "category": "interactive",
+        "note": "Interactive TUI project selection is outside the canonical run --format json wrapper surface."
+      }
+    ]
+  },
   "union": {
+    "tool_name": "opencode-cli",
+    "raw_help_layout": "path_tokens",
     "required_target": "linux-x64",
     "expected_targets": [
       "linux-x64",
@@ -18,6 +37,51 @@
       "linux-x64": "linux",
       "darwin-arm64": "macos",
       "win32-x64": "windows"
+    }
+  },
+  "acquisition": {
+    "acquisition_schema_version": 1,
+    "source_kind": "npm",
+    "npm": {
+      "package": "opencode-ai"
+    },
+    "snapshot": {
+      "command": "opencode-snapshot",
+      "binary_arg": "--opencode-binary",
+      "extra_args": []
+    },
+    "lockfile_version_key": "semantic_version",
+    "union_command": "manifest-union",
+    "targets": {
+      "linux-x64": {
+        "runs_on": "ubuntu-latest",
+        "binary_path": "./opencode-{target}",
+        "archive": "npm_tgz",
+        "platform_package": "opencode-linux-x64",
+        "archive_member": "package/bin/opencode"
+      },
+      "darwin-arm64": {
+        "runs_on": "macos-latest",
+        "binary_path": "./opencode-{target}",
+        "archive": "npm_tgz",
+        "platform_package": "opencode-darwin-arm64",
+        "archive_member": "package/bin/opencode"
+      },
+      "win32-x64": {
+        "runs_on": "windows-latest",
+        "binary_path": "./opencode-{target}.exe",
+        "archive": "npm_tgz",
+        "platform_package": "opencode-windows-x64",
+        "archive_member": "package/bin/opencode.exe"
+      }
+    },
+    "validation": {
+      "env": {
+        "OPENCODE_BINARY": "{binary_path}"
+      },
+      "commands": [
+        "cargo test -p unified-agent-api-opencode"
+      ]
     }
   },
   "wrapper_coverage": {
@@ -40,17 +104,52 @@
       ]
     }
   },
-  "parity_exclusions": {
+  "report": {
     "schema_version": 1,
-    "units": [
-      {
-        "unit": "arg",
-        "path": [],
-        "name": "project",
-        "category": "interactive",
-        "note": "Interactive TUI project selection is outside the canonical run --format json wrapper surface."
+    "file_naming": {
+      "dir": "cli_manifests/opencode/reports/<version>/",
+      "any": "coverage.any.json",
+      "all": "coverage.all.json",
+      "per_target": "coverage.<target_triple>.json",
+      "markdown_optional_suffix": ".md"
+    },
+    "required_deltas": [
+      "missing_commands",
+      "missing_flags",
+      "missing_args"
+    ],
+    "optional_deltas": [
+      "excluded_commands",
+      "excluded_flags",
+      "excluded_args",
+      "passthrough_candidates",
+      "unsupported",
+      "intentionally_unsupported",
+      "wrapper_only_commands",
+      "wrapper_only_flags",
+      "wrapper_only_args"
+    ],
+    "platform_filter": {
+      "modes": [
+        "any",
+        "all",
+        "exact_target"
+      ]
+    },
+    "filter_semantics": {
+      "any": "Surface is considered present if it appears on at least one available input target.",
+      "all": "Surface is considered present only if it appears on all expected_targets.",
+      "exact_target": "Surface is considered present only if it appears on the specified target_triple.",
+      "when_union_incomplete": {
+        "all": "error",
+        "any": "allowed",
+        "exact_target": "allowed"
       }
-    ]
+    },
+    "wrapper_only_policy": {
+      "mode": "report",
+      "meaning": "Wrapper coverage entries with no corresponding upstream surface (after platform filtering). Treat as stale or wrapper-only and surface for cleanup/review."
+    }
   },
   "storage": {
     "committed": {
@@ -69,6 +168,176 @@
       "compat": {
         "latest_validated": "cli_manifests/opencode/latest_validated.txt"
       }
+    }
+  },
+  "version_metadata": {
+    "path": "cli_manifests/opencode/versions/<version>.json",
+    "schema": "cli_manifests/opencode/VERSION_METADATA_SCHEMA.json",
+    "statuses": {
+      "snapshotted": "Snapshots generated and schema-valid; no wrapper claims.",
+      "reported": "Coverage report generated; work queue available; no wrapper validation claim.",
+      "validated": "Passed validation matrix (promotion-grade for latest_validated/current.json).",
+      "supported": "Wrapper coverage meets the support-matrix policy requirements for this version (stronger than validated)."
+    },
+    "supported_policy": {
+      "requires_union_complete": true,
+      "requires_semantic_version": true,
+      "coverage_requirement": {
+        "applies_to": "all_upstream_surfaces_on_all_targets_where_available",
+        "allowed_levels": [
+          "explicit",
+          "passthrough",
+          "intentionally_unsupported"
+        ],
+        "disallowed_levels": [
+          "unsupported",
+          "unknown"
+        ],
+        "treat_missing_as": "unknown"
+      },
+      "intentionally_unsupported_requires_note": true,
+      "notes": [
+        "supported means there are no uncovered (missing/unknown/unsupported) upstream surfaces on any expected target under the support-matrix contract; every surfaced command/flag/arg is either supported (explicit/passthrough) or explicitly waived (intentionally_unsupported with rationale).",
+        "supported is a documentation/policy guarantee derived from coverage mapping; it does not replace real-binary validation (validated) for promotion."
+      ]
+    },
+    "validation_contract": {
+      "required_target": "union.required_target",
+      "targets_source": "union.expected_targets",
+      "disjoint_sets_required": true,
+      "require_explicit_outcome_for_required_target": true,
+      "meaning": "versions/<v>.json.validation.{passed_targets,failed_targets,skipped_targets} must be disjoint subsets of expected_targets, and the required target must appear in exactly one of the sets (never implicit)."
+    },
+    "promotion_gate": {
+      "latest_validated_requires": "validated"
+    },
+    "status_gates": {
+      "validated_requires": [
+        "validation_passed_on_required_target",
+        "supported_on_required_target"
+      ],
+      "supported_requires": [
+        "supported_on_all_expected_targets"
+      ]
+    },
+    "pointer_update_policy": {
+      "latest_supported_by_target": {
+        "requires": [
+          "supported_on_target"
+        ]
+      },
+      "latest_validated_by_target": {
+        "requires": [
+          "validation_passed_on_target",
+          "supported_on_target"
+        ]
+      }
+    }
+  },
+  "automation": {
+    "pr_loop": {
+      "enabled": true,
+      "allowed_actions": [
+        "open_pr_with_snapshots_and_reports",
+        "push_commits_back_to_pr_branch",
+        "re_run_ci_until_supported_and_validated"
+      ],
+      "coverage_gap_resolution": [
+        "implement_wrapper_support",
+        "mark_intentionally_unsupported_with_rationale"
+      ],
+      "branch_policy": {
+        "require_dedicated_branch_per_version": true,
+        "disallow_direct_push_to": [
+          "main",
+          "master",
+          "feat/*"
+        ],
+        "notes": [
+          "Automation must only push commits to the dedicated PR branch for the target upstream version.",
+          "Human approval gates can be applied at merge time or via a separate staging branch."
+        ]
+      }
+    }
+  },
+  "ci_validation": {
+    "mode": "hard_fail",
+    "schemas": {
+      "schema_file": "cli_manifests/opencode/SCHEMA.json",
+      "rules_file": "cli_manifests/opencode/RULES.json"
+    },
+    "validate_committed_artifacts": [
+      "cli_manifests/opencode/VERSION_METADATA_SCHEMA.json",
+      "cli_manifests/opencode/versions/<version>.json",
+      "cli_manifests/opencode/current.json",
+      "cli_manifests/opencode/snapshots/<version>/union.json",
+      "cli_manifests/opencode/snapshots/<version>/<target_triple>.json",
+      "cli_manifests/opencode/wrapper_coverage.json",
+      "cli_manifests/opencode/reports/<version>/coverage.any.json",
+      "cli_manifests/opencode/reports/<version>/coverage.all.json",
+      "cli_manifests/opencode/reports/<version>/coverage.<target_triple>.json"
+    ],
+    "notes": [
+      "CI must fail if any committed artifact does not validate against SCHEMA.json.",
+      "Raw help artifacts are not committed and are not schema-validated."
+    ]
+  },
+  "timestamps": {
+    "snapshots": {
+      "field": "collected_at",
+      "policy": "deterministic_in_ci",
+      "notes": [
+        "To avoid churn in committed artifacts, CI should set collected_at deterministically (e.g., from SOURCE_DATE_EPOCH)."
+      ]
+    },
+    "reports": {
+      "generated_at_field": "generated_at",
+      "policy": "deterministic_or_omit",
+      "notes": [
+        "Prefer omitting report timestamps from committed reports; if present, make them deterministic in CI."
+      ]
+    },
+    "version_metadata": {
+      "field": "updated_at",
+      "policy": "deterministic_in_ci",
+      "notes": [
+        "updated_at should be deterministic in CI to keep diffs stable across reruns."
+      ]
+    }
+  },
+  "sorting": {
+    "commands": "lexicographic_path",
+    "flags": "by_key_then_long_then_short",
+    "args": "by_name",
+    "expected_targets": "rules_expected_targets_order",
+    "inputs": "rules_expected_targets_order",
+    "available_on": "rules_expected_targets_order",
+    "conflicts": "by_unit_then_path_then_key_or_name_then_field",
+    "report": {
+      "missing_commands": "by_path",
+      "missing_flags": "by_path_then_key",
+      "missing_args": "by_path_then_name",
+      "excluded_commands": "by_path",
+      "excluded_flags": "by_path_then_key",
+      "excluded_args": "by_path_then_name",
+      "passthrough_candidates": "by_path",
+      "unsupported": "by_path",
+      "intentionally_unsupported": "by_kind_then_path_then_key_or_name",
+      "wrapper_only_commands": "by_path",
+      "wrapper_only_flags": "by_path_then_key",
+      "wrapper_only_args": "by_path_then_name"
+    }
+  },
+  "validation": {
+    "require_root_path_entry": true,
+    "require_unique_command_paths": true,
+    "require_unique_flag_keys_per_command": true,
+    "require_unique_arg_names_per_command": true,
+    "uniqueness_scope": {
+      "commands": "path",
+      "flags": "path_plus_flag_key",
+      "args": "path_plus_arg_name",
+      "note": "Collisions across different command paths are expected and allowed; uniqueness is enforced only within a single command scope."
     }
   }
 }

@@ -282,17 +282,17 @@ jobs:
       - name: Skip (no Codex artifacts committed yet)
         if: ${{ steps.codex-artifacts.outputs.has_versions != 'true' }}
         shell: bash
-        run: echo "No cli_manifests/codex/versions/*.json; skipping codex-validate."
+        run: echo "No cli_manifests/codex/versions/*.json; skipping manifest-validate."
 
       - uses: dtolnay/rust-toolchain@stable
         if: ${{ steps.codex-artifacts.outputs.has_versions == 'true' }}
 
-      - name: xtask codex-validate
+      - name: xtask manifest-validate
         if: ${{ steps.codex-artifacts.outputs.has_versions == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
-          cargo run -p xtask -- codex-validate --root cli_manifests/codex
+          cargo run -p xtask -- manifest-validate --root cli_manifests/codex
 
   claude-validate-artifacts:
     name: Validate Claude Code committed artifacts
@@ -302,11 +302,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
-      - name: xtask codex-validate (claude_code root)
+      - name: xtask manifest-validate (claude_code root)
         shell: bash
         run: |
           set -euo pipefail
-          cargo run -p xtask -- codex-validate --root cli_manifests/claude_code
+          cargo run -p xtask -- manifest-validate --root cli_manifests/claude_code
 
   opencode-validate-artifacts:
     name: Validate OpenCode committed artifacts
@@ -329,17 +329,33 @@ jobs:
       - name: Skip (no OpenCode artifacts committed yet)
         if: ${{ steps.opencode-artifacts.outputs.has_versions != 'true' }}
         shell: bash
-        run: echo "No cli_manifests/opencode/versions/*.json; skipping codex-validate."
+        run: echo "No cli_manifests/opencode/versions/*.json; skipping manifest-validate."
 
       - uses: dtolnay/rust-toolchain@stable
         if: ${{ steps.opencode-artifacts.outputs.has_versions == 'true' }}
 
-      - name: xtask codex-validate (opencode root)
+      - name: xtask manifest-validate (opencode root)
         if: ${{ steps.opencode-artifacts.outputs.has_versions == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
-          cargo run -p xtask -- codex-validate --root cli_manifests/opencode
+          cargo run -p xtask -- manifest-validate --root cli_manifests/opencode
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # `manifest-validate` covers the committed artifacts; the acquisition descriptors are a
+      # separate surface that is only exercised at CI-dispatch time. Resolve every enrolled
+      # agent's descriptor here so a malformed block fails on the PR that introduces it rather
+      # than on the next watcher run.
+      - name: Resolve every acquisition descriptor
+        shell: bash
+        run: |
+          set -euo pipefail
+          for agent in codex claude_code opencode; do
+            echo "::group::${agent}"
+            cargo run -p xtask -- manifest-acquisition-plan --agent "$agent" --version 1.2.3 > /dev/null
+            echo "::endgroup::"
+          done
 
   versions:
     name: Read Codex version pointers
@@ -477,27 +493,72 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
+      # Target, binary path and runtime env come from the acquisition descriptor; the artifact
+      # itself comes from the lockfile row. The two answer different questions: the descriptor
+      # says how a *new* version would be acquired, while the row records what was *actually*
+      # pinned for this one. They disagree across the distribution migration — 2.1.29 is pinned
+      # as a bare binary from the old bucket, while the descriptor resolves an npm platform
+      # tarball — so taking the asset name from the descriptor would demand a row that does not
+      # exist. Reading the row keeps this job correct on both sides of the migration, including
+      # after parity-acquire starts writing tarball-shaped rows.
       - name: Acquire Claude Code CLI (required target)
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${{ needs.claude-versions.outputs.latest_validated }}"
-          TARGET="linux-x64"
-          ASSET="claude"
+          mkdir -p _ci_tmp
+          cargo run -p xtask -- manifest-acquisition-plan \
+            --agent claude_code --version "$VERSION" --emit-json _ci_tmp/plan.json
 
-          URL="$(jq -r --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" '.artifacts[] | select(.claude_code_version==$v and .target_triple==$t and .asset_name==$a) | .download_url' cli_manifests/claude_code/artifacts.lock.json)"
-          SHA="$(jq -r --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" '.artifacts[] | select(.claude_code_version==$v and .target_triple==$t and .asset_name==$a) | .sha256' cli_manifests/claude_code/artifacts.lock.json)"
-          SIZE="$(jq -r --arg v "$VERSION" --arg t "$TARGET" --arg a "$ASSET" '.artifacts[] | select(.claude_code_version==$v and .target_triple==$t and .asset_name==$a) | .size_bytes' cli_manifests/claude_code/artifacts.lock.json)"
+          REQUIRED_TARGET="$(jq -r '.required_target' _ci_tmp/plan.json)"
+          PLANNED="$(jq -c --arg t "$REQUIRED_TARGET" '.include[] | select(.target_triple==$t)' _ci_tmp/plan.json)"
+          BIN="$(jq -r '.binary_path' <<<"$PLANNED")"
+          VERSION_KEY="$(jq -r '.lockfile_version_key' _ci_tmp/plan.json)"
 
-          test -n "$URL" && test "$URL" != "null"
-          test -n "$SHA" && test "$SHA" != "null"
-          test -n "$SIZE" && test "$SIZE" != "null"
+          LOCK=cli_manifests/claude_code/artifacts.lock.json
+          ROW="$(jq -c --arg key "$VERSION_KEY" --arg v "$VERSION" --arg t "$REQUIRED_TARGET" \
+            '.artifacts[] | select(.[$key]==$v and .target_triple==$t)' "$LOCK")"
+
+          if [ -z "$ROW" ]; then
+            echo "::error title=No usable lockfile pin::${LOCK} has no row for ${VERSION_KEY}=${VERSION} target=${REQUIRED_TARGET}. Re-run parity-acquire for this version." >&2
+            exit 1
+          fi
+
+          ASSET="$(jq -r '.asset_name' <<<"$ROW")"
+          URL="$(jq -r '.download_url' <<<"$ROW")"
+          SHA="$(jq -r '.sha256' <<<"$ROW")"
+          SIZE="$(jq -r '.size_bytes' <<<"$ROW")"
 
           curl -fsSL -o claude.bin "$URL"
           test "$(wc -c < claude.bin)" = "$SIZE"
           echo "$SHA  claude.bin" | sha256sum -c -
-          install -m 0755 claude.bin ./claude-linux-x64
-          DISABLE_AUTOUPDATER=1 ./claude-linux-x64 --version
+
+          # The pinned asset names its own shape: a tarball has to be unpacked, a bare binary is
+          # already the executable. Trusting the descriptor's `archive` here would mis-handle
+          # whichever side of the migration the row came from.
+          case "$ASSET" in
+            *.tgz|*.tar.gz)
+              MEMBER="$(jq -r '.archive_member // empty' <<<"$PLANNED")"
+              if [ -z "$MEMBER" ]; then
+                MEMBER="$(tar -tzf claude.bin | awk 'NF && substr($0,length($0),1) != "/" {print; exit}')"
+              fi
+              test -n "$MEMBER"
+              rm -rf _extract && mkdir -p _extract
+              tar -xzf claude.bin -C _extract "$MEMBER"
+              cp "_extract/${MEMBER}" "$BIN"
+              ;;
+            *)
+              cp claude.bin "$BIN"
+              ;;
+          esac
+          chmod +x "$BIN"
+
+          while read -r pair; do
+            NAME="$(jq -r '.name' <<<"$pair")"
+            VALUE="$(jq -r '.value' <<<"$pair")"
+            export "${NAME}=${VALUE}"
+          done < <(jq -c '.snapshot.env[]?' _ci_tmp/plan.json)
+          "$BIN" --version
 
       - name: Wrapper unit tests
         shell: bash

@@ -52,7 +52,7 @@ No other sources are consulted.
 ### Human text output (default)
 
 - One line summary:
-  - `OK: codex-validate` on success
+  - `OK: manifest-validate` on success (the retained `codex-validate` alias prints the same string)
   - `FAIL: <n> violations` on failure
 - Then one violation per line, stable-sorted:
   - `<CODE> <SEVERITY> <FILEPATH> <JSON_POINTER?> <MESSAGE>`

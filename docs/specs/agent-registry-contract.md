@@ -99,19 +99,26 @@ detection. The schema is:
 ```toml
 [agents.maintenance.release_watch]
 enabled = true
-version_policy = "latest_stable_minus_one"
+version_policy = "latest_stable_minus_one" # or "upstream_stable_pointer"
 dispatch_kind = "workflow_dispatch" # or "packet_pr"
 dispatch_workflow = "example.yml"    # required only for workflow_dispatch
 
 [agents.maintenance.release_watch.upstream]
-source_kind = "github_releases"      # or "gcs_object_listing"
+source_kind = "github_releases"      # or "gcs_object_listing" or "npm_dist_tag"
 ```
 
 Required top-level fields:
 
 - `enabled`: boolean. When the block is present, it MUST be `true`.
-- `version_policy`: currently `latest_stable_minus_one`
+- `version_policy`: one of `latest_stable_minus_one` or `upstream_stable_pointer`
 - `dispatch_kind`: one of `workflow_dispatch` or `packet_pr`
+
+Version-policy rules:
+
+- `latest_stable_minus_one`: target the next-to-latest stable upstream release after the upstream
+  history is sorted and deduplicated.
+- `upstream_stable_pointer`: target the single upstream-resolved stable-channel version directly;
+  no minus-one offset is applied.
 
 Dispatch rules:
 
@@ -137,6 +144,9 @@ Upstream rules:
   - `bucket`
   - `prefix`
   - `version_marker`
+- `source_kind = "npm_dist_tag"` requires:
+  - `package`
+  - `dist_tag`
 - Source-specific fields from the non-selected source kind MUST NOT be present.
 
 Current committed registry truth enables release-watch metadata for `codex`, `claude_code`, and
@@ -144,6 +154,29 @@ Current committed registry truth enables release-watch metadata for `codex`, `cl
 for each of those agents. Any temporary or historical `workflow_dispatch` entry exists only as a
 compatibility state in the committed registry content, not as a permanent schema-level expectation
 for future agents.
+
+## Multi-target parity acquisition
+
+Multi-target parity acquisition — downloading an upstream release for every expected target,
+snapshotting each on a matching-OS runner, and merging a complete union — is enabled for an agent
+when **both** of the following hold:
+
+1. the agent carries `maintenance.release_watch` in this registry, and
+2. the agent's `cli_manifests/<agent>/RULES.json` carries an `acquisition` block.
+
+The registry MUST NOT gain a separate acquisition-enablement field. Such a field would be a second
+enrollment inventory, which the “Absence of `maintenance.release_watch` is the only ‘not enrolled’
+state” rule above already forbids, and it could disagree with the manifest it claims to describe.
+
+The gate is enforced in one place — `xtask manifest-acquisition-plan` — which fails closed with a
+distinct error for each reason (`UnknownAgent`, `NotEnrolled`, `NoAcquisitionBlock`).
+`.github/workflows/agent-maintenance-open-pr.yml` treats a clean exit from that command as the
+gate, so committed truth is the only input. An agent that satisfies neither condition keeps the
+docs-only maintenance path with no behavior change.
+
+Watch and acquire are independent. `maintenance.release_watch.upstream.source_kind` governs
+release *detection*; `acquisition.source_kind` in the manifest governs where *binaries* come from.
+An agent may legitimately watch one source and acquire from another.
 
 ## Maintenance governance checks
 

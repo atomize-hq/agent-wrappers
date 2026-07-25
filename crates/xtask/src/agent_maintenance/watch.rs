@@ -1,5 +1,7 @@
 use std::{
-    env, fs,
+    env,
+    ffi::OsString,
+    fs,
     io::{self, Write},
     path::{Path, PathBuf},
     process::Command,
@@ -327,7 +329,7 @@ fn read_current_validated(
     )
 }
 
-fn select_target_version(
+pub(crate) fn select_target_version(
     versions: &[Version],
     version_policy: ReleaseWatchVersionPolicy,
 ) -> Option<Version> {
@@ -339,6 +341,7 @@ fn select_target_version(
                 versions.get(versions.len() - 2).cloned()
             }
         }
+        ReleaseWatchVersionPolicy::UpstreamStablePointer => versions.last().cloned(),
     }
 }
 
@@ -349,6 +352,7 @@ fn resolve_release_history(
     match release_watch.upstream.source_kind {
         ReleaseWatchSourceKind::GithubReleases => fetch_github_releases(entry, release_watch),
         ReleaseWatchSourceKind::GcsObjectListing => fetch_gcs_versions(entry, release_watch),
+        ReleaseWatchSourceKind::NpmDistTag => fetch_npm_dist_tag_version(entry, release_watch),
     }
 }
 
@@ -431,6 +435,63 @@ fn fetch_gcs_versions(
     release_watch: &ReleaseWatchMetadata,
 ) -> Result<Vec<Version>, Error> {
     fetch_gcs_versions_with_fetcher(entry, release_watch, fetch_text)
+}
+
+fn fetch_npm_dist_tag_version(
+    entry: &AgentRegistryEntry,
+    release_watch: &ReleaseWatchMetadata,
+) -> Result<Vec<Version>, Error> {
+    fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, fetch_text)
+}
+
+pub(crate) fn fetch_npm_dist_tag_version_with_fetcher<F>(
+    entry: &AgentRegistryEntry,
+    release_watch: &ReleaseWatchMetadata,
+    mut fetch: F,
+) -> Result<Vec<Version>, Error>
+where
+    F: FnMut(&str) -> Result<String, Error>,
+{
+    let package = release_watch.upstream.package.as_deref().ok_or_else(|| {
+        Error::Validation(format!(
+            "release_watch package missing for npm_dist_tag agent `{}`",
+            entry.agent_id
+        ))
+    })?;
+    let dist_tag = release_watch.upstream.dist_tag.as_deref().ok_or_else(|| {
+        Error::Validation(format!(
+            "release_watch dist_tag missing for npm_dist_tag agent `{}`",
+            entry.agent_id
+        ))
+    })?;
+    // npm scoped packages contain `/` (e.g. `@scope/name`). Encode the package as a
+    // single path segment so the scope separator is never transmitted as a path
+    // separator by a stricter registry, CDN, or proxy.
+    let url = format!(
+        "https://registry.npmjs.org/{}",
+        percent_encode_query_value(package)
+    );
+    let body = fetch(&url)?;
+    let metadata: NpmPackageMetadata = serde_json::from_str(&body).map_err(|err| {
+        Error::Validation(format!(
+            "parse npm metadata for agent `{}` from {url}: {err}",
+            entry.agent_id
+        ))
+    })?;
+    let raw_version = metadata.dist_tags.get(dist_tag).ok_or_else(|| {
+        Error::Validation(format!(
+            "npm dist-tag `{dist_tag}` missing for package `{package}` on agent `{}`",
+            entry.agent_id
+        ))
+    })?;
+
+    Ok(vec![parse_semver(
+        raw_version,
+        &format!(
+            "npm dist-tag `{dist_tag}` for package `{package}` on agent `{}`",
+            entry.agent_id
+        ),
+    )?])
 }
 
 pub(crate) fn fetch_gcs_versions_with_fetcher<F>(
@@ -525,28 +586,89 @@ fn percent_encode_query_value(value: &str) -> String {
     encoded
 }
 
-fn fetch_text(url: &str) -> Result<String, Error> {
-    let mut command = Command::new("curl");
-    command.args([
-        "-fsSL",
-        "--retry",
-        "3",
-        "--retry-all-errors",
-        "--retry-max-time",
-        "20",
-        "-H",
-        "User-Agent: unified-agent-api-maintenance-watch/1.0",
-    ]);
+/// Build the curl argument vector for an upstream metadata fetch.
+///
+/// The body is written to `response_path` instead of stdout. curl truncates the
+/// output file at the start of each retry attempt, whereas a retried transfer
+/// captured from stdout appends the retried body to the partial one. That splices
+/// two JSON documents together and corrupts large responses — the
+/// `openai/codex` releases page is ~26 MB, so an interrupted transfer there
+/// yielded an unparseable body rather than a clean failure.
+///
+/// Arguments are `OsString`, not `String`: `Path::display` replaces non-Unicode
+/// bytes with U+FFFD, so a `TMPDIR` containing arbitrary bytes would send curl a
+/// *different* path than the one read back afterwards — turning a successful
+/// download into a spurious upstream failure.
+pub(crate) fn build_curl_args(
+    url: &str,
+    response_path: &Path,
+    token: Option<&str>,
+) -> Vec<OsString> {
+    let mut args: Vec<OsString> = vec![
+        OsString::from("-fsSL"),
+        OsString::from("--retry"),
+        OsString::from("3"),
+        OsString::from("--retry-all-errors"),
+        // Multi-megabyte bodies routinely exceed a 20s window, and the retry timer
+        // starts before the first attempt: too small a budget means a failed large
+        // transfer is never retried at all.
+        OsString::from("--retry-max-time"),
+        OsString::from("120"),
+        // Bound a stalled connect/TLS handshake. The throughput guard below cannot see
+        // it — curl only speed-checks once it is PERFORMING — so a handshake stall
+        // would otherwise run to libcurl's 300s default, which exceeds the retry
+        // budget and therefore never retries.
+        OsString::from("--connect-timeout"),
+        OsString::from("30"),
+        // Abort a transfer that stalls *after* connecting (under 1 KB/s sustained for
+        // a minute) without penalising a slow-but-progressing multi-megabyte download,
+        // which a blunt --max-time would turn into a spurious upstream failure.
+        OsString::from("--speed-limit"),
+        OsString::from("1024"),
+        OsString::from("--speed-time"),
+        OsString::from("60"),
+        OsString::from("-H"),
+        OsString::from("User-Agent: unified-agent-api-maintenance-watch/1.0"),
+        // Never add `-C`/`--continue-at` or `-a`/`--append` here: those re-enable
+        // the resume/append semantics whose absence is what keeps a retried
+        // transfer from splicing onto a partial body.
+        OsString::from("-o"),
+        response_path.as_os_str().to_os_string(),
+    ];
     if url.starts_with("https://api.github.com/") {
-        if let Ok(token) = env::var("GITHUB_TOKEN") {
-            let token = token.trim();
-            if !token.is_empty() {
-                command.args(["-H", &format!("Authorization: Bearer {token}")]);
-            }
+        if let Some(token) = token.map(str::trim).filter(|token| !token.is_empty()) {
+            args.push(OsString::from("-H"));
+            args.push(OsString::from(format!("Authorization: Bearer {token}")));
         }
     }
-    command.arg(url);
-    let output = command
+    args.push(OsString::from(url));
+    args
+}
+
+pub(crate) fn fetch_text(url: &str) -> Result<String, Error> {
+    // `curl -o` follows a symlink at its output path and truncates the target, so the
+    // destination is created here with O_EXCL under a random name: an attacker cannot
+    // pre-plant a symlink we would later follow, and cannot guess the name.
+    //
+    // The residual is worth stating precisely: curl re-opens this path by name without
+    // O_NOFOLLOW, so what rules out an unlink-and-swap between our creation and that
+    // open is a sticky (/tmp, 1777) or per-user temp directory — not O_EXCL itself. A
+    // TMPDIR pointing somewhere world-writable and non-sticky would reopen the class.
+    //
+    // `into_temp_path` closes the handle so curl can write on every platform, while
+    // deletion moves to the drop guard and so also covers the early returns below.
+    let response_path = tempfile::Builder::new()
+        .prefix("uaa-maintenance-watch-")
+        .suffix(".body")
+        .tempfile()
+        .map_err(|err| Error::Internal(format!("create response file for {url}: {err}")))?
+        .into_temp_path();
+
+    let token = env::var("GITHUB_TOKEN").ok();
+    let args = build_curl_args(url, &response_path, token.as_deref());
+
+    let output = Command::new("curl")
+        .args(&args)
         .output()
         .map_err(|err| Error::Internal(format!("spawn curl for {url}: {err}")))?;
     if !output.status.success() {
@@ -556,8 +678,9 @@ fn fetch_text(url: &str) -> Result<String, Error> {
             String::from_utf8_lossy(&output.stderr).trim()
         )));
     }
-    String::from_utf8(output.stdout)
-        .map_err(|err| Error::Internal(format!("curl output for {url} was not utf-8: {err}")))
+
+    fs::read_to_string(&response_path)
+        .map_err(|err| Error::Internal(format!("read curl response body for {url}: {err}")))
 }
 
 fn write_queue_json(
@@ -611,4 +734,10 @@ struct GcsListingResponse {
 #[derive(Debug, Deserialize)]
 struct GcsObject {
     name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct NpmPackageMetadata {
+    #[serde(rename = "dist-tags")]
+    dist_tags: std::collections::BTreeMap<String, String>,
 }

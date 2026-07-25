@@ -9,11 +9,29 @@ mod capability_projection {
 use std::path::PathBuf;
 
 use agent_registry::{
-    AgentRegistry, ReleaseWatchDispatchKind, ReleaseWatchSourceKind, ReleaseWatchVersionPolicy,
+    normalize_release_watch_metadata, normalized_release_watch_sha256, AgentRegistry,
+    ReleaseWatchDispatchKind, ReleaseWatchSourceKind, ReleaseWatchVersionPolicy,
     REGISTRY_RELATIVE_PATH,
 };
 
 const SEEDED_REGISTRY: &str = include_str!("../data/agent_registry.toml");
+const CLAUDE_NPM_RELEASE_WATCH_UPSTREAM: &str =
+    "source_kind = \"npm_dist_tag\"\npackage = \"@anthropic-ai/claude-code\"\ndist_tag = \"stable\"";
+const CLAUDE_GCS_RELEASE_WATCH_UPSTREAM: &str = "source_kind = \"gcs_object_listing\"\nbucket = \"claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819\"\nprefix = \"claude-code-releases\"\nversion_marker = \"manifest.json\"";
+
+fn seeded_registry_with_claude_gcs(version_policy: &str) -> String {
+    SEEDED_REGISTRY
+        .replacen(
+            "version_policy = \"upstream_stable_pointer\"",
+            &format!("version_policy = \"{version_policy}\""),
+            1,
+        )
+        .replacen(
+            CLAUDE_NPM_RELEASE_WATCH_UPSTREAM,
+            CLAUDE_GCS_RELEASE_WATCH_UPSTREAM,
+            1,
+        )
+}
 
 #[test]
 fn seeded_registry_parses_successfully() {
@@ -99,7 +117,7 @@ fn seeded_registry_parses_successfully() {
     );
     assert_eq!(
         claude_watch.version_policy,
-        ReleaseWatchVersionPolicy::LatestStableMinusOne
+        ReleaseWatchVersionPolicy::UpstreamStablePointer
     );
     assert_eq!(
         claude_watch.dispatch_kind,
@@ -108,20 +126,13 @@ fn seeded_registry_parses_successfully() {
     assert_eq!(claude_watch.dispatch_workflow, None);
     assert_eq!(
         claude_watch.upstream.source_kind,
-        ReleaseWatchSourceKind::GcsObjectListing
+        ReleaseWatchSourceKind::NpmDistTag
     );
     assert_eq!(
-        claude_watch.upstream.bucket.as_deref(),
-        Some("claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819")
+        claude_watch.upstream.package.as_deref(),
+        Some("@anthropic-ai/claude-code")
     );
-    assert_eq!(
-        claude_watch.upstream.prefix.as_deref(),
-        Some("claude-code-releases")
-    );
-    assert_eq!(
-        claude_watch.upstream.version_marker.as_deref(),
-        Some("manifest.json")
-    );
+    assert_eq!(claude_watch.upstream.dist_tag.as_deref(), Some("stable"));
 
     let release_watch_ids: Vec<&str> = registry
         .agents
@@ -539,7 +550,8 @@ fn malformed_release_watch_metadata_fails_closed() {
         ),
         (
             "gcs object listing missing version marker",
-            SEEDED_REGISTRY.replacen("version_marker = \"manifest.json\"\n", "", 1),
+            seeded_registry_with_claude_gcs("latest_stable_minus_one")
+                .replacen("version_marker = \"manifest.json\"\n", "", 1),
             "upstream.version_marker is required for this upstream source",
         ),
         (
@@ -550,6 +562,43 @@ fn malformed_release_watch_metadata_fails_closed() {
                 1,
             ),
             "must not be set when maintenance.release_watch.upstream.source_kind = `github_releases`",
+        ),
+        (
+            "npm dist tag missing package",
+            SEEDED_REGISTRY.replacen("package = \"@anthropic-ai/claude-code\"\n", "", 1),
+            "upstream.package is required for this upstream source",
+        ),
+        (
+            "npm dist tag missing dist_tag",
+            SEEDED_REGISTRY.replacen("dist_tag = \"stable\"\n", "", 1),
+            "upstream.dist_tag is required for this upstream source",
+        ),
+        (
+            "npm dist tag must not declare gcs-only field",
+            SEEDED_REGISTRY.replacen(
+                "dist_tag = \"stable\"",
+                "dist_tag = \"stable\"\nbucket = \"unexpected\"",
+                1,
+            ),
+            "must not be set when maintenance.release_watch.upstream.source_kind = `npm_dist_tag`",
+        ),
+        (
+            "github releases must not declare package field",
+            SEEDED_REGISTRY.replacen(
+                "tag_prefix = \"rust-v\"",
+                "tag_prefix = \"rust-v\"\npackage = \"codex\"",
+                1,
+            ),
+            "must not be set when maintenance.release_watch.upstream.source_kind = `github_releases`",
+        ),
+        (
+            "gcs object listing must not declare dist_tag field",
+            seeded_registry_with_claude_gcs("latest_stable_minus_one").replacen(
+                "version_marker = \"manifest.json\"",
+                "version_marker = \"manifest.json\"\ndist_tag = \"stable\"",
+                1,
+            ),
+            "must not be set when maintenance.release_watch.upstream.source_kind = `gcs_object_listing`",
         ),
         (
             "release watch block may not be present disabled",
@@ -578,6 +627,77 @@ fn malformed_release_watch_metadata_fails_closed() {
         let text = err.to_string();
         assert!(text.contains(expected), "{label}: {text}");
     }
+}
+
+#[test]
+fn release_watch_normalization_skips_npm_fields_and_preserves_legacy_sha() {
+    let registry = AgentRegistry::parse(SEEDED_REGISTRY).expect("parse seeded registry");
+
+    for (agent_id, expected_sha) in [
+        (
+            "codex",
+            "72aa6a74149f62301a30bd787bad3fbd635b04dfe4b093248413d5a6d63452d7",
+        ),
+        (
+            "opencode",
+            "8b1e76a30fb3a900b0e42b76cf3b1343cb22270abbac2556d57584a515c308df",
+        ),
+    ] {
+        let agent = registry
+            .find(agent_id)
+            .unwrap_or_else(|| panic!("missing {agent_id}"));
+        let release_watch = agent
+            .maintenance
+            .release_watch
+            .as_ref()
+            .unwrap_or_else(|| panic!("{agent_id} release watch"));
+        let normalized = normalize_release_watch_metadata(release_watch)
+            .unwrap_or_else(|err| panic!("normalize {agent_id}: {err}"));
+        let normalized_json = serde_json::to_string(&normalized)
+            .unwrap_or_else(|err| panic!("serialize {agent_id} normalized json: {err}"));
+
+        assert!(
+            !normalized_json.contains("\"package\""),
+            "{agent_id}: {normalized_json}"
+        );
+        assert!(
+            !normalized_json.contains("\"dist_tag\""),
+            "{agent_id}: {normalized_json}"
+        );
+        assert_eq!(
+            normalized_release_watch_sha256(release_watch)
+                .unwrap_or_else(|err| panic!("sha {agent_id}: {err}")),
+            expected_sha
+        );
+    }
+
+    let raw = seeded_registry_with_claude_gcs("latest_stable_minus_one");
+    let registry = AgentRegistry::parse(&raw).expect("parse seeded registry with gcs claude");
+    let claude = registry
+        .find("claude_code")
+        .expect("seeded claude_code gcs entry");
+    let release_watch = claude
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code gcs release watch");
+    let normalized = normalize_release_watch_metadata(release_watch)
+        .expect("normalize claude_code gcs release watch");
+    let normalized_json =
+        serde_json::to_string(&normalized).expect("serialize claude_code gcs normalized json");
+
+    assert!(
+        !normalized_json.contains("\"package\""),
+        "{normalized_json}"
+    );
+    assert!(
+        !normalized_json.contains("\"dist_tag\""),
+        "{normalized_json}"
+    );
+    assert_eq!(
+        normalized_release_watch_sha256(release_watch).expect("gcs normalized sha"),
+        "09b21b899ca16085104560cb9e95903be6e09eabc57eb3c86db7e3da6c1c9b65"
+    );
 }
 
 #[test]

@@ -6,21 +6,95 @@ use std::{
 
 use sha2::{Digest, Sha256};
 
-use crate::codex_snapshot::{ArgSnapshot, CommandSnapshot, FlagSnapshot, SnapshotV1};
+use crate::manifest_snapshot_schema::{ArgSnapshot, CommandSnapshot, FlagSnapshot, SnapshotV1};
 
 use super::schema::{
     UnionArgSnapshotV2, UnionCommandSnapshotV2, UnionConflictEntryV2, UnionConflictEvidenceV2,
     UnionFlagSnapshotV2,
 };
 
+/// How `raw_help/<version>/<target>/commands/**` lays out a nested command path on disk.
+///
+/// This is manifest data (`union.raw_help_layout`), not per-agent code: agents whose command
+/// paths stay short nest one directory per token, while agents with deep or long command paths
+/// collapse the path into a single bounded, hash-suffixed directory name so the capture survives
+/// filesystem path limits.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum RawHelpLayout {
+    /// One directory per command token: `commands/mcp/add/help.txt`.
+    #[default]
+    PathTokens,
+    /// A single hash-suffixed directory per command path: `commands/mcp-add-<sha>/help.txt`.
+    HashedDir,
+}
+
+/// Everything needed to resolve a raw-help capture reference for one manifest root.
+pub(super) struct HelpEvidenceCtx<'a> {
+    pub(super) version: &'a str,
+    pub(super) raw_help_root: &'a Path,
+    pub(super) layout: RawHelpLayout,
+}
+
+fn push_command_segments(base: PathBuf, layout: RawHelpLayout, cmd_path: &[String]) -> PathBuf {
+    match layout {
+        RawHelpLayout::PathTokens => {
+            let mut p = base;
+            for token in cmd_path {
+                p.push(token);
+            }
+            p
+        }
+        RawHelpLayout::HashedDir => base.join(hashed_command_dir_name(cmd_path)),
+    }
+}
+
+/// Collapse a command path into one bounded directory name: `<readable-prefix>__<sha256>`.
+///
+/// The hash is taken over the unit-separator-joined path so distinct command paths cannot collide
+/// after the readable prefix is truncated.
+fn hashed_command_dir_name(path: &[String]) -> String {
+    let joined = path.join("\u{1f}");
+    let mut hasher = Sha256::new();
+    hasher.update(joined.as_bytes());
+    let hash = hex::encode(hasher.finalize());
+
+    let mut prefix = path.join("-");
+    if prefix.is_empty() {
+        prefix = "cmd".to_string();
+    }
+    const MAX_PREFIX: usize = 40;
+    if prefix.len() > MAX_PREFIX {
+        // Truncate on a char boundary so a multi-byte token cannot panic here.
+        let cut = (0..=MAX_PREFIX)
+            .rev()
+            .find(|idx| prefix.is_char_boundary(*idx))
+            .unwrap_or(0);
+        prefix.truncate(cut);
+        prefix = prefix.trim_end_matches('-').to_string();
+        if prefix.is_empty() {
+            prefix = "cmd".to_string();
+        }
+    }
+
+    format!("{prefix}__{hash}")
+}
+
+#[allow(clippy::too_many_arguments)]
 pub(super) fn build_union_commands(
     expected_targets: &[String],
     required_target: &str,
     version: &str,
     raw_help_root: &Path,
+    layout: RawHelpLayout,
     present_targets: &[String],
     snapshots_by_target: &BTreeMap<String, SnapshotV1>,
 ) -> Vec<UnionCommandSnapshotV2> {
+    let help = &HelpEvidenceCtx {
+        version,
+        raw_help_root,
+        layout,
+    };
     let mut commands_by_path: BTreeMap<Vec<String>, BTreeMap<String, CommandSnapshot>> =
         BTreeMap::new();
 
@@ -46,8 +120,7 @@ pub(super) fn build_union_commands(
         let (flags, flag_conflicts) = merge_flags(
             expected_targets,
             required_target,
-            version,
-            raw_help_root,
+            help,
             &available_on,
             &path,
             &by_target,
@@ -55,21 +128,14 @@ pub(super) fn build_union_commands(
         let (args, arg_conflicts) = merge_args(
             expected_targets,
             required_target,
-            version,
-            raw_help_root,
+            help,
             &available_on,
             &path,
             &by_target,
         );
 
         let mut conflicts = Vec::new();
-        conflicts.extend(command_conflicts(
-            expected_targets,
-            version,
-            raw_help_root,
-            &path,
-            &by_target,
-        ));
+        conflicts.extend(command_conflicts(expected_targets, help, &path, &by_target));
         conflicts.extend(flag_conflicts);
         conflicts.extend(arg_conflicts);
         conflicts.sort_by(conflict_sort_key);
@@ -96,8 +162,7 @@ pub(super) fn build_union_commands(
 fn merge_flags(
     expected_targets: &[String],
     required_target: &str,
-    version: &str,
-    raw_help_root: &Path,
+    help: &HelpEvidenceCtx<'_>,
     command_available_on: &[String],
     cmd_path: &[String],
     commands_by_target: &BTreeMap<String, CommandSnapshot>,
@@ -137,8 +202,7 @@ fn merge_flags(
 
         conflicts.extend(flag_conflicts(
             expected_targets,
-            version,
-            raw_help_root,
+            help,
             cmd_path,
             &key,
             &by_target,
@@ -164,8 +228,7 @@ fn merge_flags(
 
 fn flag_conflicts(
     expected_targets: &[String],
-    version: &str,
-    raw_help_root: &Path,
+    help: &HelpEvidenceCtx<'_>,
     cmd_path: &[String],
     key: &str,
     by_target: &BTreeMap<String, FlagSnapshot>,
@@ -182,7 +245,7 @@ fn flag_conflicts(
             key: Some(key.to_string()),
             name: None,
             field: "takes_value".to_string(),
-            evidence: build_help_evidence(version, raw_help_root, cmd_path, values.keys()),
+            evidence: build_help_evidence(help, cmd_path, values.keys()),
             values_by_target: values,
             help_context: Some("Options".to_string()),
         });
@@ -202,7 +265,7 @@ fn flag_conflicts(
             key: Some(key.to_string()),
             name: None,
             field: "value_name".to_string(),
-            evidence: build_help_evidence(version, raw_help_root, cmd_path, values.keys()),
+            evidence: build_help_evidence(help, cmd_path, values.keys()),
             values_by_target: values,
             help_context: Some("Options".to_string()),
         });
@@ -221,7 +284,7 @@ fn flag_conflicts(
             key: Some(key.to_string()),
             name: None,
             field: "repeatable".to_string(),
-            evidence: build_help_evidence(version, raw_help_root, cmd_path, values.keys()),
+            evidence: build_help_evidence(help, cmd_path, values.keys()),
             values_by_target: values,
             help_context: Some("Options".to_string()),
         });
@@ -233,8 +296,7 @@ fn flag_conflicts(
 fn merge_args(
     expected_targets: &[String],
     required_target: &str,
-    version: &str,
-    raw_help_root: &Path,
+    help: &HelpEvidenceCtx<'_>,
     command_available_on: &[String],
     cmd_path: &[String],
     commands_by_target: &BTreeMap<String, CommandSnapshot>,
@@ -279,8 +341,7 @@ fn merge_args(
 
         conflicts.extend(arg_conflicts(
             expected_targets,
-            version,
-            raw_help_root,
+            help,
             cmd_path,
             &name,
             &by_target,
@@ -301,8 +362,7 @@ fn merge_args(
 
 fn arg_conflicts(
     expected_targets: &[String],
-    version: &str,
-    raw_help_root: &Path,
+    help: &HelpEvidenceCtx<'_>,
     cmd_path: &[String],
     name: &str,
     by_target: &BTreeMap<String, ArgSnapshot>,
@@ -319,7 +379,7 @@ fn arg_conflicts(
             key: None,
             name: Some(name.to_string()),
             field: "required".to_string(),
-            evidence: build_help_evidence(version, raw_help_root, cmd_path, values.keys()),
+            evidence: build_help_evidence(help, cmd_path, values.keys()),
             values_by_target: values,
             help_context: Some("Arguments".to_string()),
         });
@@ -335,7 +395,7 @@ fn arg_conflicts(
             key: None,
             name: Some(name.to_string()),
             field: "variadic".to_string(),
-            evidence: build_help_evidence(version, raw_help_root, cmd_path, values.keys()),
+            evidence: build_help_evidence(help, cmd_path, values.keys()),
             values_by_target: values,
             help_context: Some("Arguments".to_string()),
         });
@@ -346,8 +406,7 @@ fn arg_conflicts(
 
 fn command_conflicts(
     expected_targets: &[String],
-    version: &str,
-    raw_help_root: &Path,
+    help: &HelpEvidenceCtx<'_>,
     cmd_path: &[String],
     by_target: &BTreeMap<String, CommandSnapshot>,
 ) -> Vec<UnionConflictEntryV2> {
@@ -367,7 +426,7 @@ fn command_conflicts(
             key: None,
             name: None,
             field: "about".to_string(),
-            evidence: build_help_evidence(version, raw_help_root, cmd_path, values.keys()),
+            evidence: build_help_evidence(help, cmd_path, values.keys()),
             values_by_target: values,
             help_context: Some("Usage".to_string()),
         });
@@ -387,7 +446,7 @@ fn command_conflicts(
             key: None,
             name: None,
             field: "usage".to_string(),
-            evidence: build_help_evidence(version, raw_help_root, cmd_path, values.keys()),
+            evidence: build_help_evidence(help, cmd_path, values.keys()),
             values_by_target: values,
             help_context: Some("Usage".to_string()),
         });
@@ -397,8 +456,7 @@ fn command_conflicts(
 }
 
 fn build_help_evidence<'a, I: Iterator<Item = &'a String>>(
-    version: &str,
-    raw_help_root: &Path,
+    help: &HelpEvidenceCtx<'_>,
     cmd_path: &[String],
     targets: I,
 ) -> Option<UnionConflictEvidenceV2> {
@@ -406,7 +464,7 @@ fn build_help_evidence<'a, I: Iterator<Item = &'a String>>(
     let mut shas: BTreeMap<String, String> = BTreeMap::new();
 
     for target in targets {
-        let (rel, full) = raw_help_paths(version, raw_help_root, target, cmd_path);
+        let (rel, full) = raw_help_paths(help, target, cmd_path);
         if !full.is_file() {
             continue;
         }
@@ -429,35 +487,36 @@ fn build_help_evidence<'a, I: Iterator<Item = &'a String>>(
 }
 
 fn raw_help_paths(
-    version: &str,
-    raw_help_root: &Path,
+    help: &HelpEvidenceCtx<'_>,
     target: &str,
     cmd_path: &[String],
 ) -> (String, PathBuf) {
     let rel = if cmd_path.is_empty() {
         PathBuf::from("raw_help")
-            .join(version)
+            .join(help.version)
             .join(target)
             .join("help.txt")
     } else {
-        let mut p = PathBuf::from("raw_help")
-            .join(version)
-            .join(target)
-            .join("commands");
-        for token in cmd_path {
-            p.push(token);
-        }
-        p.join("help.txt")
+        push_command_segments(
+            PathBuf::from("raw_help")
+                .join(help.version)
+                .join(target)
+                .join("commands"),
+            help.layout,
+            cmd_path,
+        )
+        .join("help.txt")
     };
 
     let full = if cmd_path.is_empty() {
-        raw_help_root.join(target).join("help.txt")
+        help.raw_help_root.join(target).join("help.txt")
     } else {
-        let mut p = raw_help_root.join(target).join("commands");
-        for token in cmd_path {
-            p.push(token);
-        }
-        p.join("help.txt")
+        push_command_segments(
+            help.raw_help_root.join(target).join("commands"),
+            help.layout,
+            cmd_path,
+        )
+        .join("help.txt")
     };
 
     (rel.to_string_lossy().to_string(), full)

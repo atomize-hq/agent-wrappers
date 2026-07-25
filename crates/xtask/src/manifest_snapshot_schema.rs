@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct SnapshotV1 {
-    pub(super) snapshot_schema_version: u32,
+    pub(crate) snapshot_schema_version: u32,
     pub(crate) tool: String,
     pub(crate) collected_at: String,
     pub(crate) binary: BinarySnapshot,
@@ -15,23 +15,23 @@ pub(crate) struct SnapshotV1 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct BinarySnapshot {
-    pub(super) sha256: String,
-    pub(super) size_bytes: u64,
-    pub(super) platform: BinaryPlatform,
-    pub(super) target_triple: String,
-    pub(super) version_output: String,
+    pub(crate) sha256: String,
+    pub(crate) size_bytes: u64,
+    pub(crate) platform: BinaryPlatform,
+    pub(crate) target_triple: String,
+    pub(crate) version_output: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) semantic_version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) channel: Option<String>,
+    pub(crate) channel: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) commit: Option<String>,
+    pub(crate) commit: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct BinaryPlatform {
-    pub(super) os: String,
-    pub(super) arch: String,
+    pub(crate) os: String,
+    pub(crate) arch: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,9 +42,9 @@ pub(crate) struct CommandSnapshot {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) usage: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) stability: Option<String>,
+    pub(crate) stability: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) platforms: Option<Vec<String>>,
+    pub(crate) platforms: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) args: Option<Vec<ArgSnapshot>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -72,21 +72,21 @@ pub(crate) struct FlagSnapshot {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) repeatable: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) stability: Option<String>,
+    pub(crate) stability: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) platforms: Option<Vec<String>>,
+    pub(crate) platforms: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub(super) struct SupplementV1 {
-    pub(super) version: u32,
-    pub(super) commands: Vec<SupplementCommand>,
+pub(crate) struct SupplementV1 {
+    pub(crate) version: u32,
+    pub(crate) commands: Vec<SupplementCommand>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub(super) struct SupplementCommand {
-    pub(super) path: Vec<String>,
+pub(crate) struct SupplementCommand {
+    pub(crate) path: Vec<String>,
     #[serde(default)]
-    pub(super) platforms: Option<Vec<String>>,
-    pub(super) note: String,
+    pub(crate) platforms: Option<Vec<String>>,
+    pub(crate) note: String,
 }

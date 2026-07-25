@@ -33,23 +33,26 @@ Trigger:
 Responsibilities:
 - Run `cargo run -p xtask -- maintenance-watch --emit-json _ci_tmp/maintenance-watch.json`.
 - Build the shared `stale_agents[]` queue from registry truth rather than keeping a per-agent watcher.
-- Dispatch `.github/workflows/claude-code-update-snapshot.yml` for the `claude_code` queue item when that queue reports drift.
+- Dispatch the shared packet opener `.github/workflows/agent-maintenance-open-pr.yml`, which opens the packet PR and then calls the reusable acquisition lane against that branch.
 - The deleted per-agent watcher workflows are not live entrypoints.
 
-### 2) Update Snapshot / Parity PR (workflow_dispatch, dispatched by Release Watch)
+### 2) Acquisition (reusable lane, called by the packet opener)
 
-Workflow: `.github/workflows/claude-code-update-snapshot.yml`
+Workflow: `.github/workflows/parity-acquire.yml` — one agent-agnostic lane shared by every agent.
 
 Trigger:
-- `workflow_dispatch` with inputs:
+- `workflow_call` from `.github/workflows/agent-maintenance-open-pr.yml`, and `workflow_dispatch`
+  for manual replay, with inputs:
   - `agent_id`
-  - `current_version`
-  - `latest_stable`
   - `target_version`
-  - `opened_from`
-  - `detected_by`
-  - `dispatch_kind`
-  - `branch_name`
+  - `ref` (branch to check out and commit to; default `staging`)
+  - `commit` (commit the acquired artifacts onto `ref`)
+
+There are no per-agent inputs and no per-agent branching in the workflow. The release source, each
+target's runner, the download URL, the archive shape, the snapshot command and the engine commands
+are all read from the `acquisition` block in `cli_manifests/claude_code/RULES.json` via
+`xtask manifest-acquisition-plan`, whose emitted `include` array is used directly as the job
+matrix.
 
 Responsibilities:
 - Download upstream `manifest.json` for `version`.

@@ -80,6 +80,7 @@ pub(crate) fn dispatch_kind_str(kind: ReleaseWatchDispatchKind) -> &'static str 
 pub(crate) fn version_policy_str(value: ReleaseWatchVersionPolicy) -> &'static str {
     match value {
         ReleaseWatchVersionPolicy::LatestStableMinusOne => "latest_stable_minus_one",
+        ReleaseWatchVersionPolicy::UpstreamStablePointer => "upstream_stable_pointer",
     }
 }
 
@@ -87,6 +88,7 @@ pub(crate) fn source_kind_str(kind: ReleaseWatchSourceKind) -> &'static str {
     match kind {
         ReleaseWatchSourceKind::GithubReleases => "github_releases",
         ReleaseWatchSourceKind::GcsObjectListing => "gcs_object_listing",
+        ReleaseWatchSourceKind::NpmDistTag => "npm_dist_tag",
     }
 }
 
@@ -101,6 +103,11 @@ pub(crate) fn source_ref(release_watch: &ReleaseWatchMetadata) -> String {
             "{}/{}",
             release_watch.upstream.bucket.as_deref().unwrap_or(""),
             release_watch.upstream.prefix.as_deref().unwrap_or("")
+        ),
+        ReleaseWatchSourceKind::NpmDistTag => format!(
+            "{}#{}",
+            release_watch.upstream.package.as_deref().unwrap_or(""),
+            release_watch.upstream.dist_tag.as_deref().unwrap_or("")
         ),
     }
 }

@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[path = "support/onboard_agent_harness.rs"]
 mod harness;
@@ -28,6 +31,9 @@ use harness::{fixture_root, write_text};
 use watch::{build_watch_queue_with_resolver, run_in_workspace_with_resolver, Args, Error};
 
 const SEEDED_REGISTRY: &str = include_str!("../data/agent_registry.toml");
+const CLAUDE_NPM_RELEASE_WATCH_UPSTREAM: &str =
+    "source_kind = \"npm_dist_tag\"\npackage = \"@anthropic-ai/claude-code\"\ndist_tag = \"stable\"";
+const CLAUDE_GCS_RELEASE_WATCH_UPSTREAM: &str = "source_kind = \"gcs_object_listing\"\nbucket = \"claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819\"\nprefix = \"claude-code-releases\"\nversion_marker = \"manifest.json\"";
 
 #[test]
 fn build_watch_queue_emits_frozen_fields_for_stale_agents() {
@@ -67,8 +73,8 @@ fn build_watch_queue_emits_frozen_fields_for_stale_agents() {
                 manifest_root: "cli_manifests/claude_code".to_string(),
                 current_validated: "1.2.3".to_string(),
                 latest_stable: "1.2.5".to_string(),
-                target_version: "1.2.4".to_string(),
-                version_policy: "latest_stable_minus_one".to_string(),
+                target_version: "1.2.5".to_string(),
+                version_policy: "upstream_stable_pointer".to_string(),
                 dispatch_kind: "packet_pr".to_string(),
                 dispatch_workflow: "agent-maintenance-open-pr.yml".to_string(),
                 maintenance_root: "docs/agents/lifecycle/claude_code-maintenance".to_string(),
@@ -77,7 +83,7 @@ fn build_watch_queue_emits_frozen_fields_for_stale_agents() {
                         .to_string(),
                 opened_from: ".github/workflows/agent-maintenance-open-pr.yml".to_string(),
                 detected_by: ".github/workflows/agent-maintenance-release-watch.yml".to_string(),
-                branch_name: "automation/claude_code-maintenance-1.2.4".to_string(),
+                branch_name: "automation/claude_code-maintenance-1.2.5".to_string(),
             },
             watch::MaintenanceWatchQueueEntry {
                 agent_id: "opencode".to_string(),
@@ -169,7 +175,7 @@ fn clean_or_not_newer_agents_are_not_emitted() {
     let fixture = fixture_root("agent-maintenance-watch-clean");
     seed_registry(&fixture);
     seed_latest_validated(&fixture, "cli_manifests/codex", "0.98.0");
-    seed_latest_validated(&fixture, "cli_manifests/claude_code", "1.2.4");
+    seed_latest_validated(&fixture, "cli_manifests/claude_code", "1.2.5");
     seed_latest_validated(&fixture, "cli_manifests/opencode", "1.4.11");
 
     let queue = build_watch_queue_with_resolver(&fixture, resolver_for_queue).expect("queue");
@@ -191,7 +197,7 @@ fn partial_upstream_failures_are_isolated_into_failed_agents() {
         } else if entry.agent_id == "opencode" {
             Ok(vec!["1.4.12".parse().unwrap(), "1.4.11".parse().unwrap()])
         } else {
-            Ok(vec!["1.2.5".parse().unwrap(), "1.2.4".parse().unwrap()])
+            Ok(vec!["1.2.5".parse().unwrap()])
         }
     })
     .expect("partial failures should not abort queue");
@@ -241,7 +247,14 @@ fn enrolled_agents_use_generic_open_pr_workflow() {
 #[test]
 fn gcs_page_tokens_are_percent_encoded_for_pagination() {
     let fixture = fixture_root("agent-maintenance-watch-gcs-page-token");
-    seed_registry(&fixture);
+    seed_registry_with(
+        &fixture,
+        &SEEDED_REGISTRY.replacen(
+            CLAUDE_NPM_RELEASE_WATCH_UPSTREAM,
+            CLAUDE_GCS_RELEASE_WATCH_UPSTREAM,
+            1,
+        ),
+    );
 
     let registry =
         xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
@@ -296,7 +309,7 @@ fn agent_filter_scopes_queue_to_single_enrolled_agent() {
         },
         &mut stdout,
         |entry, _| match entry.agent_id.as_str() {
-            "claude_code" => Ok(vec!["1.2.5".parse().unwrap(), "1.2.4".parse().unwrap()]),
+            "claude_code" => Ok(vec!["1.2.5".parse().unwrap()]),
             other => panic!("unexpected filtered agent {other}"),
         },
     )
@@ -305,9 +318,364 @@ fn agent_filter_scopes_queue_to_single_enrolled_agent() {
     let output = String::from_utf8(stdout).expect("stdout utf8");
     assert!(output.contains("stale_agents: 1"));
     assert!(output.contains("failed_agents: 0"));
-    assert!(output.contains("claude_code -> 1.2.4"));
+    assert!(output.contains("claude_code -> 1.2.5"));
     assert!(!output.contains("codex ->"));
     assert!(!output.contains("opencode ->"));
+}
+
+/// A retried transfer captured from stdout appends the retried body to the partial
+/// one, splicing two JSON documents together. Writing to a file lets curl truncate
+/// on each attempt, so the body is always whole or the fetch fails cleanly.
+#[test]
+fn curl_writes_body_to_file_rather_than_stdout() {
+    let response_path = PathBuf::from("/tmp/uaa-watch-body.json");
+    let args = watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases?per_page=100&page=1",
+        &response_path,
+        None,
+    );
+
+    let output_flag = args
+        .iter()
+        .position(|arg| arg == "-o")
+        .expect("curl must write the body to a file");
+    // Compare against the raw OsStr, not a lossy String: a lossy expectation would
+    // be computed the same way as the implementation and could never fail.
+    assert_eq!(args[output_flag + 1], response_path.as_os_str());
+    assert_eq!(
+        args.last().expect("url is the final argument"),
+        "https://api.github.com/repos/openai/codex/releases?per_page=100&page=1"
+    );
+}
+
+/// Writing to a file only defeats the retry splice while curl truncates that file
+/// on each attempt. `-C`/`--continue-at` or `-a`/`--append` would restore resume
+/// semantics and reintroduce the corruption, so assert they are absent.
+#[test]
+fn curl_never_enables_resume_or_append_semantics() {
+    let args = watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases",
+        Path::new("/tmp/b"),
+        Some("tok"),
+    );
+    for forbidden in ["-C", "--continue-at", "-a", "--append"] {
+        assert!(
+            !args.iter().any(|arg| arg == forbidden),
+            "`{forbidden}` re-enables append/resume and would splice a retried body onto a partial one"
+        );
+    }
+    assert_eq!(
+        args.iter().filter(|arg| *arg == "-o").count(),
+        1,
+        "exactly one output target"
+    );
+}
+
+/// A stalled-but-not-dead upstream must be abandoned, but a slow-yet-progressing
+/// multi-megabyte download must not be — which is why this is a throughput floor
+/// rather than a blunt `--max-time`.
+#[test]
+fn curl_aborts_stalled_transfers_without_capping_slow_ones() {
+    let args = watch::build_curl_args("https://registry.npmjs.org/x", Path::new("/tmp/b"), None);
+    let value_after = |flag: &str| -> u64 {
+        let at = args
+            .iter()
+            .position(|arg| arg == flag)
+            .unwrap_or_else(|| panic!("{flag} is configured"));
+        args[at + 1]
+            .to_string_lossy()
+            .parse()
+            .unwrap_or_else(|_| panic!("{flag} takes a numeric value"))
+    };
+
+    // Bounds, not mere presence: `--speed-limit 0` silently disables the guard
+    // entirely, while a high floor aborts transfers that are merely slow. Asserting
+    // only that these parse would let both regressions through a green suite.
+    let floor = value_after("--speed-limit");
+    assert!(
+        (1..=65_536).contains(&floor),
+        "speed floor {floor} B/s is outside the sane band: 0 disables the stall guard, and a high floor fails slow-but-progressing transfers"
+    );
+
+    let window = value_after("--speed-time");
+    assert!(
+        window >= 30,
+        "a {window}s stall window is too short; transient slowdowns would be reported as upstream failures"
+    );
+
+    // The throughput guard only applies once curl is PERFORMING, so a stalled
+    // connect/TLS handshake needs its own ceiling or it runs past the retry budget.
+    let connect = value_after("--connect-timeout");
+    assert!(
+        (1..=120).contains(&connect),
+        "connect timeout {connect}s is outside the sane band"
+    );
+
+    assert!(
+        !args.iter().any(|arg| arg == "--max-time"),
+        "a hard --max-time would fail slow-but-progressing large transfers"
+    );
+}
+
+fn watcher_temp_bodies() -> std::collections::BTreeSet<String> {
+    fs::read_dir(std::env::temp_dir())
+        .map(|entries| {
+            entries
+                .filter_map(Result::ok)
+                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .filter(|name| name.starts_with("uaa-maintenance-watch-"))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Exercises the real `fetch_text` path — spawn curl, write via `-o`, read the body
+/// back, clean up — over `file://` so it needs no network.
+///
+/// Success and failure are asserted in a single test on purpose: the temp-dir
+/// snapshot is machine-global, so as separate `#[test]` functions they run
+/// concurrently and each observes the other's in-flight body file.
+#[test]
+fn fetch_text_reads_body_and_never_leaks_its_temp_file() {
+    // A TempDir cleans up even if an assertion below panics.
+    let fixture_dir = tempfile::tempdir().expect("fixture dir");
+    let dir = fixture_dir.path();
+    let fixture = dir.join("body.json");
+    fs::write(&fixture, r#"{"dist-tags":{"stable":"9.9.9"}}"#).expect("write fixture");
+
+    let before = watcher_temp_bodies();
+
+    let body = watch::fetch_text(&format!("file://{}", fixture.display()))
+        .expect("fetch_text reads a file:// body");
+    assert!(body.contains("9.9.9"));
+    assert_eq!(
+        watcher_temp_bodies(),
+        before,
+        "fetch_text must remove its temp body file on success"
+    );
+
+    let err = watch::fetch_text("file:///nonexistent/uaa-missing-source.json")
+        .expect_err("unreadable source must fail");
+    assert!(matches!(err, Error::Validation(_)));
+    assert_eq!(
+        watcher_temp_bodies(),
+        before,
+        "a failed fetch must not leak a temp body file"
+    );
+}
+
+/// The retry timer starts before the first attempt, so a budget shorter than a
+/// large transfer means it is never retried at all.
+#[test]
+fn curl_retry_budget_accommodates_multi_megabyte_bodies() {
+    let args = watch::build_curl_args("https://registry.npmjs.org/x", Path::new("/tmp/b"), None);
+    let budget = args
+        .iter()
+        .position(|arg| arg == "--retry-max-time")
+        .expect("retry budget is configured");
+    let seconds: u64 = args[budget + 1]
+        .to_string_lossy()
+        .parse()
+        .expect("retry budget is numeric");
+    assert!(
+        seconds >= 120,
+        "retry budget {seconds}s is too small for multi-megabyte upstream bodies"
+    );
+}
+
+#[test]
+fn curl_attaches_auth_only_for_github_api() {
+    let path = Path::new("/tmp/b");
+    let joined = |args: Vec<std::ffi::OsString>| {
+        args.iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    let github = joined(watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases",
+        path,
+        Some("secret-token"),
+    ));
+    assert!(github.contains("Authorization: Bearer secret-token"));
+
+    // The token must never leak to non-GitHub upstreams.
+    let npm = joined(watch::build_curl_args(
+        "https://registry.npmjs.org/%40anthropic-ai%2Fclaude-code",
+        path,
+        Some("secret-token"),
+    ));
+    assert!(!npm.contains("Authorization"));
+    assert!(!npm.contains("secret-token"));
+
+    let gcs = joined(watch::build_curl_args(
+        "https://storage.googleapis.com/storage/v1/b/bucket/o",
+        path,
+        Some("secret-token"),
+    ));
+    assert!(!gcs.contains("secret-token"));
+
+    // A blank token must not produce an empty Authorization header.
+    let blank = joined(watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases",
+        path,
+        Some("   "),
+    ));
+    assert!(!blank.contains("Authorization"));
+
+    let absent = joined(watch::build_curl_args(
+        "https://api.github.com/repos/openai/codex/releases",
+        path,
+        None,
+    ));
+    assert!(!absent.contains("Authorization"));
+}
+
+#[test]
+fn npm_dist_tag_fetcher_returns_requested_stable_pointer() {
+    let fixture = fixture_root("agent-maintenance-watch-npm-dist-tag");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "claude_code")
+        .expect("claude_code registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code release watch");
+
+    let versions = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |url| {
+        assert_eq!(
+            url,
+            "https://registry.npmjs.org/%40anthropic-ai%2Fclaude-code"
+        );
+        Ok(r#"{"dist-tags":{"stable":"2.1.206","latest":"2.1.218"}}"#.to_string())
+    })
+    .expect("npm dist-tag fetch succeeds");
+
+    assert_eq!(versions, vec!["2.1.206".parse().unwrap()]);
+}
+
+#[test]
+fn npm_dist_tag_fetcher_fails_when_requested_tag_is_missing() {
+    let fixture = fixture_root("agent-maintenance-watch-npm-missing-tag");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "claude_code")
+        .expect("claude_code registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code release watch");
+
+    let err = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |_| {
+        Ok(r#"{"dist-tags":{"latest":"2.1.218"}}"#.to_string())
+    })
+    .expect_err("missing dist-tag should fail");
+
+    assert!(matches!(err, Error::Validation(_)));
+    assert!(err.to_string().contains("npm dist-tag `stable` missing"));
+}
+
+#[test]
+fn npm_dist_tag_fetcher_fails_closed_on_malformed_json() {
+    let fixture = fixture_root("agent-maintenance-watch-npm-malformed-json");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "claude_code")
+        .expect("claude_code registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code release watch");
+
+    let err = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |_| {
+        Ok("{not json".to_string())
+    })
+    .expect_err("malformed npm metadata should fail");
+
+    assert!(matches!(err, Error::Validation(_)));
+    assert!(err.to_string().contains("parse npm metadata"));
+}
+
+#[test]
+fn npm_dist_tag_fetcher_fails_closed_on_blank_version() {
+    let fixture = fixture_root("agent-maintenance-watch-npm-blank-version");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "claude_code")
+        .expect("claude_code registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code release watch");
+
+    let err = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |_| {
+        Ok(r#"{"dist-tags":{"stable":"  "}}"#.to_string())
+    })
+    .expect_err("blank dist-tag version should fail");
+
+    assert!(matches!(err, Error::Validation(_)));
+}
+
+#[test]
+fn npm_dist_tag_fetcher_fails_closed_when_dist_tags_object_missing() {
+    let fixture = fixture_root("agent-maintenance-watch-npm-no-dist-tags");
+    seed_registry(&fixture);
+
+    let registry =
+        xtask::agent_registry::AgentRegistry::load(&fixture).expect("seeded registry loads");
+    let entry = registry
+        .agents
+        .iter()
+        .find(|entry| entry.agent_id == "claude_code")
+        .expect("claude_code registry entry");
+    let release_watch = entry
+        .maintenance
+        .release_watch
+        .as_ref()
+        .expect("claude_code release watch");
+
+    let err = watch::fetch_npm_dist_tag_version_with_fetcher(entry, release_watch, |_| {
+        Ok(r#"{"versions":{}}"#.to_string())
+    })
+    .expect_err("missing dist-tags object should fail");
+
+    assert!(matches!(err, Error::Validation(_)));
+}
+
+#[test]
+fn upstream_stable_pointer_selects_last_sorted_version() {
+    let selected = watch::select_target_version(
+        &["2.1.206".parse().unwrap()],
+        xtask::agent_registry::ReleaseWatchVersionPolicy::UpstreamStablePointer,
+    );
+
+    assert_eq!(selected, Some("2.1.206".parse().unwrap()));
 }
 
 #[test]
@@ -367,7 +735,7 @@ fn resolver_for_queue(
 ) -> Result<Vec<semver::Version>, Error> {
     let versions = match entry.agent_id.as_str() {
         "codex" => vec!["0.99.0", "0.98.0", "0.97.0"],
-        "claude_code" => vec!["1.2.5", "1.2.4", "1.2.3"],
+        "claude_code" => vec!["1.2.5"],
         "opencode" => vec!["1.4.12", "1.4.11", "1.4.9"],
         other => panic!("unexpected agent {other}"),
     };
