@@ -1,22 +1,10 @@
-<!-- generated-by: xtask close-agent-maintenance; owner: maintenance-control-plane -->
+<!-- generated-by: xtask agent-maintenance renderer; source-of-truth: governance/maintenance-request.toml -->
 
 # Handoff
 
-This packet records the closed maintenance run for `codex`.
+This file is the canonical contributor execution contract for `codex` maintenance.
 
-Manual closeout remained an explicit maintainer action recorded with `close-agent-maintenance`; relay execution does not finalize it automatically.
-
-## Request linkage
-
-- request ref: `docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml`
-- request sha256: `27f3c0797b0ae6af9d8297d0d816d6c8e3cc730b72fbe84a6674f1aa0d9cad6a`
-- trigger kind: `upstream_release_detected`
-- basis ref: `cli_manifests/codex/latest_validated.txt`
-- opened from: `.github/workflows/agent-maintenance-open-pr.yml`
-- requested control-plane actions:
-- `packet_doc_refresh`
-
-## Trigger context
+## Packet origin
 
 - detected_by: `.github/workflows/agent-maintenance-release-watch.yml`
 - current_validated: `0.125.0`
@@ -29,35 +17,145 @@ Manual closeout remained an explicit maintainer action recorded with `close-agen
 - dispatch_workflow: `agent-maintenance-open-pr.yml`
 - branch_name: `automation/codex-maintenance-0.144.6`
 
-## Closeout
+## Support-surface audit
 
-- closeout metadata: `docs/agents/lifecycle/codex-maintenance/governance/maintenance-closeout.json`
-- preflight passed: `true`
-- recorded at: `2026-07-22T02:42:12Z`
-- commit: `9234efca`
+- required: `true`
+- pre-run debt count: `2`
+- expected post-run debt count: `2`
+- discovered upstream surface rows: `0`
+- preexisting unsupported rows: `2`
+- required uplifts this run:
+- none
+- deferred preexisting gaps:
+- `codex completion` `completion` via `requires_new_architectural_seam` (TODOS.md#close-codex-completion-maintenance-gap)
+- `codex completion` `SHELL` via `requires_new_architectural_seam` (TODOS.md#close-codex-completion-maintenance-gap)
 
-## Resolved findings
 
-- [registry_manifest_drift] The codex 0.144.6 packet materialized the version-scoped snapshots, coverage reports, union, version metadata, wrapper coverage, and lockfile provenance required by the live maintenance request (baseline 0.125.0 -> target 0.144.6).
-  surfaces:
-  - cli_manifests/codex/snapshots/0.144.6/aarch64-apple-darwin.json
-  - cli_manifests/codex/snapshots/0.144.6/x86_64-unknown-linux-musl.json
-  - cli_manifests/codex/snapshots/0.144.6/union.json
-  - cli_manifests/codex/reports/0.144.6/coverage.aarch64-apple-darwin.json
-  - cli_manifests/codex/reports/0.144.6/coverage.x86_64-unknown-linux-musl.json
-  - cli_manifests/codex/reports/0.144.6/coverage.any.json
-  - cli_manifests/codex/versions/0.144.6.json
-  - cli_manifests/codex/wrapper_coverage.json
-  - cli_manifests/codex/artifacts.lock.json
-- [support_publication_drift] Support-matrix publication was regenerated to match the landed codex 0.144.6 manifest truth, including the deterministic passthrough evidence note derived from the committed 0.144.6 coverage passthrough_candidates.
-  surfaces:
-  - cli_manifests/support_matrix/current.json
-  - docs/specs/unified-agent-api/support-matrix.md
+## Relay contract
 
-## Deferred findings
+- maintained agent packet: `codex`
+- local execution host: `local Codex CLI host via execute-agent-maintenance`
+- executor surface: `execute-agent-maintenance`
+- request artifact: `docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml`
+- prompt template path: `docs/agents/lifecycle/codex-maintenance/governance/execute-agent-maintenance-prompt.md`
+- prompt sha256: `9e7a6f4055d32dabd4235ec29f45b909066e992d47983275f5fd38f1ea5f0a1a`
+- canonical handoff: `docs/agents/lifecycle/codex-maintenance/HANDOFF.md`
+- derivative pr summary: `docs/agents/lifecycle/codex-maintenance/governance/pr-summary.md`
+- exact closeout artifact: `docs/agents/lifecycle/codex-maintenance/governance/maintenance-closeout.json`
+- branch linkage: `automation/codex-maintenance-0.144.6`
+- manual closeout required: `true`
 
-- No deferred findings remain: Live drift for codex is clean (check-agent-drift --agent codex -> status: clean) after the 0.144.6 packet write, the bounded non-TUI passthrough surface, and green-gate validation (fmt, codex-validate, support-matrix --check, capability-matrix --check, capability-matrix-audit, make preflight). No maintenance drift findings remain deferred. The frozen support_surface_audit was reconciled via prepare-agent-maintenance/refresh-agent to the post-passthrough coverage: the 68 discovered upstream surfaces are now covered by the bounded passthrough surface, so required_uplifts_this_run is 0; only the two preexisting `codex completion` non-TUI rows stay deferred by the request (requires_new_architectural_seam; TODOS.md#close-codex-completion-maintenance-gap) as support-surface debt, not drift. Two out-of-envelope xtask follow-ups (snapshot-discovery parser fix; support-matrix passthrough-note tooling) are recorded in governance/maintainer-follow-up.md and governance/orchestration-friction-log.md.
+## Writable surfaces
 
-## Runtime follow-up
+- `docs/agents/lifecycle/codex-maintenance/**`
+- `crates/codex/**`
+- `crates/agent_api/**`
+- `cli_manifests/codex/artifacts.lock.json`
+- `cli_manifests/codex/snapshots/0.144.6/**`
+- `cli_manifests/codex/reports/0.144.6/**`
+- `cli_manifests/codex/versions/0.144.6.json`
+- `cli_manifests/codex/wrapper_coverage.json`
+- `cli_manifests/support_matrix/current.json`
+- `docs/specs/unified-agent-api/support-matrix.md`
+- `crates/agent_api/src/runtime_support_data.rs`
+- `docs/specs/unified-agent-api/non-tui-support-debt.md`
+- `docs/specs/codex-wrapper-coverage-scenarios-v1.md`
 
-- No runtime follow-up is currently required.
+## Read-only inputs
+
+- `docs/agents/lifecycle/codex-maintenance/OPS_PLAYBOOK.md`
+- `docs/agents/lifecycle/codex-maintenance/CI_WORKFLOWS_PLAN.md`
+- `docs/agents/lifecycle/codex-maintenance/governance/execute-agent-maintenance-prompt.md`
+- `.github/workflows/agent-maintenance-open-pr.yml`
+- `docs/specs/unified-agent-api/non-tui-support-debt.md`
+
+## Ordered repo commands
+
+- `cargo fmt --all`
+- `cargo run -p xtask -- codex-validate --root cli_manifests/codex`
+- `cargo run -p xtask -- support-matrix --check`
+- `cargo run -p xtask -- capability-matrix --check`
+- `cargo run -p xtask -- capability-matrix-audit`
+- `make preflight`
+
+## Exact green gates
+
+- `cargo fmt --all`
+- `cargo run -p xtask -- codex-validate --root cli_manifests/codex`
+- `cargo run -p xtask -- support-matrix --check`
+- `cargo run -p xtask -- capability-matrix --check`
+- `cargo run -p xtask -- capability-matrix-audit`
+- `make preflight`
+
+## Recovery
+
+- recreate packet command: `cargo run -p xtask -- refresh-agent --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml --write`
+- reopen pr body path: `docs/agents/lifecycle/codex-maintenance/governance/pr-summary.md`
+- reopen pr branch: `automation/codex-maintenance-0.144.6`
+- notes:
+- If PR creation fails after packet generation, rerun packet regeneration from the frozen request and reopen the PR from the generated pr-summary path.
+- If the local execution-host preflight (local Codex CLI host via execute-agent-maintenance) fails, fix the Codex binary/auth state and rerun `execute-agent-maintenance --dry-run` before write mode.
+
+## Dry-run to write relay
+
+Use the `run_id` printed by the dry-run output, replacing `RUN_ID_FROM_DRY_RUN` before invoking write mode.
+
+```sh
+cargo run -p xtask -- execute-agent-maintenance --dry-run --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml
+cargo run -p xtask -- execute-agent-maintenance --write --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml --run-id RUN_ID_FROM_DRY_RUN
+```
+
+## Exact closeout command
+
+```sh
+cargo run -p xtask -- close-agent-maintenance --request docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml --closeout docs/agents/lifecycle/codex-maintenance/governance/maintenance-closeout.json
+```
+
+## Exact maintained-agent prompt
+
+```md
+# Packet PR Maintenance Prompt (`0.144.6`)
+
+This template renders the exact maintained-agent prompt for `codex` packet execution.
+`docs/agents/lifecycle/codex-maintenance/HANDOFF.md` remains canonical and `governance/pr-summary.md` is derivative.
+
+@codex
+
+## Goal
+
+Execute the automated maintenance packet for `codex` target `0.144.6`.
+
+## Frozen request contract
+
+- Read `docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml` before changing code or docs.
+- Read the packet-owned `support_surface_audit` block before deciding whether the run can succeed.
+- Treat `docs/agents/lifecycle/codex-maintenance/HANDOFF.md` as canonical for writable surfaces, read-only inputs, ordered commands, green gates, and recovery.
+- Treat `.github/workflows/agent-maintenance-open-pr.yml` as the opening workflow source.
+- Do not write outside the execution contract frozen in the request packet.
+
+## Manifest inputs
+
+- `cli_manifests/codex/README.md`
+- `cli_manifests/codex/VALIDATOR_SPEC.md`
+- `cli_manifests/codex/RULES.json`
+- `cli_manifests/codex/SCHEMA.json`
+- `cli_manifests/codex/current.json`
+- `cli_manifests/codex/latest_validated.txt`
+- `cli_manifests/codex/wrapper_coverage.json`
+
+## Required workflow
+
+1. Compare the current validated baseline from `cli_manifests/codex/latest_validated.txt` against the target `0.144.6` artifacts.
+2. Use `support_surface_audit` to classify newly discovered non-TUI surface, preexisting non-TUI debt, required uplifts, and allowed deferrals.
+3. Land bounded wrapper/backend/manifest/publication updates for every row in `required_uplifts_this_run`.
+4. Refresh or create version-scoped manifest artifacts under `cli_manifests/codex/snapshots/0.144.6/`, `cli_manifests/codex/reports/0.144.6/`, and `cli_manifests/codex/versions/0.144.6.json` as required by the packet.
+5. Leave closeout manual; record it only with `close-agent-maintenance` after the declared green gates pass.
+
+## Done criteria
+
+- Changes stay within the writable surfaces frozen in `docs/agents/lifecycle/codex-maintenance/governance/maintenance-request.toml`.
+- No newly discovered non-TUI surface remains unresolved unless the packet records one allowed deferral.
+- `cargo run -p xtask -- codex-validate --root cli_manifests/codex` passes.
+- The remaining ordered commands and green gates from `docs/agents/lifecycle/codex-maintenance/HANDOFF.md` pass or are captured in maintainer follow-up notes.
+
+```
