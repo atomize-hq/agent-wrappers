@@ -27,14 +27,14 @@
   },
   "artifacts": [
     {
-      "semantic_version": "1.14.47",
+      "semantic_version": "1.4.9",
       "target_triple": "darwin-arm64",
       "package_name": "opencode-ai",
-      "package_version": "1.14.47",
+      "package_version": "1.4.9",
       "asset_name": "bin/.opencode",
-      "download_url": "npm:opencode-ai@1.14.47#darwin-arm64",
-      "sha256": "91093dab474017c558e88f94b7cbc2adefec6badfcacff944c7c889f61f7ad3c",
-      "size_bytes": 106826914
+      "download_url": "npm:opencode-ai@1.4.9#darwin-arm64",
+      "sha256": "4557b09dfbb6e8c28b85e90e9b8d8b83361ce53f622d3e41d908f279c378f091",
+      "size_bytes": 101226400
     },
     {
       "semantic_version": "1.4.11",
@@ -45,14 +45,44 @@
       "size_bytes": 142172442
     },
     {
-      "semantic_version": "1.4.9",
+      "semantic_version": "1.14.47",
       "target_triple": "darwin-arm64",
       "package_name": "opencode-ai",
-      "package_version": "1.4.9",
+      "package_version": "1.14.47",
       "asset_name": "bin/.opencode",
-      "download_url": "npm:opencode-ai@1.4.9#darwin-arm64",
-      "sha256": "4557b09dfbb6e8c28b85e90e9b8d8b83361ce53f622d3e41d908f279c378f091",
-      "size_bytes": 101226400
+      "download_url": "npm:opencode-ai@1.14.47#darwin-arm64",
+      "sha256": "91093dab474017c558e88f94b7cbc2adefec6badfcacff944c7c889f61f7ad3c",
+      "size_bytes": 106826914
+    },
+    {
+      "semantic_version": "1.18.8",
+      "target_triple": "darwin-arm64",
+      "package_name": "opencode-darwin-arm64",
+      "package_version": "1.18.8",
+      "asset_name": "opencode-darwin-arm64-1.18.8.tgz",
+      "download_url": "https://registry.npmjs.org/opencode-darwin-arm64/-/opencode-darwin-arm64-1.18.8.tgz",
+      "sha256": "6de51df81e487aef4a41f1db750346ae15157801abd631c1b54234d50500a859",
+      "size_bytes": 44782380
+    },
+    {
+      "semantic_version": "1.18.8",
+      "target_triple": "linux-x64",
+      "package_name": "opencode-linux-x64",
+      "package_version": "1.18.8",
+      "asset_name": "opencode-linux-x64-1.18.8.tgz",
+      "download_url": "https://registry.npmjs.org/opencode-linux-x64/-/opencode-linux-x64-1.18.8.tgz",
+      "sha256": "34a697c9385d805d5193c48eba5127433cf514364eae38add792f22f1726976f",
+      "size_bytes": 59057496
+    },
+    {
+      "semantic_version": "1.18.8",
+      "target_triple": "win32-x64",
+      "package_name": "opencode-windows-x64",
+      "package_version": "1.18.8",
+      "asset_name": "opencode-windows-x64-1.18.8.tgz",
+      "download_url": "https://registry.npmjs.org/opencode-windows-x64/-/opencode-windows-x64-1.18.8.tgz",
+      "sha256": "496e7ac0986b378dae1a2ae35f4a969095c705484baf23c108a8627567ca6613",
+      "size_bytes": 58975891
     }
   ]
 }
