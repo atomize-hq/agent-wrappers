@@ -2,13 +2,13 @@
 
 # PR summary
 
-Automated maintenance packet for `opencode` target `1.14.49`.
+Automated maintenance packet for `opencode` target `1.18.13`.
 
 - canonical execution contract: `docs/agents/lifecycle/opencode-maintenance/HANDOFF.md`
 - request artifact: `docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml`
-- branch: `automation/opencode-maintenance-1.14.49`
+- branch: `automation/opencode-maintenance-1.18.13`
 - opened from: `.github/workflows/agent-maintenance-open-pr.yml`
-- prompt sha256: `63e6a34ae78b4aa8f0c6746c72f193b72eb2b530193e22cbacffd521094c82a7`
+- prompt sha256: `e61601e5f7664f6eff92d423d439518ef76f470c008c88f44b1aa887342d64f0`
 
 ## Support-surface audit
 
@@ -44,7 +44,7 @@ Follow `docs/agents/lifecycle/opencode-maintenance/HANDOFF.md` exactly. This PR 
 ## Exact maintained-agent prompt
 
 ```md
-# Packet PR Maintenance Prompt (`1.14.49`)
+# Packet PR Maintenance Prompt (`1.18.13`)
 
 This template renders the exact maintained-agent prompt for `opencode` packet execution.
 `docs/agents/lifecycle/opencode-maintenance/HANDOFF.md` remains canonical and `governance/pr-summary.md` is derivative.
@@ -53,7 +53,7 @@ This template renders the exact maintained-agent prompt for `opencode` packet ex
 
 ## Goal
 
-Execute the automated maintenance packet for `opencode` target `1.14.49`.
+Execute the automated maintenance packet for `opencode` target `1.18.13`.
 
 ## Frozen request contract
 
@@ -75,10 +75,10 @@ Execute the automated maintenance packet for `opencode` target `1.14.49`.
 
 ## Required workflow
 
-1. Compare the current validated baseline from `cli_manifests/opencode/latest_validated.txt` against the target `1.14.49` artifacts.
+1. Compare the current validated baseline from `cli_manifests/opencode/latest_validated.txt` against the target `1.18.13` artifacts.
 2. Use `support_surface_audit` to classify newly discovered non-TUI surface, preexisting non-TUI debt, required uplifts, and allowed deferrals.
 3. Land bounded wrapper/backend/manifest/publication updates for every row in `required_uplifts_this_run`.
-4. Refresh or create version-scoped manifest artifacts under `cli_manifests/opencode/snapshots/1.14.49/`, `cli_manifests/opencode/reports/1.14.49/`, and `cli_manifests/opencode/versions/1.14.49.json` as required by the packet.
+4. Refresh or create version-scoped manifest artifacts under `cli_manifests/opencode/snapshots/1.18.13/`, `cli_manifests/opencode/reports/1.18.13/`, and `cli_manifests/opencode/versions/1.18.13.json` as required by the packet.
 5. Leave closeout manual; record it only with `close-agent-maintenance` after the declared green gates pass.
 
 ## Done criteria
