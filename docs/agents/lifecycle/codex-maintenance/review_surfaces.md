@@ -8,9 +8,9 @@
 - `crates/codex/**`
 - `crates/agent_api/**`
 - `cli_manifests/codex/artifacts.lock.json`
-- `cli_manifests/codex/snapshots/0.144.6/**`
-- `cli_manifests/codex/reports/0.144.6/**`
-- `cli_manifests/codex/versions/0.144.6.json`
+- `cli_manifests/codex/snapshots/0.150.0/**`
+- `cli_manifests/codex/reports/0.150.0/**`
+- `cli_manifests/codex/versions/0.150.0.json`
 - `cli_manifests/codex/wrapper_coverage.json`
 - `cli_manifests/support_matrix/current.json`
 - `docs/specs/unified-agent-api/support-matrix.md`
