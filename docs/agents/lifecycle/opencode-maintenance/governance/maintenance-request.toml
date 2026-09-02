@@ -6,8 +6,8 @@ opened_from = ".github/workflows/agent-maintenance-open-pr.yml"
 requested_control_plane_actions = [
   "packet_doc_refresh",
 ]
-request_recorded_at = "2026-05-14T18:37:44Z"
-request_commit = "4a6073bc7b7500441d8db170d5e5e3c9c9942366"
+request_recorded_at = "2026-09-02T07:55:01Z"
+request_commit = "a36a115dcea862c636801b1b0e55f1689d6ad6ed"
 
 [runtime_followup_required]
 required = false
@@ -16,14 +16,14 @@ items = []
 [detected_release]
 detected_by = ".github/workflows/agent-maintenance-release-watch.yml"
 current_validated = "1.4.11"
-target_version = "1.14.49"
-latest_stable = "1.14.50"
+target_version = "1.18.25"
+latest_stable = "1.18.26"
 version_policy = "latest_stable_minus_one"
 source_kind = "github_releases"
 source_ref = "anomalyco/opencode"
 dispatch_kind = "packet_pr"
 dispatch_workflow = "agent-maintenance-open-pr.yml"
-branch_name = "automation/opencode-maintenance-1.14.49"
+branch_name = "automation/opencode-maintenance-1.18.25"
 
 [support_surface_audit]
 required = true
@@ -485,7 +485,7 @@ surface_doc = "docs/specs/unified-agent-api/support-matrix.md"
 [execution_contract]
 executor = "execute-agent-maintenance"
 prompt_template_path = "docs/agents/lifecycle/opencode-maintenance/governance/execute-agent-maintenance-prompt.md"
-prompt_sha256 = "63e6a34ae78b4aa8f0c6746c72f193b72eb2b530193e22cbacffd521094c82a7"
+prompt_sha256 = "5a19b5bc50001b7344a928a9f4ad8512807c5c0f59058e07c04fa99bb0f438eb"
 pr_summary_path = "docs/agents/lifecycle/opencode-maintenance/governance/pr-summary.md"
 closeout_path = "docs/agents/lifecycle/opencode-maintenance/governance/maintenance-closeout.json"
 requires_manual_closeout = true
@@ -494,9 +494,9 @@ writable_surfaces = [
   "crates/opencode/**",
   "crates/agent_api/**",
   "cli_manifests/opencode/artifacts.lock.json",
-  "cli_manifests/opencode/snapshots/1.14.49/**",
-  "cli_manifests/opencode/reports/1.14.49/**",
-  "cli_manifests/opencode/versions/1.14.49.json",
+  "cli_manifests/opencode/snapshots/1.18.25/**",
+  "cli_manifests/opencode/reports/1.18.25/**",
+  "cli_manifests/opencode/versions/1.18.25.json",
   "cli_manifests/opencode/wrapper_coverage.json",
   "cli_manifests/support_matrix/current.json",
   "docs/specs/unified-agent-api/support-matrix.md",
@@ -530,7 +530,7 @@ green_gates = [
 [execution_contract.recovery]
 recreate_packet_command = "cargo run -p xtask -- refresh-agent --request docs/agents/lifecycle/opencode-maintenance/governance/maintenance-request.toml --write"
 reopen_pr_body_path = "docs/agents/lifecycle/opencode-maintenance/governance/pr-summary.md"
-reopen_pr_branch = "automation/opencode-maintenance-1.14.49"
+reopen_pr_branch = "automation/opencode-maintenance-1.18.25"
 notes = [
   "If PR creation fails after packet generation, rerun packet regeneration from the frozen request and reopen the PR from the generated pr-summary path.",
   "If the local execution-host preflight (local Codex CLI host via execute-agent-maintenance) fails, fix the Codex binary/auth state and rerun `execute-agent-maintenance --dry-run` before write mode.",
