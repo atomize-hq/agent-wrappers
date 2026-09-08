@@ -1,0 +1,5829 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-04T15:40:40Z",
+  "inputs": {
+    "upstream": {
+      "semantic_version": "1.18.28",
+      "mode": "union",
+      "targets": [
+        "win32-x64"
+      ]
+    },
+    "wrapper": {
+      "schema_version": 1,
+      "wrapper_version": "0.2.3"
+    },
+    "rules": {
+      "rules_schema_version": 1
+    }
+  },
+  "platform_filter": {
+    "mode": "exact_target",
+    "target_triple": "win32-x64"
+  },
+  "deltas": {
+    "missing_commands": [
+      {
+        "path": [],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "acp"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "create"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "list"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db",
+          "path"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "agent"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "config"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "list"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "read"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "search"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "info"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "diagnostics"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "document-symbols"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "symbols"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "paths"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "files"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "search"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "scrap"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "skill"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "diff"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "patch"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "track"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "startup"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "v2"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "wait"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "export"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "install"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "run"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "import"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth",
+          "list"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "debug"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "models"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "pr"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "list"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "login"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "logout"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "serve"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "delete"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "list"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "stats"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "uninstall"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "upgrade"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "web"
+        ],
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      }
+    ],
+    "missing_flags": [
+      {
+        "path": [],
+        "key": "--agent",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--auto",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--continue",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--cors",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--fork",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--hostname",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--mdns",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--mdns-domain",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--mini",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--model",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--no-replay",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--port",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--prompt",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--replay-limit",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--session",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "acp"
+        ],
+        "key": "--cors",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "acp"
+        ],
+        "key": "--cwd",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "acp"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "acp"
+        ],
+        "key": "--hostname",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "acp"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "acp"
+        ],
+        "key": "--mdns",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "acp"
+        ],
+        "key": "--mdns-domain",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "acp"
+        ],
+        "key": "--port",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "acp"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "acp"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "acp"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "create"
+        ],
+        "key": "--description",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "create"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "create"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "create"
+        ],
+        "key": "--mode",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "create"
+        ],
+        "key": "--model",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "create"
+        ],
+        "key": "--path",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "create"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "create"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "create"
+        ],
+        "key": "--tools",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "create"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "list"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "list"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "list"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "list"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "agent",
+          "list"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--continue",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--dir",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--fork",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--mini",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--no-replay",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--password",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--replay-limit",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--session",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--username",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "attach"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--agent",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--auto",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--continue",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--cors",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--fork",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--hostname",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--mdns",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--mdns-domain",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--mini",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--model",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--no-replay",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--port",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--prompt",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--replay-limit",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--session",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db"
+        ],
+        "key": "--format",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db",
+          "path"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db",
+          "path"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db",
+          "path"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db",
+          "path"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db",
+          "path"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "agent"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "agent"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "agent"
+        ],
+        "key": "--params",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "agent"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "agent"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "agent"
+        ],
+        "key": "--tool",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "agent"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "config"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "config"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "config"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "config"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "config"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "list"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "list"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "list"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "list"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "list"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "read"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "read"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "read"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "read"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "read"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "search"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "search"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "search"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "search"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "search"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "info"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "info"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "info"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "info"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "info"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "diagnostics"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "diagnostics"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "diagnostics"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "diagnostics"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "diagnostics"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "document-symbols"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "document-symbols"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "document-symbols"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "document-symbols"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "document-symbols"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "symbols"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "symbols"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "symbols"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "symbols"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "symbols"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "paths"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "paths"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "paths"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "paths"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "paths"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "files"
+        ],
+        "key": "--glob",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "files"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "files"
+        ],
+        "key": "--limit",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "files"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "files"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "files"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "files"
+        ],
+        "key": "--query",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "files"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "search"
+        ],
+        "key": "--glob",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "search"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "search"
+        ],
+        "key": "--limit",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "search"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "search"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "search"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "search"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "scrap"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "scrap"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "scrap"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "scrap"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "scrap"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "skill"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "skill"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "skill"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "skill"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "skill"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "diff"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "diff"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "diff"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "diff"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "diff"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "patch"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "patch"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "patch"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "patch"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "patch"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "track"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "track"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "track"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "track"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "track"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "startup"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "startup"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "startup"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "startup"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "startup"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "v2"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "v2"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "v2"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "v2"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "v2"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "wait"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "wait"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "wait"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "wait"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "wait"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "export"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "export"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "export"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "export"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "export"
+        ],
+        "key": "--sanitize",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "export"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "install"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "install"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "install"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "install"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "install"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "run"
+        ],
+        "key": "--event",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "run"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "run"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "run"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "run"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "run"
+        ],
+        "key": "--token",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "github",
+          "run"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "import"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "import"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "import"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "import"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "import"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--env",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--header",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--url",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth",
+          "list"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth",
+          "list"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth",
+          "list"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth",
+          "list"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth",
+          "list"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "debug"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "debug"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "debug"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "debug"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "debug"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "list"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "models"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "models"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "models"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "models"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "models"
+        ],
+        "key": "--refresh",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "models"
+        ],
+        "key": "--verbose",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "models"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin"
+        ],
+        "key": "--force",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin"
+        ],
+        "key": "--global",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "pr"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "pr"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "pr"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "pr"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "pr"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "list"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "list"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "list"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "list"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "list"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "login"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "login"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "login"
+        ],
+        "key": "--method",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "login"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "login"
+        ],
+        "key": "--provider",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "login"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "login"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "logout"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "logout"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "logout"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "logout"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "logout"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--agent",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--attach",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--auto",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--command",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--file",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--interactive",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--password",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--port",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--share",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--thinking",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--title",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--username",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--variant",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "run"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "serve"
+        ],
+        "key": "--cors",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "serve"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "serve"
+        ],
+        "key": "--hostname",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "serve"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "serve"
+        ],
+        "key": "--mdns",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "serve"
+        ],
+        "key": "--mdns-domain",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "serve"
+        ],
+        "key": "--port",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "serve"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "serve"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "serve"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "delete"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "delete"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "delete"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "delete"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "delete"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "list"
+        ],
+        "key": "--format",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "list"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "list"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "list"
+        ],
+        "key": "--max-count",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "list"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "list"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "list"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "stats"
+        ],
+        "key": "--days",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "stats"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "stats"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "stats"
+        ],
+        "key": "--models",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "stats"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "stats"
+        ],
+        "key": "--project",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "stats"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "stats"
+        ],
+        "key": "--tools",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "stats"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "uninstall"
+        ],
+        "key": "--dry-run",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "uninstall"
+        ],
+        "key": "--force",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "uninstall"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "uninstall"
+        ],
+        "key": "--keep-config",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "uninstall"
+        ],
+        "key": "--keep-data",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "uninstall"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "uninstall"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "uninstall"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "uninstall"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "upgrade"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "upgrade"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "upgrade"
+        ],
+        "key": "--method",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "upgrade"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "upgrade"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "upgrade"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "web"
+        ],
+        "key": "--cors",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "web"
+        ],
+        "key": "--help",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "web"
+        ],
+        "key": "--hostname",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "web"
+        ],
+        "key": "--log-level",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "web"
+        ],
+        "key": "--mdns",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "web"
+        ],
+        "key": "--mdns-domain",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "web"
+        ],
+        "key": "--port",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "web"
+        ],
+        "key": "--print-logs",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "web"
+        ],
+        "key": "--pure",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "web"
+        ],
+        "key": "--version",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      }
+    ],
+    "missing_args": [
+      {
+        "path": [
+          "attach"
+        ],
+        "name": "url",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "name": "project",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "db"
+        ],
+        "name": "query",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "agent"
+        ],
+        "name": "name",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "list"
+        ],
+        "name": "path",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "read"
+        ],
+        "name": "path",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "file",
+          "search"
+        ],
+        "name": "query",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "diagnostics"
+        ],
+        "name": "file",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "document-symbols"
+        ],
+        "name": "uri",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "lsp",
+          "symbols"
+        ],
+        "name": "query",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "rg",
+          "search"
+        ],
+        "name": "pattern",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "diff"
+        ],
+        "name": "hash",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "debug",
+          "snapshot",
+          "patch"
+        ],
+        "name": "hash",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "export"
+        ],
+        "name": "sessionID",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "import"
+        ],
+        "name": "file",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "name": "name",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth"
+        ],
+        "name": "name",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "auth",
+          "list"
+        ],
+        "name": "name",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "debug"
+        ],
+        "name": "name",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "logout"
+        ],
+        "name": "name",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "models"
+        ],
+        "name": "provider",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "plugin"
+        ],
+        "name": "module",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "pr"
+        ],
+        "name": "number",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "login"
+        ],
+        "name": "url",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "providers",
+          "logout"
+        ],
+        "name": "provider",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "session",
+          "delete"
+        ],
+        "name": "sessionID",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      },
+      {
+        "path": [
+          "upgrade"
+        ],
+        "name": "target",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ]
+      }
+    ],
+    "excluded_args": [
+      {
+        "path": [],
+        "name": "project",
+        "upstream_available_on": [
+          "linux-x64",
+          "darwin-arm64",
+          "win32-x64"
+        ],
+        "note": "Interactive TUI project selection is outside the canonical run --format json wrapper surface."
+      }
+    ]
+  }
+}

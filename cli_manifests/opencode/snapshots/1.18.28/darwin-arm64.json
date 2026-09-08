@@ -1,0 +1,3080 @@
+{
+  "snapshot_schema_version": 1,
+  "tool": "opencode-cli",
+  "collected_at": "2026-09-04T15:40:40Z",
+  "binary": {
+    "sha256": "d099d7025feb3663e6ad50513d764d9a6868d42d5e2d88eae01a7b2aeafeea9f",
+    "size_bytes": 144090722,
+    "platform": {
+      "os": "macos",
+      "arch": "aarch64"
+    },
+    "target_triple": "darwin-arm64",
+    "version_output": "1.18.28",
+    "semantic_version": "1.18.28"
+  },
+  "commands": [
+    {
+      "path": [],
+      "about": "start opencode tui",
+      "usage": "opencode [project]",
+      "args": [
+        {
+          "name": "project",
+          "required": false,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--agent",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--auto",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--continue",
+          "short": "-c",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--cors",
+          "takes_value": true,
+          "repeatable": true
+        },
+        {
+          "long": "--fork",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--hostname",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--mdns",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--mdns-domain",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--mini",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--model",
+          "short": "-m",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--no-replay",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--port",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--prompt",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--replay-limit",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--session",
+          "short": "-s",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "acp"
+      ],
+      "about": "start ACP (Agent Client Protocol) server",
+      "usage": "opencode acp",
+      "flags": [
+        {
+          "long": "--cors",
+          "takes_value": true,
+          "repeatable": true
+        },
+        {
+          "long": "--cwd",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--hostname",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--mdns",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--mdns-domain",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--port",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "agent"
+      ],
+      "about": "manage agents",
+      "usage": "opencode agent",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "agent",
+        "create"
+      ],
+      "about": "create a new agent",
+      "usage": "opencode agent create",
+      "flags": [
+        {
+          "long": "--description",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--mode",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--model",
+          "short": "-m",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--path",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--tools",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "agent",
+        "list"
+      ],
+      "about": "list all available agents",
+      "usage": "opencode agent list",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "attach"
+      ],
+      "about": "attach to a running opencode server",
+      "usage": "opencode attach <url>",
+      "args": [
+        {
+          "name": "url",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--continue",
+          "short": "-c",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--dir",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--fork",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--mini",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--no-replay",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--password",
+          "short": "-p",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--replay-limit",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--session",
+          "short": "-s",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--username",
+          "short": "-u",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "completion"
+      ],
+      "about": "█▀▀█ █▀▀█ █▀▀█ █▀▀▄ █▀▀▀ █▀▀█ █▀▀█ █▀▀█",
+      "usage": "⠀                                ▄",
+      "args": [
+        {
+          "name": "project",
+          "required": false,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--agent",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--auto",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--continue",
+          "short": "-c",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--cors",
+          "takes_value": true,
+          "repeatable": true
+        },
+        {
+          "long": "--fork",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--hostname",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--mdns",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--mdns-domain",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--mini",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--model",
+          "short": "-m",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--no-replay",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--port",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--prompt",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--replay-limit",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--session",
+          "short": "-s",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "db"
+      ],
+      "about": "database tools",
+      "usage": "opencode db",
+      "args": [
+        {
+          "name": "query",
+          "required": false,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--format",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "db",
+        "path"
+      ],
+      "about": "print the database path",
+      "usage": "opencode db path",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug"
+      ],
+      "about": "debugging and troubleshooting tools",
+      "usage": "opencode debug",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "agent"
+      ],
+      "about": "show agent configuration details",
+      "usage": "opencode debug agent <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--params",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--tool",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "config"
+      ],
+      "about": "show resolved configuration",
+      "usage": "opencode debug config",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "file"
+      ],
+      "about": "file system debugging utilities",
+      "usage": "opencode debug file",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "file",
+        "list"
+      ],
+      "about": "list files in a directory",
+      "usage": "opencode debug file list <path>",
+      "args": [
+        {
+          "name": "path",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "file",
+        "read"
+      ],
+      "about": "read file contents as JSON",
+      "usage": "opencode debug file read <path>",
+      "args": [
+        {
+          "name": "path",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "file",
+        "search"
+      ],
+      "about": "search files by query",
+      "usage": "opencode debug file search <query>",
+      "args": [
+        {
+          "name": "query",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "info"
+      ],
+      "about": "show debug information",
+      "usage": "opencode debug info",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "lsp"
+      ],
+      "about": "LSP debugging utilities",
+      "usage": "opencode debug lsp",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "lsp",
+        "diagnostics"
+      ],
+      "about": "get diagnostics for a file",
+      "usage": "opencode debug lsp diagnostics <file>",
+      "args": [
+        {
+          "name": "file",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "lsp",
+        "document-symbols"
+      ],
+      "about": "get symbols from a document",
+      "usage": "opencode debug lsp document-symbols <uri>",
+      "args": [
+        {
+          "name": "uri",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "lsp",
+        "symbols"
+      ],
+      "about": "search workspace symbols",
+      "usage": "opencode debug lsp symbols <query>",
+      "args": [
+        {
+          "name": "query",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "paths"
+      ],
+      "about": "show global paths (data, config, cache, state)",
+      "usage": "opencode debug paths",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "rg"
+      ],
+      "about": "ripgrep debugging utilities",
+      "usage": "opencode debug rg",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "rg",
+        "files"
+      ],
+      "about": "list files using ripgrep",
+      "usage": "opencode debug rg files",
+      "flags": [
+        {
+          "long": "--glob",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--limit",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--query",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "rg",
+        "search"
+      ],
+      "about": "search file contents using ripgrep",
+      "usage": "opencode debug rg search <pattern>",
+      "args": [
+        {
+          "name": "pattern",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--glob",
+          "takes_value": true,
+          "repeatable": true
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--limit",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "scrap"
+      ],
+      "about": "list all known projects",
+      "usage": "opencode debug scrap",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "skill"
+      ],
+      "about": "list all available skills",
+      "usage": "opencode debug skill",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "snapshot"
+      ],
+      "about": "snapshot debugging utilities",
+      "usage": "opencode debug snapshot",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "snapshot",
+        "diff"
+      ],
+      "about": "show diff for a snapshot hash",
+      "usage": "opencode debug snapshot diff <hash>",
+      "args": [
+        {
+          "name": "hash",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "snapshot",
+        "patch"
+      ],
+      "about": "show patch for a snapshot hash",
+      "usage": "opencode debug snapshot patch <hash>",
+      "args": [
+        {
+          "name": "hash",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "snapshot",
+        "track"
+      ],
+      "about": "track current snapshot state",
+      "usage": "opencode debug snapshot track",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "startup"
+      ],
+      "about": "print startup timing",
+      "usage": "opencode debug startup",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "v2"
+      ],
+      "about": "debug v2 catalog and built-in plugins",
+      "usage": "opencode debug v2",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "wait"
+      ],
+      "about": "wait indefinitely (for debugging)",
+      "usage": "opencode debug wait",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "export"
+      ],
+      "about": "export session data as JSON",
+      "usage": "opencode export [sessionID]",
+      "args": [
+        {
+          "name": "sessionID",
+          "required": false,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--sanitize",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "github"
+      ],
+      "about": "manage GitHub agent",
+      "usage": "opencode github",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "github",
+        "install"
+      ],
+      "about": "install the GitHub agent",
+      "usage": "opencode github install",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "github",
+        "run"
+      ],
+      "about": "run the GitHub agent",
+      "usage": "opencode github run",
+      "flags": [
+        {
+          "long": "--event",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--token",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "import"
+      ],
+      "about": "import session data from JSON file or URL",
+      "usage": "opencode import <file>",
+      "args": [
+        {
+          "name": "file",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp"
+      ],
+      "about": "manage MCP (Model Context Protocol) servers",
+      "usage": "opencode mcp",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add"
+      ],
+      "about": "add an MCP server",
+      "usage": "opencode mcp add [name]",
+      "args": [
+        {
+          "name": "name",
+          "required": false,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--env",
+          "takes_value": true,
+          "repeatable": true
+        },
+        {
+          "long": "--header",
+          "takes_value": true,
+          "repeatable": true
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--url",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "auth"
+      ],
+      "about": "authenticate with an OAuth-enabled MCP server",
+      "usage": "opencode mcp auth [name]",
+      "args": [
+        {
+          "name": "name",
+          "required": false,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "auth",
+        "list"
+      ],
+      "about": "list OAuth-capable MCP servers and their auth status",
+      "usage": "opencode mcp auth list",
+      "args": [
+        {
+          "name": "name",
+          "required": false,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "debug"
+      ],
+      "about": "debug OAuth connection for an MCP server",
+      "usage": "opencode mcp debug <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "about": "list MCP servers and their status",
+      "usage": "opencode mcp list",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "logout"
+      ],
+      "about": "remove OAuth credentials for an MCP server",
+      "usage": "opencode mcp logout [name]",
+      "args": [
+        {
+          "name": "name",
+          "required": false,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "models"
+      ],
+      "about": "list all available models",
+      "usage": "opencode models [provider]",
+      "args": [
+        {
+          "name": "provider",
+          "required": false,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--refresh",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--verbose",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin"
+      ],
+      "about": "install plugin and update config",
+      "usage": "opencode plugin <module>",
+      "args": [
+        {
+          "name": "module",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--force",
+          "short": "-f",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--global",
+          "short": "-g",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "pr"
+      ],
+      "about": "fetch and checkout a GitHub PR branch, then run opencode",
+      "usage": "opencode pr <number>",
+      "args": [
+        {
+          "name": "number",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "providers"
+      ],
+      "about": "manage AI providers and credentials",
+      "usage": "opencode providers",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "providers",
+        "list"
+      ],
+      "about": "list providers and credentials",
+      "usage": "opencode providers list",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "providers",
+        "login"
+      ],
+      "about": "log in to a provider",
+      "usage": "opencode providers login [url]",
+      "args": [
+        {
+          "name": "url",
+          "required": false,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--method",
+          "short": "-m",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--provider",
+          "short": "-p",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "providers",
+        "logout"
+      ],
+      "about": "log out from a configured provider",
+      "usage": "opencode providers logout [provider]",
+      "args": [
+        {
+          "name": "provider",
+          "required": false,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "run"
+      ],
+      "about": "run opencode with a message",
+      "usage": "opencode run [message..]",
+      "args": [
+        {
+          "name": "message",
+          "required": false,
+          "variadic": true
+        }
+      ],
+      "flags": [
+        {
+          "long": "--agent",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--attach",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--auto",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--command",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--continue",
+          "short": "-c",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--dir",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--file",
+          "short": "-f",
+          "takes_value": true,
+          "repeatable": true
+        },
+        {
+          "long": "--fork",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--format",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--interactive",
+          "short": "-i",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--model",
+          "short": "-m",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--password",
+          "short": "-p",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--port",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--session",
+          "short": "-s",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--share",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--thinking",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--title",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--username",
+          "short": "-u",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--variant",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "serve"
+      ],
+      "about": "starts a headless opencode server",
+      "usage": "opencode serve",
+      "flags": [
+        {
+          "long": "--cors",
+          "takes_value": true,
+          "repeatable": true
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--hostname",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--mdns",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--mdns-domain",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--port",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "session"
+      ],
+      "about": "manage sessions",
+      "usage": "opencode session",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "session",
+        "delete"
+      ],
+      "about": "delete a session",
+      "usage": "opencode session delete <sessionID>",
+      "args": [
+        {
+          "name": "sessionID",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "session",
+        "list"
+      ],
+      "about": "list sessions",
+      "usage": "opencode session list",
+      "flags": [
+        {
+          "long": "--format",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--max-count",
+          "short": "-n",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "stats"
+      ],
+      "about": "show token usage and cost statistics",
+      "usage": "opencode stats",
+      "flags": [
+        {
+          "long": "--days",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--models",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--project",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--tools",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "uninstall"
+      ],
+      "about": "uninstall opencode and remove all related files",
+      "usage": "opencode uninstall",
+      "flags": [
+        {
+          "long": "--dry-run",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--force",
+          "short": "-f",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--keep-config",
+          "short": "-c",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--keep-data",
+          "short": "-d",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "upgrade"
+      ],
+      "about": "upgrade opencode to the latest or a specific version",
+      "usage": "opencode upgrade [target]",
+      "args": [
+        {
+          "name": "target",
+          "required": false,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--method",
+          "short": "-m",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "web"
+      ],
+      "about": "start opencode server and open web interface",
+      "usage": "opencode web",
+      "flags": [
+        {
+          "long": "--cors",
+          "takes_value": true,
+          "repeatable": true
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--hostname",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--mdns",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--mdns-domain",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--port",
+          "takes_value": true,
+          "repeatable": false
+        },
+        {
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false
+        }
+      ]
+    }
+  ]
+}

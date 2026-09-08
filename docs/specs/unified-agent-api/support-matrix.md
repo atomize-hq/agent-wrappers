@@ -289,21 +289,27 @@ Do not edit this section by hand.
 
 | agent | version | target | manifest_support | backend_support | uaa_support | pointer_promotion | evidence_notes |
 |---|---|---|---|---|---|---|---|
+| `opencode` | `1.18.28` | `darwin-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
 | `opencode` | `1.14.47` | `darwin-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
 | `opencode` | `1.4.11` | `darwin-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | current root snapshot omits this target |
 | `opencode` | `1.4.9` | `darwin-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
+| `opencode` | `1.18.28` | `darwin-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
 | `opencode` | `1.14.47` | `darwin-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
 | `opencode` | `1.4.11` | `darwin-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | current root snapshot omits this target |
 | `opencode` | `1.4.9` | `darwin-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
+| `opencode` | `1.18.28` | `linux-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
 | `opencode` | `1.14.47` | `linux-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
 | `opencode` | `1.4.11` | `linux-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | current root snapshot omits this target |
 | `opencode` | `1.4.9` | `linux-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
+| `opencode` | `1.18.28` | `linux-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
 | `opencode` | `1.14.47` | `linux-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
 | `opencode` | `1.4.11` | `linux-x64` | `supported` | `unsupported` | `unsupported` | `latest_validated` | — |
 | `opencode` | `1.4.9` | `linux-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
+| `opencode` | `1.18.28` | `win32-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
 | `opencode` | `1.14.47` | `win32-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
 | `opencode` | `1.4.11` | `win32-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | current root snapshot omits this target |
 | `opencode` | `1.4.9` | `win32-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
+| `opencode` | `1.18.28` | `win32-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
 | `opencode` | `1.14.47` | `win32-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |
 | `opencode` | `1.4.11` | `win32-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | current root snapshot omits this target |
 | `opencode` | `1.4.9` | `win32-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | — |

@@ -1,0 +1,6098 @@
+{
+  "snapshot_schema_version": 2,
+  "tool": "opencode-cli",
+  "mode": "union",
+  "collected_at": "2026-09-04T15:40:40Z",
+  "expected_targets": [
+    "linux-x64",
+    "darwin-arm64",
+    "win32-x64"
+  ],
+  "complete": true,
+  "inputs": [
+    {
+      "target_triple": "linux-x64",
+      "collected_at": "2026-09-04T15:40:40Z",
+      "binary": {
+        "sha256": "3b757fd2968df306f5dd071f914475a524f8afa574118e786109a8529bc1b06e",
+        "size_bytes": 184653952,
+        "platform": {
+          "os": "linux",
+          "arch": "x86_64"
+        },
+        "target_triple": "linux-x64",
+        "version_output": "1.18.28",
+        "semantic_version": "1.18.28"
+      }
+    },
+    {
+      "target_triple": "darwin-arm64",
+      "collected_at": "2026-09-04T15:40:40Z",
+      "binary": {
+        "sha256": "d099d7025feb3663e6ad50513d764d9a6868d42d5e2d88eae01a7b2aeafeea9f",
+        "size_bytes": 144090722,
+        "platform": {
+          "os": "macos",
+          "arch": "aarch64"
+        },
+        "target_triple": "darwin-arm64",
+        "version_output": "1.18.28",
+        "semantic_version": "1.18.28"
+      }
+    },
+    {
+      "target_triple": "win32-x64",
+      "collected_at": "2026-09-04T15:40:40Z",
+      "binary": {
+        "sha256": "c096373dd8b17c1a30223f34b27080bc3beb7f913c4ca4484f0abe361b66399c",
+        "size_bytes": 179620392,
+        "platform": {
+          "os": "windows",
+          "arch": "x86_64"
+        },
+        "target_triple": "win32-x64",
+        "version_output": "1.18.28",
+        "semantic_version": "1.18.28"
+      }
+    }
+  ],
+  "commands": [
+    {
+      "path": [],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "start opencode tui",
+      "usage": "opencode [project]",
+      "args": [
+        {
+          "name": "project",
+          "required": false,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--agent",
+          "long": "--agent",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--auto",
+          "long": "--auto",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--continue",
+          "long": "--continue",
+          "short": "-c",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--cors",
+          "long": "--cors",
+          "takes_value": true,
+          "repeatable": true,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--fork",
+          "long": "--fork",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--hostname",
+          "long": "--hostname",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mdns",
+          "long": "--mdns",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mdns-domain",
+          "long": "--mdns-domain",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mini",
+          "long": "--mini",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--model",
+          "long": "--model",
+          "short": "-m",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--no-replay",
+          "long": "--no-replay",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--port",
+          "long": "--port",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--prompt",
+          "long": "--prompt",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--replay-limit",
+          "long": "--replay-limit",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--session",
+          "long": "--session",
+          "short": "-s",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "acp"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "start ACP (Agent Client Protocol) server",
+      "usage": "opencode acp",
+      "flags": [
+        {
+          "key": "--cors",
+          "long": "--cors",
+          "takes_value": true,
+          "repeatable": true,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--cwd",
+          "long": "--cwd",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--hostname",
+          "long": "--hostname",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mdns",
+          "long": "--mdns",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mdns-domain",
+          "long": "--mdns-domain",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--port",
+          "long": "--port",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "agent"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "manage agents",
+      "usage": "opencode agent",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "agent",
+        "create"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "create a new agent",
+      "usage": "opencode agent create",
+      "flags": [
+        {
+          "key": "--description",
+          "long": "--description",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mode",
+          "long": "--mode",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--model",
+          "long": "--model",
+          "short": "-m",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--path",
+          "long": "--path",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--tools",
+          "long": "--tools",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "agent",
+        "list"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "list all available agents",
+      "usage": "opencode agent list",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "attach"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "attach to a running opencode server",
+      "usage": "opencode attach <url>",
+      "args": [
+        {
+          "name": "url",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--continue",
+          "long": "--continue",
+          "short": "-c",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--dir",
+          "long": "--dir",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--fork",
+          "long": "--fork",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mini",
+          "long": "--mini",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--no-replay",
+          "long": "--no-replay",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--password",
+          "long": "--password",
+          "short": "-p",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--replay-limit",
+          "long": "--replay-limit",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--session",
+          "long": "--session",
+          "short": "-s",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--username",
+          "long": "--username",
+          "short": "-u",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "completion"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "█▀▀█ █▀▀█ █▀▀█ █▀▀▄ █▀▀▀ █▀▀█ █▀▀█ █▀▀█",
+      "usage": "⠀                                ▄",
+      "args": [
+        {
+          "name": "project",
+          "required": false,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--agent",
+          "long": "--agent",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--auto",
+          "long": "--auto",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--continue",
+          "long": "--continue",
+          "short": "-c",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--cors",
+          "long": "--cors",
+          "takes_value": true,
+          "repeatable": true,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--fork",
+          "long": "--fork",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--hostname",
+          "long": "--hostname",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mdns",
+          "long": "--mdns",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mdns-domain",
+          "long": "--mdns-domain",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mini",
+          "long": "--mini",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--model",
+          "long": "--model",
+          "short": "-m",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--no-replay",
+          "long": "--no-replay",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--port",
+          "long": "--port",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--prompt",
+          "long": "--prompt",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--replay-limit",
+          "long": "--replay-limit",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--session",
+          "long": "--session",
+          "short": "-s",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "db"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "database tools",
+      "usage": "opencode db",
+      "args": [
+        {
+          "name": "query",
+          "required": false,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--format",
+          "long": "--format",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "db",
+        "path"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "print the database path",
+      "usage": "opencode db path",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "debugging and troubleshooting tools",
+      "usage": "opencode debug",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "agent"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "show agent configuration details",
+      "usage": "opencode debug agent <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--params",
+          "long": "--params",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--tool",
+          "long": "--tool",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "config"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "show resolved configuration",
+      "usage": "opencode debug config",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "file"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "file system debugging utilities",
+      "usage": "opencode debug file",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "file",
+        "list"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "list files in a directory",
+      "usage": "opencode debug file list <path>",
+      "args": [
+        {
+          "name": "path",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "file",
+        "read"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "read file contents as JSON",
+      "usage": "opencode debug file read <path>",
+      "args": [
+        {
+          "name": "path",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "file",
+        "search"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "search files by query",
+      "usage": "opencode debug file search <query>",
+      "args": [
+        {
+          "name": "query",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "info"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "show debug information",
+      "usage": "opencode debug info",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "lsp"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "LSP debugging utilities",
+      "usage": "opencode debug lsp",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "lsp",
+        "diagnostics"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "get diagnostics for a file",
+      "usage": "opencode debug lsp diagnostics <file>",
+      "args": [
+        {
+          "name": "file",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "lsp",
+        "document-symbols"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "get symbols from a document",
+      "usage": "opencode debug lsp document-symbols <uri>",
+      "args": [
+        {
+          "name": "uri",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "lsp",
+        "symbols"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "search workspace symbols",
+      "usage": "opencode debug lsp symbols <query>",
+      "args": [
+        {
+          "name": "query",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "paths"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "show global paths (data, config, cache, state)",
+      "usage": "opencode debug paths",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "rg"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "ripgrep debugging utilities",
+      "usage": "opencode debug rg",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "rg",
+        "files"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "list files using ripgrep",
+      "usage": "opencode debug rg files",
+      "flags": [
+        {
+          "key": "--glob",
+          "long": "--glob",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--limit",
+          "long": "--limit",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--query",
+          "long": "--query",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "rg",
+        "search"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "search file contents using ripgrep",
+      "usage": "opencode debug rg search <pattern>",
+      "args": [
+        {
+          "name": "pattern",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--glob",
+          "long": "--glob",
+          "takes_value": true,
+          "repeatable": true,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--limit",
+          "long": "--limit",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "scrap"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "list all known projects",
+      "usage": "opencode debug scrap",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "skill"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "list all available skills",
+      "usage": "opencode debug skill",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "snapshot"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "snapshot debugging utilities",
+      "usage": "opencode debug snapshot",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "snapshot",
+        "diff"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "show diff for a snapshot hash",
+      "usage": "opencode debug snapshot diff <hash>",
+      "args": [
+        {
+          "name": "hash",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "snapshot",
+        "patch"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "show patch for a snapshot hash",
+      "usage": "opencode debug snapshot patch <hash>",
+      "args": [
+        {
+          "name": "hash",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "snapshot",
+        "track"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "track current snapshot state",
+      "usage": "opencode debug snapshot track",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "startup"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "print startup timing",
+      "usage": "opencode debug startup",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "v2"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "debug v2 catalog and built-in plugins",
+      "usage": "opencode debug v2",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "wait"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "wait indefinitely (for debugging)",
+      "usage": "opencode debug wait",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "export"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "export session data as JSON",
+      "usage": "opencode export [sessionID]",
+      "args": [
+        {
+          "name": "sessionID",
+          "required": false,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--sanitize",
+          "long": "--sanitize",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "github"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "manage GitHub agent",
+      "usage": "opencode github",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "github",
+        "install"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "install the GitHub agent",
+      "usage": "opencode github install",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "github",
+        "run"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "run the GitHub agent",
+      "usage": "opencode github run",
+      "flags": [
+        {
+          "key": "--event",
+          "long": "--event",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--token",
+          "long": "--token",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "import"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "import session data from JSON file or URL",
+      "usage": "opencode import <file>",
+      "args": [
+        {
+          "name": "file",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "manage MCP (Model Context Protocol) servers",
+      "usage": "opencode mcp",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "add an MCP server",
+      "usage": "opencode mcp add [name]",
+      "args": [
+        {
+          "name": "name",
+          "required": false,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--env",
+          "long": "--env",
+          "takes_value": true,
+          "repeatable": true,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--header",
+          "long": "--header",
+          "takes_value": true,
+          "repeatable": true,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--url",
+          "long": "--url",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "auth"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "authenticate with an OAuth-enabled MCP server",
+      "usage": "opencode mcp auth [name]",
+      "args": [
+        {
+          "name": "name",
+          "required": false,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "auth",
+        "list"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "list OAuth-capable MCP servers and their auth status",
+      "usage": "opencode mcp auth list",
+      "args": [
+        {
+          "name": "name",
+          "required": false,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "debug"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "debug OAuth connection for an MCP server",
+      "usage": "opencode mcp debug <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "list MCP servers and their status",
+      "usage": "opencode mcp list",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "logout"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "remove OAuth credentials for an MCP server",
+      "usage": "opencode mcp logout [name]",
+      "args": [
+        {
+          "name": "name",
+          "required": false,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "models"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "list all available models",
+      "usage": "opencode models [provider]",
+      "args": [
+        {
+          "name": "provider",
+          "required": false,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--refresh",
+          "long": "--refresh",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--verbose",
+          "long": "--verbose",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "install plugin and update config",
+      "usage": "opencode plugin <module>",
+      "args": [
+        {
+          "name": "module",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--force",
+          "long": "--force",
+          "short": "-f",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--global",
+          "long": "--global",
+          "short": "-g",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "pr"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "fetch and checkout a GitHub PR branch, then run opencode",
+      "usage": "opencode pr <number>",
+      "args": [
+        {
+          "name": "number",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "providers"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "manage AI providers and credentials",
+      "usage": "opencode providers",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "providers",
+        "list"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "list providers and credentials",
+      "usage": "opencode providers list",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "providers",
+        "login"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "log in to a provider",
+      "usage": "opencode providers login [url]",
+      "args": [
+        {
+          "name": "url",
+          "required": false,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--method",
+          "long": "--method",
+          "short": "-m",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--provider",
+          "long": "--provider",
+          "short": "-p",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "providers",
+        "logout"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "log out from a configured provider",
+      "usage": "opencode providers logout [provider]",
+      "args": [
+        {
+          "name": "provider",
+          "required": false,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "run"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "run opencode with a message",
+      "usage": "opencode run [message..]",
+      "args": [
+        {
+          "name": "message",
+          "required": false,
+          "variadic": true,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--agent",
+          "long": "--agent",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--attach",
+          "long": "--attach",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--auto",
+          "long": "--auto",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--command",
+          "long": "--command",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--continue",
+          "long": "--continue",
+          "short": "-c",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--dir",
+          "long": "--dir",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--file",
+          "long": "--file",
+          "short": "-f",
+          "takes_value": true,
+          "repeatable": true,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--fork",
+          "long": "--fork",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--format",
+          "long": "--format",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--interactive",
+          "long": "--interactive",
+          "short": "-i",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--model",
+          "long": "--model",
+          "short": "-m",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--password",
+          "long": "--password",
+          "short": "-p",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--port",
+          "long": "--port",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--session",
+          "long": "--session",
+          "short": "-s",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--share",
+          "long": "--share",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--thinking",
+          "long": "--thinking",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--title",
+          "long": "--title",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--username",
+          "long": "--username",
+          "short": "-u",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--variant",
+          "long": "--variant",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "serve"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "starts a headless opencode server",
+      "usage": "opencode serve",
+      "flags": [
+        {
+          "key": "--cors",
+          "long": "--cors",
+          "takes_value": true,
+          "repeatable": true,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--hostname",
+          "long": "--hostname",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mdns",
+          "long": "--mdns",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mdns-domain",
+          "long": "--mdns-domain",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--port",
+          "long": "--port",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "session"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "manage sessions",
+      "usage": "opencode session",
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "session",
+        "delete"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "delete a session",
+      "usage": "opencode session delete <sessionID>",
+      "args": [
+        {
+          "name": "sessionID",
+          "required": true,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "session",
+        "list"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "list sessions",
+      "usage": "opencode session list",
+      "flags": [
+        {
+          "key": "--format",
+          "long": "--format",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--max-count",
+          "long": "--max-count",
+          "short": "-n",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "stats"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "show token usage and cost statistics",
+      "usage": "opencode stats",
+      "flags": [
+        {
+          "key": "--days",
+          "long": "--days",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--models",
+          "long": "--models",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--project",
+          "long": "--project",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--tools",
+          "long": "--tools",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "uninstall"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "uninstall opencode and remove all related files",
+      "usage": "opencode uninstall",
+      "flags": [
+        {
+          "key": "--dry-run",
+          "long": "--dry-run",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--force",
+          "long": "--force",
+          "short": "-f",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--keep-config",
+          "long": "--keep-config",
+          "short": "-c",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--keep-data",
+          "long": "--keep-data",
+          "short": "-d",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "upgrade"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "upgrade opencode to the latest or a specific version",
+      "usage": "opencode upgrade [target]",
+      "args": [
+        {
+          "name": "target",
+          "required": false,
+          "variadic": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--method",
+          "long": "--method",
+          "short": "-m",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "web"
+      ],
+      "available_on": [
+        "linux-x64",
+        "darwin-arm64",
+        "win32-x64"
+      ],
+      "about": "start opencode server and open web interface",
+      "usage": "opencode web",
+      "flags": [
+        {
+          "key": "--cors",
+          "long": "--cors",
+          "takes_value": true,
+          "repeatable": true,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--hostname",
+          "long": "--hostname",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--log-level",
+          "long": "--log-level",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mdns",
+          "long": "--mdns",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--mdns-domain",
+          "long": "--mdns-domain",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--port",
+          "long": "--port",
+          "takes_value": true,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--print-logs",
+          "long": "--print-logs",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--pure",
+          "long": "--pure",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false,
+          "repeatable": false,
+          "available_on": [
+            "linux-x64",
+            "darwin-arm64",
+            "win32-x64"
+          ]
+        }
+      ]
+    }
+  ]
+}
