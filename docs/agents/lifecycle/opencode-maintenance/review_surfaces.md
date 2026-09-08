@@ -8,9 +8,9 @@
 - `crates/opencode/**`
 - `crates/agent_api/**`
 - `cli_manifests/opencode/artifacts.lock.json`
-- `cli_manifests/opencode/snapshots/1.14.49/**`
-- `cli_manifests/opencode/reports/1.14.49/**`
-- `cli_manifests/opencode/versions/1.14.49.json`
+- `cli_manifests/opencode/snapshots/1.18.28/**`
+- `cli_manifests/opencode/reports/1.18.28/**`
+- `cli_manifests/opencode/versions/1.18.28.json`
 - `cli_manifests/opencode/wrapper_coverage.json`
 - `cli_manifests/support_matrix/current.json`
 - `docs/specs/unified-agent-api/support-matrix.md`
