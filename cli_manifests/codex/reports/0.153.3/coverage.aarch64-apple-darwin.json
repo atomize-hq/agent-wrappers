@@ -1,0 +1,1238 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-04T19:01:32Z",
+  "inputs": {
+    "upstream": {
+      "semantic_version": "0.153.3",
+      "mode": "union",
+      "targets": [
+        "aarch64-apple-darwin"
+      ]
+    },
+    "wrapper": {
+      "schema_version": 1,
+      "wrapper_version": "0.3.7"
+    },
+    "rules": {
+      "rules_schema_version": 1
+    }
+  },
+  "platform_filter": {
+    "mode": "exact_target",
+    "target_triple": "aarch64-apple-darwin"
+  },
+  "deltas": {
+    "missing_commands": [
+      {
+        "path": [
+          "agents"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "fork"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec-server",
+          "forward"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec-server",
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "migrate-rollouts"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "queue"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      }
+    ],
+    "missing_flags": [
+      {
+        "path": [],
+        "key": "--approve-for-me",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "app-server"
+        ],
+        "key": "--code-mode-host",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec"
+        ],
+        "key": "--thread-source",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "fork"
+        ],
+        "key": "--ephemeral",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "fork"
+        ],
+        "key": "--ignore-rules",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "fork"
+        ],
+        "key": "--ignore-user-config",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "fork"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "fork"
+        ],
+        "key": "--output-last-message",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "fork"
+        ],
+        "key": "--output-schema",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "fork"
+        ],
+        "key": "--skip-git-repo-check",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "fork"
+        ],
+        "key": "--thread-source",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "resume"
+        ],
+        "key": "--thread-source",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "review"
+        ],
+        "key": "--thread-source",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec-server"
+        ],
+        "key": "--concurrent-requests",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec-server"
+        ],
+        "key": "--exit-on-stdin-close",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec-server",
+          "forward"
+        ],
+        "key": "--connect",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec-server",
+          "forward"
+        ],
+        "key": "--environment-id",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec-server",
+          "forward"
+        ],
+        "key": "--exit-on-stdin-close",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec-server",
+          "forward"
+        ],
+        "key": "--name",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec-server",
+          "forward"
+        ],
+        "key": "--use-agent-identity-auth",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "add"
+        ],
+        "key": "--oauth-client-registration",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "login"
+        ],
+        "key": "--oauth-client-registration",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "migrate-rollouts"
+        ],
+        "key": "--apply",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "migrate-rollouts"
+        ],
+        "key": "--json",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "migrate-rollouts"
+        ],
+        "key": "--max-mib-per-second",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "migrate-rollouts"
+        ],
+        "key": "--thread",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "migrate-rollouts"
+        ],
+        "key": "--verbose",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "queue"
+        ],
+        "key": "--message",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "queue"
+        ],
+        "key": "--thread",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      }
+    ],
+    "missing_args": [
+      {
+        "path": [
+          "exec",
+          "fork"
+        ],
+        "name": "PROMPT",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec",
+          "fork"
+        ],
+        "name": "SESSION_ID",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      },
+      {
+        "path": [
+          "exec-server",
+          "help"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ]
+      }
+    ],
+    "excluded_commands": [
+      {
+        "path": [
+          "app"
+        ],
+        "upstream_available_on": [
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "note": "Desktop app launcher is platform-specific and excluded from wrapper parity."
+      }
+    ],
+    "excluded_flags": [
+      {
+        "path": [],
+        "key": "--no-alt-screen",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "note": "Alt-screen control is a TUI-only surface and is excluded from wrapper parity."
+      }
+    ],
+    "excluded_args": [
+      {
+        "path": [],
+        "name": "PROMPT",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "note": "Interactive TUI default-mode prompt surface is excluded from wrapper parity."
+      }
+    ],
+    "passthrough_candidates": [
+      {
+        "path": [
+          "app-server",
+          "daemon"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "app-server",
+          "daemon",
+          "bootstrap"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "app-server",
+          "daemon",
+          "disable-remote-control"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "app-server",
+          "daemon",
+          "enable-remote-control"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "app-server",
+          "daemon",
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "app-server",
+          "daemon",
+          "restart"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "app-server",
+          "daemon",
+          "start"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "app-server",
+          "daemon",
+          "stop"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "app-server",
+          "daemon",
+          "version"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "archive"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "delete"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "doctor"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "plugin",
+          "add"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "plugin",
+          "list"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "plugin",
+          "marketplace",
+          "list"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "plugin",
+          "remove"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "remote-control"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "remote-control",
+          "help"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "remote-control",
+          "pair"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "remote-control",
+          "start"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "remote-control",
+          "stop"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      },
+      {
+        "path": [
+          "unarchive"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "passthrough",
+        "note": "Forwarded by NonTuiCommandRequest."
+      }
+    ],
+    "intentionally_unsupported": [
+      {
+        "path": [
+          "completion"
+        ],
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Shell completion generation is out of scope for the wrapper."
+      },
+      {
+        "path": [
+          "completion"
+        ],
+        "name": "SHELL",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "intentionally_unsupported",
+        "note": "Shell completion generation is out of scope for the wrapper."
+      }
+    ],
+    "wrapper_only_commands": [
+      {
+        "path": [
+          "execpolicy",
+          "check"
+        ],
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "responses-api-proxy"
+        ],
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "help"
+        ],
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "linux"
+        ],
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "windows"
+        ],
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "stdio-to-uds"
+        ],
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      }
+    ],
+    "wrapper_only_flags": [
+      {
+        "path": [],
+        "key": "--full-auto",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "debug",
+          "prompt-input"
+        ],
+        "key": "--image",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "exec-server"
+        ],
+        "key": "--executor-id",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "execpolicy",
+          "check"
+        ],
+        "key": "--policy",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "execpolicy",
+          "check"
+        ],
+        "key": "--pretty",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "login"
+        ],
+        "key": "--api-key",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "login"
+        ],
+        "key": "--mcp",
+        "upstream_available_on": [
+          "x86_64-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "aarch64-apple-darwin",
+          "x86_64-pc-windows-msvc"
+        ],
+        "wrapper_level": "explicit",
+        "note": "capability-guarded"
+      },
+      {
+        "path": [
+          "responses-api-proxy"
+        ],
+        "key": "--http-shutdown",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "responses-api-proxy"
+        ],
+        "key": "--port",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "responses-api-proxy"
+        ],
+        "key": "--server-info",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "responses-api-proxy"
+        ],
+        "key": "--upstream-url",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "linux"
+        ],
+        "key": "--include-managed-config",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "linux"
+        ],
+        "key": "--permissions-profile",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "key": "--allow-unix-socket",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "key": "--include-managed-config",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "key": "--log-denials",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "key": "--permissions-profile",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "windows"
+        ],
+        "key": "--include-managed-config",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "windows"
+        ],
+        "key": "--permissions-profile",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      }
+    ],
+    "wrapper_only_args": [
+      {
+        "path": [
+          "execpolicy",
+          "check"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "help"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "linux"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "macos"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "sandbox",
+          "windows"
+        ],
+        "name": "COMMAND",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      },
+      {
+        "path": [
+          "stdio-to-uds"
+        ],
+        "name": "SOCKET_PATH",
+        "upstream_available_on": [
+          "aarch64-apple-darwin"
+        ],
+        "wrapper_level": "explicit"
+      }
+    ]
+  }
+}
