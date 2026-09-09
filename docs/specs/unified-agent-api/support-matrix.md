@@ -242,8 +242,11 @@ Do not edit this section by hand.
 
 | agent | version | target | manifest_support | backend_support | uaa_support | pointer_promotion | evidence_notes |
 |---|---|---|---|---|---|---|---|
+| `claude_code` | `2.1.236` | `darwin-arm64` | `unsupported` | `unsupported` | `unsupported` | `none` | backend report includes backend-only surface outside unified support |
 | `claude_code` | `2.1.29` | `darwin-arm64` | `supported` | `supported` | `supported` | `latest_supported_and_validated` | — |
+| `claude_code` | `2.1.236` | `linux-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | backend report includes backend-only surface outside unified support |
 | `claude_code` | `2.1.29` | `linux-x64` | `supported` | `supported` | `supported` | `latest_supported_and_validated` | — |
+| `claude_code` | `2.1.236` | `win32-x64` | `unsupported` | `unsupported` | `unsupported` | `none` | backend report includes intentionally unsupported surface outside unified support; backend report includes backend-only surface outside unified support |
 | `claude_code` | `2.1.29` | `win32-x64` | `supported` | `partial` | `partial` | `latest_supported_and_validated` | backend report includes intentionally unsupported surface outside unified support |
 
 ### `codex`

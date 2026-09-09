@@ -2,13 +2,13 @@
 
 # PR summary
 
-Automated maintenance packet for `claude_code` target `2.1.140`.
+Automated maintenance packet for `claude_code` target `2.1.236`.
 
 - canonical execution contract: `docs/agents/lifecycle/claude_code-maintenance/HANDOFF.md`
 - request artifact: `docs/agents/lifecycle/claude_code-maintenance/governance/maintenance-request.toml`
-- branch: `automation/claude_code-maintenance-2.1.140`
+- branch: `automation/claude_code-maintenance-2.1.236`
 - opened from: `.github/workflows/agent-maintenance-open-pr.yml`
-- prompt sha256: `0e8eb3b6d0a36c0ad5844f7a5fb5e3d5a4cb7525fb7559194d85fba08c6afeac`
+- prompt sha256: `6d308aea034c6b63313e600fead74aee0794dae591646edbdecf6ffd6d0fee3b`
 
 ## Support-surface audit
 
@@ -31,7 +31,7 @@ Follow `docs/agents/lifecycle/claude_code-maintenance/HANDOFF.md` exactly. This 
 ## Exact maintained-agent prompt
 
 ```md
-# Packet PR Maintenance Prompt (`2.1.140`)
+# Packet PR Maintenance Prompt (`2.1.236`)
 
 This template renders the exact maintained-agent prompt for `claude_code` packet execution.
 `docs/agents/lifecycle/claude_code-maintenance/HANDOFF.md` remains canonical and `governance/pr-summary.md` is derivative.
@@ -40,7 +40,7 @@ This template renders the exact maintained-agent prompt for `claude_code` packet
 
 ## Goal
 
-Execute the automated maintenance packet for `claude_code` target `2.1.140`.
+Execute the automated maintenance packet for `claude_code` target `2.1.236`.
 
 ## Frozen request contract
 
@@ -62,10 +62,10 @@ Execute the automated maintenance packet for `claude_code` target `2.1.140`.
 
 ## Required workflow
 
-1. Compare the current validated baseline from `cli_manifests/claude_code/latest_validated.txt` against the target `2.1.140` artifacts.
+1. Compare the current validated baseline from `cli_manifests/claude_code/latest_validated.txt` against the target `2.1.236` artifacts.
 2. Use `support_surface_audit` to classify newly discovered non-TUI surface, preexisting non-TUI debt, required uplifts, and allowed deferrals.
 3. Land bounded wrapper/backend/manifest/publication updates for every row in `required_uplifts_this_run`.
-4. Refresh or create version-scoped manifest artifacts under `cli_manifests/claude_code/snapshots/2.1.140/`, `cli_manifests/claude_code/reports/2.1.140/`, and `cli_manifests/claude_code/versions/2.1.140.json` as required by the packet.
+4. Refresh or create version-scoped manifest artifacts under `cli_manifests/claude_code/snapshots/2.1.236/`, `cli_manifests/claude_code/reports/2.1.236/`, and `cli_manifests/claude_code/versions/2.1.236.json` as required by the packet.
 5. Leave closeout manual; record it only with `close-agent-maintenance` after the declared green gates pass.
 
 ## Done criteria

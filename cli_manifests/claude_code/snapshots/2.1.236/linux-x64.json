@@ -1,0 +1,1598 @@
+{
+  "snapshot_schema_version": 1,
+  "tool": "claude-code-cli",
+  "collected_at": "2026-08-19T18:45:14Z",
+  "binary": {
+    "sha256": "6c8818fa22187aa555c242be4abbacc44d6b71a32ac9631ee7b2b5d12f51f752",
+    "size_bytes": 334645552,
+    "platform": {
+      "os": "linux",
+      "arch": "x86_64"
+    },
+    "target_triple": "linux-x64",
+    "version_output": "2.1.236 (Claude Code)",
+    "semantic_version": "2.1.236"
+  },
+  "commands": [
+    {
+      "path": [],
+      "usage": "claude [options] [command] [prompt]",
+      "flags": [
+        {
+          "long": "--add-dir",
+          "takes_value": true,
+          "value_name": "directories..."
+        },
+        {
+          "long": "--add-dir",
+          "takes_value": false
+        },
+        {
+          "long": "--agent",
+          "takes_value": true,
+          "value_name": "agent"
+        },
+        {
+          "long": "--agents",
+          "takes_value": true,
+          "value_name": "json"
+        },
+        {
+          "long": "--allow-dangerously-skip-permissions",
+          "takes_value": false
+        },
+        {
+          "long": "--allowedTools",
+          "takes_value": true,
+          "value_name": "tools..."
+        },
+        {
+          "long": "--append-system-prompt",
+          "takes_value": true,
+          "value_name": "prompt"
+        },
+        {
+          "long": "--autocompact",
+          "takes_value": true,
+          "value_name": "auto|tokens"
+        },
+        {
+          "long": "--ax-screen-reader",
+          "takes_value": false
+        },
+        {
+          "long": "--bare",
+          "takes_value": false
+        },
+        {
+          "long": "--betas",
+          "takes_value": true,
+          "value_name": "betas..."
+        },
+        {
+          "long": "--bg",
+          "takes_value": false
+        },
+        {
+          "long": "--brief",
+          "takes_value": false
+        },
+        {
+          "long": "--chrome",
+          "takes_value": false
+        },
+        {
+          "long": "--cloud",
+          "takes_value": false
+        },
+        {
+          "long": "--continue",
+          "short": "-c",
+          "takes_value": false
+        },
+        {
+          "long": "--dangerously-skip-permissions",
+          "takes_value": false
+        },
+        {
+          "long": "--debug",
+          "short": "-d",
+          "takes_value": false
+        },
+        {
+          "long": "--debug-file",
+          "takes_value": true,
+          "value_name": "path"
+        },
+        {
+          "long": "--disable-slash-commands",
+          "takes_value": false
+        },
+        {
+          "long": "--disallowedTools",
+          "takes_value": true,
+          "value_name": "tools..."
+        },
+        {
+          "long": "--effort",
+          "takes_value": true,
+          "value_name": "level"
+        },
+        {
+          "long": "--environment",
+          "takes_value": true,
+          "value_name": "environment_id"
+        },
+        {
+          "long": "--exclude-dynamic-system-prompt-sections",
+          "takes_value": false
+        },
+        {
+          "long": "--fallback-model",
+          "takes_value": true,
+          "value_name": "model"
+        },
+        {
+          "long": "--file",
+          "takes_value": true,
+          "value_name": "specs..."
+        },
+        {
+          "long": "--file",
+          "takes_value": false
+        },
+        {
+          "long": "--fork-session",
+          "takes_value": false
+        },
+        {
+          "long": "--forward-subagent-text",
+          "takes_value": false
+        },
+        {
+          "long": "--from-pr",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--ide",
+          "takes_value": false
+        },
+        {
+          "long": "--include-hook-events",
+          "takes_value": false
+        },
+        {
+          "long": "--include-partial-messages",
+          "takes_value": false
+        },
+        {
+          "long": "--input-format",
+          "takes_value": true,
+          "value_name": "format"
+        },
+        {
+          "long": "--json-schema",
+          "takes_value": true,
+          "value_name": "schema"
+        },
+        {
+          "long": "--max-budget-usd",
+          "takes_value": true,
+          "value_name": "amount"
+        },
+        {
+          "long": "--mcp-config",
+          "takes_value": true,
+          "value_name": "configs..."
+        },
+        {
+          "long": "--model",
+          "takes_value": true,
+          "value_name": "model"
+        },
+        {
+          "long": "--name",
+          "short": "-n",
+          "takes_value": true,
+          "value_name": "name"
+        },
+        {
+          "long": "--no-chrome",
+          "takes_value": false
+        },
+        {
+          "long": "--no-session-persistence",
+          "takes_value": false
+        },
+        {
+          "long": "--output-format",
+          "takes_value": true,
+          "value_name": "format"
+        },
+        {
+          "long": "--permission-mode",
+          "takes_value": true,
+          "value_name": "mode"
+        },
+        {
+          "long": "--plugin-dir",
+          "takes_value": true,
+          "value_name": "path"
+        },
+        {
+          "long": "--plugin-dir",
+          "takes_value": true,
+          "value_name": "A"
+        },
+        {
+          "long": "--plugin-url",
+          "takes_value": true,
+          "value_name": "url"
+        },
+        {
+          "long": "--plugin-url",
+          "takes_value": false
+        },
+        {
+          "long": "--print",
+          "short": "-p",
+          "takes_value": false
+        },
+        {
+          "long": "--print",
+          "takes_value": false
+        },
+        {
+          "long": "--prompt-suggestions",
+          "takes_value": false
+        },
+        {
+          "long": "--remote-control",
+          "takes_value": false
+        },
+        {
+          "long": "--remote-control-session-name-prefix",
+          "takes_value": true,
+          "value_name": "prefix"
+        },
+        {
+          "long": "--replay-user-messages",
+          "takes_value": false
+        },
+        {
+          "long": "--resume",
+          "short": "-r",
+          "takes_value": false
+        },
+        {
+          "long": "--safe-mode",
+          "takes_value": false
+        },
+        {
+          "long": "--session-id",
+          "takes_value": true,
+          "value_name": "uuid"
+        },
+        {
+          "long": "--setting-sources",
+          "takes_value": true,
+          "value_name": "sources"
+        },
+        {
+          "long": "--settings",
+          "takes_value": false
+        },
+        {
+          "long": "--settings",
+          "takes_value": true,
+          "value_name": "file-or-json"
+        },
+        {
+          "long": "--strict-mcp-config",
+          "takes_value": false
+        },
+        {
+          "long": "--system-prompt",
+          "takes_value": true,
+          "value_name": "prompt"
+        },
+        {
+          "long": "--teleport",
+          "takes_value": false
+        },
+        {
+          "long": "--tmux",
+          "takes_value": false
+        },
+        {
+          "long": "--tools",
+          "takes_value": true,
+          "value_name": "tools..."
+        },
+        {
+          "long": "--verbose",
+          "takes_value": false
+        },
+        {
+          "long": "--version",
+          "short": "-v",
+          "takes_value": false
+        },
+        {
+          "long": "--worktree",
+          "short": "-w",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "agents"
+      ],
+      "usage": "claude agents [options]",
+      "flags": [
+        {
+          "long": "--add-dir",
+          "takes_value": true,
+          "value_name": "directory"
+        },
+        {
+          "long": "--agent",
+          "takes_value": true,
+          "value_name": "agent"
+        },
+        {
+          "long": "--all",
+          "takes_value": false
+        },
+        {
+          "long": "--allow-dangerously-skip-permissions",
+          "takes_value": false
+        },
+        {
+          "long": "--cwd",
+          "takes_value": true,
+          "value_name": "path"
+        },
+        {
+          "long": "--dangerously-skip-permissions",
+          "takes_value": false
+        },
+        {
+          "long": "--effort",
+          "takes_value": true,
+          "value_name": "level"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--json",
+          "takes_value": false
+        },
+        {
+          "long": "--mcp-config",
+          "takes_value": true,
+          "value_name": "config"
+        },
+        {
+          "long": "--model",
+          "takes_value": true,
+          "value_name": "model"
+        },
+        {
+          "long": "--permission-mode",
+          "takes_value": true,
+          "value_name": "mode"
+        },
+        {
+          "long": "--plugin-dir",
+          "takes_value": true,
+          "value_name": "path"
+        },
+        {
+          "long": "--setting-sources",
+          "takes_value": true,
+          "value_name": "sources"
+        },
+        {
+          "long": "--settings",
+          "takes_value": true,
+          "value_name": "file-or-json"
+        },
+        {
+          "long": "--strict-mcp-config",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "auth"
+      ],
+      "usage": "claude auth [options] [command]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "auth",
+        "login"
+      ],
+      "usage": "claude auth login [options]",
+      "flags": [
+        {
+          "long": "--claudeai",
+          "takes_value": false
+        },
+        {
+          "long": "--console",
+          "takes_value": false
+        },
+        {
+          "long": "--email",
+          "takes_value": true,
+          "value_name": "email"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--sso",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "auth",
+        "logout"
+      ],
+      "usage": "claude auth logout [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "auth",
+        "status"
+      ],
+      "usage": "claude auth status [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--json",
+          "takes_value": false
+        },
+        {
+          "long": "--text",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "auto-mode"
+      ],
+      "usage": "claude auto-mode [options] [command]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "auto-mode",
+        "config"
+      ],
+      "usage": "claude auto-mode config [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "auto-mode",
+        "critique"
+      ],
+      "usage": "claude auto-mode critique [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--model",
+          "takes_value": true,
+          "value_name": "model"
+        }
+      ]
+    },
+    {
+      "path": [
+        "auto-mode",
+        "defaults"
+      ],
+      "usage": "claude auto-mode defaults [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--label",
+          "takes_value": true,
+          "value_name": "prefix"
+        }
+      ]
+    },
+    {
+      "path": [
+        "auto-mode",
+        "reset"
+      ],
+      "usage": "claude auto-mode reset [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--yes",
+          "short": "-y",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "doctor"
+      ],
+      "usage": "claude doctor [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "gateway"
+      ],
+      "usage": "claude gateway [options]",
+      "flags": [
+        {
+          "long": "--config",
+          "takes_value": true,
+          "value_name": "path"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "import"
+      ],
+      "usage": "claude import [options] [source]",
+      "flags": [
+        {
+          "long": "--dry-run",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--yes",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "install"
+      ],
+      "usage": "claude install [options] [target]",
+      "flags": [
+        {
+          "long": "--force",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp"
+      ],
+      "usage": "claude mcp [options] [command]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add"
+      ],
+      "usage": "claude mcp add [options] <name> <commandOrUrl> [args...]",
+      "args": [
+        {
+          "name": "commandOrUrl",
+          "required": true,
+          "variadic": false
+        },
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--callback-port",
+          "takes_value": true,
+          "value_name": "port"
+        },
+        {
+          "long": "--client-id",
+          "takes_value": true,
+          "value_name": "clientId"
+        },
+        {
+          "long": "--client-secret",
+          "takes_value": false
+        },
+        {
+          "long": "--env",
+          "short": "-e",
+          "takes_value": true,
+          "value_name": "env..."
+        },
+        {
+          "long": "--header",
+          "short": "-H",
+          "takes_value": true,
+          "value_name": "header..."
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        },
+        {
+          "long": "--transport",
+          "short": "-t",
+          "takes_value": true,
+          "value_name": "transport"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add-from-claude-desktop"
+      ],
+      "usage": "claude mcp add-from-claude-desktop [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "add-json"
+      ],
+      "usage": "claude mcp add-json [options] <name> <json>",
+      "args": [
+        {
+          "name": "json",
+          "required": true,
+          "variadic": false
+        },
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--client-secret",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "get"
+      ],
+      "usage": "claude mcp get [options] <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "usage": "claude mcp list [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "login"
+      ],
+      "usage": "claude mcp login [options] <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--no-browser",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "logout"
+      ],
+      "usage": "claude mcp logout [options] <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "remove"
+      ],
+      "usage": "claude mcp remove [options] <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "reset-project-choices"
+      ],
+      "usage": "claude mcp reset-project-choices [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "serve"
+      ],
+      "usage": "claude mcp serve [options]",
+      "flags": [
+        {
+          "long": "--debug",
+          "short": "-d",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--verbose",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin"
+      ],
+      "usage": "claude plugin|plugins [options] [command]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "details"
+      ],
+      "usage": "claude plugin details [options] <name>",
+      "args": [
+        {
+          "name": "name",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "disable"
+      ],
+      "usage": "claude plugin disable [options] [plugin]",
+      "flags": [
+        {
+          "long": "--all",
+          "short": "-a",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "enable"
+      ],
+      "usage": "claude plugin enable [options] <plugin>",
+      "args": [
+        {
+          "name": "plugin",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "eval"
+      ],
+      "usage": "claude plugin eval [options] [command] [target]",
+      "flags": [
+        {
+          "long": "--ablation",
+          "takes_value": true,
+          "value_name": "mode"
+        },
+        {
+          "long": "--allow-tools",
+          "takes_value": true,
+          "value_name": "tools..."
+        },
+        {
+          "long": "--case",
+          "takes_value": true,
+          "value_name": "glob"
+        },
+        {
+          "long": "--debug-file",
+          "takes_value": false
+        },
+        {
+          "long": "--eval-dir",
+          "takes_value": true,
+          "value_name": "dir"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--json",
+          "takes_value": false
+        },
+        {
+          "long": "--judge-model",
+          "takes_value": true,
+          "value_name": "model"
+        },
+        {
+          "long": "--keep-temp",
+          "takes_value": false
+        },
+        {
+          "long": "--max-cost-usd",
+          "takes_value": true,
+          "value_name": "usd"
+        },
+        {
+          "long": "--model",
+          "takes_value": true,
+          "value_name": "model"
+        },
+        {
+          "long": "--no-publish",
+          "takes_value": false
+        },
+        {
+          "long": "--no-scaffold",
+          "takes_value": false
+        },
+        {
+          "long": "--output-dir",
+          "takes_value": true,
+          "value_name": "dir"
+        },
+        {
+          "long": "--publish-report",
+          "takes_value": false
+        },
+        {
+          "long": "--report",
+          "takes_value": true,
+          "value_name": "path"
+        },
+        {
+          "long": "--runs",
+          "takes_value": true,
+          "value_name": "n"
+        },
+        {
+          "long": "--scaffold",
+          "takes_value": false
+        },
+        {
+          "long": "--tag",
+          "takes_value": true,
+          "value_name": "tag..."
+        },
+        {
+          "long": "--threshold",
+          "takes_value": true,
+          "value_name": "0..1"
+        },
+        {
+          "long": "--verbose",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "eval",
+        "init"
+      ],
+      "usage": "claude plugin eval init [options] [name]",
+      "flags": [
+        {
+          "long": "--bare",
+          "takes_value": false
+        },
+        {
+          "long": "--eval-dir",
+          "takes_value": true,
+          "value_name": "dir"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--interactive",
+          "short": "-i",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "init"
+      ],
+      "usage": "claude plugin init|new [options] <name>",
+      "flags": [
+        {
+          "long": "--author",
+          "takes_value": true,
+          "value_name": "name"
+        },
+        {
+          "long": "--author-email",
+          "takes_value": true,
+          "value_name": "email"
+        },
+        {
+          "long": "--description",
+          "takes_value": true,
+          "value_name": "text"
+        },
+        {
+          "long": "--force",
+          "short": "-f",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--with",
+          "takes_value": true,
+          "value_name": "components..."
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "install"
+      ],
+      "usage": "claude plugin install|i [options] <plugin>",
+      "flags": [
+        {
+          "long": "--config",
+          "takes_value": true,
+          "value_name": "key=value"
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        },
+        {
+          "long": "--yes",
+          "short": "-y",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "list"
+      ],
+      "usage": "claude plugin list [options]",
+      "flags": [
+        {
+          "long": "--available",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--json",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace"
+      ],
+      "usage": "claude plugin marketplace [options] [command]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "add"
+      ],
+      "usage": "claude plugin marketplace add [options] <source>",
+      "args": [
+        {
+          "name": "source",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "takes_value": true,
+          "value_name": "scope"
+        },
+        {
+          "long": "--sparse",
+          "takes_value": true,
+          "value_name": "paths..."
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "list"
+      ],
+      "usage": "claude plugin marketplace list [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--json",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "remove"
+      ],
+      "usage": "claude plugin marketplace remove|rm [options] <name>",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "takes_value": true,
+          "value_name": "scope"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "update"
+      ],
+      "usage": "claude plugin marketplace update [options] [name]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "prune"
+      ],
+      "usage": "claude plugin prune|autoremove [options]",
+      "flags": [
+        {
+          "long": "--dry-run",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        },
+        {
+          "long": "--yes",
+          "short": "-y",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "tag"
+      ],
+      "usage": "claude plugin tag [options] [path]",
+      "flags": [
+        {
+          "long": "--dry-run",
+          "takes_value": false
+        },
+        {
+          "long": "--force",
+          "short": "-f",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--message",
+          "short": "-m",
+          "takes_value": true,
+          "value_name": "msg"
+        },
+        {
+          "long": "--push",
+          "takes_value": false
+        },
+        {
+          "long": "--remote",
+          "takes_value": true,
+          "value_name": "name"
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "uninstall"
+      ],
+      "usage": "claude plugin uninstall|remove [options] <plugin>",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--keep-data",
+          "takes_value": false
+        },
+        {
+          "long": "--prune",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        },
+        {
+          "long": "--yes",
+          "short": "-y",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "update"
+      ],
+      "usage": "claude plugin update [options] <plugin>",
+      "args": [
+        {
+          "name": "plugin",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--scope",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "scope"
+        },
+        {
+          "long": "--yes",
+          "short": "-y",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "validate"
+      ],
+      "usage": "claude plugin validate [options] <path>",
+      "args": [
+        {
+          "name": "path",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--strict",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "project"
+      ],
+      "usage": "claude project [options] [command]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "project",
+        "purge"
+      ],
+      "usage": "claude project purge [options] [path]",
+      "flags": [
+        {
+          "long": "--all",
+          "takes_value": false
+        },
+        {
+          "long": "--dry-run",
+          "takes_value": false
+        },
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--interactive",
+          "short": "-i",
+          "takes_value": false
+        },
+        {
+          "long": "--yes",
+          "short": "-y",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "setup-token"
+      ],
+      "usage": "claude setup-token [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    },
+    {
+      "path": [
+        "ultrareview"
+      ],
+      "usage": "claude ultrareview [options] [target]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        },
+        {
+          "long": "--json",
+          "takes_value": false
+        },
+        {
+          "long": "--no-post",
+          "takes_value": false
+        },
+        {
+          "long": "--post",
+          "takes_value": false
+        },
+        {
+          "long": "--timeout",
+          "takes_value": true,
+          "value_name": "minutes"
+        }
+      ]
+    },
+    {
+      "path": [
+        "update"
+      ],
+      "usage": "claude update|upgrade [options]",
+      "flags": [
+        {
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false
+        }
+      ]
+    }
+  ]
+}
