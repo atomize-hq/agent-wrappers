@@ -1,0 +1,5879 @@
+{
+  "snapshot_schema_version": 2,
+  "tool": "codex-cli",
+  "mode": "union",
+  "collected_at": "2026-09-04T19:01:32Z",
+  "expected_targets": [
+    "x86_64-unknown-linux-musl",
+    "aarch64-unknown-linux-musl",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc"
+  ],
+  "complete": true,
+  "inputs": [
+    {
+      "target_triple": "x86_64-unknown-linux-musl",
+      "collected_at": "2026-09-04T19:01:32Z",
+      "binary": {
+        "sha256": "f9d4eab23d0e0726340e084ed22d668885c1dcabeb29ec508b8962e5e29b8dc6",
+        "size_bytes": 258638944,
+        "platform": {
+          "os": "linux",
+          "arch": "x86_64"
+        },
+        "target_triple": "x86_64-unknown-linux-musl",
+        "version_output": "codex-cli 0.153.3",
+        "semantic_version": "0.153.3",
+        "channel": "stable"
+      },
+      "features": {
+        "commands_added_when_all_enabled": [],
+        "enabled_for_snapshot": [
+          "apply_patch_freeform",
+          "apps",
+          "apps_mcp_path_override",
+          "auth_elicitation",
+          "browser_use",
+          "browser_use_external",
+          "browser_use_full_cdp_access",
+          "code_mode_buffered_exec",
+          "code_mode_host",
+          "codex_git_commit",
+          "collaboration_modes",
+          "compaction_image_budget",
+          "computer_use",
+          "content_item_kinds",
+          "elevated_windows_sandbox",
+          "enable_fanout",
+          "enable_request_compression",
+          "experimental_windows_sandbox",
+          "external_migration",
+          "fast_mode",
+          "goals",
+          "guardian_approval",
+          "hooks",
+          "image_detail_original",
+          "image_generation",
+          "in_app_browser",
+          "in_app_chat",
+          "in_app_dictation",
+          "in_app_local_automation",
+          "in_app_updates",
+          "item_ids",
+          "js_repl",
+          "js_repl_tools_only",
+          "local_thread_store_shared_compression",
+          "memories",
+          "mentions_v2",
+          "multi_agent",
+          "multi_agent_mode",
+          "multi_agent_v2",
+          "network_proxy",
+          "personality",
+          "plugin_hooks",
+          "plugin_sharing",
+          "plugins",
+          "prevent_idle_sleep",
+          "recommended_plugins",
+          "remote_compaction_v2",
+          "remote_control",
+          "remote_models",
+          "remote_plugin",
+          "request_rule",
+          "resize_all_images",
+          "responses_websockets",
+          "responses_websockets_v2",
+          "search_tool",
+          "secret_auth_storage",
+          "send_async_message",
+          "shell_snapshot",
+          "shell_tool",
+          "skill_env_var_dependency_prompt",
+          "skill_mcp_dependency_install",
+          "skill_search",
+          "sleep_tool",
+          "sqlite",
+          "steer",
+          "terminal_resize_reflow",
+          "tool_call_mcp_elicitation",
+          "tool_search",
+          "tool_search_always_defer_mcp_tools",
+          "tool_suggest",
+          "tui_app_server",
+          "unavailable_dummy_tools",
+          "unbounded_connection_retries",
+          "undo",
+          "unified_exec",
+          "unified_exec_zsh_fork",
+          "use_legacy_landlock",
+          "use_linux_sandbox_bwrap",
+          "view_image",
+          "web_search_cached",
+          "web_search_request",
+          "workspace_dependencies",
+          "workspace_owner_usage_nudge"
+        ],
+        "listed": [
+          {
+            "effective": false,
+            "name": "apply_patch_freeform",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "apps",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "apps_mcp_path_override",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "auth_elicitation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use_external",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use_full_cdp_access",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "code_mode_buffered_exec",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "code_mode_host",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "codex_git_commit",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "collaboration_modes",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "compaction_image_budget",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "computer_use",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "content_item_kinds",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "elevated_windows_sandbox",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "enable_fanout",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "enable_request_compression",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "experimental_windows_sandbox",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "external_migration",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "fast_mode",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "goals",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "guardian_approval",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "hooks",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "image_detail_original",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "image_generation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_browser",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_chat",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_dictation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_local_automation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_updates",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "item_ids",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "js_repl",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "js_repl_tools_only",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "local_thread_store_shared_compression",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "memories",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "mentions_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "multi_agent",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "multi_agent_mode",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "multi_agent_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "network_proxy",
+            "stage": "experimental"
+          },
+          {
+            "effective": true,
+            "name": "personality",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "plugin_hooks",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "plugin_sharing",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "plugins",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "prevent_idle_sleep",
+            "stage": "experimental"
+          },
+          {
+            "effective": false,
+            "name": "recommended_plugins",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "remote_compaction_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "remote_control",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "remote_models",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "remote_plugin",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "request_rule",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "resize_all_images",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "responses_websockets",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "responses_websockets_v2",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "search_tool",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "secret_auth_storage",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "send_async_message",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "shell_snapshot",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "shell_tool",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "skill_env_var_dependency_prompt",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "skill_mcp_dependency_install",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "skill_search",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "sleep_tool",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "sqlite",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "steer",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "terminal_resize_reflow",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_call_mcp_elicitation",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "tool_search",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_search_always_defer_mcp_tools",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_suggest",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "tui_app_server",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "unavailable_dummy_tools",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "unbounded_connection_retries",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "undo",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "unified_exec",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "unified_exec_zsh_fork",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "use_legacy_landlock",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "use_linux_sandbox_bwrap",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "view_image",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "web_search_cached",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "web_search_request",
+            "stage": "deprecated"
+          },
+          {
+            "effective": true,
+            "name": "workspace_dependencies",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "workspace_owner_usage_nudge",
+            "stage": "removed"
+          }
+        ],
+        "mode": "default_plus_all_enabled"
+      }
+    },
+    {
+      "target_triple": "aarch64-unknown-linux-musl",
+      "collected_at": "2026-09-04T19:01:32Z",
+      "binary": {
+        "sha256": "a5f4dd89c5f385583d6b626332d79868a6cdcbe51f59a1e0bc1133860840d36e",
+        "size_bytes": 222567456,
+        "platform": {
+          "os": "linux",
+          "arch": "aarch64"
+        },
+        "target_triple": "aarch64-unknown-linux-musl",
+        "version_output": "codex-cli 0.153.3",
+        "semantic_version": "0.153.3",
+        "channel": "stable"
+      },
+      "features": {
+        "commands_added_when_all_enabled": [],
+        "enabled_for_snapshot": [
+          "apply_patch_freeform",
+          "apps",
+          "apps_mcp_path_override",
+          "auth_elicitation",
+          "browser_use",
+          "browser_use_external",
+          "browser_use_full_cdp_access",
+          "code_mode_buffered_exec",
+          "code_mode_host",
+          "codex_git_commit",
+          "collaboration_modes",
+          "compaction_image_budget",
+          "computer_use",
+          "content_item_kinds",
+          "elevated_windows_sandbox",
+          "enable_fanout",
+          "enable_request_compression",
+          "experimental_windows_sandbox",
+          "external_migration",
+          "fast_mode",
+          "goals",
+          "guardian_approval",
+          "hooks",
+          "image_detail_original",
+          "image_generation",
+          "in_app_browser",
+          "in_app_chat",
+          "in_app_dictation",
+          "in_app_local_automation",
+          "in_app_updates",
+          "item_ids",
+          "js_repl",
+          "js_repl_tools_only",
+          "local_thread_store_shared_compression",
+          "memories",
+          "mentions_v2",
+          "multi_agent",
+          "multi_agent_mode",
+          "multi_agent_v2",
+          "network_proxy",
+          "personality",
+          "plugin_hooks",
+          "plugin_sharing",
+          "plugins",
+          "prevent_idle_sleep",
+          "recommended_plugins",
+          "remote_compaction_v2",
+          "remote_control",
+          "remote_models",
+          "remote_plugin",
+          "request_rule",
+          "resize_all_images",
+          "responses_websockets",
+          "responses_websockets_v2",
+          "search_tool",
+          "secret_auth_storage",
+          "send_async_message",
+          "shell_snapshot",
+          "shell_tool",
+          "skill_env_var_dependency_prompt",
+          "skill_mcp_dependency_install",
+          "skill_search",
+          "sleep_tool",
+          "sqlite",
+          "steer",
+          "terminal_resize_reflow",
+          "tool_call_mcp_elicitation",
+          "tool_search",
+          "tool_search_always_defer_mcp_tools",
+          "tool_suggest",
+          "tui_app_server",
+          "unavailable_dummy_tools",
+          "unbounded_connection_retries",
+          "undo",
+          "unified_exec",
+          "unified_exec_zsh_fork",
+          "use_legacy_landlock",
+          "use_linux_sandbox_bwrap",
+          "view_image",
+          "web_search_cached",
+          "web_search_request",
+          "workspace_dependencies",
+          "workspace_owner_usage_nudge"
+        ],
+        "listed": [
+          {
+            "effective": false,
+            "name": "apply_patch_freeform",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "apps",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "apps_mcp_path_override",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "auth_elicitation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use_external",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use_full_cdp_access",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "code_mode_buffered_exec",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "code_mode_host",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "codex_git_commit",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "collaboration_modes",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "compaction_image_budget",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "computer_use",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "content_item_kinds",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "elevated_windows_sandbox",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "enable_fanout",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "enable_request_compression",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "experimental_windows_sandbox",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "external_migration",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "fast_mode",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "goals",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "guardian_approval",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "hooks",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "image_detail_original",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "image_generation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_browser",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_chat",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_dictation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_local_automation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_updates",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "item_ids",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "js_repl",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "js_repl_tools_only",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "local_thread_store_shared_compression",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "memories",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "mentions_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "multi_agent",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "multi_agent_mode",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "multi_agent_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "network_proxy",
+            "stage": "experimental"
+          },
+          {
+            "effective": true,
+            "name": "personality",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "plugin_hooks",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "plugin_sharing",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "plugins",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "prevent_idle_sleep",
+            "stage": "experimental"
+          },
+          {
+            "effective": false,
+            "name": "recommended_plugins",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "remote_compaction_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "remote_control",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "remote_models",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "remote_plugin",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "request_rule",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "resize_all_images",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "responses_websockets",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "responses_websockets_v2",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "search_tool",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "secret_auth_storage",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "send_async_message",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "shell_snapshot",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "shell_tool",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "skill_env_var_dependency_prompt",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "skill_mcp_dependency_install",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "skill_search",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "sleep_tool",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "sqlite",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "steer",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "terminal_resize_reflow",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_call_mcp_elicitation",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "tool_search",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_search_always_defer_mcp_tools",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_suggest",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "tui_app_server",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "unavailable_dummy_tools",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "unbounded_connection_retries",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "undo",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "unified_exec",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "unified_exec_zsh_fork",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "use_legacy_landlock",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "use_linux_sandbox_bwrap",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "view_image",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "web_search_cached",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "web_search_request",
+            "stage": "deprecated"
+          },
+          {
+            "effective": true,
+            "name": "workspace_dependencies",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "workspace_owner_usage_nudge",
+            "stage": "removed"
+          }
+        ],
+        "mode": "default_plus_all_enabled"
+      }
+    },
+    {
+      "target_triple": "aarch64-apple-darwin",
+      "collected_at": "2026-09-04T19:01:32Z",
+      "binary": {
+        "sha256": "0e1f892695844ad0798dab8895955846450a9e7663476ebf24615814dd377216",
+        "size_bytes": 220584480,
+        "platform": {
+          "os": "macos",
+          "arch": "aarch64"
+        },
+        "target_triple": "aarch64-apple-darwin",
+        "version_output": "codex-cli 0.153.3",
+        "semantic_version": "0.153.3",
+        "channel": "stable"
+      },
+      "features": {
+        "commands_added_when_all_enabled": [],
+        "enabled_for_snapshot": [
+          "apply_patch_freeform",
+          "apps",
+          "apps_mcp_path_override",
+          "auth_elicitation",
+          "browser_use",
+          "browser_use_external",
+          "browser_use_full_cdp_access",
+          "code_mode_buffered_exec",
+          "code_mode_host",
+          "codex_git_commit",
+          "collaboration_modes",
+          "compaction_image_budget",
+          "computer_use",
+          "content_item_kinds",
+          "elevated_windows_sandbox",
+          "enable_fanout",
+          "enable_request_compression",
+          "experimental_windows_sandbox",
+          "external_migration",
+          "fast_mode",
+          "goals",
+          "guardian_approval",
+          "hooks",
+          "image_detail_original",
+          "image_generation",
+          "in_app_browser",
+          "in_app_chat",
+          "in_app_dictation",
+          "in_app_local_automation",
+          "in_app_updates",
+          "item_ids",
+          "js_repl",
+          "js_repl_tools_only",
+          "local_thread_store_shared_compression",
+          "memories",
+          "mentions_v2",
+          "multi_agent",
+          "multi_agent_mode",
+          "multi_agent_v2",
+          "network_proxy",
+          "personality",
+          "plugin_hooks",
+          "plugin_sharing",
+          "plugins",
+          "prevent_idle_sleep",
+          "recommended_plugins",
+          "remote_compaction_v2",
+          "remote_control",
+          "remote_models",
+          "remote_plugin",
+          "request_rule",
+          "resize_all_images",
+          "responses_websockets",
+          "responses_websockets_v2",
+          "search_tool",
+          "secret_auth_storage",
+          "send_async_message",
+          "shell_snapshot",
+          "shell_tool",
+          "skill_env_var_dependency_prompt",
+          "skill_mcp_dependency_install",
+          "skill_search",
+          "sleep_tool",
+          "sqlite",
+          "steer",
+          "terminal_resize_reflow",
+          "tool_call_mcp_elicitation",
+          "tool_search",
+          "tool_search_always_defer_mcp_tools",
+          "tool_suggest",
+          "tui_app_server",
+          "unavailable_dummy_tools",
+          "unbounded_connection_retries",
+          "undo",
+          "unified_exec",
+          "unified_exec_zsh_fork",
+          "use_legacy_landlock",
+          "use_linux_sandbox_bwrap",
+          "view_image",
+          "web_search_cached",
+          "web_search_request",
+          "workspace_dependencies",
+          "workspace_owner_usage_nudge"
+        ],
+        "listed": [
+          {
+            "effective": false,
+            "name": "apply_patch_freeform",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "apps",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "apps_mcp_path_override",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "auth_elicitation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use_external",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use_full_cdp_access",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "code_mode_buffered_exec",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "code_mode_host",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "codex_git_commit",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "collaboration_modes",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "compaction_image_budget",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "computer_use",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "content_item_kinds",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "elevated_windows_sandbox",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "enable_fanout",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "enable_request_compression",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "experimental_windows_sandbox",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "external_migration",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "fast_mode",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "goals",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "guardian_approval",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "hooks",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "image_detail_original",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "image_generation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_browser",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_chat",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_dictation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_local_automation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_updates",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "item_ids",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "js_repl",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "js_repl_tools_only",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "local_thread_store_shared_compression",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "memories",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "mentions_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "multi_agent",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "multi_agent_mode",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "multi_agent_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "network_proxy",
+            "stage": "experimental"
+          },
+          {
+            "effective": true,
+            "name": "personality",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "plugin_hooks",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "plugin_sharing",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "plugins",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "prevent_idle_sleep",
+            "stage": "experimental"
+          },
+          {
+            "effective": false,
+            "name": "recommended_plugins",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "remote_compaction_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "remote_control",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "remote_models",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "remote_plugin",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "request_rule",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "resize_all_images",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "responses_websockets",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "responses_websockets_v2",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "search_tool",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "secret_auth_storage",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "send_async_message",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "shell_snapshot",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "shell_tool",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "skill_env_var_dependency_prompt",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "skill_mcp_dependency_install",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "skill_search",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "sleep_tool",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "sqlite",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "steer",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "terminal_resize_reflow",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_call_mcp_elicitation",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "tool_search",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_search_always_defer_mcp_tools",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_suggest",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "tui_app_server",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "unavailable_dummy_tools",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "unbounded_connection_retries",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "undo",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "unified_exec",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "unified_exec_zsh_fork",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "use_legacy_landlock",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "use_linux_sandbox_bwrap",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "view_image",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "web_search_cached",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "web_search_request",
+            "stage": "deprecated"
+          },
+          {
+            "effective": true,
+            "name": "workspace_dependencies",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "workspace_owner_usage_nudge",
+            "stage": "removed"
+          }
+        ],
+        "mode": "default_plus_all_enabled"
+      }
+    },
+    {
+      "target_triple": "x86_64-pc-windows-msvc",
+      "collected_at": "2026-09-04T19:01:32Z",
+      "binary": {
+        "sha256": "e5ef3c4b81d2fb861f3731c91a773d45a1973c6a0b480d6449f80bc8fd749e96",
+        "size_bytes": 295414576,
+        "platform": {
+          "os": "windows",
+          "arch": "x86_64"
+        },
+        "target_triple": "x86_64-pc-windows-msvc",
+        "version_output": "codex-cli 0.153.3",
+        "semantic_version": "0.153.3",
+        "channel": "stable"
+      },
+      "features": {
+        "commands_added_when_all_enabled": [],
+        "enabled_for_snapshot": [
+          "apply_patch_freeform",
+          "apps",
+          "apps_mcp_path_override",
+          "auth_elicitation",
+          "browser_use",
+          "browser_use_external",
+          "browser_use_full_cdp_access",
+          "code_mode_buffered_exec",
+          "code_mode_host",
+          "codex_git_commit",
+          "collaboration_modes",
+          "compaction_image_budget",
+          "computer_use",
+          "content_item_kinds",
+          "elevated_windows_sandbox",
+          "enable_fanout",
+          "enable_request_compression",
+          "experimental_windows_sandbox",
+          "external_migration",
+          "fast_mode",
+          "goals",
+          "guardian_approval",
+          "hooks",
+          "image_detail_original",
+          "image_generation",
+          "in_app_browser",
+          "in_app_chat",
+          "in_app_dictation",
+          "in_app_local_automation",
+          "in_app_updates",
+          "item_ids",
+          "js_repl",
+          "js_repl_tools_only",
+          "local_thread_store_shared_compression",
+          "memories",
+          "mentions_v2",
+          "multi_agent",
+          "multi_agent_mode",
+          "multi_agent_v2",
+          "network_proxy",
+          "personality",
+          "plugin_hooks",
+          "plugin_sharing",
+          "plugins",
+          "prevent_idle_sleep",
+          "recommended_plugins",
+          "remote_compaction_v2",
+          "remote_control",
+          "remote_models",
+          "remote_plugin",
+          "request_rule",
+          "resize_all_images",
+          "responses_websockets",
+          "responses_websockets_v2",
+          "search_tool",
+          "secret_auth_storage",
+          "send_async_message",
+          "shell_snapshot",
+          "shell_tool",
+          "skill_env_var_dependency_prompt",
+          "skill_mcp_dependency_install",
+          "skill_search",
+          "sleep_tool",
+          "sqlite",
+          "steer",
+          "terminal_resize_reflow",
+          "tool_call_mcp_elicitation",
+          "tool_search",
+          "tool_search_always_defer_mcp_tools",
+          "tool_suggest",
+          "tui_app_server",
+          "unavailable_dummy_tools",
+          "unbounded_connection_retries",
+          "undo",
+          "unified_exec",
+          "unified_exec_zsh_fork",
+          "use_legacy_landlock",
+          "use_linux_sandbox_bwrap",
+          "view_image",
+          "web_search_cached",
+          "web_search_request",
+          "workspace_dependencies",
+          "workspace_owner_usage_nudge"
+        ],
+        "listed": [
+          {
+            "effective": false,
+            "name": "apply_patch_freeform",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "apps",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "apps_mcp_path_override",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "auth_elicitation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use_external",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "browser_use_full_cdp_access",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "code_mode_buffered_exec",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "code_mode_host",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "codex_git_commit",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "collaboration_modes",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "compaction_image_budget",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "computer_use",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "content_item_kinds",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "elevated_windows_sandbox",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "enable_fanout",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "enable_request_compression",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "experimental_windows_sandbox",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "external_migration",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "fast_mode",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "goals",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "guardian_approval",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "hooks",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "image_detail_original",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "image_generation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_browser",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_chat",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_dictation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_local_automation",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "in_app_updates",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "item_ids",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "js_repl",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "js_repl_tools_only",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "local_thread_store_shared_compression",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "memories",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "mentions_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "multi_agent",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "multi_agent_mode",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "multi_agent_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "network_proxy",
+            "stage": "experimental"
+          },
+          {
+            "effective": true,
+            "name": "personality",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "plugin_hooks",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "plugin_sharing",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "plugins",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "prevent_idle_sleep",
+            "stage": "experimental"
+          },
+          {
+            "effective": false,
+            "name": "recommended_plugins",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "remote_compaction_v2",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "remote_control",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "remote_models",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "remote_plugin",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "request_rule",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "resize_all_images",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "responses_websockets",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "responses_websockets_v2",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "search_tool",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "secret_auth_storage",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "send_async_message",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "shell_snapshot",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "shell_tool",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "skill_env_var_dependency_prompt",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "skill_mcp_dependency_install",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "skill_search",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "sleep_tool",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "sqlite",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "steer",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "terminal_resize_reflow",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_call_mcp_elicitation",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "tool_search",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_search_always_defer_mcp_tools",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "tool_suggest",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "tui_app_server",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "unavailable_dummy_tools",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "unbounded_connection_retries",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "undo",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "unified_exec",
+            "stage": "stable"
+          },
+          {
+            "effective": true,
+            "name": "unified_exec_zsh_fork",
+            "stage": "removed"
+          },
+          {
+            "effective": false,
+            "name": "use_legacy_landlock",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "use_linux_sandbox_bwrap",
+            "stage": "removed"
+          },
+          {
+            "effective": true,
+            "name": "view_image",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "web_search_cached",
+            "stage": "deprecated"
+          },
+          {
+            "effective": false,
+            "name": "web_search_request",
+            "stage": "deprecated"
+          },
+          {
+            "effective": true,
+            "name": "workspace_dependencies",
+            "stage": "stable"
+          },
+          {
+            "effective": false,
+            "name": "workspace_owner_usage_nudge",
+            "stage": "removed"
+          }
+        ],
+        "mode": "default_plus_all_enabled"
+      }
+    }
+  ],
+  "commands": [
+    {
+      "path": [],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "about": "If no subcommand is specified, options will be forwarded to the interactive CLI.",
+      "usage": "codex [OPTIONS] [PROMPT]\ncodex [OPTIONS] <COMMAND> [ARGS]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Optional user prompt to start the session",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--add-dir",
+          "long": "--add-dir",
+          "takes_value": true,
+          "value_name": "DIR",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--approve-for-me",
+          "long": "--approve-for-me",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ask-for-approval",
+          "long": "--ask-for-approval",
+          "short": "-a",
+          "takes_value": true,
+          "value_name": "APPROVAL_POLICY",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--cd",
+          "long": "--cd",
+          "short": "-C",
+          "takes_value": true,
+          "value_name": "DIR",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--config",
+          "long": "--config",
+          "short": "-c",
+          "takes_value": true,
+          "value_name": "key=value",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--dangerously-bypass-approvals-and-sandbox",
+          "long": "--dangerously-bypass-approvals-and-sandbox",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--dangerously-bypass-hook-trust",
+          "long": "--dangerously-bypass-hook-trust",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--disable",
+          "long": "--disable",
+          "takes_value": true,
+          "value_name": "FEATURE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--enable",
+          "long": "--enable",
+          "takes_value": true,
+          "value_name": "FEATURE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--help",
+          "long": "--help",
+          "short": "-h",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--image",
+          "long": "--image",
+          "short": "-i",
+          "takes_value": true,
+          "value_name": "FILE",
+          "repeatable": true,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--local-provider",
+          "long": "--local-provider",
+          "takes_value": true,
+          "value_name": "OSS_PROVIDER",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--model",
+          "long": "--model",
+          "short": "-m",
+          "takes_value": true,
+          "value_name": "MODEL",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--no-alt-screen",
+          "long": "--no-alt-screen",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--oss",
+          "long": "--oss",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--profile",
+          "long": "--profile",
+          "short": "-p",
+          "takes_value": true,
+          "value_name": "CONFIG_PROFILE_V2",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--remote",
+          "long": "--remote",
+          "takes_value": true,
+          "value_name": "ADDR",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--remote-auth-token-env",
+          "long": "--remote-auth-token-env",
+          "takes_value": true,
+          "value_name": "ENV_VAR",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--sandbox",
+          "long": "--sandbox",
+          "short": "-s",
+          "takes_value": true,
+          "value_name": "SANDBOX_MODE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--search",
+          "long": "--search",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--strict-config",
+          "long": "--strict-config",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--version",
+          "long": "--version",
+          "short": "-V",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "agents"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex agents [OPTIONS]"
+    },
+    {
+      "path": [
+        "app"
+      ],
+      "available_on": [
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app [OPTIONS] [PATH]",
+      "args": [
+        {
+          "name": "PATH",
+          "required": false,
+          "variadic": false,
+          "note": "Workspace path to open in the Desktop app\n[default: .]",
+          "available_on": [
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--download-url",
+          "long": "--download-url",
+          "takes_value": true,
+          "value_name": "DOWNLOAD_URL_OVERRIDE",
+          "available_on": [
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server [OPTIONS] [COMMAND]",
+      "flags": [
+        {
+          "key": "--analytics-default-enabled",
+          "long": "--analytics-default-enabled",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--code-mode-host",
+          "long": "--code-mode-host",
+          "takes_value": true,
+          "value_name": "URL",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--listen",
+          "long": "--listen",
+          "takes_value": true,
+          "value_name": "URL",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--stdio",
+          "long": "--stdio",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ws-audience",
+          "long": "--ws-audience",
+          "takes_value": true,
+          "value_name": "AUDIENCE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ws-auth",
+          "long": "--ws-auth",
+          "takes_value": true,
+          "value_name": "MODE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ws-issuer",
+          "long": "--ws-issuer",
+          "takes_value": true,
+          "value_name": "ISSUER",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ws-max-clock-skew-seconds",
+          "long": "--ws-max-clock-skew-seconds",
+          "takes_value": true,
+          "value_name": "SECONDS",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ws-shared-secret-file",
+          "long": "--ws-shared-secret-file",
+          "takes_value": true,
+          "value_name": "PATH",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ws-token-file",
+          "long": "--ws-token-file",
+          "takes_value": true,
+          "value_name": "PATH",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ws-token-sha256",
+          "long": "--ws-token-sha256",
+          "takes_value": true,
+          "value_name": "HEX",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server daemon [OPTIONS] <COMMAND>"
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "bootstrap"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server daemon bootstrap [OPTIONS]",
+      "flags": [
+        {
+          "key": "--remote-control",
+          "long": "--remote-control",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "disable-remote-control"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server daemon disable-remote-control [OPTIONS]"
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "enable-remote-control"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server daemon enable-remote-control [OPTIONS]"
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server daemon help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "restart"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server daemon restart [OPTIONS]"
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "start"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server daemon start [OPTIONS]"
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "stop"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server daemon stop [OPTIONS]"
+    },
+    {
+      "path": [
+        "app-server",
+        "daemon",
+        "version"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server daemon version [OPTIONS]"
+    },
+    {
+      "path": [
+        "app-server",
+        "generate-json-schema"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server generate-json-schema [OPTIONS] --out <DIR>",
+      "flags": [
+        {
+          "key": "--experimental",
+          "long": "--experimental",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--out",
+          "long": "--out",
+          "short": "-o",
+          "takes_value": true,
+          "value_name": "DIR",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server",
+        "generate-ts"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server generate-ts [OPTIONS] --out <DIR>",
+      "flags": [
+        {
+          "key": "--experimental",
+          "long": "--experimental",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--out",
+          "long": "--out",
+          "short": "-o",
+          "takes_value": true,
+          "value_name": "DIR",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--prettier",
+          "long": "--prettier",
+          "short": "-p",
+          "takes_value": true,
+          "value_name": "PRETTIER_BIN",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "app-server",
+        "proxy"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex app-server proxy [OPTIONS]",
+      "flags": [
+        {
+          "key": "--sock",
+          "long": "--sock",
+          "takes_value": true,
+          "value_name": "SOCKET_PATH",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "apply"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex apply [OPTIONS] <TASK_ID>",
+      "args": [
+        {
+          "name": "TASK_ID",
+          "required": true,
+          "variadic": false,
+          "inferred_from_usage": true,
+          "note": "inferred from usage",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "archive"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex archive [OPTIONS] <SESSION>",
+      "args": [
+        {
+          "name": "SESSION",
+          "required": true,
+          "variadic": false,
+          "note": "Session id (UUID) or session name. UUIDs take precedence if it parses",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex cloud [OPTIONS] [COMMAND]"
+    },
+    {
+      "path": [
+        "cloud",
+        "apply"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex cloud apply [OPTIONS] <TASK_ID>",
+      "args": [
+        {
+          "name": "TASK_ID",
+          "required": true,
+          "variadic": false,
+          "note": "Codex Cloud task identifier to apply",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--attempt",
+          "long": "--attempt",
+          "takes_value": true,
+          "value_name": "N",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "diff"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex cloud diff [OPTIONS] <TASK_ID>",
+      "args": [
+        {
+          "name": "TASK_ID",
+          "required": true,
+          "variadic": false,
+          "note": "Codex Cloud task identifier to display",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--attempt",
+          "long": "--attempt",
+          "takes_value": true,
+          "value_name": "N",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "exec"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex cloud exec [OPTIONS] --env <ENV_ID> [QUERY]",
+      "args": [
+        {
+          "name": "QUERY",
+          "required": false,
+          "variadic": false,
+          "note": "Task prompt to run in Codex Cloud",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--attempts",
+          "long": "--attempts",
+          "takes_value": true,
+          "value_name": "ATTEMPTS",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--branch",
+          "long": "--branch",
+          "takes_value": true,
+          "value_name": "BRANCH",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--env",
+          "long": "--env",
+          "takes_value": true,
+          "value_name": "ENV_ID",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex cloud help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "list"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex cloud list [OPTIONS]",
+      "flags": [
+        {
+          "key": "--cursor",
+          "long": "--cursor",
+          "takes_value": true,
+          "value_name": "CURSOR",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--env",
+          "long": "--env",
+          "takes_value": true,
+          "value_name": "ENV_ID",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--limit",
+          "long": "--limit",
+          "takes_value": true,
+          "value_name": "N",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "cloud",
+        "status"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex cloud status [OPTIONS] <TASK_ID>",
+      "args": [
+        {
+          "name": "TASK_ID",
+          "required": true,
+          "variadic": false,
+          "note": "Codex Cloud task identifier to inspect",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "completion"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex completion [OPTIONS] [SHELL]",
+      "args": [
+        {
+          "name": "SHELL",
+          "required": false,
+          "variadic": false,
+          "note": "Shell to generate completions for\n[default: bash]\n[possible values: bash, elvish, fish, powershell, zsh]",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex debug [OPTIONS] <COMMAND>"
+    },
+    {
+      "path": [
+        "debug",
+        "app-server"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex debug app-server [OPTIONS] <COMMAND>"
+    },
+    {
+      "path": [
+        "debug",
+        "app-server",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex debug app-server help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "app-server",
+        "send-message-v2"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex debug app-server send-message-v2 [OPTIONS] <USER_MESSAGE>",
+      "args": [
+        {
+          "name": "USER_MESSAGE",
+          "required": true,
+          "variadic": false,
+          "inferred_from_usage": true,
+          "note": "inferred from usage",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex debug help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "models"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex debug models [OPTIONS]",
+      "flags": [
+        {
+          "key": "--bundled",
+          "long": "--bundled",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "debug",
+        "prompt-input"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex debug prompt-input [OPTIONS] [PROMPT]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Optional user prompt to append after session context",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "delete"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex delete [OPTIONS] <SESSION>",
+      "args": [
+        {
+          "name": "SESSION",
+          "required": true,
+          "variadic": false,
+          "note": "Session id (UUID) or session name. UUIDs take precedence if it parses",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--force",
+          "long": "--force",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "doctor"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex doctor [OPTIONS]",
+      "flags": [
+        {
+          "key": "--all",
+          "long": "--all",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ascii",
+          "long": "--ascii",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--no-color",
+          "long": "--no-color",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--summary",
+          "long": "--summary",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex exec [OPTIONS] [PROMPT]\ncodex exec [OPTIONS] <COMMAND> [ARGS]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Initial instructions for the agent. If not provided as an argument (or if `-` is used),\ninstructions are read from stdin. If stdin is piped and a prompt is also provided, stdin\nis appended as a `<stdin>` block",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--color",
+          "long": "--color",
+          "takes_value": true,
+          "value_name": "COLOR",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ephemeral",
+          "long": "--ephemeral",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ignore-rules",
+          "long": "--ignore-rules",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ignore-user-config",
+          "long": "--ignore-user-config",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--output-last-message",
+          "long": "--output-last-message",
+          "short": "-o",
+          "takes_value": true,
+          "value_name": "FILE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--output-schema",
+          "long": "--output-schema",
+          "takes_value": true,
+          "value_name": "FILE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--skip-git-repo-check",
+          "long": "--skip-git-repo-check",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--thread-source",
+          "long": "--thread-source",
+          "takes_value": true,
+          "value_name": "SOURCE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec",
+        "fork"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex exec fork [OPTIONS] <SESSION_ID> [PROMPT]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Optional prompt to send after forking. If `-` is used, read from stdin",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "name": "SESSION_ID",
+          "required": true,
+          "variadic": false,
+          "note": "Conversation/session id (UUID) or thread name to fork",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--ephemeral",
+          "long": "--ephemeral",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ignore-rules",
+          "long": "--ignore-rules",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ignore-user-config",
+          "long": "--ignore-user-config",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--output-last-message",
+          "long": "--output-last-message",
+          "short": "-o",
+          "takes_value": true,
+          "value_name": "FILE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--output-schema",
+          "long": "--output-schema",
+          "takes_value": true,
+          "value_name": "FILE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--skip-git-repo-check",
+          "long": "--skip-git-repo-check",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--thread-source",
+          "long": "--thread-source",
+          "takes_value": true,
+          "value_name": "SOURCE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex exec help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec",
+        "resume"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex exec resume [OPTIONS] [SESSION_ID] [PROMPT]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Prompt to send after resuming the session. If `-` is used, read from stdin",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "name": "SESSION_ID",
+          "required": false,
+          "variadic": false,
+          "note": "Conversation/session id (UUID) or thread name. UUIDs take precedence if it parses. If\nomitted, use --last to pick the most recent recorded session",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--all",
+          "long": "--all",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ephemeral",
+          "long": "--ephemeral",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ignore-rules",
+          "long": "--ignore-rules",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ignore-user-config",
+          "long": "--ignore-user-config",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--last",
+          "long": "--last",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--output-last-message",
+          "long": "--output-last-message",
+          "short": "-o",
+          "takes_value": true,
+          "value_name": "FILE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--output-schema",
+          "long": "--output-schema",
+          "takes_value": true,
+          "value_name": "FILE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--skip-git-repo-check",
+          "long": "--skip-git-repo-check",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--thread-source",
+          "long": "--thread-source",
+          "takes_value": true,
+          "value_name": "SOURCE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec",
+        "review"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex exec review [OPTIONS] [PROMPT]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Custom review instructions. If `-` is used, read from stdin",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--base",
+          "long": "--base",
+          "takes_value": true,
+          "value_name": "BRANCH",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--commit",
+          "long": "--commit",
+          "takes_value": true,
+          "value_name": "SHA",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ephemeral",
+          "long": "--ephemeral",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ignore-rules",
+          "long": "--ignore-rules",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ignore-user-config",
+          "long": "--ignore-user-config",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--output-last-message",
+          "long": "--output-last-message",
+          "short": "-o",
+          "takes_value": true,
+          "value_name": "FILE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--output-schema",
+          "long": "--output-schema",
+          "takes_value": true,
+          "value_name": "FILE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--skip-git-repo-check",
+          "long": "--skip-git-repo-check",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--thread-source",
+          "long": "--thread-source",
+          "takes_value": true,
+          "value_name": "SOURCE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--title",
+          "long": "--title",
+          "takes_value": true,
+          "value_name": "TITLE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--uncommitted",
+          "long": "--uncommitted",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec-server"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex exec-server [OPTIONS] [COMMAND]",
+      "flags": [
+        {
+          "key": "--concurrent-requests",
+          "long": "--concurrent-requests",
+          "takes_value": true,
+          "value_name": "COUNT",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--environment-id",
+          "long": "--environment-id",
+          "takes_value": true,
+          "value_name": "ID",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--exit-on-stdin-close",
+          "long": "--exit-on-stdin-close",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--listen",
+          "long": "--listen",
+          "takes_value": true,
+          "value_name": "URL",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--name",
+          "long": "--name",
+          "takes_value": true,
+          "value_name": "NAME",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--use-agent-identity-auth",
+          "long": "--use-agent-identity-auth",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec-server",
+        "forward"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex exec-server forward [OPTIONS] --remote <URL> --environment-id <ID> --connect <URL>",
+      "flags": [
+        {
+          "key": "--connect",
+          "long": "--connect",
+          "takes_value": true,
+          "value_name": "URL",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--environment-id",
+          "long": "--environment-id",
+          "takes_value": true,
+          "value_name": "ID",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--exit-on-stdin-close",
+          "long": "--exit-on-stdin-close",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--name",
+          "long": "--name",
+          "takes_value": true,
+          "value_name": "NAME",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--use-agent-identity-auth",
+          "long": "--use-agent-identity-auth",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "exec-server",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex exec-server help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "features"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex features [OPTIONS] <COMMAND>"
+    },
+    {
+      "path": [
+        "features",
+        "disable"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex features disable [OPTIONS] <FEATURE>",
+      "args": [
+        {
+          "name": "FEATURE",
+          "required": true,
+          "variadic": false,
+          "note": "Feature key to update (for example: unified_exec)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "features",
+        "enable"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex features enable [OPTIONS] <FEATURE>",
+      "args": [
+        {
+          "name": "FEATURE",
+          "required": true,
+          "variadic": false,
+          "note": "Feature key to update (for example: unified_exec)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "features",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex features help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "features",
+        "list"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex features list [OPTIONS]"
+    },
+    {
+      "path": [
+        "fork"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex fork [OPTIONS] [SESSION_ID] [PROMPT]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Optional user prompt to start the session",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "name": "SESSION_ID",
+          "required": false,
+          "variadic": false,
+          "note": "Conversation/session id (UUID). When provided, forks this session. If omitted, use --last\nto pick the most recent recorded session",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--all",
+          "long": "--all",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--last",
+          "long": "--last",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "login"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex login [OPTIONS] [COMMAND]",
+      "flags": [
+        {
+          "key": "--device-auth",
+          "long": "--device-auth",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--with-access-token",
+          "long": "--with-access-token",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--with-api-key",
+          "long": "--with-api-key",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "login",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex login help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "login",
+        "status"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex login status [OPTIONS]"
+    },
+    {
+      "path": [
+        "logout"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex logout [OPTIONS]"
+    },
+    {
+      "path": [
+        "mcp"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex mcp [OPTIONS] <COMMAND>"
+    },
+    {
+      "path": [
+        "mcp",
+        "add"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex mcp add [OPTIONS] <NAME> (--url <URL> | -- <COMMAND>...)",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": true,
+          "variadic": true,
+          "note": "Command to launch the MCP server. Use --url for a streamable HTTP server",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name for the MCP server configuration",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--bearer-token-env-var",
+          "long": "--bearer-token-env-var",
+          "takes_value": true,
+          "value_name": "ENV_VAR",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--env",
+          "long": "--env",
+          "takes_value": true,
+          "value_name": "KEY=VALUE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--oauth-client-id",
+          "long": "--oauth-client-id",
+          "takes_value": true,
+          "value_name": "CLIENT_ID",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--oauth-client-registration",
+          "long": "--oauth-client-registration",
+          "takes_value": true,
+          "value_name": "AUTO|CIMD|DCR",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--oauth-resource",
+          "long": "--oauth-resource",
+          "takes_value": true,
+          "value_name": "RESOURCE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--url",
+          "long": "--url",
+          "takes_value": true,
+          "value_name": "URL",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "get"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex mcp get [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to display",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex mcp help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "list"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex mcp list [OPTIONS]",
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "login"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex mcp login [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to authenticate with oauth",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--oauth-client-registration",
+          "long": "--oauth-client-registration",
+          "takes_value": true,
+          "value_name": "AUTO|CIMD|DCR",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--scopes",
+          "long": "--scopes",
+          "takes_value": true,
+          "value_name": "SCOPE,SCOPE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "logout"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex mcp logout [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server to deauthenticate",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp",
+        "remove"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex mcp remove [OPTIONS] <NAME>",
+      "args": [
+        {
+          "name": "NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Name of the MCP server configuration to remove",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "mcp-server"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex mcp-server [OPTIONS]"
+    },
+    {
+      "path": [
+        "migrate-rollouts"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex migrate-rollouts [OPTIONS]",
+      "flags": [
+        {
+          "key": "--apply",
+          "long": "--apply",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--max-mib-per-second",
+          "long": "--max-mib-per-second",
+          "takes_value": true,
+          "value_name": "MIB",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--thread",
+          "long": "--thread",
+          "takes_value": true,
+          "value_name": "THREAD_ID",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--verbose",
+          "long": "--verbose",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex plugin [OPTIONS] <COMMAND>"
+    },
+    {
+      "path": [
+        "plugin",
+        "add"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "about": "Pass either `PLUGIN@MARKETPLACE` or pass `PLUGIN` with `--marketplace MARKETPLACE`.",
+      "usage": "codex plugin add [OPTIONS] <PLUGIN[@MARKETPLACE]>",
+      "args": [
+        {
+          "name": "PLUGIN[@MARKETPLACE]",
+          "required": true,
+          "variadic": false,
+          "note": "Plugin selector to install: either PLUGIN@MARKETPLACE or PLUGIN with --marketplace",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--marketplace",
+          "long": "--marketplace",
+          "short": "-m",
+          "takes_value": true,
+          "value_name": "MARKETPLACE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex plugin help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "list"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex plugin list [OPTIONS]",
+      "flags": [
+        {
+          "key": "--available",
+          "long": "--available",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--marketplace",
+          "long": "--marketplace",
+          "short": "-m",
+          "takes_value": true,
+          "value_name": "MARKETPLACE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex plugin marketplace [OPTIONS] <COMMAND>"
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "add"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex plugin marketplace add [OPTIONS] <SOURCE>",
+      "args": [
+        {
+          "name": "SOURCE",
+          "required": true,
+          "variadic": false,
+          "note": "Marketplace source: a local path, owner/repo[@ref], HTTPS Git URL, or SSH Git URL",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--ref",
+          "long": "--ref",
+          "takes_value": true,
+          "value_name": "REF",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--sparse",
+          "long": "--sparse",
+          "takes_value": true,
+          "value_name": "PATH",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex plugin marketplace help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "list"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex plugin marketplace list [OPTIONS]",
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "remove"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex plugin marketplace remove [OPTIONS] <MARKETPLACE_NAME>",
+      "args": [
+        {
+          "name": "MARKETPLACE_NAME",
+          "required": true,
+          "variadic": false,
+          "note": "Configured marketplace name to remove",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "marketplace",
+        "upgrade"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "about": "Omit MARKETPLACE_NAME to upgrade all configured Git marketplaces.",
+      "usage": "codex plugin marketplace upgrade [OPTIONS] [MARKETPLACE_NAME]",
+      "args": [
+        {
+          "name": "MARKETPLACE_NAME",
+          "required": false,
+          "variadic": false,
+          "note": "Optional configured marketplace name to upgrade. Omit to upgrade all Git marketplaces",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "plugin",
+        "remove"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "about": "Pass either `PLUGIN@MARKETPLACE` or pass `PLUGIN` with `--marketplace MARKETPLACE`.",
+      "usage": "codex plugin remove [OPTIONS] <PLUGIN[@MARKETPLACE]>",
+      "args": [
+        {
+          "name": "PLUGIN[@MARKETPLACE]",
+          "required": true,
+          "variadic": false,
+          "note": "Plugin selector to remove: either PLUGIN@MARKETPLACE or PLUGIN with --marketplace",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--marketplace",
+          "long": "--marketplace",
+          "short": "-m",
+          "takes_value": true,
+          "value_name": "MARKETPLACE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "queue"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex queue [OPTIONS] --thread <THREAD> --message <TEXT>",
+      "flags": [
+        {
+          "key": "--message",
+          "long": "--message",
+          "takes_value": true,
+          "value_name": "TEXT",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--thread",
+          "long": "--thread",
+          "takes_value": true,
+          "value_name": "THREAD",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "remote-control"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex remote-control [OPTIONS] [COMMAND]",
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "remote-control",
+        "help"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex remote-control help [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Print help for the subcommand(s)",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "remote-control",
+        "pair"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex remote-control pair [OPTIONS]",
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "remote-control",
+        "start"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex remote-control start [OPTIONS]",
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "remote-control",
+        "stop"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex remote-control stop [OPTIONS]",
+      "flags": [
+        {
+          "key": "--json",
+          "long": "--json",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "resume"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex resume [OPTIONS] [SESSION_ID] [PROMPT]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Optional user prompt to start the session",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "name": "SESSION_ID",
+          "required": false,
+          "variadic": false,
+          "note": "Session id (UUID) or session name. UUIDs take precedence if it parses. If omitted, use\n--last to pick the most recent recorded session",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--all",
+          "long": "--all",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--include-non-interactive",
+          "long": "--include-non-interactive",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--last",
+          "long": "--last",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "review"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex review [OPTIONS] [PROMPT]",
+      "args": [
+        {
+          "name": "PROMPT",
+          "required": false,
+          "variadic": false,
+          "note": "Custom review instructions. If `-` is used, read from stdin",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--base",
+          "long": "--base",
+          "takes_value": true,
+          "value_name": "BRANCH",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--commit",
+          "long": "--commit",
+          "takes_value": true,
+          "value_name": "SHA",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--title",
+          "long": "--title",
+          "takes_value": true,
+          "value_name": "TITLE",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--uncommitted",
+          "long": "--uncommitted",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "sandbox"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex sandbox [OPTIONS] [COMMAND]...",
+      "args": [
+        {
+          "name": "COMMAND",
+          "required": false,
+          "variadic": true,
+          "note": "Full command args to run under the Linux sandbox",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ],
+      "flags": [
+        {
+          "key": "--allow-unix-socket",
+          "long": "--allow-unix-socket",
+          "takes_value": true,
+          "value_name": "ALLOW_UNIX_SOCKETS",
+          "available_on": [
+            "aarch64-apple-darwin"
+          ]
+        },
+        {
+          "key": "--include-managed-config",
+          "long": "--include-managed-config",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--log-denials",
+          "long": "--log-denials",
+          "takes_value": false,
+          "available_on": [
+            "aarch64-apple-darwin"
+          ]
+        },
+        {
+          "key": "--permission-profile",
+          "long": "--permission-profile",
+          "short": "-P",
+          "takes_value": true,
+          "value_name": "NAME",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--sandbox-state-disable-network",
+          "long": "--sandbox-state-disable-network",
+          "takes_value": false,
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--sandbox-state-json",
+          "long": "--sandbox-state-json",
+          "takes_value": true,
+          "value_name": "JSON",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        },
+        {
+          "key": "--sandbox-state-readable-root",
+          "long": "--sandbox-state-readable-root",
+          "takes_value": true,
+          "value_name": "SANDBOX_STATE_READABLE_ROOT",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "unarchive"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex unarchive [OPTIONS] <SESSION>",
+      "args": [
+        {
+          "name": "SESSION",
+          "required": true,
+          "variadic": false,
+          "note": "Session id (UUID) or session name. UUIDs take precedence if it parses",
+          "available_on": [
+            "x86_64-unknown-linux-musl",
+            "aarch64-unknown-linux-musl",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+          ]
+        }
+      ]
+    },
+    {
+      "path": [
+        "update"
+      ],
+      "available_on": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "usage": "codex update [OPTIONS]"
+    }
+  ]
+}
