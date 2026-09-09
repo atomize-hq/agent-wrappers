@@ -13,6 +13,18 @@
     },
     {
       "agent": "claude_code",
+      "version": "2.1.236",
+      "target": "darwin-arm64",
+      "manifest_support": "unsupported",
+      "backend_support": "unsupported",
+      "uaa_support": "unsupported",
+      "pointer_promotion": "none",
+      "evidence_notes": [
+        "backend report includes backend-only surface outside unified support"
+      ]
+    },
+    {
+      "agent": "claude_code",
       "version": "2.1.29",
       "target": "darwin-arm64",
       "manifest_support": "supported",
@@ -23,6 +35,18 @@
     },
     {
       "agent": "claude_code",
+      "version": "2.1.236",
+      "target": "linux-x64",
+      "manifest_support": "unsupported",
+      "backend_support": "unsupported",
+      "uaa_support": "unsupported",
+      "pointer_promotion": "none",
+      "evidence_notes": [
+        "backend report includes backend-only surface outside unified support"
+      ]
+    },
+    {
+      "agent": "claude_code",
       "version": "2.1.29",
       "target": "linux-x64",
       "manifest_support": "supported",
@@ -30,6 +54,19 @@
       "uaa_support": "supported",
       "pointer_promotion": "latest_supported_and_validated",
       "evidence_notes": []
+    },
+    {
+      "agent": "claude_code",
+      "version": "2.1.236",
+      "target": "win32-x64",
+      "manifest_support": "unsupported",
+      "backend_support": "unsupported",
+      "uaa_support": "unsupported",
+      "pointer_promotion": "none",
+      "evidence_notes": [
+        "backend report includes intentionally unsupported surface outside unified support",
+        "backend report includes backend-only surface outside unified support"
+      ]
     },
     {
       "agent": "claude_code",
